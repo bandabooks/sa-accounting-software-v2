@@ -54,12 +54,25 @@ export function formatCurrency(amount: number | string): string {
   }).format(num);
 }
 
-export function formatDate(date: Date): string {
+export function formatDate(date: Date | string): string {
+  let dateObj: Date;
+  
+  if (typeof date === 'string') {
+    dateObj = new Date(date);
+  } else {
+    dateObj = date;
+  }
+  
+  // Check if the date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+  
   return new Intl.DateTimeFormat('en-ZA', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  }).format(date);
+  }).format(dateObj);
 }
 
 export function getStatusColor(status: string): string {
