@@ -1,25 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
-
-interface User {
-  id: number;
-  username: string;
-  name: string;
-  email?: string;
-  role: string;
-  permissions: string[];
-}
+import { apiRequest } from "@/lib/queryClient";
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery<User>({
+  const { data: user, isLoading } = useQuery({
     queryKey: ["/api/auth/me"],
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const logout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+      // Redirect to login page
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force redirect even if logout fails
+      window.location.href = "/login";
+    }
+  };
 
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
-    error,
+    logout,
   };
 }

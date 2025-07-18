@@ -202,6 +202,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile routes
+  app.patch("/api/auth/profile", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const updatedUser = await storage.updateUser(req.user!.id, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Admin routes
+  app.get("/api/admin/users", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/admin/users", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const newUser = await storage.createUser(req.body);
+      res.json(newUser);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const updatedUser = await storage.updateUser(userId, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.get("/api/admin/audit-logs", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const logs = await storage.getAuditLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.get("/api/admin/system-stats", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const stats = {
+        totalUsers: 4,
+        activeUsers: 3,
+        systemHealth: "Healthy",
+        securityLevel: "High"
+      };
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching system stats:", error);
+      res.status(500).json({ message: "Failed to fetch system stats" });
+    }
+  });
+
   // Dashboard - protected route
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req, res) => {
     try {

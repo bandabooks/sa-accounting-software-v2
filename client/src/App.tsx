@@ -27,6 +27,8 @@ import ProductCreate from "@/pages/product-create";
 import Settings from "@/pages/settings";
 import Inventory from "@/pages/inventory";
 import Companies from "@/pages/companies";
+import Profile from "@/pages/profile";
+import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -152,6 +154,12 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/companies">
           <Companies />
+        </Route>
+        <Route path="/profile">
+          <Profile />
+        </Route>
+        <Route path="/admin-panel">
+          <AdminPanel />
         </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />
