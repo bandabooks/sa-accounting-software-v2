@@ -1,9 +1,9 @@
+/* Import mobile-specific styles */
+@import './styles/mobile.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import mobile-specific styles */
-@import './styles/mobile.css';
 
 :root {
   --background: hsl(0, 0%, 100%);

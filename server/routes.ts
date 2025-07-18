@@ -16,6 +16,7 @@ import {
   ROLES,
   type AuthenticatedRequest 
 } from "./auth";
+import { registerCompanyRoutes } from "./companyRoutes";
 import { 
   insertCustomerSchema, 
   insertInvoiceSchema, 
@@ -43,6 +44,8 @@ import { z } from "zod";
 import { createPayFastService } from "./payfast";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register multi-company routes
+  registerCompanyRoutes(app);
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {

@@ -26,6 +26,7 @@ import Products from "@/pages/products";
 import ProductCreate from "@/pages/product-create";
 import Settings from "@/pages/settings";
 import Inventory from "@/pages/inventory";
+import Companies from "@/pages/companies";
 import Login from "@/pages/login";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -154,6 +155,9 @@ function AuthenticatedApp() {
           <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
             <Inventory />
           </ProtectedRoute>
+        </Route>
+        <Route path="/companies">
+          <Companies />
         </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />

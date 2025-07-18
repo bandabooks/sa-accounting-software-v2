@@ -1,9 +1,58 @@
-import { pgTable, text, serial, integer, boolean, decimal, timestamp, varchar, jsonb, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, decimal, timestamp, varchar, jsonb, date, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
+
+// Multi-Company Core Tables
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  displayName: text("display_name").notNull(),
+  slug: text("slug").notNull().unique(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  country: text("country").default("South Africa"),
+  vatNumber: text("vat_number"),
+  registrationNumber: text("registration_number"),
+  logo: text("logo"), // URL to company logo
+  primaryColor: text("primary_color").default("#3b82f6"),
+  secondaryColor: text("secondary_color").default("#64748b"),
+  timezone: text("timezone").default("Africa/Johannesburg"),
+  currency: text("currency").default("ZAR"),
+  dateFormat: text("date_format").default("DD/MM/YYYY"),
+  fiscalYearStart: text("fiscal_year_start").default("04-01"), // April 1st
+  isActive: boolean("is_active").default(true),
+  subscriptionPlan: text("subscription_plan").default("basic"), // basic, professional, enterprise
+  subscriptionStatus: text("subscription_status").default("active"), // active, suspended, cancelled
+  subscriptionExpiresAt: timestamp("subscription_expires_at"),
+  settings: jsonb("settings").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  slugIdx: index("companies_slug_idx").on(table.slug),
+  activeIdx: index("companies_active_idx").on(table.isActive),
+}));
+
+export const companyUsers = pgTable("company_users", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  userId: integer("user_id").notNull(),
+  role: text("role").notNull().default("employee"), // owner, admin, manager, accountant, employee
+  permissions: jsonb("permissions").default([]),
+  isActive: boolean("is_active").default(true),
+  joinedAt: timestamp("joined_at").defaultNow(),
+}, (table) => ({
+  companyUserUnique: unique().on(table.companyId, table.userId),
+  companyIdx: index("company_users_company_idx").on(table.companyId),
+  userIdx: index("company_users_user_idx").on(table.userId),
+}));
 
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   email: text("email"),
   phone: text("phone"),
@@ -18,11 +67,14 @@ export const customers = pgTable("customers", {
   portalAccess: boolean("portal_access").default(false),
   portalPassword: text("portal_password"), // For customer portal login
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("customers_company_idx").on(table.companyId),
+}));
 
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
-  invoiceNumber: text("invoice_number").notNull().unique(),
+  companyId: integer("company_id").notNull(),
+  invoiceNumber: text("invoice_number").notNull(),
   customerId: integer("customer_id").notNull(),
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
@@ -32,7 +84,11 @@ export const invoices = pgTable("invoices", {
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  companyInvoiceUnique: unique().on(table.companyId, table.invoiceNumber),
+  companyIdx: index("invoices_company_idx").on(table.companyId),
+  customerIdx: index("invoices_customer_idx").on(table.customerId),
+}));
 
 export const invoiceItems = pgTable("invoice_items", {
   id: serial("id").primaryKey(),
@@ -46,7 +102,8 @@ export const invoiceItems = pgTable("invoice_items", {
 
 export const estimates = pgTable("estimates", {
   id: serial("id").primaryKey(),
-  estimateNumber: text("estimate_number").notNull().unique(),
+  companyId: integer("company_id").notNull(),
+  estimateNumber: text("estimate_number").notNull(),
   customerId: integer("customer_id").notNull(),
   issueDate: timestamp("issue_date").notNull(),
   expiryDate: timestamp("expiry_date").notNull(),
@@ -56,7 +113,11 @@ export const estimates = pgTable("estimates", {
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  companyEstimateUnique: unique().on(table.companyId, table.estimateNumber),
+  companyIdx: index("estimates_company_idx").on(table.companyId),
+  customerIdx: index("estimates_customer_idx").on(table.customerId),
+}));
 
 export const estimateItems = pgTable("estimate_items", {
   id: serial("id").primaryKey(),
@@ -71,6 +132,7 @@ export const estimateItems = pgTable("estimate_items", {
 // Financial reporting tables
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   description: text("description").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   category: text("category").notNull(), // office_supplies, travel, utilities, etc.
@@ -79,10 +141,13 @@ export const expenses = pgTable("expenses", {
   isDeductible: boolean("is_deductible").default(true),
   receiptPath: text("receipt_path"), // Path to receipt image/PDF
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("expenses_company_idx").on(table.companyId),
+}));
 
 export const vatReturns = pgTable("vat_returns", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
   totalSales: decimal("total_sales", { precision: 10, scale: 2 }).notNull(),
@@ -93,7 +158,9 @@ export const vatReturns = pgTable("vat_returns", {
   status: text("status").notNull().default("draft"), // draft, submitted, approved
   submittedAt: timestamp("submitted_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("vat_returns_company_idx").on(table.companyId),
+}));
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -149,6 +216,7 @@ export const auditLogs = pgTable("audit_logs", {
 
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   invoiceId: integer("invoice_id").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   paymentMethod: text("payment_method").notNull(), // 'cash', 'card', 'eft', 'payfast'
@@ -162,6 +230,7 @@ export const payments = pgTable("payments", {
 // Purchase Order Management
 export const suppliers = pgTable("suppliers", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   email: text("email"),
   phone: text("phone"),
@@ -178,7 +247,8 @@ export const suppliers = pgTable("suppliers", {
 
 export const purchaseOrders = pgTable("purchase_orders", {
   id: serial("id").primaryKey(),
-  orderNumber: text("order_number").notNull().unique(),
+  companyId: integer("company_id").notNull(),
+  orderNumber: text("order_number").notNull(),
   supplierId: integer("supplier_id").notNull(),
   orderDate: timestamp("order_date").notNull(),
   deliveryDate: timestamp("delivery_date"),
@@ -203,6 +273,7 @@ export const purchaseOrderItems = pgTable("purchase_order_items", {
 
 export const supplierPayments = pgTable("supplier_payments", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   supplierId: integer("supplier_id").notNull(),
   purchaseOrderId: integer("purchase_order_id"),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
@@ -217,7 +288,8 @@ export const supplierPayments = pgTable("supplier_payments", {
 // Products and Services module
 export const productCategories = pgTable("product_categories", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
   description: text("description"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -225,6 +297,7 @@ export const productCategories = pgTable("product_categories", {
 
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   sku: text("sku").unique(),
@@ -246,6 +319,7 @@ export const products = pgTable("products", {
 // PayFast payment integration tables
 export const payfastPayments = pgTable("payfast_payments", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   invoiceId: integer("invoice_id").notNull(),
   payfastPaymentId: text("payfast_payment_id").unique(),
   merchantId: text("merchant_id").notNull(),
@@ -488,6 +562,7 @@ export type InsertPayfastPayment = z.infer<typeof insertPayfastPaymentSchema>;
 
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   templateInvoiceId: integer("template_invoice_id").references(() => invoices.id),
   customerId: integer("customer_id").references(() => customers.id),
   frequency: text("frequency").notNull(), // weekly, monthly, quarterly, yearly
@@ -513,6 +588,69 @@ export const insertRecurringInvoiceSchema = z.object({
 export type RecurringInvoice = typeof recurringInvoices.$inferSelect;
 export type InsertRecurringInvoice = z.infer<typeof insertRecurringInvoiceSchema>;
 
+// Multi-Company Types
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = typeof companies.$inferInsert;
+export type CompanyUser = typeof companyUsers.$inferSelect;
+export type InsertCompanyUser = typeof companyUsers.$inferInsert;
+
+// Multi-Company Schemas
+export const insertCompanySchema = createInsertSchema(companies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCompanyUserSchema = createInsertSchema(companyUsers).omit({
+  id: true,
+  joinedAt: true,
+});
+
+// Company Relations
+export const companiesRelations = relations(companies, ({ many }) => ({
+  users: many(companyUsers),
+  customers: many(customers),
+  invoices: many(invoices),
+  estimates: many(estimates),
+  expenses: many(expenses),
+  suppliers: many(suppliers),
+  purchaseOrders: many(purchaseOrders),
+  products: many(products),
+}));
+
+export const companyUsersRelations = relations(companyUsers, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyUsers.companyId],
+    references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [companyUsers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const customersRelations = relations(customers, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [customers.companyId],
+    references: [companies.id],
+  }),
+  invoices: many(invoices),
+  estimates: many(estimates),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [invoices.companyId],
+    references: [companies.id],
+  }),
+  customer: one(customers, {
+    fields: [invoices.customerId],
+    references: [customers.id],
+  }),
+  items: many(invoiceItems),
+  payments: many(payments),
+}));
+
 // Extended types for API responses
 export type InvoiceWithCustomer = Invoice & { customer: Customer };
 export type InvoiceWithItems = Invoice & { items: InvoiceItem[]; customer: Customer };
@@ -526,6 +664,7 @@ export type SupplierPaymentWithPurchaseOrder = SupplierPayment & { purchaseOrder
 // Company settings table
 export const companySettings = pgTable("company_settings", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   companyName: varchar("company_name", { length: 255 }).notNull(),
   companyEmail: varchar("company_email", { length: 255 }),
   companyPhone: varchar("company_phone", { length: 50 }),
@@ -550,6 +689,7 @@ export const companySettings = pgTable("company_settings", {
 // Inventory management tables
 export const inventoryTransactions = pgTable("inventory_transactions", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
   transactionType: varchar("transaction_type", { length: 20 }).notNull(), // 'in', 'out', 'adjustment'
   quantity: integer("quantity").notNull(),
