@@ -1498,7 +1498,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chart-of-accounts", authenticate, async (req, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 1; // Default company for now
+      const userId = (req as AuthenticatedRequest).user?.id;
       const accounts = await storage.getAllChartOfAccounts(companyId);
+      
+      // Create audit log for Chart of Accounts access
+      if (userId) {
+        await storage.createAuditLog({
+          userId,
+          action: 'chart_of_accounts_viewed',
+          details: JSON.stringify({ companyId, accountCount: accounts.length }),
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        });
+      }
+      
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching chart of accounts:", error);
@@ -1523,8 +1535,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chart-of-accounts", authenticate, async (req, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const userId = (req as AuthenticatedRequest).user?.id;
       const validatedData = insertChartOfAccountSchema.parse({ ...req.body, companyId });
       const account = await storage.createChartOfAccount(validatedData);
+      
+      // Create audit log for account creation
+      if (userId) {
+        await storage.createAuditLog({
+          userId,
+          action: 'chart_of_accounts_created',
+          details: JSON.stringify({ 
+            accountId: account.id, 
+            accountCode: account.accountCode, 
+            accountName: account.accountName,
+            companyId 
+          }),
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        });
+      }
+      
       res.status(201).json(account);
     } catch (error) {
       if (error instanceof z.ZodError) {

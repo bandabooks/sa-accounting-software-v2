@@ -433,7 +433,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuditLogs(limit: number = 100, offset: number = 0): Promise<AuditLog[]> {
-    return await db
+    const results = await db
       .select({
         id: auditLogs.id,
         userId: auditLogs.userId,
@@ -442,18 +442,32 @@ export class DatabaseStorage implements IStorage {
         ipAddress: auditLogs.ipAddress,
         timestamp: auditLogs.timestamp,
         createdAt: auditLogs.createdAt,
-        user: {
-          id: users.id,
-          username: users.username,
-          name: users.name,
-          email: users.email,
-        }
+        userName: users.username,
+        userEmail: users.email,
+        userFullName: users.name,
       })
       .from(auditLogs)
       .leftJoin(users, eq(auditLogs.userId, users.id))
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit)
       .offset(offset);
+
+    // Transform results to include user object with null safety
+    return results.map(result => ({
+      id: result.id,
+      userId: result.userId,
+      action: result.action,
+      details: result.details,
+      ipAddress: result.ipAddress,
+      timestamp: result.timestamp,
+      createdAt: result.createdAt,
+      user: result.userId ? {
+        id: result.userId,
+        username: result.userName || 'Unknown',
+        name: result.userFullName || 'Unknown User',
+        email: result.userEmail || 'unknown@domain.com',
+      } : null
+    }));
   }
 
   async getAuditLogsByUser(userId: number, limit: number = 100): Promise<AuditLog[]> {
