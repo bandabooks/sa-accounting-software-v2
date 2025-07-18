@@ -3,7 +3,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "./button";
 import { Sheet, SheetContent, SheetTrigger } from "./sheet";
 import { Link, useLocation } from "wouter";
-import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building, Archive, Building2, BookOpen, Banknote, Wrench } from "lucide-react";
+import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building, Archive, Building2, BookOpen } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: ChartLine },
@@ -13,9 +13,7 @@ const navItems = [
   { path: "/suppliers", label: "Suppliers", icon: Building },
   { path: "/purchase-orders", label: "Purchase Orders", icon: Package },
   { path: "/products", label: "Products", icon: Package },
-  { path: "/services", label: "Services", icon: Wrench },
   { path: "/inventory", label: "Inventory", icon: Archive },
-  { path: "/banking", label: "Banking", icon: Banknote },
   { path: "/expenses", label: "Expenses", icon: Receipt },
   { path: "/chart-of-accounts", label: "Chart of Accounts", icon: Calculator },
   { path: "/journal-entries", label: "Journal Entries", icon: BookOpen },
