@@ -104,9 +104,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const createInvoiceItemSchema = z.object({
+    description: z.string(),
+    quantity: z.string(),
+    unitPrice: z.string(),
+    vatRate: z.string().optional(),
+    total: z.string()
+  });
+
   const createInvoiceSchema = z.object({
     invoice: insertInvoiceSchema,
-    items: z.array(insertInvoiceItemSchema.omit({ id: true, invoiceId: true }))
+    items: z.array(createInvoiceItemSchema)
   });
 
   app.post("/api/invoices", async (req, res) => {
@@ -194,9 +202,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const createEstimateItemSchema = z.object({
+    description: z.string(),
+    quantity: z.string(),
+    unitPrice: z.string(),
+    vatRate: z.string().optional(),
+    total: z.string()
+  });
+
   const createEstimateSchema = z.object({
     estimate: insertEstimateSchema,
-    items: z.array(insertEstimateItemSchema.omit({ id: true, estimateId: true }))
+    items: z.array(createEstimateItemSchema)
   });
 
   app.post("/api/estimates", async (req, res) => {

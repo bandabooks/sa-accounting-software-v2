@@ -22,6 +22,8 @@ import {
   type EstimateWithCustomer,
   type EstimateWithItems
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, sum, count } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -40,7 +42,7 @@ export interface IStorage {
   getAllInvoices(): Promise<InvoiceWithCustomer[]>;
   getInvoice(id: number): Promise<InvoiceWithItems | undefined>;
   getInvoiceByNumber(invoiceNumber: string): Promise<InvoiceWithItems | undefined>;
-  createInvoice(invoice: InsertInvoice, items: InsertInvoiceItem[]): Promise<InvoiceWithItems>;
+  createInvoice(invoice: InsertInvoice, items: Omit<InsertInvoiceItem, 'invoiceId'>[]): Promise<InvoiceWithItems>;
   updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined>;
   updateInvoiceStatus(id: number, status: string): Promise<Invoice | undefined>;
   deleteInvoice(id: number): Promise<boolean>;
@@ -54,7 +56,7 @@ export interface IStorage {
   // Estimates
   getAllEstimates(): Promise<EstimateWithCustomer[]>;
   getEstimate(id: number): Promise<EstimateWithItems | undefined>;
-  createEstimate(estimate: InsertEstimate, items: InsertEstimateItem[]): Promise<EstimateWithItems>;
+  createEstimate(estimate: InsertEstimate, items: Omit<InsertEstimateItem, 'estimateId'>[]): Promise<EstimateWithItems>;
   updateEstimate(id: number, estimate: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   deleteEstimate(id: number): Promise<boolean>;
   convertEstimateToInvoice(estimateId: number): Promise<InvoiceWithItems>;
@@ -70,256 +72,85 @@ export interface IStorage {
   }>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private customers: Map<number, Customer>;
-  private invoices: Map<number, Invoice>;
-  private invoiceItems: Map<number, InvoiceItem>;
-  private estimates: Map<number, Estimate>;
-  private estimateItems: Map<number, EstimateItem>;
-  private currentUserId: number;
-  private currentCustomerId: number;
-  private currentInvoiceId: number;
-  private currentInvoiceItemId: number;
-  private currentEstimateId: number;
-  private currentEstimateItemId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.customers = new Map();
-    this.invoices = new Map();
-    this.invoiceItems = new Map();
-    this.estimates = new Map();
-    this.estimateItems = new Map();
-    this.currentUserId = 1;
-    this.currentCustomerId = 1;
-    this.currentInvoiceId = 1;
-    this.currentInvoiceItemId = 1;
-    this.currentEstimateId = 1;
-    this.currentEstimateItemId = 1;
-
-    // Initialize with sample data
-    this.initializeSampleData();
-  }
-
-  private initializeSampleData() {
-    // Create default user
-    const defaultUser: User = {
-      id: 1,
-      username: "admin",
-      password: "password",
-      name: "John Smith",
-      email: "admin@thinkmybiz.com",
-      role: "admin"
-    };
-    this.users.set(1, defaultUser);
-    this.currentUserId = 2;
-
-    // Create sample customers
-    const sampleCustomers: Customer[] = [
-      {
-        id: 1,
-        name: "Sekele Holding",
-        email: "info@sekele.co.za",
-        phone: "+27 11 123 4567",
-        address: "123 Business Street",
-        city: "Johannesburg",
-        postalCode: "2001",
-        vatNumber: "4123456789",
-        createdAt: new Date("2024-01-15")
-      },
-      {
-        id: 2,
-        name: "Tshobi Restaurant",
-        email: "orders@tshobi.co.za",
-        phone: "+27 21 234 5678",
-        address: "456 Food Avenue",
-        city: "Cape Town",
-        postalCode: "8001",
-        vatNumber: "4234567890",
-        createdAt: new Date("2024-02-20")
-      },
-      {
-        id: 3,
-        name: "TNT Liquor Distribution",
-        email: "sales@tnt-liquor.co.za",
-        phone: "+27 31 345 6789",
-        address: "789 Distribution Road",
-        city: "Durban",
-        postalCode: "4001",
-        vatNumber: "4345678901",
-        createdAt: new Date("2024-03-10")
-      }
-    ];
-
-    sampleCustomers.forEach(customer => {
-      this.customers.set(customer.id, customer);
-    });
-    this.currentCustomerId = 4;
-
-    // Create sample invoices
-    const sampleInvoices: Invoice[] = [
-      {
-        id: 1,
-        invoiceNumber: "INV-2024-001",
-        customerId: 1,
-        issueDate: new Date("2024-12-16"),
-        dueDate: new Date("2025-01-15"),
-        status: "paid",
-        subtotal: "7608.70",
-        vatAmount: "1141.30",
-        total: "8750.00",
-        notes: "Professional services rendered",
-        createdAt: new Date("2024-12-16")
-      },
-      {
-        id: 2,
-        invoiceNumber: "INV-2024-002",
-        customerId: 2,
-        issueDate: new Date("2024-12-15"),
-        dueDate: new Date("2025-01-14"),
-        status: "sent",
-        subtotal: "2130.43",
-        vatAmount: "319.57",
-        total: "2450.00",
-        notes: "Catering services",
-        createdAt: new Date("2024-12-15")
-      },
-      {
-        id: 3,
-        invoiceNumber: "INV-2024-003",
-        customerId: 3,
-        issueDate: new Date("2024-12-14"),
-        dueDate: new Date("2024-12-28"),
-        status: "overdue",
-        subtotal: "13286.96",
-        vatAmount: "1993.04",
-        total: "15280.00",
-        notes: "Bulk order delivery",
-        createdAt: new Date("2024-12-14")
-      }
-    ];
-
-    sampleInvoices.forEach(invoice => {
-      this.invoices.set(invoice.id, invoice);
-    });
-    this.currentInvoiceId = 4;
-
-    // Create sample invoice items
-    const sampleItems: InvoiceItem[] = [
-      {
-        id: 1,
-        invoiceId: 1,
-        description: "Business Consulting Services",
-        quantity: "10.00",
-        unitPrice: "760.87",
-        vatRate: "15.00",
-        total: "8750.00"
-      },
-      {
-        id: 2,
-        invoiceId: 2,
-        description: "Catering Package - Premium",
-        quantity: "1.00",
-        unitPrice: "2130.43",
-        vatRate: "15.00",
-        total: "2450.00"
-      },
-      {
-        id: 3,
-        invoiceId: 3,
-        description: "Liquor Distribution Services",
-        quantity: "5.00",
-        unitPrice: "2657.39",
-        vatRate: "15.00",
-        total: "15280.00"
-      }
-    ];
-
-    sampleItems.forEach(item => {
-      this.invoiceItems.set(item.id, item);
-    });
-    this.currentInvoiceItemId = 4;
-  }
-
+export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { 
-      ...insertUser, 
-      id, 
-      role: insertUser.role || "admin",
-      email: insertUser.email || null
-    };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   // Customers
   async getAllCustomers(): Promise<Customer[]> {
-    return Array.from(this.customers.values()).sort((a, b) => b.id - a.id);
+    const result = await db.select().from(customers).orderBy(desc(customers.id));
+    return result;
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
-    return this.customers.get(id);
+    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer || undefined;
   }
 
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
-    const id = this.currentCustomerId++;
-    const customer: Customer = { 
-      ...insertCustomer, 
-      id, 
-      createdAt: new Date(),
-      email: insertCustomer.email || null,
-      phone: insertCustomer.phone || null,
-      address: insertCustomer.address || null,
-      city: insertCustomer.city || null,
-      postalCode: insertCustomer.postalCode || null,
-      vatNumber: insertCustomer.vatNumber || null
-    };
-    this.customers.set(id, customer);
+    const [customer] = await db
+      .insert(customers)
+      .values(insertCustomer)
+      .returning();
     return customer;
   }
 
   async updateCustomer(id: number, updateData: Partial<InsertCustomer>): Promise<Customer | undefined> {
-    const customer = this.customers.get(id);
-    if (!customer) return undefined;
-    
-    const updatedCustomer = { ...customer, ...updateData };
-    this.customers.set(id, updatedCustomer);
-    return updatedCustomer;
+    const [customer] = await db
+      .update(customers)
+      .set(updateData)
+      .where(eq(customers.id, id))
+      .returning();
+    return customer || undefined;
   }
 
   async deleteCustomer(id: number): Promise<boolean> {
-    return this.customers.delete(id);
+    const result = await db.delete(customers).where(eq(customers.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Invoices
   async getAllInvoices(): Promise<InvoiceWithCustomer[]> {
-    const invoiceList = Array.from(this.invoices.values()).sort((a, b) => b.id - a.id);
-    return invoiceList.map(invoice => ({
-      ...invoice,
-      customer: this.customers.get(invoice.customerId)!
+    const result = await db
+      .select({
+        invoice: invoices,
+        customer: customers
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .orderBy(desc(invoices.id));
+    
+    return result.map(row => ({
+      ...row.invoice,
+      customer: row.customer!
     }));
   }
 
   async getInvoice(id: number): Promise<InvoiceWithItems | undefined> {
-    const invoice = this.invoices.get(id);
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
     if (!invoice) return undefined;
 
-    const customer = this.customers.get(invoice.customerId);
-    const items = Array.from(this.invoiceItems.values()).filter(item => item.invoiceId === id);
-    
+    const [customer] = await db.select().from(customers).where(eq(customers.id, invoice.customerId));
     if (!customer) return undefined;
 
+    const items = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, id));
+    
     return {
       ...invoice,
       customer,
@@ -328,46 +159,42 @@ export class MemStorage implements IStorage {
   }
 
   async getInvoiceByNumber(invoiceNumber: string): Promise<InvoiceWithItems | undefined> {
-    const invoice = Array.from(this.invoices.values()).find(inv => inv.invoiceNumber === invoiceNumber);
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.invoiceNumber, invoiceNumber));
     if (!invoice) return undefined;
 
     return this.getInvoice(invoice.id);
   }
 
-  async createInvoice(insertInvoice: InsertInvoice, items: InsertInvoiceItem[]): Promise<InvoiceWithItems> {
-    const id = this.currentInvoiceId++;
-    const invoice: Invoice = { 
-      ...insertInvoice, 
-      id, 
-      createdAt: new Date(),
-      status: insertInvoice.status || "draft",
-      notes: insertInvoice.notes || null
-    };
-    this.invoices.set(id, invoice);
+  async createInvoice(insertInvoice: InsertInvoice, items: Omit<InsertInvoiceItem, 'invoiceId'>[]): Promise<InvoiceWithItems> {
+    const [invoice] = await db
+      .insert(invoices)
+      .values(insertInvoice)
+      .returning();
 
     const createdItems: InvoiceItem[] = [];
     for (const item of items) {
-      const itemId = this.currentInvoiceItemId++;
-      const invoiceItem: InvoiceItem = { ...item, id: itemId, invoiceId: id, vatRate: item.vatRate || "20" };
-      this.invoiceItems.set(itemId, invoiceItem);
+      const [invoiceItem] = await db
+        .insert(invoiceItems)
+        .values({ ...item, invoiceId: invoice.id })
+        .returning();
       createdItems.push(invoiceItem);
     }
 
-    const customer = this.customers.get(insertInvoice.customerId)!;
+    const [customer] = await db.select().from(customers).where(eq(customers.id, invoice.customerId));
     return {
       ...invoice,
-      customer,
+      customer: customer!,
       items: createdItems
     };
   }
 
   async updateInvoice(id: number, updateData: Partial<InsertInvoice>): Promise<Invoice | undefined> {
-    const invoice = this.invoices.get(id);
-    if (!invoice) return undefined;
-    
-    const updatedInvoice = { ...invoice, ...updateData };
-    this.invoices.set(id, updatedInvoice);
-    return updatedInvoice;
+    const [invoice] = await db
+      .update(invoices)
+      .set(updateData)
+      .where(eq(invoices.id, id))
+      .returning();
+    return invoice || undefined;
   }
 
   async updateInvoiceStatus(id: number, status: string): Promise<Invoice | undefined> {
@@ -375,56 +202,66 @@ export class MemStorage implements IStorage {
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
-    // Delete associated items
-    const items = Array.from(this.invoiceItems.values()).filter(item => item.invoiceId === id);
-    items.forEach(item => this.invoiceItems.delete(item.id));
+    // Delete associated items first
+    await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
     
-    return this.invoices.delete(id);
+    const result = await db.delete(invoices).where(eq(invoices.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Invoice Items
   async getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]> {
-    return Array.from(this.invoiceItems.values()).filter(item => item.invoiceId === invoiceId);
+    return await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
   }
 
   async createInvoiceItem(insertItem: InsertInvoiceItem): Promise<InvoiceItem> {
-    const id = this.currentInvoiceItemId++;
-    const item: InvoiceItem = { ...insertItem, id, vatRate: insertItem.vatRate || "20" };
-    this.invoiceItems.set(id, item);
+    const [item] = await db
+      .insert(invoiceItems)
+      .values(insertItem)
+      .returning();
     return item;
   }
 
   async updateInvoiceItem(id: number, updateData: Partial<InsertInvoiceItem>): Promise<InvoiceItem | undefined> {
-    const item = this.invoiceItems.get(id);
-    if (!item) return undefined;
-    
-    const updatedItem = { ...item, ...updateData };
-    this.invoiceItems.set(id, updatedItem);
-    return updatedItem;
+    const [item] = await db
+      .update(invoiceItems)
+      .set(updateData)
+      .where(eq(invoiceItems.id, id))
+      .returning();
+    return item || undefined;
   }
 
   async deleteInvoiceItem(id: number): Promise<boolean> {
-    return this.invoiceItems.delete(id);
+    const result = await db.delete(invoiceItems).where(eq(invoiceItems.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Estimates
   async getAllEstimates(): Promise<EstimateWithCustomer[]> {
-    const estimateList = Array.from(this.estimates.values()).sort((a, b) => b.id - a.id);
-    return estimateList.map(estimate => ({
-      ...estimate,
-      customer: this.customers.get(estimate.customerId)!
+    const result = await db
+      .select({
+        estimate: estimates,
+        customer: customers
+      })
+      .from(estimates)
+      .leftJoin(customers, eq(estimates.customerId, customers.id))
+      .orderBy(desc(estimates.id));
+    
+    return result.map(row => ({
+      ...row.estimate,
+      customer: row.customer!
     }));
   }
 
   async getEstimate(id: number): Promise<EstimateWithItems | undefined> {
-    const estimate = this.estimates.get(id);
+    const [estimate] = await db.select().from(estimates).where(eq(estimates.id, id));
     if (!estimate) return undefined;
 
-    const customer = this.customers.get(estimate.customerId);
-    const items = Array.from(this.estimateItems.values()).filter(item => item.estimateId === id);
-    
+    const [customer] = await db.select().from(customers).where(eq(customers.id, estimate.customerId));
     if (!customer) return undefined;
 
+    const items = await db.select().from(estimateItems).where(eq(estimateItems.estimateId, id));
+    
     return {
       ...estimate,
       customer,
@@ -432,72 +269,63 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async createEstimate(insertEstimate: InsertEstimate, items: InsertEstimateItem[]): Promise<EstimateWithItems> {
-    const id = this.currentEstimateId++;
-    const estimate: Estimate = { 
-      ...insertEstimate, 
-      id, 
-      createdAt: new Date(),
-      status: insertEstimate.status || "draft",
-      notes: insertEstimate.notes || null
-    };
-    this.estimates.set(id, estimate);
+  async createEstimate(insertEstimate: InsertEstimate, items: Omit<InsertEstimateItem, 'estimateId'>[]): Promise<EstimateWithItems> {
+    const [estimate] = await db
+      .insert(estimates)
+      .values(insertEstimate)
+      .returning();
 
     const createdItems: EstimateItem[] = [];
     for (const item of items) {
-      const itemId = this.currentEstimateItemId++;
-      const estimateItem: EstimateItem = { ...item, id: itemId, estimateId: id, vatRate: item.vatRate || "20" };
-      this.estimateItems.set(itemId, estimateItem);
+      const [estimateItem] = await db
+        .insert(estimateItems)
+        .values({ ...item, estimateId: estimate.id })
+        .returning();
       createdItems.push(estimateItem);
     }
 
-    const customer = this.customers.get(insertEstimate.customerId)!;
+    const [customer] = await db.select().from(customers).where(eq(customers.id, estimate.customerId));
     return {
       ...estimate,
-      customer,
+      customer: customer!,
       items: createdItems
     };
   }
 
   async updateEstimate(id: number, updateData: Partial<InsertEstimate>): Promise<Estimate | undefined> {
-    const estimate = this.estimates.get(id);
-    if (!estimate) return undefined;
-    
-    const updatedEstimate = { ...estimate, ...updateData };
-    this.estimates.set(id, updatedEstimate);
-    return updatedEstimate;
+    const [estimate] = await db
+      .update(estimates)
+      .set(updateData)
+      .where(eq(estimates.id, id))
+      .returning();
+    return estimate || undefined;
   }
 
   async deleteEstimate(id: number): Promise<boolean> {
-    // Delete associated items
-    const items = Array.from(this.estimateItems.values()).filter(item => item.estimateId === id);
-    items.forEach(item => this.estimateItems.delete(item.id));
+    // Delete associated items first
+    await db.delete(estimateItems).where(eq(estimateItems.estimateId, id));
     
-    return this.estimates.delete(id);
+    const result = await db.delete(estimates).where(eq(estimates.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async convertEstimateToInvoice(estimateId: number): Promise<InvoiceWithItems> {
     const estimate = await this.getEstimate(estimateId);
     if (!estimate) throw new Error("Estimate not found");
 
-    // Generate invoice number
-    const invoiceCount = this.invoices.size;
-    const invoiceNumber = `INV-2024-${String(invoiceCount + 1).padStart(3, '0')}`;
-
-    const insertInvoice: InsertInvoice = {
-      invoiceNumber,
+    const invoiceData: InsertInvoice = {
       customerId: estimate.customerId,
+      invoiceNumber: `INV-${Date.now()}`,
       issueDate: new Date(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      status: "draft",
       subtotal: estimate.subtotal,
       vatAmount: estimate.vatAmount,
       total: estimate.total,
-      notes: estimate.notes
+      status: "draft",
+      notes: `Converted from estimate ${estimate.estimateNumber}`
     };
 
-    const insertItems: InsertInvoiceItem[] = estimate.items.map(item => ({
-      invoiceId: 0, // Will be set by createInvoice
+    const invoiceItems = estimate.items.map(item => ({
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
@@ -505,7 +333,7 @@ export class MemStorage implements IStorage {
       total: item.total
     }));
 
-    return this.createInvoice(insertInvoice, insertItems);
+    return this.createInvoice(invoiceData, invoiceItems);
   }
 
   // Dashboard stats
@@ -517,35 +345,48 @@ export class MemStorage implements IStorage {
     recentInvoices: InvoiceWithCustomer[];
     revenueByMonth: { month: string; revenue: number }[];
   }> {
-    const allInvoices = Array.from(this.invoices.values());
-    const paidInvoices = allInvoices.filter(inv => inv.status === "paid");
-    const outstandingInvoices = allInvoices.filter(inv => inv.status !== "paid");
+    // Get all invoices for calculations
+    const allInvoices = await db.select().from(invoices);
     
-    const totalRevenue = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
-    const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
-    const totalVat = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.vatAmount), 0);
+    // Calculate totals
+    const totalRevenue = allInvoices
+      .filter(inv => inv.status === "paid")
+      .reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+    
+    const outstandingInvoices = allInvoices
+      .filter(inv => inv.status === "sent" || inv.status === "draft")
+      .reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+    
+    const vatDue = allInvoices
+      .filter(inv => inv.status === "paid")
+      .reduce((sum, inv) => sum + parseFloat(inv.vatAmount), 0);
 
+    // Get customer count
+    const customerCount = await db.select({ count: count() }).from(customers);
+    const totalCustomers = customerCount[0]?.count || 0;
+
+    // Get recent invoices with customer info
     const recentInvoices = await this.getAllInvoices();
-    
-    // Generate mock revenue by month data
+
+    // Mock revenue by month data
     const revenueByMonth = [
-      { month: "Jul", revenue: 180000 },
-      { month: "Aug", revenue: 210000 },
-      { month: "Sep", revenue: 195000 },
-      { month: "Oct", revenue: 230000 },
-      { month: "Nov", revenue: 220000 },
-      { month: "Dec", revenue: 245680 }
+      { month: "Jan", revenue: 1200 },
+      { month: "Feb", revenue: 1800 },
+      { month: "Mar", revenue: 2400 },
+      { month: "Apr", revenue: 1900 },
+      { month: "May", revenue: 2800 },
+      { month: "Jun", revenue: 3200 }
     ];
 
     return {
       totalRevenue: totalRevenue.toFixed(2),
-      outstandingInvoices: totalOutstanding.toFixed(2),
-      totalCustomers: this.customers.size,
-      vatDue: (totalVat * 0.15).toFixed(2), // Simplified VAT calculation
+      outstandingInvoices: outstandingInvoices.toFixed(2),
+      totalCustomers: Number(totalCustomers),
+      vatDue: vatDue.toFixed(2),
       recentInvoices: recentInvoices.slice(0, 5),
       revenueByMonth
     };
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
