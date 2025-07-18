@@ -214,6 +214,55 @@ export const supplierPayments = pgTable("supplier_payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Products and Services module
+export const productCategories = pgTable("product_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  sku: text("sku").unique(),
+  categoryId: integer("category_id").references(() => productCategories.id),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }).default("0.00"),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  stockQuantity: integer("stock_quantity").default(0),
+  minStockLevel: integer("min_stock_level").default(0),
+  maxStockLevel: integer("max_stock_level").default(0),
+  isActive: boolean("is_active").default(true),
+  isService: boolean("is_service").default(false), // true for services, false for products
+  imagePath: text("image_path"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// PayFast payment integration tables
+export const payfastPayments = pgTable("payfast_payments", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull(),
+  payfastPaymentId: text("payfast_payment_id").unique(),
+  merchantId: text("merchant_id").notNull(),
+  merchantKey: text("merchant_key").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  itemName: text("item_name").notNull(),
+  itemDescription: text("item_description"),
+  returnUrl: text("return_url").notNull(),
+  cancelUrl: text("cancel_url").notNull(),
+  notifyUrl: text("notify_url").notNull(),
+  status: text("status").notNull().default("pending"), // pending, completed, failed, cancelled
+  payfastData: text("payfast_data"), // JSON string of PayFast response
+  signature: text("signature"),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 // Insert schemas
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
@@ -320,6 +369,24 @@ export const insertVatReturnSchema = z.object({
   status: z.enum(["draft", "submitted", "approved"]).default("draft"),
 });
 
+// Products and Services schemas
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPayfastPaymentSchema = createInsertSchema(payfastPayments).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
 // Customer portal login schema
 export const customerPortalLoginSchema = z.object({
   email: z.string().email(),
@@ -412,6 +479,12 @@ export type InsertPurchaseOrderItem = z.infer<typeof insertPurchaseOrderItemSche
 
 export type SupplierPayment = typeof supplierPayments.$inferSelect;
 export type InsertSupplierPayment = z.infer<typeof insertSupplierPaymentSchema>;
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type PayfastPayment = typeof payfastPayments.$inferSelect;
+export type InsertPayfastPayment = z.infer<typeof insertPayfastPaymentSchema>;
 
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),

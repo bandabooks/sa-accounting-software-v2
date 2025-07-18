@@ -22,6 +22,8 @@ import FinancialReports from "@/pages/financial-reports";
 import Expenses from "@/pages/expenses";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
+import Products from "@/pages/products";
+import ProductCreate from "@/pages/product-create";
 import Login from "@/pages/login";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -38,6 +40,8 @@ const PERMISSIONS = {
   EXPENSES_VIEW: 'expenses:view',
   SUPPLIERS_VIEW: 'suppliers:view',
   PURCHASE_ORDERS_VIEW: 'purchase_orders:view',
+  PRODUCTS_VIEW: 'products:view',
+  PRODUCTS_CREATE: 'products:create',
 } as const;
 
 function AuthenticatedApp() {
@@ -110,6 +114,16 @@ function AuthenticatedApp() {
         <Route path="/purchase-orders">
           <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
             <PurchaseOrders />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/products">
+          <ProtectedRoute permission={PERMISSIONS.PRODUCTS_VIEW}>
+            <Products />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/products/create">
+          <ProtectedRoute permission={PERMISSIONS.PRODUCTS_CREATE}>
+            <ProductCreate />
           </ProtectedRoute>
         </Route>
         <Route path="/reports">

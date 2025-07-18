@@ -30,6 +30,9 @@ import {
   insertPurchaseOrderSchema,
   insertPurchaseOrderItemSchema,
   insertSupplierPaymentSchema,
+  insertProductSchema,
+  insertProductCategorySchema,
+  insertPayfastPaymentSchema,
   loginSchema,
   changePasswordSchema,
   insertUserRoleSchema,
@@ -37,6 +40,7 @@ import {
   type ChangePasswordRequest
 } from "@shared/schema";
 import { z } from "zod";
+import { createPayFastService } from "./payfast";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
@@ -1004,6 +1008,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Supplier payment deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete supplier payment" });
+    }
+  });
+
+  // Initialize PayFast service
+  let payfastService: any = null;
+  try {
+    payfastService = createPayFastService();
+  } catch (error) {
+    console.warn('PayFast service not available. Set PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY environment variables.');
+  }
+
+  // Product Categories routes
+  app.get("/api/product-categories", authenticate, async (req, res) => {
+    try {
+      const categories = await storage.getAllProductCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching product categories:", error);
+      res.status(500).json({ message: "Failed to fetch product categories" });
+    }
+  });
+
+  app.post("/api/product-categories", authenticate, requirePermission(PERMISSIONS.PRODUCTS_CREATE), async (req, res) => {
+    try {
+      const categoryData = insertProductCategorySchema.parse(req.body);
+      const category = await storage.createProductCategory(categoryData);
+      await logAudit((req as AuthenticatedRequest).user.id, 'CREATE', 'product_category', category?.id || 0);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating product category:", error);
+      res.status(500).json({ message: "Failed to create product category" });
+    }
+  });
+
+  app.put("/api/product-categories/:id", authenticate, requirePermission(PERMISSIONS.PRODUCTS_UPDATE), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const categoryData = insertProductCategorySchema.parse(req.body);
+      const category = await storage.updateProductCategory(id, categoryData);
+      if (!category) {
+        return res.status(404).json({ message: "Product category not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user.id, 'UPDATE', 'product_category', id);
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating product category:", error);
+      res.status(500).json({ message: "Failed to update product category" });
+    }
+  });
+
+  app.delete("/api/product-categories/:id", authenticate, requirePermission(PERMISSIONS.PRODUCTS_DELETE), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteProductCategory(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Product category not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user.id, 'DELETE', 'product_category', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting product category:", error);
+      res.status(500).json({ message: "Failed to delete product category" });
+    }
+  });
+
+  // Products routes
+  app.get("/api/products", authenticate, async (req, res) => {
+    try {
+      const products = await storage.getAllProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.get("/api/products/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const product = await storage.getProduct(id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+
+  app.post("/api/products", authenticate, requirePermission(PERMISSIONS.PRODUCTS_CREATE), async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
+      await logAudit((req as AuthenticatedRequest).user.id, 'CREATE', 'product', product?.id || 0);
+      res.status(201).json(product);
+    } catch (error) {
+      console.error("Error creating product:", error);
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  app.put("/api/products/:id", authenticate, requirePermission(PERMISSIONS.PRODUCTS_UPDATE), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.updateProduct(id, productData);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user.id, 'UPDATE', 'product', id);
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/products/:id", authenticate, requirePermission(PERMISSIONS.PRODUCTS_DELETE), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteProduct(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user.id, 'DELETE', 'product', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // PayFast payment routes
+  app.post("/api/payfast/create-payment", authenticate, async (req, res) => {
+    try {
+      if (!payfastService) {
+        return res.status(500).json({ message: "PayFast service not configured" });
+      }
+
+      const { invoiceId, amount, itemName, itemDescription, returnUrl, cancelUrl } = req.body;
+      
+      // Get invoice details
+      const invoice = await storage.getInvoice(invoiceId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Create PayFast payment data
+      const paymentData = payfastService.createPaymentData({
+        return_url: returnUrl,
+        cancel_url: cancelUrl,
+        notify_url: `${req.protocol}://${req.get('host')}/api/payfast/notify`,
+        m_payment_id: `INV-${invoiceId}-${Date.now()}`,
+        amount: amount.toString(),
+        item_name: itemName,
+        item_description: itemDescription,
+        custom_int1: invoiceId.toString(),
+      });
+
+      // Save payment to database
+      const payfastPayment = await storage.createPayfastPayment({
+        invoiceId,
+        payfastPaymentId: paymentData.m_payment_id,
+        merchantId: paymentData.merchant_id,
+        merchantKey: paymentData.merchant_key,
+        amount: amount.toString(),
+        itemName,
+        itemDescription,
+        returnUrl,
+        cancelUrl,
+        notifyUrl: paymentData.notify_url,
+        status: 'pending',
+        signature: paymentData.signature,
+      });
+
+      await logAudit((req as AuthenticatedRequest).user.id, 'CREATE', 'payfast_payment', payfastPayment.id);
+
+      res.json({
+        paymentData,
+        paymentUrl: payfastService.getPaymentUrl(),
+        payfastPaymentId: payfastPayment.id,
+      });
+    } catch (error) {
+      console.error("Error creating PayFast payment:", error);
+      res.status(500).json({ message: "Failed to create PayFast payment" });
+    }
+  });
+
+  app.post("/api/payfast/notify", async (req, res) => {
+    try {
+      if (!payfastService) {
+        return res.status(500).json({ message: "PayFast service not configured" });
+      }
+
+      // Verify the ITN
+      const isValid = payfastService.verifyITN(req.body);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid ITN signature" });
+      }
+
+      const { m_payment_id, payment_status, amount_gross, amount_fee, amount_net } = req.body;
+
+      // Find the payment
+      const payment = await storage.getPayfastPaymentByPaymentId(m_payment_id);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      // Update payment status
+      const status = payment_status === 'COMPLETE' ? 'completed' : 'failed';
+      await storage.updatePayfastPaymentStatus(payment.id, status, JSON.stringify(req.body));
+
+      // If payment is complete, create a payment record
+      if (status === 'completed') {
+        await storage.createPayment({
+          invoiceId: payment.invoiceId,
+          amount: amount_net || amount_gross,
+          paymentMethod: 'payfast',
+          paymentDate: new Date(),
+          reference: m_payment_id,
+          notes: `PayFast payment completed. Fee: ${amount_fee || '0.00'}`,
+          status: 'completed',
+        });
+
+        // Update invoice status if fully paid
+        const invoice = await storage.getInvoice(payment.invoiceId);
+        if (invoice) {
+          const payments = await storage.getPaymentsByInvoice(payment.invoiceId);
+          const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0);
+          
+          if (totalPaid >= parseFloat(invoice.total)) {
+            await storage.updateInvoiceStatus(payment.invoiceId, 'paid');
+          }
+        }
+      }
+
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error("Error processing PayFast notification:", error);
+      res.status(500).json({ message: "Failed to process PayFast notification" });
+    }
+  });
+
+  app.get("/api/payfast/payment/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const payment = await storage.getPayfastPaymentByInvoiceId(id);
+      if (!payment) {
+        return res.status(404).json({ message: "PayFast payment not found" });
+      }
+      res.json(payment);
+    } catch (error) {
+      console.error("Error fetching PayFast payment:", error);
+      res.status(500).json({ message: "Failed to fetch PayFast payment" });
     }
   });
 

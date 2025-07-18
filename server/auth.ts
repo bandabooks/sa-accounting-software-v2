@@ -59,6 +59,12 @@ export const PERMISSIONS = {
   USERS_UPDATE: 'users:update',
   USERS_DELETE: 'users:delete',
   
+  // Products permissions
+  PRODUCTS_VIEW: 'products:view',
+  PRODUCTS_CREATE: 'products:create',
+  PRODUCTS_UPDATE: 'products:update',
+  PRODUCTS_DELETE: 'products:delete',
+  
   // System permissions
   SETTINGS_VIEW: 'settings:view',
   SETTINGS_UPDATE: 'settings:update',

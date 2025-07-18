@@ -15,6 +15,9 @@ import {
   purchaseOrders,
   purchaseOrderItems,
   supplierPayments,
+  productCategories,
+  products,
+  payfastPayments,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -47,6 +50,12 @@ import {
   type InsertPurchaseOrderItem,
   type SupplierPayment,
   type InsertSupplierPayment,
+  type ProductCategory,
+  type InsertProductCategory,
+  type Product,
+  type InsertProduct,
+  type PayfastPayment,
+  type InsertPayfastPayment,
   type InvoiceWithCustomer,
   type InvoiceWithItems,
   type EstimateWithCustomer,
@@ -206,6 +215,29 @@ export interface IStorage {
   createSupplierPayment(payment: InsertSupplierPayment): Promise<SupplierPayment>;
   updateSupplierPayment(id: number, payment: Partial<InsertSupplierPayment>): Promise<SupplierPayment | undefined>;
   deleteSupplierPayment(id: number): Promise<boolean>;
+
+  // Product Categories
+  getAllProductCategories(): Promise<ProductCategory[]>;
+  getProductCategory(id: number): Promise<ProductCategory | undefined>;
+  createProductCategory(category: InsertProductCategory): Promise<ProductCategory>;
+  updateProductCategory(id: number, category: Partial<InsertProductCategory>): Promise<ProductCategory | undefined>;
+  deleteProductCategory(id: number): Promise<boolean>;
+
+  // Products
+  getAllProducts(): Promise<Product[]>;
+  getProduct(id: number): Promise<Product | undefined>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: number): Promise<boolean>;
+  getProductsBySku(sku: string): Promise<Product | undefined>;
+  getProductsByCategory(categoryId: number): Promise<Product[]>;
+
+  // PayFast Payments
+  createPayfastPayment(payment: InsertPayfastPayment): Promise<PayfastPayment>;
+  getPayfastPaymentByInvoiceId(invoiceId: number): Promise<PayfastPayment | undefined>;
+  getPayfastPaymentByPaymentId(payfastPaymentId: string): Promise<PayfastPayment | undefined>;
+  updatePayfastPayment(id: number, payment: Partial<InsertPayfastPayment>): Promise<PayfastPayment | undefined>;
+  updatePayfastPaymentStatus(id: number, status: string, payfastData?: string): Promise<PayfastPayment | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1278,6 +1310,115 @@ export class DatabaseStorage implements IStorage {
   async deleteSupplierPayment(id: number): Promise<boolean> {
     const result = await db.delete(supplierPayments).where(eq(supplierPayments.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // Product Categories
+  async getAllProductCategories(): Promise<ProductCategory[]> {
+    return await db.select().from(productCategories).where(eq(productCategories.isActive, true));
+  }
+
+  async getProductCategory(id: number): Promise<ProductCategory | undefined> {
+    const [category] = await db.select().from(productCategories).where(eq(productCategories.id, id));
+    return category || undefined;
+  }
+
+  async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
+    const [newCategory] = await db.insert(productCategories).values(category).returning();
+    return newCategory;
+  }
+
+  async updateProductCategory(id: number, category: Partial<InsertProductCategory>): Promise<ProductCategory | undefined> {
+    const [updated] = await db
+      .update(productCategories)
+      .set(category)
+      .where(eq(productCategories.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProductCategory(id: number): Promise<boolean> {
+    const result = await db.delete(productCategories).where(eq(productCategories.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Products
+  async getAllProducts(): Promise<Product[]> {
+    return await db.select().from(products).where(eq(products.isActive, true));
+  }
+
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product || undefined;
+  }
+
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const [newProduct] = await db.insert(products).values(product).returning();
+    return newProduct;
+  }
+
+  async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product | undefined> {
+    const [updated] = await db
+      .update(products)
+      .set({ ...product, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProduct(id: number): Promise<boolean> {
+    const result = await db.delete(products).where(eq(products.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getProductsBySku(sku: string): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.sku, sku));
+    return product || undefined;
+  }
+
+  async getProductsByCategory(categoryId: number): Promise<Product[]> {
+    return await db.select().from(products).where(eq(products.categoryId, categoryId));
+  }
+
+  // PayFast Payments
+  async createPayfastPayment(payment: InsertPayfastPayment): Promise<PayfastPayment> {
+    const [newPayment] = await db.insert(payfastPayments).values(payment).returning();
+    return newPayment;
+  }
+
+  async getPayfastPaymentByInvoiceId(invoiceId: number): Promise<PayfastPayment | undefined> {
+    const [payment] = await db.select().from(payfastPayments).where(eq(payfastPayments.invoiceId, invoiceId));
+    return payment || undefined;
+  }
+
+  async getPayfastPaymentByPaymentId(payfastPaymentId: string): Promise<PayfastPayment | undefined> {
+    const [payment] = await db.select().from(payfastPayments).where(eq(payfastPayments.payfastPaymentId, payfastPaymentId));
+    return payment || undefined;
+  }
+
+  async updatePayfastPayment(id: number, payment: Partial<InsertPayfastPayment>): Promise<PayfastPayment | undefined> {
+    const [updated] = await db
+      .update(payfastPayments)
+      .set(payment)
+      .where(eq(payfastPayments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updatePayfastPaymentStatus(id: number, status: string, payfastData?: string): Promise<PayfastPayment | undefined> {
+    const updateData: any = { status };
+    if (payfastData) {
+      updateData.payfastData = payfastData;
+    }
+    if (status === 'completed') {
+      updateData.completedAt = new Date();
+    }
+    
+    const [updated] = await db
+      .update(payfastPayments)
+      .set(updateData)
+      .where(eq(payfastPayments.id, id))
+      .returning();
+    return updated || undefined;
   }
 }
 
