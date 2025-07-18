@@ -5,6 +5,7 @@ import {
   estimates, 
   estimateItems, 
   users,
+  payments,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -17,6 +18,8 @@ import {
   type InsertEstimateItem,
   type User, 
   type InsertUser,
+  type Payment,
+  type InsertPayment,
   type InvoiceWithCustomer,
   type InvoiceWithItems,
   type EstimateWithCustomer,
@@ -60,6 +63,13 @@ export interface IStorage {
   updateEstimate(id: number, estimate: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   deleteEstimate(id: number): Promise<boolean>;
   convertEstimateToInvoice(estimateId: number): Promise<InvoiceWithItems>;
+
+  // Payments
+  getAllPayments(): Promise<Payment[]>;
+  getPaymentsByInvoice(invoiceId: number): Promise<Payment[]>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  updatePayment(id: number, payment: Partial<InsertPayment>): Promise<Payment | undefined>;
+  deletePayment(id: number): Promise<boolean>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -411,6 +421,79 @@ export class DatabaseStorage implements IStorage {
     });
     
     return revenueByMonth;
+  }
+
+  // Payments
+  async getAllPayments(): Promise<Payment[]> {
+    return await db.select().from(payments).orderBy(desc(payments.id));
+  }
+
+  async getPaymentsByInvoice(invoiceId: number): Promise<Payment[]> {
+    return await db.select().from(payments).where(eq(payments.invoiceId, invoiceId)).orderBy(desc(payments.id));
+  }
+
+  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
+    const [payment] = await db
+      .insert(payments)
+      .values(insertPayment)
+      .returning();
+    
+    // Update invoice status and amount based on payments
+    await this.updateInvoicePaymentStatus(insertPayment.invoiceId);
+    
+    return payment;
+  }
+
+  async updatePayment(id: number, updateData: Partial<InsertPayment>): Promise<Payment | undefined> {
+    const [payment] = await db
+      .update(payments)
+      .set(updateData)
+      .where(eq(payments.id, id))
+      .returning();
+    
+    if (payment) {
+      await this.updateInvoicePaymentStatus(payment.invoiceId);
+    }
+    
+    return payment || undefined;
+  }
+
+  async deletePayment(id: number): Promise<boolean> {
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    if (!payment) return false;
+    
+    const result = await db.delete(payments).where(eq(payments.id, id));
+    
+    if (result.rowCount !== null && result.rowCount > 0) {
+      await this.updateInvoicePaymentStatus(payment.invoiceId);
+      return true;
+    }
+    
+    return false;
+  }
+
+  private async updateInvoicePaymentStatus(invoiceId: number): Promise<void> {
+    const invoice = await this.getInvoice(invoiceId);
+    if (!invoice) return;
+    
+    const invoicePayments = await this.getPaymentsByInvoice(invoiceId);
+    const totalPaid = invoicePayments
+      .filter(p => p.status === 'completed')
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    
+    const invoiceTotal = parseFloat(invoice.total);
+    
+    let newStatus: "draft" | "sent" | "paid" | "overdue" = invoice.status as "draft" | "sent" | "paid" | "overdue";
+    
+    if (totalPaid >= invoiceTotal) {
+      newStatus = "paid";
+    } else if (totalPaid > 0) {
+      newStatus = "sent"; // Partially paid
+    }
+    
+    if (newStatus !== invoice.status) {
+      await this.updateInvoiceStatus(invoiceId, newStatus);
+    }
   }
 }
 

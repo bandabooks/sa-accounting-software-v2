@@ -7,6 +7,39 @@ import { Printer, Mail, Edit } from "lucide-react";
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
+import PaymentForm from "@/components/payment/payment-form";
+import PaymentHistory from "@/components/payment/payment-history";
+
+// Payment Form Wrapper that calculates remaining amount
+function PaymentFormWrapper({ invoiceId, invoiceTotal, onPaymentAdded }: {
+  invoiceId: number;
+  invoiceTotal: string;
+  onPaymentAdded: () => void;
+}) {
+  const { data: payments } = useQuery<any[]>({
+    queryKey: [`/api/invoices/${invoiceId}/payments`],
+    queryFn: async () => {
+      const response = await fetch(`/api/invoices/${invoiceId}/payments`);
+      if (!response.ok) throw new Error("Failed to fetch payments");
+      return response.json();
+    },
+  });
+
+  const totalPaid = payments
+    ?.filter(p => p.status === "completed")
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0) || 0;
+
+  const remainingAmount = Math.max(0, parseFloat(invoiceTotal) - totalPaid).toFixed(2);
+
+  return (
+    <PaymentForm
+      invoiceId={invoiceId}
+      invoiceTotal={invoiceTotal}
+      remainingAmount={remainingAmount}
+      onPaymentAdded={onPaymentAdded}
+    />
+  );
+}
 
 export default function InvoiceDetail() {
   const params = useParams();
@@ -215,8 +248,8 @@ export default function InvoiceDetail() {
           )}
         </div>
 
-        {/* Summary */}
-        <div>
+        {/* Summary and Payment */}
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Summary</CardTitle>
@@ -240,6 +273,26 @@ export default function InvoiceDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Payment History */}
+          <PaymentHistory invoiceId={invoiceId} />
+
+          {/* Payment Form */}
+          {invoice.status !== "paid" && (
+            <PaymentFormWrapper
+              invoiceId={invoiceId}
+              invoiceTotal={invoice.total}
+              onPaymentAdded={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/invoices", invoiceId] });
+                queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
+                toast({
+                  title: "Payment recorded",
+                  description: "Payment has been recorded successfully.",
+                });
+              }}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -71,6 +71,18 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("admin"),
 });
 
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull(), // 'cash', 'card', 'eft', 'payfast'
+  paymentDate: timestamp("payment_date").defaultNow(),
+  reference: text("reference"), // PayFast reference or manual reference
+  notes: text("notes"),
+  status: text("status").notNull().default("completed"), // 'pending', 'completed', 'failed'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
@@ -113,6 +125,16 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
 
+export const insertPaymentSchema = z.object({
+  invoiceId: z.number(),
+  amount: z.string(),
+  paymentMethod: z.enum(["cash", "card", "eft", "payfast"]),
+  paymentDate: z.string().optional().transform((str) => str ? new Date(str) : new Date()),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.enum(["pending", "completed", "failed"]).default("completed"),
+});
+
 // Types
 export type Customer = typeof customers.$inferSelect;
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
@@ -131,6 +153,9 @@ export type InsertEstimateItem = z.infer<typeof insertEstimateItemSchema>;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
 // Extended types for API responses
 export type InvoiceWithCustomer = Invoice & { customer: Customer };

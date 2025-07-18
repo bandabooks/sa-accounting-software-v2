@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCustomerSchema, insertInvoiceSchema, insertInvoiceItemSchema, insertEstimateSchema, insertEstimateItemSchema } from "@shared/schema";
+import { insertCustomerSchema, insertInvoiceSchema, insertInvoiceItemSchema, insertEstimateSchema, insertEstimateItemSchema, insertPaymentSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -235,6 +235,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(invoice);
     } catch (error) {
       res.status(500).json({ message: "Failed to convert estimate to invoice" });
+    }
+  });
+
+  // Payment routes
+  app.get("/api/payments", async (req, res) => {
+    try {
+      const payments = await storage.getAllPayments();
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+
+  app.get("/api/invoices/:id/payments", async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const payments = await storage.getPaymentsByInvoice(invoiceId);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invoice payments" });
+    }
+  });
+
+  app.post("/api/payments", async (req, res) => {
+    try {
+      const validatedData = insertPaymentSchema.parse(req.body);
+      const payment = await storage.createPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create payment" });
+    }
+  });
+
+  app.put("/api/payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertPaymentSchema.partial().parse(req.body);
+      const payment = await storage.updatePayment(id, validatedData);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update payment" });
+    }
+  });
+
+  app.delete("/api/payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deletePayment(id);
+      if (!success) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      res.json({ message: "Payment deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete payment" });
     }
   });
 
