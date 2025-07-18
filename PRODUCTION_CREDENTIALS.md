@@ -3,7 +3,7 @@
 ## Super Administrator Account (PRODUCTION)
 **Username:** admin  
 **Password:** 35e15ff2fcd3bcf6e1eb81b24964de3f  
-**Email:** your-production-email@thinkmybiz.com  
+**Email:** accounts@thinkmybiz.com  
 **Role:** Admin (Full System Access)  
 
 ⚠️ **IMPORTANT SECURITY NOTES:**
