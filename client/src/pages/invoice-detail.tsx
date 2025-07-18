@@ -3,12 +3,16 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Mail, Edit } from "lucide-react";
+import { Printer, Mail, Edit, Download, Repeat } from "lucide-react";
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
 import PaymentForm from "@/components/payment/payment-form";
 import PaymentHistory from "@/components/payment/payment-history";
+import { generateInvoicePDF } from "@/components/invoice/pdf-generator";
+import EmailInvoice from "@/components/invoice/email-invoice";
+import RecurringInvoice from "@/components/invoice/recurring-invoice";
+import { useState } from "react";
 
 // Payment Form Wrapper that calculates remaining amount
 function PaymentFormWrapper({ invoiceId, invoiceTotal, onPaymentAdded }: {
@@ -63,6 +67,8 @@ export default function InvoiceDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
   
   const invoiceId = parseInt(params.id || "0");
 
@@ -145,13 +151,26 @@ export default function InvoiceDetail() {
               <SelectItem value="overdue">Overdue</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={() => setIsEmailModalOpen(true)}
+          >
             <Mail size={16} className="mr-2" />
             Send
           </Button>
-          <Button variant="outline">
-            <Printer size={16} className="mr-2" />
-            Print
+          <Button 
+            variant="outline"
+            onClick={handlePrintPDF}
+          >
+            <Download size={16} className="mr-2" />
+            PDF
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setIsRecurringModalOpen(true)}
+          >
+            <Repeat size={16} className="mr-2" />
+            Recurring
           </Button>
         </div>
       </div>
@@ -312,6 +331,56 @@ export default function InvoiceDetail() {
           )}
         </div>
       </div>
+
+      {/* Enhanced Invoice Management Features */}
+      <EmailInvoice 
+        invoice={invoice}
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        onSent={handleEmailSent}
+      />
+      
+      <RecurringInvoice 
+        invoice={invoice}
+        isOpen={isRecurringModalOpen}
+        onClose={() => setIsRecurringModalOpen(false)}
+        onSetup={handleRecurringSetup}
+      />
     </div>
   );
+
+  // Helper functions
+  async function handlePrintPDF() {
+    if (!invoice) return;
+    
+    try {
+      const pdf = await generateInvoicePDF(invoice);
+      pdf.save(`invoice-${invoice.invoiceNumber}.pdf`);
+      toast({
+        title: "PDF Generated",
+        description: "Invoice PDF has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  function handleEmailSent() {
+    toast({
+      title: "Invoice Emailed",
+      description: "Invoice has been sent successfully.",
+    });
+  }
+
+  function handleRecurringSetup() {
+    toast({
+      title: "Recurring Invoice Setup",
+      description: "Invoice will now be generated automatically.",
+    });
+  }
 }

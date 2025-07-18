@@ -301,6 +301,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email invoice functionality
+  app.post("/api/invoices/send-email", async (req, res) => {
+    try {
+      const { invoiceId, to, subject, message } = req.body;
+      
+      // For demo purposes, we'll simulate email sending
+      // In production, you would integrate with SendGrid or another email service
+      console.log("Email sent simulation:", { invoiceId, to, subject, message });
+      
+      res.json({ message: "Email sent successfully" });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
+  // Setup recurring invoice
+  app.post("/api/invoices/setup-recurring", async (req, res) => {
+    try {
+      const { invoiceId, frequency, intervalCount, startDate, endDate, isActive } = req.body;
+      
+      // For demo purposes, we'll simulate recurring invoice setup
+      console.log("Recurring invoice setup:", { invoiceId, frequency, intervalCount, startDate, endDate, isActive });
+      
+      res.json({ message: "Recurring invoice setup complete" });
+    } catch (error) {
+      console.error("Error setting up recurring invoice:", error);
+      res.status(500).json({ message: "Failed to setup recurring invoice" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

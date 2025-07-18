@@ -157,6 +157,33 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
+export const recurringInvoices = pgTable("recurring_invoices", {
+  id: serial("id").primaryKey(),
+  templateInvoiceId: integer("template_invoice_id").references(() => invoices.id),
+  customerId: integer("customer_id").references(() => customers.id),
+  frequency: text("frequency").notNull(), // weekly, monthly, quarterly, yearly
+  intervalCount: integer("interval_count").default(1),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  nextInvoiceDate: timestamp("next_invoice_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRecurringInvoiceSchema = z.object({
+  templateInvoiceId: z.number(),
+  customerId: z.number(),
+  frequency: z.enum(["weekly", "monthly", "quarterly", "yearly"]),
+  intervalCount: z.number().default(1),
+  startDate: z.string().transform((str) => new Date(str)),
+  endDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
+  nextInvoiceDate: z.string().transform((str) => new Date(str)),
+  isActive: z.boolean().default(true),
+});
+
+export type RecurringInvoice = typeof recurringInvoices.$inferSelect;
+export type InsertRecurringInvoice = z.infer<typeof insertRecurringInvoiceSchema>;
+
 // Extended types for API responses
 export type InvoiceWithCustomer = Invoice & { customer: Customer };
 export type InvoiceWithItems = Invoice & { items: InvoiceItem[]; customer: Customer };
