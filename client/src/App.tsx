@@ -18,6 +18,8 @@ import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
 import Expenses from "@/pages/expenses";
+import Suppliers from "@/pages/suppliers";
+import PurchaseOrders from "@/pages/purchase-orders";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -35,6 +37,8 @@ function Router() {
       <Route path="/estimates" component={Estimates} />
       <Route path="/estimates/new" component={EstimateCreate} />
       <Route path="/estimates/:id" component={EstimateDetail} />
+      <Route path="/suppliers" component={Suppliers} />
+      <Route path="/purchase-orders" component={PurchaseOrders} />
       <Route path="/reports" component={Reports} />
       <Route path="/financial-reports" component={FinancialReports} />
       <Route path="/expenses" component={Expenses} />

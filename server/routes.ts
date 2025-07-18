@@ -10,7 +10,11 @@ import {
   insertPaymentSchema,
   insertExpenseSchema,
   insertVatReturnSchema,
-  customerPortalLoginSchema 
+  customerPortalLoginSchema,
+  insertSupplierSchema,
+  insertPurchaseOrderSchema,
+  insertPurchaseOrderItemSchema,
+  insertSupplierPaymentSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -611,6 +615,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to calculate VAT" });
+    }
+  });
+
+  // Purchase Order Management
+  // Suppliers
+  app.get("/api/suppliers", async (req, res) => {
+    try {
+      const suppliers = await storage.getAllSuppliers();
+      res.json(suppliers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch suppliers" });
+    }
+  });
+
+  app.get("/api/suppliers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const supplier = await storage.getSupplier(id);
+      if (!supplier) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      res.json(supplier);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch supplier" });
+    }
+  });
+
+  app.post("/api/suppliers", async (req, res) => {
+    try {
+      const validatedData = insertSupplierSchema.parse(req.body);
+      const supplier = await storage.createSupplier(validatedData);
+      res.status(201).json(supplier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create supplier" });
+    }
+  });
+
+  app.put("/api/suppliers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertSupplierSchema.partial().parse(req.body);
+      const supplier = await storage.updateSupplier(id, validatedData);
+      if (!supplier) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      res.json(supplier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update supplier" });
+    }
+  });
+
+  app.delete("/api/suppliers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSupplier(id);
+      if (!success) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      res.json({ message: "Supplier deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete supplier" });
+    }
+  });
+
+  // Purchase Orders
+  app.get("/api/purchase-orders", async (req, res) => {
+    try {
+      const orders = await storage.getAllPurchaseOrders();
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch purchase orders" });
+    }
+  });
+
+  app.get("/api/purchase-orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const order = await storage.getPurchaseOrder(id);
+      if (!order) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch purchase order" });
+    }
+  });
+
+  app.post("/api/purchase-orders", async (req, res) => {
+    try {
+      const { items, ...orderData } = req.body;
+      const validatedOrder = insertPurchaseOrderSchema.parse(orderData);
+      const validatedItems = items.map((item: any) => insertPurchaseOrderItemSchema.omit({ purchaseOrderId: true }).parse(item));
+      
+      const order = await storage.createPurchaseOrder(validatedOrder, validatedItems);
+      res.status(201).json(order);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create purchase order" });
+    }
+  });
+
+  app.put("/api/purchase-orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertPurchaseOrderSchema.partial().parse(req.body);
+      const order = await storage.updatePurchaseOrder(id, validatedData);
+      if (!order) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update purchase order" });
+    }
+  });
+
+  app.put("/api/purchase-orders/:id/status", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      const order = await storage.updatePurchaseOrderStatus(id, status);
+      if (!order) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update purchase order status" });
+    }
+  });
+
+  app.delete("/api/purchase-orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deletePurchaseOrder(id);
+      if (!success) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json({ message: "Purchase order deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete purchase order" });
+    }
+  });
+
+  // Supplier Payments
+  app.get("/api/supplier-payments", async (req, res) => {
+    try {
+      const payments = await storage.getAllSupplierPayments();
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch supplier payments" });
+    }
+  });
+
+  app.get("/api/supplier-payments/supplier/:supplierId", async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const payments = await storage.getSupplierPaymentsBySupplier(supplierId);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch supplier payments" });
+    }
+  });
+
+  app.post("/api/supplier-payments", async (req, res) => {
+    try {
+      const validatedData = insertSupplierPaymentSchema.parse(req.body);
+      const payment = await storage.createSupplierPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create supplier payment" });
+    }
+  });
+
+  app.put("/api/supplier-payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertSupplierPaymentSchema.partial().parse(req.body);
+      const payment = await storage.updateSupplierPayment(id, validatedData);
+      if (!payment) {
+        return res.status(404).json({ message: "Supplier payment not found" });
+      }
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update supplier payment" });
+    }
+  });
+
+  app.delete("/api/supplier-payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSupplierPayment(id);
+      if (!success) {
+        return res.status(404).json({ message: "Supplier payment not found" });
+      }
+      res.json({ message: "Supplier payment deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete supplier payment" });
     }
   });
 

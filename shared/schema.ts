@@ -116,6 +116,61 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Purchase Order Management
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  vatNumber: text("vat_number"),
+  paymentTerms: integer("payment_terms").default(30), // Days
+  category: text("category").default("standard"), // standard, preferred, etc.
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: serial("id").primaryKey(),
+  orderNumber: text("order_number").notNull().unique(),
+  supplierId: integer("supplier_id").notNull(),
+  orderDate: timestamp("order_date").notNull(),
+  deliveryDate: timestamp("delivery_date"),
+  status: text("status").notNull().default("draft"), // draft, sent, received, completed, cancelled
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const purchaseOrderItems = pgTable("purchase_order_items", {
+  id: serial("id").primaryKey(),
+  purchaseOrderId: integer("purchase_order_id").notNull(),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  expenseCategory: text("expense_category").default("office_supplies"), // Links to expense categories
+});
+
+export const supplierPayments = pgTable("supplier_payments", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").notNull(),
+  purchaseOrderId: integer("purchase_order_id"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull(), // 'cash', 'card', 'eft', 'check'
+  paymentDate: timestamp("payment_date").defaultNow(),
+  reference: text("reference"),
+  notes: text("notes"),
+  status: text("status").notNull().default("completed"), // 'pending', 'completed', 'failed'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
@@ -195,6 +250,39 @@ export const customerPortalLoginSchema = z.object({
   password: z.string().min(1),
 });
 
+// Purchase Order Management schemas
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPurchaseOrderSchema = z.object({
+  supplierId: z.number(),
+  orderNumber: z.string(),
+  orderDate: z.string().transform((str) => new Date(str)),
+  deliveryDate: z.string().optional().transform((str) => str ? new Date(str) : undefined),
+  subtotal: z.string(),
+  vatAmount: z.string(),
+  total: z.string(),
+  status: z.enum(["draft", "sent", "received", "completed", "cancelled"]).default("draft"),
+  notes: z.string().optional(),
+});
+
+export const insertPurchaseOrderItemSchema = createInsertSchema(purchaseOrderItems).omit({
+  id: true,
+});
+
+export const insertSupplierPaymentSchema = z.object({
+  supplierId: z.number(),
+  purchaseOrderId: z.number().optional(),
+  amount: z.string(),
+  paymentMethod: z.enum(["cash", "card", "eft", "check"]),
+  paymentDate: z.string().optional().transform((str) => str ? new Date(str) : new Date()),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.enum(["pending", "completed", "failed"]).default("completed"),
+});
+
 // Types
 export type Customer = typeof customers.$inferSelect;
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
@@ -222,6 +310,19 @@ export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
 export type VatReturn = typeof vatReturns.$inferSelect;
 export type InsertVatReturn = z.infer<typeof insertVatReturnSchema>;
+
+// Purchase Order Management types
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
+
+export type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
+export type InsertPurchaseOrderItem = z.infer<typeof insertPurchaseOrderItemSchema>;
+
+export type SupplierPayment = typeof supplierPayments.$inferSelect;
+export type InsertSupplierPayment = z.infer<typeof insertSupplierPaymentSchema>;
 
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),
@@ -255,3 +356,7 @@ export type InvoiceWithCustomer = Invoice & { customer: Customer };
 export type InvoiceWithItems = Invoice & { items: InvoiceItem[]; customer: Customer };
 export type EstimateWithCustomer = Estimate & { customer: Customer };
 export type EstimateWithItems = Estimate & { items: EstimateItem[]; customer: Customer };
+export type PurchaseOrderWithSupplier = PurchaseOrder & { supplier: Supplier };
+export type PurchaseOrderWithItems = PurchaseOrder & { items: PurchaseOrderItem[]; supplier: Supplier };
+export type SupplierPaymentWithSupplier = SupplierPayment & { supplier: Supplier };
+export type SupplierPaymentWithPurchaseOrder = SupplierPayment & { purchaseOrder?: PurchaseOrder };
