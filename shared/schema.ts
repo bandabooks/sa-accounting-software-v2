@@ -11,6 +11,12 @@ export const customers = pgTable("customers", {
   city: text("city"),
   postalCode: text("postal_code"),
   vatNumber: text("vat_number"),
+  creditLimit: decimal("credit_limit", { precision: 10, scale: 2 }).default("0.00"),
+  paymentTerms: integer("payment_terms").default(30), // Days
+  category: text("category").default("standard"), // standard, premium, wholesale, etc.
+  notes: text("notes"),
+  portalAccess: boolean("portal_access").default(false),
+  portalPassword: text("portal_password"), // For customer portal login
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -133,6 +139,12 @@ export const insertPaymentSchema = z.object({
   reference: z.string().optional(),
   notes: z.string().optional(),
   status: z.enum(["pending", "completed", "failed"]).default("completed"),
+});
+
+// Customer portal login schema
+export const customerPortalLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
 });
 
 // Types

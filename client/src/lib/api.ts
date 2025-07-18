@@ -34,6 +34,12 @@ export const customersApi = {
   
   delete: (id: number): Promise<void> => 
     apiRequest("DELETE", `/api/customers/${id}`).then(() => {}),
+  
+  setupPortal: (id: number, data: any): Promise<Customer> => 
+    apiRequest("POST", `/api/customers/${id}/portal`, data).then(res => res.json()),
+  
+  getByCustomer: (customerId: number): Promise<InvoiceWithCustomer[]> => 
+    apiRequest("GET", `/api/invoices/customer/${customerId}`).then(res => res.json()),
 };
 
 // Invoices API
@@ -52,6 +58,9 @@ export const invoicesApi = {
   
   updateStatus: (id: number, status: string): Promise<Invoice> => 
     apiRequest("PUT", `/api/invoices/${id}/status`, { status }).then(res => res.json()),
+  
+  getByCustomer: (customerId: number): Promise<InvoiceWithCustomer[]> => 
+    apiRequest("GET", `/api/invoices/customer/${customerId}`).then(res => res.json()),
   
   delete: (id: number): Promise<void> => 
     apiRequest("DELETE", `/api/invoices/${id}`).then(() => {}),

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCustomerSchema, insertInvoiceSchema, insertInvoiceItemSchema, insertEstimateSchema, insertEstimateItemSchema, insertPaymentSchema } from "@shared/schema";
+import { insertCustomerSchema, insertInvoiceSchema, insertInvoiceItemSchema, insertEstimateSchema, insertEstimateItemSchema, insertPaymentSchema, customerPortalLoginSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -68,6 +68,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/customers/:id/portal", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { portalAccess, portalPassword } = req.body;
+      const customer = await storage.setupCustomerPortal(id, { portalAccess, portalPassword });
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      res.json(customer);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to setup customer portal" });
+    }
+  });
+
   app.delete("/api/customers/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -101,6 +115,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(invoice);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch invoice" });
+    }
+  });
+
+  app.get("/api/invoices/customer/:customerId", async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const invoices = await storage.getInvoicesByCustomer(customerId);
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch customer invoices" });
     }
   });
 
@@ -329,6 +353,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error setting up recurring invoice:", error);
       res.status(500).json({ message: "Failed to setup recurring invoice" });
+    }
+  });
+
+  // Customer Portal Routes
+  app.post("/api/customer-portal/login", async (req, res) => {
+    try {
+      const { email, password } = customerPortalLoginSchema.parse(req.body);
+      const customer = await storage.getCustomerByEmail(email);
+      
+      if (!customer || !customer.portalAccess || customer.portalPassword !== password) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      const invoices = await storage.getInvoicesByCustomer(customer.id);
+      const totalAmount = invoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+      const paidAmount = invoices.filter(inv => inv.status === "paid")
+        .reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+      const outstandingAmount = totalAmount - paidAmount;
+      
+      res.json({
+        customer: {
+          ...customer,
+          portalPassword: undefined, // Don't send password back
+        },
+        invoices,
+        totalAmount,
+        paidAmount,
+        outstandingAmount,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.get("/api/customer-portal/invoice/:id/pdf", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      // In a real application, you would generate the PDF here
+      // For now, we'll just return a success response
+      res.json({ message: "PDF generation not implemented" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate PDF" });
     }
   });
 

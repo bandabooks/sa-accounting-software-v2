@@ -10,6 +10,8 @@ import InvoiceCreate from "@/pages/invoice-create";
 import InvoiceDetail from "@/pages/invoice-detail";
 import Customers from "@/pages/customers";
 import CustomerCreate from "@/pages/customer-create";
+import CustomerDetail from "@/pages/customer-detail";
+import CustomerPortal from "@/pages/customer-portal";
 import Estimates from "@/pages/estimates";
 import EstimateCreate from "@/pages/estimate-create";
 import EstimateDetail from "@/pages/estimate-detail";
@@ -26,6 +28,8 @@ function Router() {
       <Route path="/invoices/:id" component={InvoiceDetail} />
       <Route path="/customers" component={Customers} />
       <Route path="/customers/new" component={CustomerCreate} />
+      <Route path="/customers/:id" component={CustomerDetail} />
+      <Route path="/portal" component={CustomerPortal} />
       <Route path="/estimates" component={Estimates} />
       <Route path="/estimates/new" component={EstimateCreate} />
       <Route path="/estimates/:id" component={EstimateDetail} />

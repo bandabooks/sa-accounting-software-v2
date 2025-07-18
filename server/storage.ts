@@ -40,6 +40,9 @@ export interface IStorage {
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
   deleteCustomer(id: number): Promise<boolean>;
+  setupCustomerPortal(id: number, data: { portalAccess: boolean; portalPassword?: string }): Promise<Customer | undefined>;
+  getCustomerByEmail(email: string): Promise<Customer | undefined>;
+  getInvoicesByCustomer(customerId: number): Promise<InvoiceWithCustomer[]>;
 
   // Invoices
   getAllInvoices(): Promise<InvoiceWithCustomer[]>;
@@ -133,6 +136,64 @@ export class DatabaseStorage implements IStorage {
   async deleteCustomer(id: number): Promise<boolean> {
     const result = await db.delete(customers).where(eq(customers.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async setupCustomerPortal(id: number, data: { portalAccess: boolean; portalPassword?: string }): Promise<Customer | undefined> {
+    const updateData: any = { portalAccess: data.portalAccess };
+    if (data.portalPassword) {
+      updateData.portalPassword = data.portalPassword; // In real app, hash this password
+    }
+    const [customer] = await db
+      .update(customers)
+      .set(updateData)
+      .where(eq(customers.id, id))
+      .returning();
+    return customer || undefined;
+  }
+
+  async getCustomerByEmail(email: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.email, email));
+    return customer || undefined;
+  }
+
+  async getInvoicesByCustomer(customerId: number): Promise<InvoiceWithCustomer[]> {
+    const result = await db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        customerId: invoices.customerId,
+        issueDate: invoices.issueDate,
+        dueDate: invoices.dueDate,
+        status: invoices.status,
+        subtotal: invoices.subtotal,
+        vatAmount: invoices.vatAmount,
+        total: invoices.total,
+        notes: invoices.notes,
+        createdAt: invoices.createdAt,
+        customer: {
+          id: customers.id,
+          name: customers.name,
+          email: customers.email,
+          phone: customers.phone,
+          address: customers.address,
+          city: customers.city,
+          postalCode: customers.postalCode,
+          vatNumber: customers.vatNumber,
+          creditLimit: customers.creditLimit,
+          paymentTerms: customers.paymentTerms,
+          category: customers.category,
+          notes: customers.notes,
+          portalAccess: customers.portalAccess,
+          portalPassword: customers.portalPassword,
+          createdAt: customers.createdAt,
+        }
+      })
+      .from(invoices)
+      .innerJoin(customers, eq(invoices.customerId, customers.id))
+      .where(eq(invoices.customerId, customerId))
+      .orderBy(desc(invoices.createdAt));
+
+    return result;
   }
 
   // Invoices
