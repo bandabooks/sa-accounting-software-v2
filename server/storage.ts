@@ -1420,6 +1420,116 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updated || undefined;
   }
+
+  // Company Settings
+  async getCompanySettings(): Promise<any> {
+    const [settings] = await db.select().from(companySettings);
+    return settings || null;
+  }
+
+  async updateCompanySettings(updates: Partial<any>): Promise<any> {
+    const existing = await this.getCompanySettings();
+    if (!existing) {
+      const [newSettings] = await db.insert(companySettings).values(updates).returning();
+      return newSettings;
+    }
+    
+    const [updated] = await db
+      .update(companySettings)
+      .set(updates)
+      .where(eq(companySettings.id, existing.id))
+      .returning();
+    return updated;
+  }
+
+  // Inventory Transactions
+  async createInventoryTransaction(transaction: any): Promise<any> {
+    const [newTransaction] = await db.insert(inventoryTransactions).values(transaction).returning();
+    
+    // Update product stock quantity
+    const product = await this.getProductById(transaction.productId);
+    if (product) {
+      let newQuantity = product.stockQuantity;
+      if (transaction.transactionType === 'in') {
+        newQuantity += transaction.quantity;
+      } else if (transaction.transactionType === 'out') {
+        newQuantity -= transaction.quantity;
+      } else if (transaction.transactionType === 'adjustment') {
+        newQuantity = transaction.quantity;
+      }
+      
+      await db.update(products).set({ stockQuantity: newQuantity }).where(eq(products.id, product.id));
+    }
+    
+    return newTransaction;
+  }
+
+  async getInventoryTransactions(): Promise<any[]> {
+    return await db.select().from(inventoryTransactions);
+  }
+
+  async getInventoryTransactionsByProduct(productId: number): Promise<any[]> {
+    return await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.productId, productId));
+  }
+
+  // Email Reminders
+  async createEmailReminder(reminder: any): Promise<any> {
+    const [newReminder] = await db.insert(emailReminders).values(reminder).returning();
+    return newReminder;
+  }
+
+  async getEmailReminders(): Promise<any[]> {
+    return await db.select().from(emailReminders);
+  }
+
+  async getPendingEmailReminders(): Promise<any[]> {
+    const now = new Date();
+    return await db.select().from(emailReminders).where(
+      and(
+        eq(emailReminders.emailSent, false),
+        lte(emailReminders.scheduledFor, now)
+      )
+    );
+  }
+
+  async markEmailReminderSent(id: number): Promise<void> {
+    await db.update(emailReminders).set({ emailSent: true, sentAt: new Date() }).where(eq(emailReminders.id, id));
+  }
+
+  // Currency Rates
+  async getCurrencyRates(): Promise<any[]> {
+    return await db.select().from(currencyRates);
+  }
+
+  async getCurrentRate(fromCurrency: string, toCurrency: string): Promise<any | null> {
+    const now = new Date();
+    const [rate] = await db.select().from(currencyRates).where(
+      and(
+        eq(currencyRates.fromCurrency, fromCurrency),
+        eq(currencyRates.toCurrency, toCurrency),
+        lte(currencyRates.validFrom, now),
+        or(
+          isNull(currencyRates.validTo),
+          gte(currencyRates.validTo, now)
+        )
+      )
+    );
+    return rate || null;
+  }
+
+  async createCurrencyRate(rate: any): Promise<any> {
+    const [newRate] = await db.insert(currencyRates).values(rate).returning();
+    return newRate;
+  }
+
+  async updateCurrencyRate(id: number, updates: Partial<any>): Promise<any | undefined> {
+    const [updated] = await db
+      .update(currencyRates)
+      .set(updates)
+      .where(eq(currencyRates.id, id))
+      .returning();
+    return updated || undefined;
+  }
 }
 
 export const storage = new DatabaseStorage();

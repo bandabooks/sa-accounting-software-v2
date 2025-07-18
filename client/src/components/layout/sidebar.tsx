@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building } from "lucide-react";
+import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building, Archive } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: ChartLine },
@@ -9,9 +9,11 @@ const navItems = [
   { path: "/suppliers", label: "Suppliers", icon: Building },
   { path: "/purchase-orders", label: "Purchase Orders", icon: Package },
   { path: "/products", label: "Products", icon: Package },
+  { path: "/inventory", label: "Inventory", icon: Archive },
   { path: "/expenses", label: "Expenses", icon: Receipt },
   { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp },
   { path: "/reports", label: "Business Reports", icon: BarChart3 },
+  { path: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {

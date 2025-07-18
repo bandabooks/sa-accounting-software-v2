@@ -1266,6 +1266,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Company Settings routes
+  app.get('/api/settings', authenticate, async (req, res) => {
+    try {
+      const settings = await storage.getCompanySettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+      res.status(500).json({ error: 'Failed to fetch company settings' });
+    }
+  });
+
+  app.put('/api/settings', authenticate, async (req, res) => {
+    try {
+      const settingsData = req.body;
+      const settings = await storage.updateCompanySettings(settingsData);
+      res.json(settings);
+    } catch (error) {
+      console.error('Error updating company settings:', error);
+      res.status(500).json({ error: 'Failed to update company settings' });
+    }
+  });
+
+  // Inventory Management routes
+  app.get('/api/inventory/products', authenticate, async (req, res) => {
+    try {
+      const products = await storage.getAllProducts();
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching inventory products:', error);
+      res.status(500).json({ error: 'Failed to fetch inventory products' });
+    }
+  });
+
+  app.get('/api/inventory/transactions', authenticate, async (req, res) => {
+    try {
+      const transactions = await storage.getAllInventoryTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching inventory transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch inventory transactions' });
+    }
+  });
+
+  app.post('/api/inventory/transactions', authenticate, async (req, res) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const transactionData = { ...req.body, userId };
+      const transaction = await storage.createInventoryTransaction(transactionData);
+      res.json(transaction);
+    } catch (error) {
+      console.error('Error creating inventory transaction:', error);
+      res.status(500).json({ error: 'Failed to create inventory transaction' });
+    }
+  });
+
+  app.get('/api/inventory/transactions/:productId', authenticate, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      const transactions = await storage.getInventoryTransactionsByProduct(productId);
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching product transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch product transactions' });
+    }
+  });
+
+  // Company Settings routes
+  app.get("/api/settings/company", authenticate, requirePermission("settings:view"), async (req, res) => {
+    try {
+      const settings = await storage.getCompanySettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching company settings:", error);
+      res.status(500).json({ error: "Failed to fetch company settings" });
+    }
+  });
+
+  app.put("/api/settings/company", authenticate, requirePermission("settings:view"), async (req, res) => {
+    try {
+      const settings = await storage.updateCompanySettings(req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating company settings:", error);
+      res.status(500).json({ error: "Failed to update company settings" });
+    }
+  });
+
+  // Inventory routes
+  app.get("/api/inventory/transactions", authenticate, requirePermission("inventory:view"), async (req, res) => {
+    try {
+      const transactions = await storage.getInventoryTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching inventory transactions:", error);
+      res.status(500).json({ error: "Failed to fetch inventory transactions" });
+    }
+  });
+
+  app.post("/api/inventory/transactions", authenticate, requirePermission("inventory:view"), async (req, res) => {
+    try {
+      const transaction = await storage.createInventoryTransaction(req.body);
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error creating inventory transaction:", error);
+      res.status(500).json({ error: "Failed to create inventory transaction" });
+    }
+  });
+
+  app.get("/api/inventory/transactions/product/:productId", authenticate, requirePermission("inventory:view"), async (req, res) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      const transactions = await storage.getInventoryTransactionsByProduct(productId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching product inventory transactions:", error);
+      res.status(500).json({ error: "Failed to fetch product inventory transactions" });
+    }
+  });
+
+  // Currency rate routes
+  app.get("/api/currency-rates", authenticate, requirePermission("settings:view"), async (req, res) => {
+    try {
+      const rates = await storage.getCurrencyRates();
+      res.json(rates);
+    } catch (error) {
+      console.error("Error fetching currency rates:", error);
+      res.status(500).json({ error: "Failed to fetch currency rates" });
+    }
+  });
+
+  app.post("/api/currency-rates", authenticate, requirePermission("settings:view"), async (req, res) => {
+    try {
+      const rate = await storage.createCurrencyRate(req.body);
+      res.json(rate);
+    } catch (error) {
+      console.error("Error creating currency rate:", error);
+      res.status(500).json({ error: "Failed to create currency rate" });
+    }
+  });
+
+  app.get("/api/currency-rates/current/:from/:to", authenticate, requirePermission("settings:view"), async (req, res) => {
+    try {
+      const { from, to } = req.params;
+      const rate = await storage.getCurrentRate(from, to);
+      res.json(rate);
+    } catch (error) {
+      console.error("Error fetching current currency rate:", error);
+      res.status(500).json({ error: "Failed to fetch current currency rate" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

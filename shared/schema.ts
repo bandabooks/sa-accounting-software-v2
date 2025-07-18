@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, decimal, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, decimal, timestamp, varchar, jsonb, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -522,3 +522,99 @@ export type PurchaseOrderWithSupplier = PurchaseOrder & { supplier: Supplier };
 export type PurchaseOrderWithItems = PurchaseOrder & { items: PurchaseOrderItem[]; supplier: Supplier };
 export type SupplierPaymentWithSupplier = SupplierPayment & { supplier: Supplier };
 export type SupplierPaymentWithPurchaseOrder = SupplierPayment & { purchaseOrder?: PurchaseOrder };
+
+// Company settings table
+export const companySettings = pgTable("company_settings", {
+  id: serial("id").primaryKey(),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  companyEmail: varchar("company_email", { length: 255 }),
+  companyPhone: varchar("company_phone", { length: 50 }),
+  companyAddress: text("company_address"),
+  vatNumber: varchar("vat_number", { length: 50 }),
+  registrationNumber: varchar("registration_number", { length: 50 }),
+  logo: text("logo"),
+  primaryCurrency: varchar("primary_currency", { length: 3 }).default("ZAR"),
+  secondaryCurrencies: jsonb("secondary_currencies").$type<string[]>().default([]),
+  exchangeRates: jsonb("exchange_rates").$type<Record<string, number>>().default({}),
+  invoicePrefix: varchar("invoice_prefix", { length: 10 }).default("INV"),
+  estimatePrefix: varchar("estimate_prefix", { length: 10 }).default("EST"),
+  paymentTerms: text("payment_terms"),
+  emailReminderDays: jsonb("email_reminder_days").$type<number[]>().default([7, 3, 1]),
+  autoEmailReminders: boolean("auto_email_reminders").default(false),
+  fiscalYearStart: date("fiscal_year_start").default("2025-01-01"),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("15.00"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Inventory management tables
+export const inventoryTransactions = pgTable("inventory_transactions", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // 'in', 'out', 'adjustment'
+  quantity: integer("quantity").notNull(),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
+  reference: varchar("reference", { length: 100 }), // invoice, purchase order, adjustment ref
+  notes: text("notes"),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Email reminders table
+export const emailReminders = pgTable("email_reminders", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
+  reminderType: varchar("reminder_type", { length: 20 }).notNull(), // 'overdue', 'payment_due'
+  daysBefore: integer("days_before").notNull(),
+  emailSent: boolean("email_sent").default(false),
+  sentAt: timestamp("sent_at"),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Currency exchange rates table
+export const currencyRates = pgTable("currency_rates", {
+  id: serial("id").primaryKey(),
+  fromCurrency: varchar("from_currency", { length: 3 }).notNull(),
+  toCurrency: varchar("to_currency", { length: 3 }).notNull(),
+  rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
+  validFrom: timestamp("valid_from").defaultNow(),
+  validTo: timestamp("valid_to"),
+  source: varchar("source", { length: 50 }).default("manual"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Schema exports
+export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInventoryTransactionSchema = createInsertSchema(inventoryTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEmailReminderSchema = createInsertSchema(emailReminders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCurrencyRateSchema = createInsertSchema(currencyRates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
+export type CompanySettings = typeof companySettings.$inferSelect;
+
+export type InsertInventoryTransaction = z.infer<typeof insertInventoryTransactionSchema>;
+export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
+
+export type InsertEmailReminder = z.infer<typeof insertEmailReminderSchema>;
+export type EmailReminder = typeof emailReminders.$inferSelect;
+
+export type InsertCurrencyRate = z.infer<typeof insertCurrencyRateSchema>;
+export type CurrencyRate = typeof currencyRates.$inferSelect;

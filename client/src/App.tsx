@@ -24,6 +24,8 @@ import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Products from "@/pages/products";
 import ProductCreate from "@/pages/product-create";
+import Settings from "@/pages/settings";
+import Inventory from "@/pages/inventory";
 import Login from "@/pages/login";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -42,6 +44,8 @@ const PERMISSIONS = {
   PURCHASE_ORDERS_VIEW: 'purchase_orders:view',
   PRODUCTS_VIEW: 'products:view',
   PRODUCTS_CREATE: 'products:create',
+  SETTINGS_VIEW: 'settings:view',
+  INVENTORY_VIEW: 'inventory:view',
 } as const;
 
 function AuthenticatedApp() {
@@ -139,6 +143,16 @@ function AuthenticatedApp() {
         <Route path="/expenses">
           <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
             <Expenses />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/settings">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <Settings />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/inventory">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <Inventory />
           </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />
