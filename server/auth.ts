@@ -172,7 +172,7 @@ export const verifyPassword = async (password: string, hashedPassword: string): 
 
 // Token utilities
 export const generateSessionToken = (): string => {
-  return require('crypto').randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString('hex');
 };
 
 export const generateJWT = (payload: any, expiresIn: string = '24h'): string => {
