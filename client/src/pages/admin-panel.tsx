@@ -381,8 +381,8 @@ export default function AdminPanel() {
                     <TableRow key={user.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
+                          <div className="font-medium">{user.name || user.username}</div>
+                          <div className="text-sm text-gray-500">{user.email || 'No email'}</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -409,7 +409,7 @@ export default function AdminPanel() {
                       <TableCell>
                         {user.lastLogin ? formatDate(user.lastLogin) : "Never"}
                       </TableCell>
-                      <TableCell>{formatDate(user.createdAt)}</TableCell>
+                      <TableCell>{user.createdAt ? formatDate(user.createdAt) : "Unknown"}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
@@ -458,8 +458,8 @@ export default function AdminPanel() {
                     <TableRow key={log.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{log.user.name}</div>
-                          <div className="text-sm text-gray-500">@{log.user.username}</div>
+                          <div className="font-medium">{log.user?.name || 'System'}</div>
+                          <div className="text-sm text-gray-500">@{log.user?.username || 'system'}</div>
                         </div>
                       </TableCell>
                       <TableCell>

@@ -83,6 +83,7 @@ export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   updateUserPassword(id: number, hashedPassword: string): Promise<void>;
@@ -264,6 +265,10 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -385,8 +390,23 @@ export class DatabaseStorage implements IStorage {
 
   async getAuditLogs(limit: number = 100, offset: number = 0): Promise<AuditLog[]> {
     return await db
-      .select()
+      .select({
+        id: auditLogs.id,
+        userId: auditLogs.userId,
+        action: auditLogs.action,
+        details: auditLogs.details,
+        ipAddress: auditLogs.ipAddress,
+        timestamp: auditLogs.timestamp,
+        createdAt: auditLogs.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          name: users.name,
+          email: users.email,
+        }
+      })
       .from(auditLogs)
+      .leftJoin(users, eq(auditLogs.userId, users.id))
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit)
       .offset(offset);
