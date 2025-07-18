@@ -122,14 +122,10 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         <Route path="/products">
-          <ProtectedRoute permission={PERMISSIONS.PRODUCTS_VIEW}>
-            <Products />
-          </ProtectedRoute>
+          <Products />
         </Route>
         <Route path="/products/create">
-          <ProtectedRoute permission={PERMISSIONS.PRODUCTS_CREATE}>
-            <ProductCreate />
-          </ProtectedRoute>
+          <ProductCreate />
         </Route>
         <Route path="/reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
@@ -152,9 +148,7 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         <Route path="/inventory">
-          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
-            <Inventory />
-          </ProtectedRoute>
+          <Inventory />
         </Route>
         <Route path="/companies">
           <Companies />
