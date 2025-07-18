@@ -37,6 +37,8 @@ import {
   loginSchema,
   changePasswordSchema,
   insertUserRoleSchema,
+  insertChartOfAccountSchema,
+  insertJournalEntrySchema,
   type LoginRequest,
   type ChangePasswordRequest
 } from "@shared/schema";
@@ -1489,6 +1491,237 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching current currency rate:", error);
       res.status(500).json({ error: "Failed to fetch current currency rate" });
+    }
+  });
+
+  // Chart of Accounts Routes
+  app.get("/api/chart-of-accounts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1; // Default company for now
+      const accounts = await storage.getAllChartOfAccounts(companyId);
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error fetching chart of accounts:", error);
+      res.status(500).json({ error: "Failed to fetch chart of accounts" });
+    }
+  });
+
+  app.get("/api/chart-of-accounts/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const account = await storage.getChartOfAccount(id);
+      if (!account) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      console.error("Error fetching account:", error);
+      res.status(500).json({ error: "Failed to fetch account" });
+    }
+  });
+
+  app.post("/api/chart-of-accounts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const validatedData = insertChartOfAccountSchema.parse({ ...req.body, companyId });
+      const account = await storage.createChartOfAccount(validatedData);
+      res.status(201).json(account);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating account:", error);
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.put("/api/chart-of-accounts/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertChartOfAccountSchema.partial().parse(req.body);
+      const account = await storage.updateChartOfAccount(id, validatedData);
+      if (!account) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating account:", error);
+      res.status(500).json({ error: "Failed to update account" });
+    }
+  });
+
+  app.delete("/api/chart-of-accounts/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteChartOfAccount(id);
+      if (!success) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+      res.json({ message: "Account deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
+  app.post("/api/chart-of-accounts/seed-sa", authenticate, requireRole("admin"), async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      await storage.seedSouthAfricanChartOfAccounts(companyId);
+      res.json({ message: "South African Chart of Accounts seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding chart of accounts:", error);
+      res.status(500).json({ error: "Failed to seed chart of accounts" });
+    }
+  });
+
+  // Journal Entries Routes
+  app.get("/api/journal-entries", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const entries = await storage.getAllJournalEntries(companyId);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching journal entries:", error);
+      res.status(500).json({ error: "Failed to fetch journal entries" });
+    }
+  });
+
+  app.get("/api/journal-entries/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const entry = await storage.getJournalEntry(id);
+      if (!entry) {
+        return res.status(404).json({ error: "Journal entry not found" });
+      }
+      res.json(entry);
+    } catch (error) {
+      console.error("Error fetching journal entry:", error);
+      res.status(500).json({ error: "Failed to fetch journal entry" });
+    }
+  });
+
+  app.post("/api/journal-entries", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const userId = (req as AuthenticatedRequest).user?.id || 1;
+      const { entry, lines } = req.body;
+      
+      const validatedEntry = insertJournalEntrySchema.parse({ 
+        ...entry, 
+        companyId,
+        createdBy: userId 
+      });
+      
+      const journalEntry = await storage.createJournalEntry(validatedEntry, lines);
+      res.status(201).json(journalEntry);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating journal entry:", error);
+      res.status(500).json({ error: "Failed to create journal entry" });
+    }
+  });
+
+  app.put("/api/journal-entries/:id/post", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const entry = await storage.postJournalEntry(id);
+      if (!entry) {
+        return res.status(404).json({ error: "Journal entry not found" });
+      }
+      res.json(entry);
+    } catch (error) {
+      console.error("Error posting journal entry:", error);
+      res.status(500).json({ error: "Failed to post journal entry" });
+    }
+  });
+
+  app.post("/api/journal-entries/:id/reverse", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = (req as AuthenticatedRequest).user?.id || 1;
+      const { description } = req.body;
+      
+      const reversalEntry = await storage.reverseJournalEntry(id, description, userId);
+      res.json(reversalEntry);
+    } catch (error) {
+      console.error("Error reversing journal entry:", error);
+      res.status(500).json({ error: "Failed to reverse journal entry" });
+    }
+  });
+
+  // Account Balance Reports
+  app.get("/api/reports/trial-balance", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const { asOfDate } = req.query;
+      
+      const date = asOfDate ? new Date(asOfDate as string) : new Date();
+      const trialBalance = await storage.getTrialBalance(companyId, date);
+      res.json(trialBalance);
+    } catch (error) {
+      console.error("Error generating trial balance:", error);
+      res.status(500).json({ error: "Failed to generate trial balance" });
+    }
+  });
+
+  app.get("/api/reports/account-balances", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const { periodStart, periodEnd } = req.query;
+      
+      if (!periodStart || !periodEnd) {
+        return res.status(400).json({ error: "periodStart and periodEnd are required" });
+      }
+      
+      const report = await storage.getAccountBalanceReport(
+        companyId,
+        new Date(periodStart as string),
+        new Date(periodEnd as string)
+      );
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating account balance report:", error);
+      res.status(500).json({ error: "Failed to generate account balance report" });
+    }
+  });
+
+  // Automated Journal Entries
+  app.post("/api/journal-entries/auto/invoice/:invoiceId", authenticate, async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.invoiceId);
+      const entry = await storage.createInvoiceJournalEntry(invoiceId);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating invoice journal entry:", error);
+      res.status(500).json({ error: "Failed to create invoice journal entry" });
+    }
+  });
+
+  app.post("/api/journal-entries/auto/payment/:paymentId", authenticate, async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.paymentId);
+      const entry = await storage.createPaymentJournalEntry(paymentId);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating payment journal entry:", error);
+      res.status(500).json({ error: "Failed to create payment journal entry" });
+    }
+  });
+
+  app.post("/api/journal-entries/auto/expense/:expenseId", authenticate, async (req, res) => {
+    try {
+      const expenseId = parseInt(req.params.expenseId);
+      const entry = await storage.createExpenseJournalEntry(expenseId);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating expense journal entry:", error);
+      res.status(500).json({ error: "Failed to create expense journal entry" });
     }
   });
 

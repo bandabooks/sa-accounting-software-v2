@@ -758,3 +758,195 @@ export type EmailReminder = typeof emailReminders.$inferSelect;
 
 export type InsertCurrencyRate = z.infer<typeof insertCurrencyRateSchema>;
 export type CurrencyRate = typeof currencyRates.$inferSelect;
+
+// Chart of Accounts - South African Business Accounting Standards
+export const chartOfAccounts = pgTable("chart_of_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  accountCode: varchar("account_code", { length: 20 }).notNull(),
+  accountName: varchar("account_name", { length: 255 }).notNull(),
+  parentAccountId: integer("parent_account_id").references(() => chartOfAccounts.id),
+  accountType: varchar("account_type", { length: 50 }).notNull(), // Asset, Liability, Equity, Revenue, Expense
+  accountSubType: varchar("account_sub_type", { length: 100 }), // Current Asset, Fixed Asset, etc.
+  normalBalance: varchar("normal_balance", { length: 10 }).notNull(), // Debit or Credit
+  isActive: boolean("is_active").default(true),
+  description: text("description"),
+  taxType: varchar("tax_type", { length: 50 }), // VAT, PAYE, etc.
+  level: integer("level").default(1), // Account hierarchy level
+  isSystemAccount: boolean("is_system_account").default(false), // Cannot be deleted
+  balance: decimal("balance", { precision: 15, scale: 2 }).default("0.00"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyCodeUnique: unique().on(table.companyId, table.accountCode),
+  companyIdx: index("chart_accounts_company_idx").on(table.companyId),
+  typeIdx: index("chart_accounts_type_idx").on(table.accountType),
+  activeIdx: index("chart_accounts_active_idx").on(table.isActive),
+}));
+
+// Journal Entries for double-entry bookkeeping
+export const journalEntries = pgTable("journal_entries", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  entryNumber: varchar("entry_number", { length: 50 }).notNull(),
+  transactionDate: timestamp("transaction_date").notNull(),
+  description: text("description").notNull(),
+  reference: varchar("reference", { length: 100 }), // Invoice number, payment ref, etc.
+  totalDebit: decimal("total_debit", { precision: 15, scale: 2 }).notNull(),
+  totalCredit: decimal("total_credit", { precision: 15, scale: 2 }).notNull(),
+  isPosted: boolean("is_posted").default(false),
+  isReversed: boolean("is_reversed").default(false),
+  reversalEntryId: integer("reversal_entry_id").references(() => journalEntries.id),
+  createdBy: integer("created_by").references(() => users.id),
+  sourceModule: varchar("source_module", { length: 50 }), // invoice, payment, expense, etc.
+  sourceId: integer("source_id"), // ID from source module
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyEntryUnique: unique().on(table.companyId, table.entryNumber),
+  companyIdx: index("journal_entries_company_idx").on(table.companyId),
+  dateIdx: index("journal_entries_date_idx").on(table.transactionDate),
+  postedIdx: index("journal_entries_posted_idx").on(table.isPosted),
+}));
+
+// Journal Entry Lines (the actual debits and credits)
+export const journalEntryLines = pgTable("journal_entry_lines", {
+  id: serial("id").primaryKey(),
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id).notNull(),
+  accountId: integer("account_id").references(() => chartOfAccounts.id).notNull(),
+  description: text("description"),
+  debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  reference: varchar("reference", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  entryIdx: index("journal_lines_entry_idx").on(table.journalEntryId),
+  accountIdx: index("journal_lines_account_idx").on(table.accountId),
+}));
+
+// Account Balances (for performance - calculated periodically)
+export const accountBalances = pgTable("account_balances", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  accountId: integer("account_id").references(() => chartOfAccounts.id).notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0.00"),
+  debitTotal: decimal("debit_total", { precision: 15, scale: 2 }).default("0.00"),
+  creditTotal: decimal("credit_total", { precision: 15, scale: 2 }).default("0.00"),
+  closingBalance: decimal("closing_balance", { precision: 15, scale: 2 }).default("0.00"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  companyAccountPeriodUnique: unique().on(table.companyId, table.accountId, table.periodStart),
+  companyIdx: index("account_balances_company_idx").on(table.companyId),
+  accountIdx: index("account_balances_account_idx").on(table.accountId),
+  periodIdx: index("account_balances_period_idx").on(table.periodStart, table.periodEnd),
+}));
+
+// Chart of Accounts schemas
+export const insertChartOfAccountSchema = createInsertSchema(chartOfAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertJournalEntryLineSchema = createInsertSchema(journalEntryLines).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAccountBalanceSchema = createInsertSchema(accountBalances).omit({
+  id: true,
+  lastUpdated: true,
+});
+
+// Chart of Accounts types
+export type ChartOfAccount = typeof chartOfAccounts.$inferSelect;
+export type InsertChartOfAccount = z.infer<typeof insertChartOfAccountSchema>;
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type InsertJournalEntry = z.infer<typeof insertJournalEntrySchema>;
+export type JournalEntryLine = typeof journalEntryLines.$inferSelect;
+export type InsertJournalEntryLine = z.infer<typeof insertJournalEntryLineSchema>;
+export type AccountBalance = typeof accountBalances.$inferSelect;
+export type InsertAccountBalance = z.infer<typeof insertAccountBalanceSchema>;
+
+// Extended types for Chart of Accounts
+export type ChartOfAccountWithBalance = ChartOfAccount & {
+  currentBalance: string;
+  children?: ChartOfAccountWithBalance[];
+};
+
+export type JournalEntryWithLines = JournalEntry & {
+  lines: JournalEntryLine[];
+  createdByUser?: { name: string; username: string };
+};
+
+export type AccountBalanceReport = {
+  accountId: number;
+  accountCode: string;
+  accountName: string;
+  accountType: string;
+  openingBalance: string;
+  debitTotal: string;
+  creditTotal: string;
+  closingBalance: string;
+};
+
+// Relations for Chart of Accounts
+export const chartOfAccountsRelations = relations(chartOfAccounts, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [chartOfAccounts.companyId],
+    references: [companies.id],
+  }),
+  parentAccount: one(chartOfAccounts, {
+    fields: [chartOfAccounts.parentAccountId],
+    references: [chartOfAccounts.id],
+  }),
+  childAccounts: many(chartOfAccounts),
+  journalLines: many(journalEntryLines),
+  balances: many(accountBalances),
+}));
+
+export const journalEntriesRelations = relations(journalEntries, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [journalEntries.companyId],
+    references: [companies.id],
+  }),
+  createdBy: one(users, {
+    fields: [journalEntries.createdBy],
+    references: [users.id],
+  }),
+  lines: many(journalEntryLines),
+  reversalEntry: one(journalEntries, {
+    fields: [journalEntries.reversalEntryId],
+    references: [journalEntries.id],
+  }),
+}));
+
+export const journalEntryLinesRelations = relations(journalEntryLines, ({ one }) => ({
+  journalEntry: one(journalEntries, {
+    fields: [journalEntryLines.journalEntryId],
+    references: [journalEntries.id],
+  }),
+  account: one(chartOfAccounts, {
+    fields: [journalEntryLines.accountId],
+    references: [chartOfAccounts.id],
+  }),
+}));
+
+export const accountBalancesRelations = relations(accountBalances, ({ one }) => ({
+  company: one(companies, {
+    fields: [accountBalances.companyId],
+    references: [companies.id],
+  }),
+  account: one(chartOfAccounts, {
+    fields: [accountBalances.accountId],
+    references: [chartOfAccounts.id],
+  }),
+}));

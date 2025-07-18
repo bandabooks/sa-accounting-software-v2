@@ -30,6 +30,8 @@ import Companies from "@/pages/companies";
 import Profile from "@/pages/profile";
 import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
+import ChartOfAccounts from "@/pages/chart-of-accounts";
+import JournalEntries from "@/pages/journal-entries";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -49,6 +51,8 @@ const PERMISSIONS = {
   PRODUCTS_CREATE: 'products:create',
   SETTINGS_VIEW: 'settings:view',
   INVENTORY_VIEW: 'inventory:view',
+  CHART_OF_ACCOUNTS_VIEW: 'chart_of_accounts:view',
+  JOURNAL_ENTRIES_VIEW: 'journal_entries:view',
 } as const;
 
 function AuthenticatedApp() {
@@ -160,6 +164,16 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/admin-panel">
           <AdminPanel />
+        </Route>
+        <Route path="/chart-of-accounts">
+          <ProtectedRoute permission={PERMISSIONS.CHART_OF_ACCOUNTS_VIEW}>
+            <ChartOfAccounts />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/journal-entries">
+          <ProtectedRoute permission={PERMISSIONS.JOURNAL_ENTRIES_VIEW}>
+            <JournalEntries />
+          </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />

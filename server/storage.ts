@@ -22,6 +22,10 @@ import {
   inventoryTransactions,
   emailReminders,
   currencyRates,
+  chartOfAccounts,
+  journalEntries,
+  journalEntryLines,
+  accountBalances,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -74,7 +78,18 @@ import {
   type EmailReminder,
   type InsertEmailReminder,
   type CurrencyRate,
-  type InsertCurrencyRate
+  type InsertCurrencyRate,
+  type ChartOfAccount,
+  type InsertChartOfAccount,
+  type JournalEntry,
+  type InsertJournalEntry,
+  type JournalEntryLine,
+  type InsertJournalEntryLine,
+  type AccountBalance,
+  type InsertAccountBalance,
+  type ChartOfAccountWithBalance,
+  type JournalEntryWithLines,
+  type AccountBalanceReport
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -251,6 +266,35 @@ export interface IStorage {
   getPayfastPaymentByPaymentId(payfastPaymentId: string): Promise<PayfastPayment | undefined>;
   updatePayfastPayment(id: number, payment: Partial<InsertPayfastPayment>): Promise<PayfastPayment | undefined>;
   updatePayfastPaymentStatus(id: number, status: string, payfastData?: string): Promise<PayfastPayment | undefined>;
+
+  // Chart of Accounts
+  getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]>;
+  getChartOfAccount(id: number): Promise<ChartOfAccount | undefined>;
+  getChartOfAccountByCode(companyId: number, accountCode: string): Promise<ChartOfAccount | undefined>;
+  createChartOfAccount(account: InsertChartOfAccount): Promise<ChartOfAccount>;
+  updateChartOfAccount(id: number, account: Partial<InsertChartOfAccount>): Promise<ChartOfAccount | undefined>;
+  deleteChartOfAccount(id: number): Promise<boolean>;
+  seedSouthAfricanChartOfAccounts(companyId: number): Promise<void>;
+  
+  // Journal Entries
+  getAllJournalEntries(companyId: number): Promise<JournalEntryWithLines[]>;
+  getJournalEntry(id: number): Promise<JournalEntryWithLines | undefined>;
+  createJournalEntry(entry: InsertJournalEntry, lines: Omit<InsertJournalEntryLine, 'journalEntryId'>[]): Promise<JournalEntryWithLines>;
+  updateJournalEntry(id: number, entry: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined>;
+  postJournalEntry(id: number): Promise<JournalEntry | undefined>;
+  reverseJournalEntry(id: number, description: string, createdBy: number): Promise<JournalEntryWithLines>;
+  deleteJournalEntry(id: number): Promise<boolean>;
+  
+  // Account Balances
+  calculateAccountBalance(accountId: number, asOfDate?: Date): Promise<string>;
+  getAccountBalanceReport(companyId: number, periodStart: Date, periodEnd: Date): Promise<AccountBalanceReport[]>;
+  updateAccountBalances(companyId: number, periodStart: Date, periodEnd: Date): Promise<void>;
+  getTrialBalance(companyId: number, asOfDate: Date): Promise<AccountBalanceReport[]>;
+  
+  // Automated Journal Entries
+  createInvoiceJournalEntry(invoiceId: number): Promise<JournalEntryWithLines>;
+  createPaymentJournalEntry(paymentId: number): Promise<JournalEntryWithLines>;
+  createExpenseJournalEntry(expenseId: number): Promise<JournalEntryWithLines>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1566,6 +1610,452 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updated || undefined;
   }
+
+  // Chart of Accounts Implementation
+  async getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
+    const accounts = await db.select().from(chartOfAccounts)
+      .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.isActive, true)))
+      .orderBy(chartOfAccounts.accountCode);
+    
+    return await Promise.all(accounts.map(async (account) => ({
+      ...account,
+      currentBalance: await this.calculateAccountBalance(account.id),
+    })));
+  }
+
+  async getChartOfAccount(id: number): Promise<ChartOfAccount | undefined> {
+    const [account] = await db.select().from(chartOfAccounts).where(eq(chartOfAccounts.id, id));
+    return account || undefined;
+  }
+
+  async getChartOfAccountByCode(companyId: number, accountCode: string): Promise<ChartOfAccount | undefined> {
+    const [account] = await db.select().from(chartOfAccounts)
+      .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.accountCode, accountCode)));
+    return account || undefined;
+  }
+
+  async createChartOfAccount(account: InsertChartOfAccount): Promise<ChartOfAccount> {
+    const [newAccount] = await db.insert(chartOfAccounts).values(account).returning();
+    return newAccount;
+  }
+
+  async updateChartOfAccount(id: number, account: Partial<InsertChartOfAccount>): Promise<ChartOfAccount | undefined> {
+    const [updated] = await db
+      .update(chartOfAccounts)
+      .set({ ...account, updatedAt: new Date() })
+      .where(eq(chartOfAccounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteChartOfAccount(id: number): Promise<boolean> {
+    const result = await db.delete(chartOfAccounts).where(eq(chartOfAccounts.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async seedSouthAfricanChartOfAccounts(companyId: number): Promise<void> {
+    const saAccounts = [
+      // Assets
+      { companyId, accountCode: "1000", accountName: "Current Assets", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "1010", accountName: "Bank Account - Current", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1020", accountName: "Bank Account - Savings", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1030", accountName: "Petty Cash", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1100", accountName: "Accounts Receivable", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1200", accountName: "Inventory", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1300", accountName: "Prepaid Expenses", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1400", accountName: "VAT Input Tax", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true, taxType: "VAT" },
+      
+      // Fixed Assets
+      { companyId, accountCode: "1500", accountName: "Fixed Assets", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "1510", accountName: "Equipment", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1520", accountName: "Vehicles", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1530", accountName: "Computer Equipment", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "1540", accountName: "Accumulated Depreciation", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      
+      // Liabilities
+      { companyId, accountCode: "2000", accountName: "Current Liabilities", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "2010", accountName: "Accounts Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "2020", accountName: "VAT Output Tax", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "VAT" },
+      { companyId, accountCode: "2030", accountName: "PAYE Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "PAYE" },
+      { companyId, accountCode: "2040", accountName: "UIF Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "UIF" },
+      { companyId, accountCode: "2050", accountName: "SDL Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "SDL" },
+      { companyId, accountCode: "2060", accountName: "Accrued Expenses", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      
+      // Long-term Liabilities
+      { companyId, accountCode: "2500", accountName: "Long-term Liabilities", accountType: "Liability", accountSubType: "Long-term Liability", normalBalance: "Credit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "2510", accountName: "Long-term Loans", accountType: "Liability", accountSubType: "Long-term Liability", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      
+      // Equity
+      { companyId, accountCode: "3000", accountName: "Equity", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "3010", accountName: "Share Capital", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "3020", accountName: "Retained Earnings", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "3030", accountName: "Current Year Earnings", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      
+      // Revenue
+      { companyId, accountCode: "4000", accountName: "Revenue", accountType: "Revenue", accountSubType: "Operating Revenue", normalBalance: "Credit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "4010", accountName: "Sales Revenue", accountType: "Revenue", accountSubType: "Operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "4020", accountName: "Service Revenue", accountType: "Revenue", accountSubType: "Operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "4030", accountName: "Interest Income", accountType: "Revenue", accountSubType: "Non-operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "4040", accountName: "Other Income", accountType: "Revenue", accountSubType: "Non-operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
+      
+      // Cost of Goods Sold
+      { companyId, accountCode: "5000", accountName: "Cost of Goods Sold", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "5010", accountName: "Purchases", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "5020", accountName: "Direct Labor", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "5030", accountName: "Freight In", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      
+      // Operating Expenses
+      { companyId, accountCode: "6000", accountName: "Operating Expenses", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 1, isSystemAccount: true },
+      { companyId, accountCode: "6010", accountName: "Salaries and Wages", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6020", accountName: "Rent Expense", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6030", accountName: "Utilities", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6040", accountName: "Telephone", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6050", accountName: "Insurance", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6060", accountName: "Depreciation", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6070", accountName: "Marketing and Advertising", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6080", accountName: "Professional Services", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6090", accountName: "Office Supplies", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6100", accountName: "Bank Charges", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+      { companyId, accountCode: "6110", accountName: "Interest Expense", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
+    ];
+
+    for (const account of saAccounts) {
+      await db.insert(chartOfAccounts).values(account).onConflictDoNothing();
+    }
+  }
+
+  // Journal Entries
+  async getAllJournalEntries(companyId: number): Promise<JournalEntryWithLines[]> {
+    const entries = await db.select().from(journalEntries)
+      .where(eq(journalEntries.companyId, companyId))
+      .orderBy(desc(journalEntries.transactionDate));
+
+    return await Promise.all(entries.map(async (entry) => {
+      const lines = await db.select().from(journalEntryLines)
+        .where(eq(journalEntryLines.journalEntryId, entry.id));
+      return { ...entry, lines };
+    }));
+  }
+
+  async getJournalEntry(id: number): Promise<JournalEntryWithLines | undefined> {
+    const [entry] = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
+    if (!entry) return undefined;
+
+    const lines = await db.select().from(journalEntryLines)
+      .where(eq(journalEntryLines.journalEntryId, entry.id));
+    return { ...entry, lines };
+  }
+
+  async createJournalEntry(entry: InsertJournalEntry, lines: Omit<InsertJournalEntryLine, 'journalEntryId'>[]): Promise<JournalEntryWithLines> {
+    const [newEntry] = await db.insert(journalEntries).values(entry).returning();
+    
+    const entryLines = await Promise.all(
+      lines.map(line => 
+        db.insert(journalEntryLines)
+          .values({ ...line, journalEntryId: newEntry.id })
+          .returning()
+          .then(([insertedLine]) => insertedLine)
+      )
+    );
+
+    return { ...newEntry, lines: entryLines };
+  }
+
+  async updateJournalEntry(id: number, entry: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined> {
+    const [updated] = await db
+      .update(journalEntries)
+      .set({ ...entry, updatedAt: new Date() })
+      .where(eq(journalEntries.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async postJournalEntry(id: number): Promise<JournalEntry | undefined> {
+    const [posted] = await db
+      .update(journalEntries)
+      .set({ isPosted: true, updatedAt: new Date() })
+      .where(eq(journalEntries.id, id))
+      .returning();
+    return posted || undefined;
+  }
+
+  async reverseJournalEntry(id: number, description: string, createdBy: number): Promise<JournalEntryWithLines> {
+    const originalEntry = await this.getJournalEntry(id);
+    if (!originalEntry) throw new Error("Journal entry not found");
+
+    // Create reversal entry
+    const reversalEntry: InsertJournalEntry = {
+      companyId: originalEntry.companyId,
+      entryNumber: `REV-${originalEntry.entryNumber}`,
+      transactionDate: new Date(),
+      description,
+      reference: `Reversal of ${originalEntry.entryNumber}`,
+      totalDebit: originalEntry.totalCredit,
+      totalCredit: originalEntry.totalDebit,
+      createdBy,
+      sourceModule: 'reversal',
+      sourceId: originalEntry.id,
+    };
+
+    // Reverse the line items (swap debit/credit)
+    const reversalLines = originalEntry.lines.map(line => ({
+      accountId: line.accountId,
+      description: `Reversal: ${line.description}`,
+      debitAmount: line.creditAmount,
+      creditAmount: line.debitAmount,
+      reference: line.reference,
+    }));
+
+    const newEntry = await this.createJournalEntry(reversalEntry, reversalLines);
+    
+    // Mark original as reversed
+    await db.update(journalEntries)
+      .set({ isReversed: true, reversalEntryId: newEntry.id })
+      .where(eq(journalEntries.id, id));
+
+    return newEntry;
+  }
+
+  async deleteJournalEntry(id: number): Promise<boolean> {
+    // Delete lines first
+    await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, id));
+    // Delete entry
+    const result = await db.delete(journalEntries).where(eq(journalEntries.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async calculateAccountBalance(accountId: number, asOfDate?: Date): Promise<string> {
+    const account = await this.getChartOfAccount(accountId);
+    if (!account) return "0.00";
+
+    let query = db
+      .select({
+        debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), 0)`,
+        creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), 0)`,
+      })
+      .from(journalEntryLines)
+      .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+      .where(
+        and(
+          eq(journalEntryLines.accountId, accountId),
+          eq(journalEntries.isPosted, true)
+        )
+      );
+
+    if (asOfDate) {
+      query = query.where(lte(journalEntries.transactionDate, asOfDate));
+    }
+
+    const [result] = await query;
+    const debitTotal = parseFloat(result?.debitTotal || "0");
+    const creditTotal = parseFloat(result?.creditTotal || "0");
+
+    let balance: number;
+    if (account.normalBalance === "Debit") {
+      balance = debitTotal - creditTotal;
+    } else {
+      balance = creditTotal - debitTotal;
+    }
+
+    return balance.toFixed(2);
+  }
+
+  async getAccountBalanceReport(companyId: number, periodStart: Date, periodEnd: Date): Promise<AccountBalanceReport[]> {
+    const accounts = await db.select().from(chartOfAccounts)
+      .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.isActive, true)))
+      .orderBy(chartOfAccounts.accountCode);
+
+    return await Promise.all(accounts.map(async (account) => {
+      const balance = await this.calculateAccountBalance(account.id, periodEnd);
+      return {
+        accountId: account.id,
+        accountCode: account.accountCode,
+        accountName: account.accountName,
+        accountType: account.accountType,
+        openingBalance: "0.00", // TODO: Calculate opening balance
+        debitTotal: "0.00", // TODO: Calculate period debits
+        creditTotal: "0.00", // TODO: Calculate period credits
+        closingBalance: balance,
+      };
+    }));
+  }
+
+  async updateAccountBalances(companyId: number, periodStart: Date, periodEnd: Date): Promise<void> {
+    // This would typically be run as a scheduled job
+    // Implementation would calculate and store period balances for performance
+  }
+
+  async getTrialBalance(companyId: number, asOfDate: Date): Promise<AccountBalanceReport[]> {
+    return this.getAccountBalanceReport(companyId, new Date(asOfDate.getFullYear(), 0, 1), asOfDate);
+  }
+
+  // Automated Journal Entries
+  async createInvoiceJournalEntry(invoiceId: number): Promise<JournalEntryWithLines> {
+    const invoice = await this.getInvoice(invoiceId);
+    if (!invoice) throw new Error("Invoice not found");
+
+    // Get the appropriate revenue and receivables accounts
+    const revenueAccount = await this.getChartOfAccountByCode(invoice.companyId, "4010"); // Sales Revenue
+    const receivablesAccount = await this.getChartOfAccountByCode(invoice.companyId, "1100"); // Accounts Receivable
+    const vatAccount = await this.getChartOfAccountByCode(invoice.companyId, "2020"); // VAT Output Tax
+
+    if (!revenueAccount || !receivablesAccount || !vatAccount) {
+      throw new Error("Required accounts not found for invoice journal entry");
+    }
+
+    const entry: InsertJournalEntry = {
+      companyId: invoice.companyId,
+      entryNumber: `INV-${invoice.invoiceNumber}`,
+      transactionDate: invoice.issueDate,
+      description: `Sale to ${invoice.customer.name}`,
+      reference: invoice.invoiceNumber,
+      totalDebit: invoice.total,
+      totalCredit: invoice.total,
+      sourceModule: 'invoice',
+      sourceId: invoice.id,
+      createdBy: 1, // System user
+    };
+
+    const lines = [
+      {
+        accountId: receivablesAccount.id,
+        description: `Invoice ${invoice.invoiceNumber}`,
+        debitAmount: invoice.total,
+        creditAmount: "0.00",
+        reference: invoice.invoiceNumber,
+      },
+      {
+        accountId: revenueAccount.id,
+        description: `Sale to ${invoice.customer.name}`,
+        debitAmount: "0.00",
+        creditAmount: invoice.subtotal,
+        reference: invoice.invoiceNumber,
+      },
+      {
+        accountId: vatAccount.id,
+        description: `VAT on Invoice ${invoice.invoiceNumber}`,
+        debitAmount: "0.00",
+        creditAmount: invoice.vatAmount,
+        reference: invoice.invoiceNumber,
+      },
+    ];
+
+    return this.createJournalEntry(entry, lines);
+  }
+
+  async createPaymentJournalEntry(paymentId: number): Promise<JournalEntryWithLines> {
+    const payment = await db.select().from(payments)
+      .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
+      .innerJoin(customers, eq(invoices.customerId, customers.id))
+      .where(eq(payments.id, paymentId));
+
+    if (!payment.length) throw new Error("Payment not found");
+
+    const paymentData = payment[0];
+    const bankAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1010"); // Bank Account
+    const receivablesAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1100"); // Accounts Receivable
+
+    if (!bankAccount || !receivablesAccount) {
+      throw new Error("Required accounts not found for payment journal entry");
+    }
+
+    const entry: InsertJournalEntry = {
+      companyId: paymentData.invoices.companyId,
+      entryNumber: `PAY-${paymentData.payments.id}`,
+      transactionDate: paymentData.payments.paymentDate,
+      description: `Payment from ${paymentData.customers.name}`,
+      reference: paymentData.payments.reference || '',
+      totalDebit: paymentData.payments.amount,
+      totalCredit: paymentData.payments.amount,
+      sourceModule: 'payment',
+      sourceId: paymentData.payments.id,
+      createdBy: 1, // System user
+    };
+
+    const lines = [
+      {
+        accountId: bankAccount.id,
+        description: `Payment for Invoice ${paymentData.invoices.invoiceNumber}`,
+        debitAmount: paymentData.payments.amount,
+        creditAmount: "0.00",
+        reference: paymentData.payments.reference || '',
+      },
+      {
+        accountId: receivablesAccount.id,
+        description: `Payment from ${paymentData.customers.name}`,
+        debitAmount: "0.00",
+        creditAmount: paymentData.payments.amount,
+        reference: paymentData.payments.reference || '',
+      },
+    ];
+
+    return this.createJournalEntry(entry, lines);
+  }
+
+  async createExpenseJournalEntry(expenseId: number): Promise<JournalEntryWithLines> {
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
+    if (!expense) throw new Error("Expense not found");
+
+    // Map expense category to account
+    let expenseAccountCode = "6090"; // Default to Office Supplies
+    if (expense.category === "Utilities") expenseAccountCode = "6030";
+    else if (expense.category === "Rent") expenseAccountCode = "6020";
+    else if (expense.category === "Marketing") expenseAccountCode = "6070";
+
+    const expenseAccount = await this.getChartOfAccountByCode(expense.companyId, expenseAccountCode);
+    const bankAccount = await this.getChartOfAccountByCode(expense.companyId, "1010"); // Bank Account
+    const vatInputAccount = await this.getChartOfAccountByCode(expense.companyId, "1400"); // VAT Input Tax
+
+    if (!expenseAccount || !bankAccount || !vatInputAccount) {
+      throw new Error("Required accounts not found for expense journal entry");
+    }
+
+    const entry: InsertJournalEntry = {
+      companyId: expense.companyId,
+      entryNumber: `EXP-${expense.id}`,
+      transactionDate: expense.expenseDate,
+      description: expense.description,
+      reference: `Expense-${expense.id}`,
+      totalDebit: expense.amount,
+      totalCredit: expense.amount,
+      sourceModule: 'expense',
+      sourceId: expense.id,
+      createdBy: 1, // System user
+    };
+
+    const netAmount = (parseFloat(expense.amount) - parseFloat(expense.vatAmount)).toFixed(2);
+    const lines = [
+      {
+        accountId: expenseAccount.id,
+        description: expense.description,
+        debitAmount: netAmount,
+        creditAmount: "0.00",
+        reference: `Expense-${expense.id}`,
+      },
+      {
+        accountId: vatInputAccount.id,
+        description: `VAT on ${expense.description}`,
+        debitAmount: expense.vatAmount,
+        creditAmount: "0.00",
+        reference: `Expense-${expense.id}`,
+      },
+      {
+        accountId: bankAccount.id,
+        description: `Payment for ${expense.description}`,
+        debitAmount: "0.00",
+        creditAmount: expense.amount,
+        reference: `Expense-${expense.id}`,
+      },
+    ];
+
+    return this.createJournalEntry(entry, lines);
+  }
 }
 
 export const storage = new DatabaseStorage();
+
+
+
+
+
+
