@@ -54,6 +54,29 @@ export function formatCurrency(amount: number | string): string {
   }).format(num);
 }
 
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
+}
+
+export function getStatusColor(status: string): string {
+  switch (status) {
+    case 'paid':
+      return 'bg-green-100 text-green-800';
+    case 'sent':
+      return 'bg-blue-100 text-blue-800';
+    case 'overdue':
+      return 'bg-red-100 text-red-800';
+    case 'draft':
+      return 'bg-gray-100 text-gray-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+}
+
 export function generateInvoiceNumber(count: number): string {
   const year = new Date().getFullYear();
   return `INV-${year}-${String(count + 1).padStart(3, '0')}`;
@@ -64,32 +87,4 @@ export function generateEstimateNumber(count: number): string {
   return `EST-${year}-${String(count + 1).padStart(3, '0')}`;
 }
 
-export function getStatusColor(status: string): string {
-  switch (status) {
-    case 'paid':
-      return 'bg-green-100 text-green-800';
-    case 'sent':
-      return 'bg-blue-100 text-blue-800';
-    case 'draft':
-      return 'bg-gray-100 text-gray-800';
-    case 'overdue':
-      return 'bg-red-100 text-red-800';
-    case 'approved':
-      return 'bg-green-100 text-green-800';
-    case 'rejected':
-      return 'bg-red-100 text-red-800';
-    case 'expired':
-      return 'bg-orange-100 text-orange-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-}
 
-export function formatDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-ZA', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}

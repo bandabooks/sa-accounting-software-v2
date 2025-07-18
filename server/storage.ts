@@ -6,6 +6,8 @@ import {
   estimateItems, 
   users,
   payments,
+  expenses,
+  vatReturns,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -20,13 +22,17 @@ import {
   type InsertUser,
   type Payment,
   type InsertPayment,
+  type Expense,
+  type InsertExpense,
+  type VatReturn,
+  type InsertVatReturn,
   type InvoiceWithCustomer,
   type InvoiceWithItems,
   type EstimateWithCustomer,
   type EstimateWithItems
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sum, count } from "drizzle-orm";
+import { eq, desc, sum, count, sql, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -73,6 +79,43 @@ export interface IStorage {
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: number, payment: Partial<InsertPayment>): Promise<Payment | undefined>;
   deletePayment(id: number): Promise<boolean>;
+
+  // Expenses
+  getAllExpenses(): Promise<Expense[]>;
+  getExpense(id: number): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
+  getExpensesByCategory(category: string): Promise<Expense[]>;
+  getExpensesByDateRange(startDate: Date, endDate: Date): Promise<Expense[]>;
+
+  // VAT Returns
+  getAllVatReturns(): Promise<VatReturn[]>;
+  getVatReturn(id: number): Promise<VatReturn | undefined>;
+  createVatReturn(vatReturn: InsertVatReturn): Promise<VatReturn>;
+  updateVatReturn(id: number, vatReturn: Partial<InsertVatReturn>): Promise<VatReturn | undefined>;
+  deleteVatReturn(id: number): Promise<boolean>;
+  getVatReturnByPeriod(startDate: Date, endDate: Date): Promise<VatReturn | undefined>;
+
+  // Financial Reports
+  getFinancialSummary(startDate: Date, endDate: Date): Promise<{
+    totalRevenue: string;
+    totalExpenses: string;
+    grossProfit: string;
+    netProfit: string;
+    totalVatCollected: string;
+    totalVatPaid: string;
+  }>;
+  getProfitAndLoss(startDate: Date, endDate: Date): Promise<{
+    revenue: { category: string; amount: string }[];
+    expenses: { category: string; amount: string }[];
+    netProfit: string;
+  }>;
+  getCashFlowReport(startDate: Date, endDate: Date): Promise<{
+    cashInflow: { source: string; amount: string }[];
+    cashOutflow: { category: string; amount: string }[];
+    netCashFlow: string;
+  }>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -555,6 +598,199 @@ export class DatabaseStorage implements IStorage {
     if (newStatus !== invoice.status) {
       await this.updateInvoiceStatus(invoiceId, newStatus);
     }
+  }
+
+  // Expenses
+  async getAllExpenses(): Promise<Expense[]> {
+    return await db.select().from(expenses).orderBy(desc(expenses.expenseDate));
+  }
+
+  async getExpense(id: number): Promise<Expense | undefined> {
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+    return expense || undefined;
+  }
+
+  async createExpense(expense: InsertExpense): Promise<Expense> {
+    const [newExpense] = await db.insert(expenses).values(expense).returning();
+    return newExpense;
+  }
+
+  async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const [updatedExpense] = await db.update(expenses).set(expense).where(eq(expenses.id, id)).returning();
+    return updatedExpense || undefined;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getExpensesByCategory(category: string): Promise<Expense[]> {
+    return await db.select().from(expenses).where(eq(expenses.category, category)).orderBy(desc(expenses.expenseDate));
+  }
+
+  async getExpensesByDateRange(startDate: Date, endDate: Date): Promise<Expense[]> {
+    return await db.select().from(expenses)
+      .where(and(
+        sql`${expenses.expenseDate} >= ${startDate}`,
+        sql`${expenses.expenseDate} <= ${endDate}`
+      ))
+      .orderBy(desc(expenses.expenseDate));
+  }
+
+  // VAT Returns
+  async getAllVatReturns(): Promise<VatReturn[]> {
+    return await db.select().from(vatReturns).orderBy(desc(vatReturns.createdAt));
+  }
+
+  async getVatReturn(id: number): Promise<VatReturn | undefined> {
+    const [vatReturn] = await db.select().from(vatReturns).where(eq(vatReturns.id, id));
+    return vatReturn || undefined;
+  }
+
+  async createVatReturn(vatReturn: InsertVatReturn): Promise<VatReturn> {
+    const [newVatReturn] = await db.insert(vatReturns).values(vatReturn).returning();
+    return newVatReturn;
+  }
+
+  async updateVatReturn(id: number, vatReturn: Partial<InsertVatReturn>): Promise<VatReturn | undefined> {
+    const [updatedVatReturn] = await db.update(vatReturns).set(vatReturn).where(eq(vatReturns.id, id)).returning();
+    return updatedVatReturn || undefined;
+  }
+
+  async deleteVatReturn(id: number): Promise<boolean> {
+    const result = await db.delete(vatReturns).where(eq(vatReturns.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getVatReturnByPeriod(startDate: Date, endDate: Date): Promise<VatReturn | undefined> {
+    const [vatReturn] = await db.select().from(vatReturns)
+      .where(and(
+        eq(vatReturns.periodStart, startDate),
+        eq(vatReturns.periodEnd, endDate)
+      ));
+    return vatReturn || undefined;
+  }
+
+  // Financial Reports
+  async getFinancialSummary(startDate: Date, endDate: Date): Promise<{
+    totalRevenue: string;
+    totalExpenses: string;
+    grossProfit: string;
+    netProfit: string;
+    totalVatCollected: string;
+    totalVatPaid: string;
+  }> {
+    const [revenueResult, expenseResult] = await Promise.all([
+      db.select({
+        totalRevenue: sql<string>`COALESCE(SUM(${invoices.total}), 0)`,
+        totalVatCollected: sql<string>`COALESCE(SUM(${invoices.vatAmount}), 0)`,
+      }).from(invoices)
+        .where(and(
+          sql`${invoices.issueDate} >= ${startDate}`,
+          sql`${invoices.issueDate} <= ${endDate}`,
+          eq(invoices.status, 'paid')
+        )),
+      
+      db.select({
+        totalExpenses: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`,
+        totalVatPaid: sql<string>`COALESCE(SUM(${expenses.vatAmount}), 0)`,
+      }).from(expenses)
+        .where(and(
+          sql`${expenses.expenseDate} >= ${startDate}`,
+          sql`${expenses.expenseDate} <= ${endDate}`
+        ))
+    ]);
+
+    const totalRevenue = parseFloat(revenueResult[0]?.totalRevenue || '0');
+    const totalExpenses = parseFloat(expenseResult[0]?.totalExpenses || '0');
+    const grossProfit = totalRevenue - totalExpenses;
+    const netProfit = grossProfit; // Simplified for now
+
+    return {
+      totalRevenue: totalRevenue.toFixed(2),
+      totalExpenses: totalExpenses.toFixed(2),
+      grossProfit: grossProfit.toFixed(2),
+      netProfit: netProfit.toFixed(2),
+      totalVatCollected: revenueResult[0]?.totalVatCollected || '0',
+      totalVatPaid: expenseResult[0]?.totalVatPaid || '0',
+    };
+  }
+
+  async getProfitAndLoss(startDate: Date, endDate: Date): Promise<{
+    revenue: { category: string; amount: string }[];
+    expenses: { category: string; amount: string }[];
+    netProfit: string;
+  }> {
+    const [revenueData, expenseData] = await Promise.all([
+      db.select({
+        category: sql<string>`'Sales'`,
+        amount: sql<string>`COALESCE(SUM(${invoices.total}), 0)`,
+      }).from(invoices)
+        .where(and(
+          sql`${invoices.issueDate} >= ${startDate}`,
+          sql`${invoices.issueDate} <= ${endDate}`,
+          eq(invoices.status, 'paid')
+        )),
+      
+      db.select({
+        category: expenses.category,
+        amount: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`,
+      }).from(expenses)
+        .where(and(
+          sql`${expenses.expenseDate} >= ${startDate}`,
+          sql`${expenses.expenseDate} <= ${endDate}`
+        ))
+        .groupBy(expenses.category)
+    ]);
+
+    const totalRevenue = parseFloat(revenueData[0]?.amount || '0');
+    const totalExpenses = expenseData.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+    const netProfit = totalRevenue - totalExpenses;
+
+    return {
+      revenue: revenueData,
+      expenses: expenseData,
+      netProfit: netProfit.toFixed(2),
+    };
+  }
+
+  async getCashFlowReport(startDate: Date, endDate: Date): Promise<{
+    cashInflow: { source: string; amount: string }[];
+    cashOutflow: { category: string; amount: string }[];
+    netCashFlow: string;
+  }> {
+    const [inflowData, outflowData] = await Promise.all([
+      db.select({
+        source: sql<string>`'Customer Payments'`,
+        amount: sql<string>`COALESCE(SUM(${payments.amount}), 0)`,
+      }).from(payments)
+        .where(and(
+          sql`${payments.paymentDate} >= ${startDate}`,
+          sql`${payments.paymentDate} <= ${endDate}`,
+          eq(payments.status, 'completed')
+        )),
+      
+      db.select({
+        category: expenses.category,
+        amount: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`,
+      }).from(expenses)
+        .where(and(
+          sql`${expenses.expenseDate} >= ${startDate}`,
+          sql`${expenses.expenseDate} <= ${endDate}`
+        ))
+        .groupBy(expenses.category)
+    ]);
+
+    const totalInflow = parseFloat(inflowData[0]?.amount || '0');
+    const totalOutflow = outflowData.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+    const netCashFlow = totalInflow - totalOutflow;
+
+    return {
+      cashInflow: inflowData,
+      cashOutflow: outflowData,
+      netCashFlow: netCashFlow.toFixed(2),
+    };
   }
 }
 

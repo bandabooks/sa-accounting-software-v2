@@ -16,6 +16,8 @@ import Estimates from "@/pages/estimates";
 import EstimateCreate from "@/pages/estimate-create";
 import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
+import FinancialReports from "@/pages/financial-reports";
+import Expenses from "@/pages/expenses";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -34,6 +36,8 @@ function Router() {
       <Route path="/estimates/new" component={EstimateCreate} />
       <Route path="/estimates/:id" component={EstimateDetail} />
       <Route path="/reports" component={Reports} />
+      <Route path="/financial-reports" component={FinancialReports} />
+      <Route path="/expenses" component={Expenses} />
       <Route component={NotFound} />
     </Switch>
   );

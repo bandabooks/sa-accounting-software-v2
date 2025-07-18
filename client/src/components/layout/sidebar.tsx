@@ -1,12 +1,14 @@
 import { Link, useLocation } from "wouter";
-import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings } from "lucide-react";
+import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: ChartLine },
   { path: "/invoices", label: "Invoices", icon: FileText, badge: "12" },
   { path: "/estimates", label: "Estimates", icon: FileText },
   { path: "/customers", label: "Customers", icon: Users },
-  { path: "/reports", label: "Reports", icon: BarChart3 },
+  { path: "/expenses", label: "Expenses", icon: Receipt },
+  { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp },
+  { path: "/reports", label: "Business Reports", icon: BarChart3 },
 ];
 
 export default function Sidebar() {

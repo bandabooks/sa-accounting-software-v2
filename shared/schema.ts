@@ -68,6 +68,33 @@ export const estimateItems = pgTable("estimate_items", {
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
 });
 
+// Financial reporting tables
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  category: text("category").notNull(), // office_supplies, travel, utilities, etc.
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  expenseDate: timestamp("expense_date").notNull(),
+  isDeductible: boolean("is_deductible").default(true),
+  receiptPath: text("receipt_path"), // Path to receipt image/PDF
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const vatReturns = pgTable("vat_returns", {
+  id: serial("id").primaryKey(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  totalSales: decimal("total_sales", { precision: 10, scale: 2 }).notNull(),
+  totalVatSales: decimal("total_vat_sales", { precision: 10, scale: 2 }).notNull(),
+  totalPurchases: decimal("total_purchases", { precision: 10, scale: 2 }).notNull(),
+  totalVatPurchases: decimal("total_vat_purchases", { precision: 10, scale: 2 }).notNull(),
+  vatPayable: decimal("vat_payable", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("draft"), // draft, submitted, approved
+  submittedAt: timestamp("submitted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -141,6 +168,27 @@ export const insertPaymentSchema = z.object({
   status: z.enum(["pending", "completed", "failed"]).default("completed"),
 });
 
+export const insertExpenseSchema = z.object({
+  description: z.string(),
+  amount: z.string(),
+  category: z.string(),
+  vatAmount: z.string().default("0.00"),
+  expenseDate: z.string().transform((str) => new Date(str)),
+  isDeductible: z.boolean().default(true),
+  receiptPath: z.string().optional(),
+});
+
+export const insertVatReturnSchema = z.object({
+  periodStart: z.string().transform((str) => new Date(str)),
+  periodEnd: z.string().transform((str) => new Date(str)),
+  totalSales: z.string(),
+  totalVatSales: z.string(),
+  totalPurchases: z.string(),
+  totalVatPurchases: z.string(),
+  vatPayable: z.string(),
+  status: z.enum(["draft", "submitted", "approved"]).default("draft"),
+});
+
 // Customer portal login schema
 export const customerPortalLoginSchema = z.object({
   email: z.string().email(),
@@ -168,6 +216,12 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+
+export type VatReturn = typeof vatReturns.$inferSelect;
+export type InsertVatReturn = z.infer<typeof insertVatReturnSchema>;
 
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),

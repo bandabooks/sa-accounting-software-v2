@@ -1,7 +1,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCustomerSchema, insertInvoiceSchema, insertInvoiceItemSchema, insertEstimateSchema, insertEstimateItemSchema, insertPaymentSchema, customerPortalLoginSchema } from "@shared/schema";
+import { 
+  insertCustomerSchema, 
+  insertInvoiceSchema, 
+  insertInvoiceItemSchema, 
+  insertEstimateSchema, 
+  insertEstimateItemSchema, 
+  insertPaymentSchema,
+  insertExpenseSchema,
+  insertVatReturnSchema,
+  customerPortalLoginSchema 
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -403,6 +413,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "PDF generation not implemented" });
     } catch (error) {
       res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  // Financial Reporting - Expenses
+  app.get("/api/expenses", async (req, res) => {
+    try {
+      const expenses = await storage.getAllExpenses();
+      res.json(expenses);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch expenses" });
+    }
+  });
+
+  app.get("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      res.json(expense);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch expense" });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    try {
+      const validatedData = insertExpenseSchema.parse(req.body);
+      const expense = await storage.createExpense(validatedData);
+      res.status(201).json(expense);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create expense" });
+    }
+  });
+
+  app.put("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertExpenseSchema.partial().parse(req.body);
+      const expense = await storage.updateExpense(id, validatedData);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      res.json(expense);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update expense" });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteExpense(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete expense" });
+    }
+  });
+
+  // VAT Returns
+  app.get("/api/vat-returns", async (req, res) => {
+    try {
+      const vatReturns = await storage.getAllVatReturns();
+      res.json(vatReturns);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch VAT returns" });
+    }
+  });
+
+  app.get("/api/vat-returns/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const vatReturn = await storage.getVatReturn(id);
+      if (!vatReturn) {
+        return res.status(404).json({ message: "VAT return not found" });
+      }
+      res.json(vatReturn);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch VAT return" });
+    }
+  });
+
+  app.post("/api/vat-returns", async (req, res) => {
+    try {
+      const validatedData = insertVatReturnSchema.parse(req.body);
+      const vatReturn = await storage.createVatReturn(validatedData);
+      res.status(201).json(vatReturn);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create VAT return" });
+    }
+  });
+
+  app.put("/api/vat-returns/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertVatReturnSchema.partial().parse(req.body);
+      const vatReturn = await storage.updateVatReturn(id, validatedData);
+      if (!vatReturn) {
+        return res.status(404).json({ message: "VAT return not found" });
+      }
+      res.json(vatReturn);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update VAT return" });
+    }
+  });
+
+  // Financial Reports
+  app.get("/api/reports/financial-summary", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+      
+      const summary = await storage.getFinancialSummary(
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate financial summary" });
+    }
+  });
+
+  app.get("/api/reports/profit-loss", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+      
+      const report = await storage.getProfitAndLoss(
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(report);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate profit & loss report" });
+    }
+  });
+
+  app.get("/api/reports/cash-flow", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+      
+      const report = await storage.getCashFlowReport(
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(report);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate cash flow report" });
+    }
+  });
+
+  app.get("/api/reports/vat-calculation", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+      
+      const summary = await storage.getFinancialSummary(
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      
+      const vatPayable = parseFloat(summary.totalVatCollected) - parseFloat(summary.totalVatPaid);
+      
+      res.json({
+        periodStart: startDate,
+        periodEnd: endDate,
+        totalVatCollected: summary.totalVatCollected,
+        totalVatPaid: summary.totalVatPaid,
+        vatPayable: vatPayable.toFixed(2),
+        status: "calculated"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to calculate VAT" });
     }
   });
 
