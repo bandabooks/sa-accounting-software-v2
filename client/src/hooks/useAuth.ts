@@ -25,8 +25,9 @@ export interface AuthState {
 export function useAuth(): AuthState {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Check for stored authentication data
+  // Check for stored authentication data and set initial state
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const sessionToken = localStorage.getItem('sessionToken');
@@ -37,17 +38,23 @@ export function useAuth(): AuthState {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
         setIsAuthenticated(true);
+        setIsLoading(false);
       } catch (error) {
         // Clear invalid stored data
         localStorage.removeItem('authToken');
         localStorage.removeItem('sessionToken');
         localStorage.removeItem('userData');
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
   }, []);
 
-  // Fetch current user data to verify authentication
-  const { data: currentUser, isLoading, error } = useQuery({
+  // Verify authentication with server
+  const { data: currentUser, isLoading: queryLoading, error } = useQuery({
     queryKey: ['/api/auth/me'],
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
@@ -62,6 +69,7 @@ export function useAuth(): AuthState {
           'Authorization': `Bearer ${token}`,
           'X-Session-Token': sessionToken,
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -70,7 +78,7 @@ export function useAuth(): AuthState {
 
       return response.json();
     },
-    enabled: !!localStorage.getItem('authToken'),
+    enabled: !!localStorage.getItem('authToken') && !!localStorage.getItem('sessionToken'),
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -139,7 +147,7 @@ export function useAuth(): AuthState {
   return {
     user,
     isAuthenticated,
-    isLoading,
+    isLoading: isLoading || queryLoading,
     hasPermission,
     hasRole,
     logout,

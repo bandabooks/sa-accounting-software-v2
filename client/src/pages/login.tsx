@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { loginSchema, type LoginRequest } from '@shared/schema';
 import { Lock, User, Building, AlertCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
@@ -39,13 +39,16 @@ export default function Login() {
       // Clear any previous error
       setLoginError(null);
       
+      // Invalidate auth queries to trigger re-authentication
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      
       toast({
         title: "Login Successful",
         description: `Welcome back, ${data.user.name}!`,
       });
       
-      // Redirect to dashboard
-      setLocation('/dashboard');
+      // Force page reload to ensure proper authentication state
+      window.location.href = '/dashboard';
     },
     onError: (error: Error) => {
       console.error('Login error:', error);

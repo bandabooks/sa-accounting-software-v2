@@ -40,32 +40,7 @@ const PERMISSIONS = {
   PURCHASE_ORDERS_VIEW: 'purchase_orders:view',
 } as const;
 
-function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  // Show login page if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route path="/portal" component={CustomerPortal} />
-        <Route>
-          <Login />
-        </Route>
-      </Switch>
-    );
-  }
-
-  // Show protected routes with authentication
+function AuthenticatedApp() {
   return (
     <AppLayout>
       <Switch>
@@ -157,6 +132,35 @@ function Router() {
       </Switch>
     </AppLayout>
   );
+}
+
+function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/portal" component={CustomerPortal} />
+        <Route>
+          <Login />
+        </Route>
+      </Switch>
+    );
+  }
+
+  // Show protected routes with authentication
+  return <AuthenticatedApp />;
 }
 
 function App() {
