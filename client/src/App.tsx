@@ -11,6 +11,8 @@ import InvoiceDetail from "@/pages/invoice-detail";
 import Customers from "@/pages/customers";
 import CustomerCreate from "@/pages/customer-create";
 import Estimates from "@/pages/estimates";
+import EstimateCreate from "@/pages/estimate-create";
+import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/customers" component={Customers} />
       <Route path="/customers/new" component={CustomerCreate} />
       <Route path="/estimates" component={Estimates} />
+      <Route path="/estimates/new" component={EstimateCreate} />
+      <Route path="/estimates/:id" component={EstimateDetail} />
       <Route path="/reports" component={Reports} />
       <Route component={NotFound} />
     </Switch>

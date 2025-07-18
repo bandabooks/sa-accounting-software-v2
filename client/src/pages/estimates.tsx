@@ -44,10 +44,12 @@ export default function Estimates() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button className="bg-secondary hover:bg-teal-800 text-white">
-          <Plus size={16} className="mr-2" />
-          New Estimate
-        </Button>
+        <Link href="/estimates/new">
+          <Button className="bg-secondary hover:bg-teal-800 text-white">
+            <Plus size={16} className="mr-2" />
+            New Estimate
+          </Button>
+        </Link>
       </div>
 
       {/* Estimates Table */}
@@ -108,9 +110,11 @@ export default function Estimates() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <Button variant="ghost" size="sm">
-                      <Eye size={16} />
-                    </Button>
+                    <Link href={`/estimates/${estimate.id}`}>
+                      <Button variant="ghost" size="sm">
+                        <Eye size={16} />
+                      </Button>
+                    </Link>
                     <Button variant="ghost" size="sm">
                       <FileText size={16} />
                     </Button>
@@ -127,9 +131,11 @@ export default function Estimates() {
               {searchTerm ? "No estimates found matching your search." : "No estimates yet."}
             </div>
             {!searchTerm && (
-              <Button className="mt-4 bg-secondary hover:bg-teal-800 text-white">
-                Create your first estimate
-              </Button>
+              <Link href="/estimates/new">
+                <Button className="mt-4 bg-secondary hover:bg-teal-800 text-white">
+                  Create your first estimate
+                </Button>
+              </Link>
             )}
           </div>
         )}
