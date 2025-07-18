@@ -55,7 +55,12 @@ interface VatCalculation {
 export default function FinancialReports() {
   const [dateRange, setDateRange] = useState({
     startDate: '2024-01-01', // Start from 2024 to capture all existing data
-    endDate: new Date().toISOString().split('T')[0] // Today
+    endDate: (() => {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      return tomorrow.toISOString().split('T')[0];
+    })() // Tomorrow to include all of today's transactions
   });
   const { toast } = useToast();
 
