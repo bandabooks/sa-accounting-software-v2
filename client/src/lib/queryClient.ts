@@ -12,12 +12,38 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const token = localStorage.getItem('authToken');
+  const sessionToken = localStorage.getItem('sessionToken');
+  
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
+  if (sessionToken) {
+    headers["X-Session-Token"] = sessionToken;
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
+
+  // Handle authentication errors
+  if (res.status === 401) {
+    // Clear authentication data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('userData');
+    
+    // Redirect to login
+    window.location.href = '/login';
+  }
 
   await throwIfResNotOk(res);
   return res;
@@ -29,12 +55,36 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const token = localStorage.getItem('authToken');
+    const sessionToken = localStorage.getItem('sessionToken');
+    
+    const headers: HeadersInit = {};
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
+    if (sessionToken) {
+      headers["X-Session-Token"] = sessionToken;
+    }
+    
     const res = await fetch(queryKey.join("/") as string, {
+      headers,
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      // Clear authentication data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('sessionToken');
+      localStorage.removeItem('userData');
+      
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      
+      // Redirect to login
+      window.location.href = '/login';
     }
 
     await throwIfResNotOk(res);

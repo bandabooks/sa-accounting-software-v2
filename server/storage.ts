@@ -5,6 +5,9 @@ import {
   estimates, 
   estimateItems, 
   users,
+  userSessions,
+  userRoles,
+  auditLogs,
   payments,
   expenses,
   vatReturns,
@@ -24,6 +27,12 @@ import {
   type InsertEstimateItem,
   type User, 
   type InsertUser,
+  type UserSession,
+  type InsertUserSession,
+  type UserRole,
+  type InsertUserRole,
+  type AuditLog,
+  type InsertAuditLog,
   type Payment,
   type InsertPayment,
   type Expense,
@@ -54,6 +63,30 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  updateUserPassword(id: number, hashedPassword: string): Promise<void>;
+  updateUserLoginAttempts(id: number, attempts: number, lockedUntil?: Date): Promise<void>;
+  updateUserLastLogin(id: number): Promise<void>;
+
+  // Authentication & Sessions
+  createSession(session: InsertUserSession): Promise<UserSession>;
+  getSessionByToken(token: string): Promise<UserSession | undefined>;
+  updateSessionActivity(sessionId: number): Promise<void>;
+  deleteSession(sessionId: number): Promise<void>;
+  deleteExpiredSessions(): Promise<void>;
+  deleteUserSessions(userId: number): Promise<void>;
+
+  // Roles
+  getAllRoles(): Promise<UserRole[]>;
+  getRole(id: number): Promise<UserRole | undefined>;
+  createRole(role: InsertUserRole): Promise<UserRole>;
+  updateRole(id: number, role: Partial<InsertUserRole>): Promise<UserRole | undefined>;
+  deleteRole(id: number): Promise<boolean>;
+
+  // Audit Logs
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(limit?: number, offset?: number): Promise<AuditLog[]>;
+  getAuditLogsByUser(userId: number, limit?: number): Promise<AuditLog[]>;
 
   // Customers
   getAllCustomers(): Promise<Customer[]>;
@@ -193,6 +226,135 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ ...user, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async updateUserPassword(id: number, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        password: hashedPassword, 
+        passwordChangedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+  }
+
+  async updateUserLoginAttempts(id: number, attempts: number, lockedUntil?: Date): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        failedLoginAttempts: attempts,
+        lockedUntil: lockedUntil || null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+  }
+
+  async updateUserLastLogin(id: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        lastLogin: new Date(),
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+  }
+
+  // Authentication & Sessions
+  async createSession(session: InsertUserSession): Promise<UserSession> {
+    const [newSession] = await db.insert(userSessions).values(session).returning();
+    return newSession;
+  }
+
+  async getSessionByToken(token: string): Promise<UserSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(userSessions)
+      .where(eq(userSessions.sessionToken, token));
+    return session;
+  }
+
+  async updateSessionActivity(sessionId: number): Promise<void> {
+    await db
+      .update(userSessions)
+      .set({ lastActivity: new Date() })
+      .where(eq(userSessions.id, sessionId));
+  }
+
+  async deleteSession(sessionId: number): Promise<void> {
+    await db.delete(userSessions).where(eq(userSessions.id, sessionId));
+  }
+
+  async deleteExpiredSessions(): Promise<void> {
+    await db.delete(userSessions).where(lte(userSessions.expiresAt, new Date()));
+  }
+
+  async deleteUserSessions(userId: number): Promise<void> {
+    await db.delete(userSessions).where(eq(userSessions.userId, userId));
+  }
+
+  // Roles
+  async getAllRoles(): Promise<UserRole[]> {
+    return await db.select().from(userRoles).orderBy(userRoles.name);
+  }
+
+  async getRole(id: number): Promise<UserRole | undefined> {
+    const [role] = await db.select().from(userRoles).where(eq(userRoles.id, id));
+    return role;
+  }
+
+  async createRole(role: InsertUserRole): Promise<UserRole> {
+    const [newRole] = await db.insert(userRoles).values(role).returning();
+    return newRole;
+  }
+
+  async updateRole(id: number, role: Partial<InsertUserRole>): Promise<UserRole | undefined> {
+    const [updatedRole] = await db
+      .update(userRoles)
+      .set(role)
+      .where(eq(userRoles.id, id))
+      .returning();
+    return updatedRole;
+  }
+
+  async deleteRole(id: number): Promise<boolean> {
+    const result = await db.delete(userRoles).where(eq(userRoles.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Audit Logs
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [newLog] = await db.insert(auditLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getAuditLogs(limit: number = 100, offset: number = 0): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getAuditLogsByUser(userId: number, limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit);
   }
 
   // Customers

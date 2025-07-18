@@ -2,6 +2,21 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
+  authenticate, 
+  requirePermission, 
+  requireRole, 
+  hashPassword, 
+  verifyPassword, 
+  generateSessionToken, 
+  generateJWT, 
+  logAudit, 
+  checkLoginAttempts, 
+  recordLoginAttempt, 
+  PERMISSIONS, 
+  ROLES,
+  type AuthenticatedRequest 
+} from "./auth";
+import { 
   insertCustomerSchema, 
   insertInvoiceSchema, 
   insertInvoiceItemSchema, 
@@ -14,13 +29,174 @@ import {
   insertSupplierSchema,
   insertPurchaseOrderSchema,
   insertPurchaseOrderItemSchema,
-  insertSupplierPaymentSchema
+  insertSupplierPaymentSchema,
+  loginSchema,
+  changePasswordSchema,
+  insertUserRoleSchema,
+  type LoginRequest,
+  type ChangePasswordRequest
 } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Dashboard
-  app.get("/api/dashboard/stats", async (req, res) => {
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = loginSchema.parse(req.body);
+      
+      // Check rate limiting
+      const clientId = req.ip || req.connection?.remoteAddress || 'unknown';
+      if (!checkLoginAttempts(clientId)) {
+        return res.status(429).json({ message: "Too many login attempts. Please try again later." });
+      }
+      
+      // Find user
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        recordLoginAttempt(clientId, false);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      // Check if user is active
+      if (!user.isActive) {
+        recordLoginAttempt(clientId, false);
+        return res.status(401).json({ message: "Account is deactivated" });
+      }
+      
+      // Check if user is locked
+      if (user.lockedUntil && new Date() < user.lockedUntil) {
+        recordLoginAttempt(clientId, false);
+        return res.status(423).json({ message: "Account is temporarily locked due to failed login attempts" });
+      }
+      
+      // Verify password
+      const isPasswordValid = await verifyPassword(password, user.password);
+      if (!isPasswordValid) {
+        recordLoginAttempt(clientId, false);
+        
+        // Increment failed attempts
+        const newAttempts = (user.failedLoginAttempts || 0) + 1;
+        const lockUntil = newAttempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : undefined; // Lock for 30 minutes
+        
+        await storage.updateUserLoginAttempts(user.id, newAttempts, lockUntil);
+        
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      // Update last login
+      await storage.updateUserLastLogin(user.id);
+      recordLoginAttempt(clientId, true);
+      
+      // Create session
+      const sessionToken = generateSessionToken();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      
+      await storage.createSession({
+        userId: user.id,
+        sessionToken,
+        expiresAt,
+        ipAddress: req.ip || req.connection?.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+        isActive: true,
+      });
+      
+      // Generate JWT
+      const token = generateJWT({ userId: user.id, username: user.username });
+      
+      // Log audit
+      await logAudit(user.id, 'login', 'users', user.id, null, req);
+      
+      res.json({
+        token,
+        sessionToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          permissions: user.permissions,
+        },
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (req.session) {
+        await storage.deleteSession(req.session.id);
+      }
+      
+      await logAudit(req.user?.id || null, 'logout', 'users', req.user?.id, null, req);
+      
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  app.get("/api/auth/me", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        lastLogin: user.lastLogin,
+        twoFactorEnabled: user.twoFactorEnabled,
+      });
+    } catch (error) {
+      console.error("Get current user error:", error);
+      res.status(500).json({ message: "Failed to fetch user data" });
+    }
+  });
+
+  app.post("/api/auth/change-password", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+      
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Verify current password
+      const isCurrentPasswordValid = await verifyPassword(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update password
+      await storage.updateUserPassword(user.id, hashedPassword);
+      
+      // Delete all user sessions (force re-login)
+      await storage.deleteUserSessions(user.id);
+      
+      await logAudit(user.id, 'password_change', 'users', user.id, null, req);
+      
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // Dashboard - protected route
+  app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);

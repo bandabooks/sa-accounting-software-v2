@@ -3,6 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
@@ -20,30 +22,140 @@ import FinancialReports from "@/pages/financial-reports";
 import Expenses from "@/pages/expenses";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
+import Login from "@/pages/login";
 import AppLayout from "@/components/layout/app-layout";
 
+// Permission constants for route protection
+const PERMISSIONS = {
+  DASHBOARD_VIEW: 'dashboard:view',
+  CUSTOMERS_VIEW: 'customers:view',
+  CUSTOMERS_CREATE: 'customers:create',
+  INVOICES_VIEW: 'invoices:view',
+  INVOICES_CREATE: 'invoices:create',
+  ESTIMATES_VIEW: 'estimates:view',
+  ESTIMATES_CREATE: 'estimates:create',
+  FINANCIAL_VIEW: 'financial:view',
+  EXPENSES_VIEW: 'expenses:view',
+  SUPPLIERS_VIEW: 'suppliers:view',
+  PURCHASE_ORDERS_VIEW: 'purchase_orders:view',
+} as const;
+
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/portal" component={CustomerPortal} />
+        <Route>
+          <Login />
+        </Route>
+      </Switch>
+    );
+  }
+
+  // Show protected routes with authentication
   return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/invoices" component={Invoices} />
-      <Route path="/invoices/new" component={InvoiceCreate} />
-      <Route path="/invoices/:id" component={InvoiceDetail} />
-      <Route path="/customers" component={Customers} />
-      <Route path="/customers/new" component={CustomerCreate} />
-      <Route path="/customers/:id" component={CustomerDetail} />
-      <Route path="/portal" component={CustomerPortal} />
-      <Route path="/estimates" component={Estimates} />
-      <Route path="/estimates/new" component={EstimateCreate} />
-      <Route path="/estimates/:id" component={EstimateDetail} />
-      <Route path="/suppliers" component={Suppliers} />
-      <Route path="/purchase-orders" component={PurchaseOrders} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/financial-reports" component={FinancialReports} />
-      <Route path="/expenses" component={Expenses} />
-      <Route component={NotFound} />
-    </Switch>
+    <AppLayout>
+      <Switch>
+        <Route path="/login">
+          <Dashboard />
+        </Route>
+        <Route path="/">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <Dashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/dashboard">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <Dashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/invoices">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <Invoices />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/invoices/new">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_CREATE}>
+            <InvoiceCreate />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/invoices/:id">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <InvoiceDetail />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customers">
+          <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_VIEW}>
+            <Customers />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customers/new">
+          <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_CREATE}>
+            <CustomerCreate />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customers/:id">
+          <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_VIEW}>
+            <CustomerDetail />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/estimates">
+          <ProtectedRoute permission={PERMISSIONS.ESTIMATES_VIEW}>
+            <Estimates />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/estimates/new">
+          <ProtectedRoute permission={PERMISSIONS.ESTIMATES_CREATE}>
+            <EstimateCreate />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/estimates/:id">
+          <ProtectedRoute permission={PERMISSIONS.ESTIMATES_VIEW}>
+            <EstimateDetail />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/suppliers">
+          <ProtectedRoute permission={PERMISSIONS.SUPPLIERS_VIEW}>
+            <Suppliers />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/purchase-orders">
+          <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
+            <PurchaseOrders />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/reports">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <Reports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/financial-reports">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <FinancialReports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/expenses">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <Expenses />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/portal" component={CustomerPortal} />
+        <Route component={NotFound} />
+      </Switch>
+    </AppLayout>
   );
 }
 
@@ -52,9 +164,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <AppLayout>
-          <Router />
-        </AppLayout>
+        <Router />
       </TooltipProvider>
     </QueryClientProvider>
   );
