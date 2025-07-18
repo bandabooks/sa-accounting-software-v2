@@ -66,10 +66,18 @@ import {
   type EstimateWithItems,
   type PurchaseOrderWithSupplier,
   type PurchaseOrderWithItems,
-  type SupplierPaymentWithSupplier
+  type SupplierPaymentWithSupplier,
+  type CompanySettings,
+  type InsertCompanySettings,
+  type InventoryTransaction,
+  type InsertInventoryTransaction,
+  type EmailReminder,
+  type InsertEmailReminder,
+  type CurrencyRate,
+  type InsertCurrencyRate
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sum, count, sql, and, gte, lte } from "drizzle-orm";
+import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -1434,7 +1442,11 @@ export class DatabaseStorage implements IStorage {
   async updateCompanySettings(updates: Partial<any>): Promise<any> {
     const existing = await this.getCompanySettings();
     if (!existing) {
-      const [newSettings] = await db.insert(companySettings).values(updates).returning();
+      const settingsData = {
+        companyName: updates.companyName || "My Company",
+        ...updates
+      };
+      const [newSettings] = await db.insert(companySettings).values(settingsData).returning();
       return newSettings;
     }
     
@@ -1451,13 +1463,13 @@ export class DatabaseStorage implements IStorage {
     const [newTransaction] = await db.insert(inventoryTransactions).values(transaction).returning();
     
     // Update product stock quantity
-    const product = await this.getProductById(transaction.productId);
+    const product = await this.getProduct(transaction.productId);
     if (product) {
       let newQuantity = product.stockQuantity;
       if (transaction.transactionType === 'in') {
         newQuantity += transaction.quantity;
       } else if (transaction.transactionType === 'out') {
-        newQuantity -= transaction.quantity;
+        newQuantity = (newQuantity || 0) - transaction.quantity;
       } else if (transaction.transactionType === 'adjustment') {
         newQuantity = transaction.quantity;
       }

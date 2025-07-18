@@ -20,7 +20,7 @@ export default function Sidebar() {
   const [location] = useLocation();
 
   return (
-    <aside className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30">
+    <aside className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 lg:block hidden">
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">

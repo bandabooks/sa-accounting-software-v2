@@ -1034,7 +1034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const categoryData = insertProductCategorySchema.parse(req.body);
       const category = await storage.createProductCategory(categoryData);
-      await logAudit((req as AuthenticatedRequest).user.id, 'CREATE', 'product_category', category?.id || 0);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product_category', category?.id || 0);
       res.status(201).json(category);
     } catch (error) {
       console.error("Error creating product category:", error);
@@ -1050,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!category) {
         return res.status(404).json({ message: "Product category not found" });
       }
-      await logAudit((req as AuthenticatedRequest).user.id, 'UPDATE', 'product_category', id);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product_category', id);
       res.json(category);
     } catch (error) {
       console.error("Error updating product category:", error);
@@ -1065,7 +1065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Product category not found" });
       }
-      await logAudit((req as AuthenticatedRequest).user.id, 'DELETE', 'product_category', id);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'DELETE', 'product_category', id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting product category:", error);
@@ -1102,7 +1102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
-      await logAudit((req as AuthenticatedRequest).user.id, 'CREATE', 'product', product?.id || 0);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product', product?.id || 0);
       res.status(201).json(product);
     } catch (error) {
       console.error("Error creating product:", error);
@@ -1118,7 +1118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-      await logAudit((req as AuthenticatedRequest).user.id, 'UPDATE', 'product', id);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product', id);
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1133,7 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Product not found" });
       }
-      await logAudit((req as AuthenticatedRequest).user.id, 'DELETE', 'product', id);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'DELETE', 'product', id);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -1184,7 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         signature: paymentData.signature,
       });
 
-      await logAudit((req as AuthenticatedRequest).user.id, 'CREATE', 'payfast_payment', payfastPayment.id);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'payfast_payment', payfastPayment.id);
 
       res.json({
         paymentData,
@@ -1301,7 +1301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/inventory/transactions', authenticate, async (req, res) => {
     try {
-      const transactions = await storage.getAllInventoryTransactions();
+      const transactions = await storage.getInventoryTransactions();
       res.json(transactions);
     } catch (error) {
       console.error('Error fetching inventory transactions:', error);

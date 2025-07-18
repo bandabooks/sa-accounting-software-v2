@@ -132,7 +132,7 @@ export default function CustomerDetail() {
             <h1 className="text-2xl font-bold">{customer.name}</h1>
             <div className="flex items-center gap-4 mt-2">
               <Badge variant={customer.category === "premium" ? "default" : "secondary"}>
-                {customer.category?.charAt(0).toUpperCase() + customer.category?.slice(1)}
+                {customer.category ? customer.category.charAt(0).toUpperCase() + customer.category.slice(1) : 'Standard'}
               </Badge>
               {customer.portalAccess && (
                 <Badge variant="outline" className="flex items-center gap-1">
@@ -269,7 +269,7 @@ export default function CustomerDetail() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Category</Label>
-                  <p className="text-sm">{customer.category?.charAt(0).toUpperCase() + customer.category?.slice(1)}</p>
+                  <p className="text-sm">{customer.category ? customer.category.charAt(0).toUpperCase() + customer.category.slice(1) : 'Standard'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-500">Notes</Label>

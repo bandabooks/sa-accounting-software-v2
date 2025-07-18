@@ -24,7 +24,7 @@ export async function seedDatabase() {
     // Create default roles
     const existingRoles = await storage.getAllRoles();
     if (existingRoles.length === 0) {
-      const rolePromises = Object.entries(ROLES).map(([key, roleData]) => 
+      const rolePromises = Object.entries(ROLES).map(([key, roleData]: [string, any]) => 
         storage.createRole({
           name: key,
           description: roleData.name,

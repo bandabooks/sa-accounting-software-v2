@@ -172,11 +172,11 @@ export const verifyPassword = async (password: string, hashedPassword: string): 
 
 // Token utilities
 export const generateSessionToken = (): string => {
-  return crypto.randomBytes(32).toString('hex');
+  return require('crypto').randomBytes(32).toString('hex');
 };
 
 export const generateJWT = (payload: any, expiresIn: string = '24h'): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions);
 };
 
 export const verifyJWT = (token: string): any => {
@@ -247,7 +247,7 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
       name: user.name,
       email: user.email,
       role: user.role,
-      permissions: user.permissions,
+      permissions: user.permissions || [],
     };
 
     if (session) {

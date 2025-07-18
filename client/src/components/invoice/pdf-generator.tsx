@@ -1,7 +1,19 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { InvoiceWithCustomer } from "@shared/schema";
-import { formatCurrency, formatDate } from "@/lib/utils-invoice";
+
+// Helper functions
+const formatCurrency = (amount: string | number) => {
+  const value = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR'
+  }).format(value);
+};
+
+const formatDate = (dateStr: string | Date) => {
+  return new Date(dateStr).toLocaleDateString('en-ZA');
+};
 
 interface PDFGeneratorProps {
   invoice: InvoiceWithCustomer;
@@ -42,8 +54,8 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     
     pdf.setFontSize(10);
     pdf.text(invoice.customer.name, 20, 80);
-    pdf.text(invoice.customer.email, 20, 87);
-    pdf.text(invoice.customer.phone, 20, 94);
+    pdf.text(invoice.customer.email || "", 20, 87);
+    pdf.text(invoice.customer.phone || "", 20, 94);
     pdf.text(`${invoice.customer.address}`, 20, 101);
     pdf.text(`${invoice.customer.city}, ${invoice.customer.postalCode}`, 20, 108);
     
@@ -68,7 +80,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setTextColor(0, 0, 0);
     let currentY = tableStartY + 15;
     
-    invoice.items.forEach((item, index) => {
+    (invoice as any).items?.forEach((item: any, index: number) => {
       pdf.text(item.description, 25, currentY);
       pdf.text(item.quantity.toString(), pageWidth - 120, currentY);
       pdf.text(formatCurrency(item.unitPrice), pageWidth - 90, currentY);
@@ -88,14 +100,14 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.text(formatCurrency(invoice.vatAmount), pageWidth - 35, totalsY + 8);
     
     pdf.setFontSize(12);
-    pdf.setFont(undefined, 'bold');
+    pdf.setFont('helvetica', 'bold');
     pdf.text("Total:", pageWidth - 80, totalsY + 18);
     pdf.text(formatCurrency(invoice.total), pageWidth - 35, totalsY + 18);
 
     // Notes
     if (invoice.notes) {
       pdf.setFontSize(10);
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text("Notes:", 20, totalsY + 30);
       pdf.text(invoice.notes, 20, totalsY + 40);
     }

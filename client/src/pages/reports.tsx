@@ -151,8 +151,8 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="h-64 bg-gradient-to-t from-primary/10 to-primary/5 rounded-lg flex items-end justify-between px-4 pb-4 space-x-2">
-              {stats?.revenueByMonth?.map((month, index) => {
-                const height = (month.revenue / Math.max(...stats.revenueByMonth.map(m => m.revenue))) * 180;
+              {stats?.revenueByMonth?.map((month: any, index: number) => {
+                const height = (month.revenue / Math.max(...stats.revenueByMonth.map((m: any) => m.revenue))) * 180;
                 return (
                   <div key={month.month} className="bg-primary/20 w-8 rounded-t flex items-end justify-center" style={{ height: `${height + 20}px` }}>
                     <div className="bg-primary w-6 rounded-t" style={{ height: `${height}px` }}></div>
@@ -161,7 +161,7 @@ export default function Reports() {
               })}
             </div>
             <div className="flex justify-between mt-4 text-xs text-gray-500">
-              {stats?.revenueByMonth?.map(month => (
+              {stats?.revenueByMonth?.map((month: any) => (
                 <span key={month.month}>{month.month}</span>
               ))}
             </div>

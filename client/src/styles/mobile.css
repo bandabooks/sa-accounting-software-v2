@@ -1,0 +1,219 @@
+/* Mobile-specific styles for enhanced touch interaction */
+
+/* Touch-friendly buttons */
+@media (max-width: 768px) {
+  .touch-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px 16px;
+  }
+  
+  .touch-icon-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px;
+  }
+  
+  /* Larger tap areas for mobile */
+  .mobile-tap-area {
+    padding: 16px;
+    margin: 8px 0;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+  }
+  
+  .mobile-tap-area:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Enhanced form inputs for mobile */
+  .mobile-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    transition: border-color 0.2s ease;
+  }
+  
+  .mobile-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  /* Mobile-friendly tables */
+  .mobile-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-table {
+    min-width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: 12px 8px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  /* Cards optimized for mobile */
+  .mobile-card {
+    padding: 16px;
+    margin: 8px 0;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+  }
+  
+  /* Mobile navigation improvements */
+  .mobile-nav-item {
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 4px 0;
+    transition: background-color 0.2s ease;
+  }
+  
+  .mobile-nav-item.active {
+    background-color: #3b82f6;
+    color: white;
+  }
+  
+  .mobile-nav-item:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .mobile-nav-item.active:hover {
+    background-color: #2563eb;
+  }
+  
+  /* Responsive text sizing */
+  .mobile-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  
+  .mobile-subtitle {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 16px;
+  }
+  
+  /* Mobile-specific spacing */
+  .mobile-spacing {
+    padding: 16px;
+  }
+  
+  .mobile-spacing-sm {
+    padding: 12px;
+  }
+  
+  .mobile-spacing-lg {
+    padding: 24px;
+  }
+  
+  /* Responsive grid adjustments */
+  .mobile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .mobile-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  /* Enhanced modal/dialog for mobile */
+  .mobile-dialog {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+  
+  .mobile-dialog-content {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  
+  /* Swipe gestures support */
+  .swipe-container {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Mobile-optimized forms */
+  .mobile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .mobile-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .mobile-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  /* Mobile-specific animations */
+  .mobile-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .mobile-button {
+      border: 2px solid currentColor;
+    }
+    
+    .mobile-card {
+      border: 2px solid #374151;
+    }
+  }
+  
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .mobile-card {
+      background-color: #1f2937;
+      border-color: #374151;
+      color: #f9fafb;
+    }
+    
+    .mobile-input {
+      background-color: #1f2937;
+      border-color: #374151;
+      color: #f9fafb;
+    }
+    
+    .mobile-nav-item:hover {
+      background-color: #374151;
+    }
+  }
+}

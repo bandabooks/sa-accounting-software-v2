@@ -96,7 +96,7 @@ export class PayFastService {
       return false;
     }
 
-    const generatedSignature = this.generateSignature(data as PayFastPaymentData);
+    const generatedSignature = this.generateSignature(data as unknown as PayFastPaymentData);
     return generatedSignature === signature;
   }
 

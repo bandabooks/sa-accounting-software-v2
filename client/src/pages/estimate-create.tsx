@@ -46,8 +46,8 @@ export default function EstimateCreate() {
     defaultValues: {
       customerId: undefined,
       estimateNumber: "",
-      issueDate: new Date().toISOString().split("T")[0],
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      issueDate: new Date(),
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       status: "draft",
       subtotal: "0.00",
       vatAmount: "0.00",
@@ -56,9 +56,9 @@ export default function EstimateCreate() {
       items: [
         {
           description: "",
-          quantity: 1,
+          quantity: "1",
           unitPrice: "0.00",
-          vatRate: 15,
+          vatRate: "15",
           total: "0.00",
         },
       ],
@@ -90,7 +90,7 @@ export default function EstimateCreate() {
           items: items.map(item => ({
             ...item,
             quantity: item.quantity.toString(),
-            vatRate: item.vatRate.toString()
+            vatRate: item.vatRate?.toString() || "15"
           }))
         }),
       });
@@ -118,15 +118,15 @@ export default function EstimateCreate() {
 
   // Calculate totals
   const subtotal = watchedItems.reduce((sum, item) => {
-    const quantity = item.quantity || 0;
-    const unitPrice = parseFloat(item.unitPrice) || 0;
+    const quantity = parseFloat(item.quantity?.toString() || "0");
+    const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
     return sum + (quantity * unitPrice);
   }, 0);
 
   const vatAmount = watchedItems.reduce((sum, item) => {
-    const quantity = item.quantity || 0;
-    const unitPrice = parseFloat(item.unitPrice) || 0;
-    const vatRate = item.vatRate || 0;
+    const quantity = parseFloat(item.quantity?.toString() || "0");
+    const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+    const vatRate = parseFloat(item.vatRate?.toString() || "0");
     const itemTotal = quantity * unitPrice;
     return sum + (itemTotal * vatRate / 100);
   }, 0);
@@ -141,9 +141,9 @@ export default function EstimateCreate() {
   const onSubmit = (data: EstimateFormData) => {
     // Update item totals
     data.items.forEach((item, index) => {
-      const quantity = item.quantity || 0;
-      const unitPrice = parseFloat(item.unitPrice) || 0;
-      const vatRate = item.vatRate || 0;
+      const quantity = parseFloat(item.quantity?.toString() || "0");
+      const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+      const vatRate = parseFloat(item.vatRate?.toString() || "0");
       const itemSubtotal = quantity * unitPrice;
       const itemVat = itemSubtotal * vatRate / 100;
       const itemTotal = itemSubtotal + itemVat;
@@ -158,9 +158,9 @@ export default function EstimateCreate() {
   const addItem = () => {
     append({
       description: "",
-      quantity: 1,
+      quantity: "1",
       unitPrice: "0.00",
-      vatRate: 15,
+      vatRate: "15",
       total: "0.00",
     });
   };
@@ -243,7 +243,7 @@ export default function EstimateCreate() {
                         <FormItem>
                           <FormLabel>Issue Date</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input type="date" {...field} value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -257,7 +257,7 @@ export default function EstimateCreate() {
                         <FormItem>
                           <FormLabel>Expiry Date</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input type="date" {...field} value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -394,9 +394,9 @@ export default function EstimateCreate() {
                             <div className="text-sm text-gray-600">
                               Item Total: {formatCurrency(
                                 (
-                                  (watchedItems[index]?.quantity || 0) *
-                                  (parseFloat(watchedItems[index]?.unitPrice) || 0) *
-                                  (1 + (watchedItems[index]?.vatRate || 0) / 100)
+                                  (parseFloat(watchedItems[index]?.quantity?.toString() || "0")) *
+                                  (parseFloat(watchedItems[index]?.unitPrice?.toString() || "0")) *
+                                  (1 + (parseFloat(watchedItems[index]?.vatRate?.toString() || "0")) / 100)
                                 ).toFixed(2)
                               )}
                             </div>

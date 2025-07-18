@@ -9,6 +9,19 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { InvoiceWithCustomer } from "@shared/schema";
 
+// Helper functions
+const formatCurrency = (amount: string | number) => {
+  const value = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR'
+  }).format(value);
+};
+
+const formatDate = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString('en-ZA');
+};
+
 interface EmailInvoiceProps {
   invoice: InvoiceWithCustomer;
   isOpen: boolean;
@@ -18,7 +31,7 @@ interface EmailInvoiceProps {
 
 export default function EmailInvoice({ invoice, isOpen, onClose, onSent }: EmailInvoiceProps) {
   const [formData, setFormData] = useState({
-    to: invoice.customer.email,
+    to: invoice.customer.email || "",
     subject: `Invoice ${invoice.invoiceNumber} from Think Mybiz Accounting`,
     message: `Dear ${invoice.customer.name},
 
@@ -26,8 +39,8 @@ Please find attached your invoice ${invoice.invoiceNumber} for ${formatCurrency(
 
 Invoice Details:
 - Invoice Number: ${invoice.invoiceNumber}
-- Issue Date: ${formatDate(invoice.issueDate)}
-- Due Date: ${formatDate(invoice.dueDate)}
+- Issue Date: ${formatDate(invoice.issueDate.toString())}
+- Due Date: ${formatDate(invoice.dueDate.toString())}
 - Amount: ${formatCurrency(invoice.total)}
 
 Thank you for your business!
@@ -92,7 +105,7 @@ Think Mybiz Accounting Team`
               <Input
                 id="to"
                 type="email"
-                value={formData.to}
+                value={formData.to || ""}
                 onChange={(e) => setFormData({ ...formData, to: e.target.value })}
                 required
               />
@@ -144,11 +157,3 @@ Think Mybiz Accounting Team`
   );
 }
 
-// Helper functions
-function formatCurrency(amount: string): string {
-  return `R ${parseFloat(amount).toFixed(2)}`;
-}
-
-function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString();
-}

@@ -173,7 +173,7 @@ export default function InvoiceCreate() {
               <Label htmlFor="status">Status</Label>
               <Select 
                 value={formData.status} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as "paid" | "sent" | "overdue" | "draft" }))}
               >
                 <SelectTrigger>
                   <SelectValue />

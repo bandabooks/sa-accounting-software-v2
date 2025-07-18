@@ -285,7 +285,7 @@ export default function Inventory() {
                             variant="outline"
                             size="sm"
                             onClick={() => openTransactionDialog(product)}
-                            disabled={product.isService}
+                            disabled={product.isService || false}
                           >
                             Update Stock
                           </Button>
@@ -341,7 +341,7 @@ export default function Inventory() {
                               {isPositive ? '+' : '-'}{transaction.quantity}
                             </p>
                             <p className="text-sm text-gray-600">
-                              {new Date(transaction.createdAt).toLocaleDateString()}
+                              {transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : 'N/A'}
                             </p>
                           </div>
                           {transaction.unitCost && (
