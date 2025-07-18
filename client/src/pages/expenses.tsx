@@ -118,7 +118,7 @@ export default function Expenses() {
   const filteredExpenses = expenses?.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          expense.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || expense.category === selectedCategory;
+    const matchesCategory = !selectedCategory || selectedCategory === 'all' || expense.category === selectedCategory;
     return matchesSearch && matchesCategory;
   }) || [];
 
@@ -319,7 +319,7 @@ export default function Expenses() {
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All categories</SelectItem>
+            <SelectItem value="all">All categories</SelectItem>
             {expenseCategories.map(category => (
               <SelectItem key={category} value={category}>
                 {formatCategoryName(category)}
