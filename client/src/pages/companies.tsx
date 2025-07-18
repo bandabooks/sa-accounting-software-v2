@@ -47,6 +47,20 @@ export default function Companies() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
       setIsCreateDialogOpen(false);
+      // Reset form
+      setFormData({
+        name: '',
+        displayName: '',
+        slug: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        postalCode: '',
+        country: 'South Africa',
+        vatNumber: '',
+        registrationNumber: '',
+      });
     },
     onError: (error) => {
       toast({
@@ -80,25 +94,30 @@ export default function Companies() {
     },
   });
 
+  const [formData, setFormData] = useState({
+    name: '',
+    displayName: '',
+    slug: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: 'South Africa',
+    vatNumber: '',
+    registrationNumber: '',
+  });
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const companyData = {
-      name: formData.get("name") as string,
-      displayName: formData.get("displayName") as string,
-      slug: formData.get("slug") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      address: formData.get("address") as string,
-      city: formData.get("city") as string,
-      postalCode: formData.get("postalCode") as string,
-      country: formData.get("country") as string,
-      vatNumber: formData.get("vatNumber") as string,
-      registrationNumber: formData.get("registrationNumber") as string,
-    };
+    createCompanyMutation.mutate(formData);
+  };
 
-    createCompanyMutation.mutate(companyData);
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const getRoleIcon = (role: string) => {
@@ -160,48 +179,89 @@ export default function Companies() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Company Name *</Label>
-                  <Input id="name" name="name" required />
+                  <Input 
+                    id="name" 
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    required 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="displayName">Display Name *</Label>
-                  <Input id="displayName" name="displayName" required />
+                  <Input 
+                    id="displayName" 
+                    value={formData.displayName}
+                    onChange={(e) => handleInputChange('displayName', e.target.value)}
+                    required 
+                  />
                 </div>
               </div>
               
               <div>
                 <Label htmlFor="slug">URL Slug *</Label>
-                <Input id="slug" name="slug" placeholder="my-company" required />
+                <Input 
+                  id="slug" 
+                  value={formData.slug}
+                  onChange={(e) => handleInputChange('slug', e.target.value)}
+                  placeholder="my-company" 
+                  required 
+                />
                 <p className="text-sm text-gray-500 mt-1">Used in URLs (lowercase, no spaces)</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="email">Email *</Label>
-                  <Input id="email" name="email" type="email" required />
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    required 
+                  />
                 </div>
                 <div>
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" />
+                  <Input 
+                    id="phone" 
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                  />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="address">Address</Label>
-                <Textarea id="address" name="address" />
+                <Textarea 
+                  id="address" 
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="city">City</Label>
-                  <Input id="city" name="city" />
+                  <Input 
+                    id="city" 
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="postalCode">Postal Code</Label>
-                  <Input id="postalCode" name="postalCode" />
+                  <Input 
+                    id="postalCode" 
+                    value={formData.postalCode}
+                    onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="country">Country</Label>
-                  <Select name="country" defaultValue="South Africa">
+                  <Select 
+                    value={formData.country} 
+                    onValueChange={(value) => handleInputChange('country', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -218,11 +278,19 @@ export default function Companies() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="vatNumber">VAT Number</Label>
-                  <Input id="vatNumber" name="vatNumber" />
+                  <Input 
+                    id="vatNumber" 
+                    value={formData.vatNumber}
+                    onChange={(e) => handleInputChange('vatNumber', e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="registrationNumber">Registration Number</Label>
-                  <Input id="registrationNumber" name="registrationNumber" />
+                  <Input 
+                    id="registrationNumber" 
+                    value={formData.registrationNumber}
+                    onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
+                  />
                 </div>
               </div>
 
