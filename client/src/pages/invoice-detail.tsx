@@ -16,6 +16,8 @@ function PaymentFormWrapper({ invoiceId, invoiceTotal, onPaymentAdded }: {
   invoiceTotal: string;
   onPaymentAdded: () => void;
 }) {
+  const queryClient = useQueryClient();
+  
   const { data: payments } = useQuery<any[]>({
     queryKey: [`/api/invoices/${invoiceId}/payments`],
     queryFn: async () => {
@@ -31,12 +33,19 @@ function PaymentFormWrapper({ invoiceId, invoiceTotal, onPaymentAdded }: {
 
   const remainingAmount = Math.max(0, parseFloat(invoiceTotal) - totalPaid).toFixed(2);
 
+  const handlePaymentAdded = () => {
+    // Invalidate payment queries first
+    queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
+    // Then call the parent callback
+    onPaymentAdded();
+  };
+
   return (
     <PaymentForm
       invoiceId={invoiceId}
       invoiceTotal={invoiceTotal}
       remainingAmount={remainingAmount}
-      onPaymentAdded={onPaymentAdded}
+      onPaymentAdded={handlePaymentAdded}
     />
   );
 }

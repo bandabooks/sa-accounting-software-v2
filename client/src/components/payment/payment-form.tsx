@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,6 +58,13 @@ export default function PaymentForm({
     },
   });
 
+  // Update amount when remaining amount changes
+  useEffect(() => {
+    if (remainingAmount !== form.getValues("amount")) {
+      form.setValue("amount", remainingAmount);
+    }
+  }, [remainingAmount, form]);
+
   const onSubmit = async (data: PaymentFormData) => {
     setIsSubmitting(true);
     try {
@@ -78,7 +85,12 @@ export default function PaymentForm({
       }
 
       // Reset form and notify parent
-      form.reset();
+      form.reset({
+        amount: "",
+        paymentMethod: "cash",
+        reference: "",
+        notes: "",
+      });
       onPaymentAdded();
     } catch (error) {
       console.error("Error recording payment:", error);
