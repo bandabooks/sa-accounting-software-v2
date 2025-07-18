@@ -52,12 +52,31 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("company");
 
   const { data: settings, isLoading } = useQuery<CompanySettings>({
-    queryKey: ["/api/settings"],
+    queryKey: ["/api/settings/company"],
   });
 
   const form = useForm<CompanySettingsFormData>({
     resolver: zodResolver(companySettingsSchema),
     defaultValues: {
+      companyName: "",
+      companyEmail: "",
+      companyPhone: "",
+      companyAddress: "",
+      vatNumber: "",
+      registrationNumber: "",
+      primaryCurrency: "ZAR",
+      invoicePrefix: "INV",
+      estimatePrefix: "EST",
+      paymentTerms: "",
+      autoEmailReminders: false,
+      fiscalYearStart: "2025-01-01",
+      taxRate: "15.00",
+    },
+  });
+
+  // Reset form when settings are loaded
+  if (settings && !isLoading) {
+    form.reset({
       companyName: settings?.companyName || "",
       companyEmail: settings?.companyEmail || "",
       companyPhone: settings?.companyPhone || "",
@@ -71,15 +90,15 @@ export default function Settings() {
       autoEmailReminders: settings?.autoEmailReminders || false,
       fiscalYearStart: settings?.fiscalYearStart || "2025-01-01",
       taxRate: settings?.taxRate || "15.00",
-    },
-  });
+    });
+  }
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: CompanySettingsFormData) => {
-      await apiRequest("PUT", "/api/settings", data);
+      await apiRequest("PUT", "/api/settings/company", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/company"] });
       toast({
         title: "Success",
         description: "Company settings updated successfully",
