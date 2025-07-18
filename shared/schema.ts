@@ -759,7 +759,7 @@ export type EmailReminder = typeof emailReminders.$inferSelect;
 export type InsertCurrencyRate = z.infer<typeof insertCurrencyRateSchema>;
 export type CurrencyRate = typeof currencyRates.$inferSelect;
 
-// Chart of Accounts - South African Business Accounting Standards
+// Enhanced Chart of Accounts with Banking Support
 export const chartOfAccounts = pgTable("chart_of_accounts", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id),
@@ -774,7 +774,14 @@ export const chartOfAccounts = pgTable("chart_of_accounts", {
   taxType: varchar("tax_type", { length: 50 }), // VAT, PAYE, etc.
   level: integer("level").default(1), // Account hierarchy level
   isSystemAccount: boolean("is_system_account").default(false), // Cannot be deleted
-  balance: decimal("balance", { precision: 15, scale: 2 }).default("0.00"),
+  isBankAccount: boolean("is_bank_account").default(false), // For banking module
+  isCashAccount: boolean("is_cash_account").default(false), // For cash transactions
+  isControlAccount: boolean("is_control_account").default(false), // For AR, AP control
+  bankName: varchar("bank_name", { length: 100 }), // Bank name if bank account
+  accountNumber: varchar("account_number", { length: 50 }), // Bank account number
+  currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).default("0.00"),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0.00"),
+  reconciliationDate: timestamp("reconciliation_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -782,6 +789,7 @@ export const chartOfAccounts = pgTable("chart_of_accounts", {
   companyIdx: index("chart_accounts_company_idx").on(table.companyId),
   typeIdx: index("chart_accounts_type_idx").on(table.accountType),
   activeIdx: index("chart_accounts_active_idx").on(table.isActive),
+  bankIdx: index("chart_accounts_bank_idx").on(table.isBankAccount),
 }));
 
 // Journal Entries for double-entry bookkeeping
@@ -843,6 +851,153 @@ export const accountBalances = pgTable("account_balances", {
   periodIdx: index("account_balances_period_idx").on(table.periodStart, table.periodEnd),
 }));
 
+// Banking Module Tables
+export const bankAccounts = pgTable("bank_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  chartAccountId: integer("chart_account_id").notNull().references(() => chartOfAccounts.id),
+  bankName: varchar("bank_name", { length: 100 }).notNull(),
+  accountNumber: varchar("account_number", { length: 50 }).notNull(),
+  accountType: varchar("account_type", { length: 50 }).default("checking"), // checking, savings, credit
+  routingNumber: varchar("routing_number", { length: 20 }),
+  swiftCode: varchar("swift_code", { length: 20 }),
+  branchCode: varchar("branch_code", { length: 20 }),
+  currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).default("0.00"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const bankTransactions = pgTable("bank_transactions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id),
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // deposit, withdrawal, payment, receipt, transfer
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  description: text("description").notNull(),
+  reference: varchar("reference", { length: 100 }),
+  payeePayor: varchar("payee_payor", { length: 255 }), // Who paid or who was paid
+  transactionDate: timestamp("transaction_date").notNull(),
+  clearingDate: timestamp("clearing_date"),
+  isReconciled: boolean("is_reconciled").default(false),
+  reconciledAt: timestamp("reconciled_at"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bank_transactions_company_idx").on(table.companyId),
+  accountIdx: index("bank_transactions_account_idx").on(table.bankAccountId),
+  dateIdx: index("bank_transactions_date_idx").on(table.transactionDate),
+  reconciledIdx: index("bank_transactions_reconciled_idx").on(table.isReconciled),
+}));
+
+// Enhanced Inventory with Double-Entry Integration
+export const inventoryCategories = pgTable("inventory_categories", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  assetAccountId: integer("asset_account_id").references(() => chartOfAccounts.id), // Inventory asset account
+  cogsAccountId: integer("cogs_account_id").references(() => chartOfAccounts.id), // Cost of goods sold account
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const inventoryItems = pgTable("inventory_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  categoryId: integer("category_id").references(() => inventoryCategories.id),
+  itemCode: varchar("item_code", { length: 50 }).notNull(),
+  itemName: varchar("item_name", { length: 255 }).notNull(),
+  description: text("description"),
+  itemType: varchar("item_type", { length: 20 }).notNull().default("product"), // product, service, bundle
+  unitOfMeasure: varchar("unit_of_measure", { length: 20 }).default("each"),
+  quantityOnHand: decimal("quantity_on_hand", { precision: 10, scale: 2 }).default("0.00"),
+  reorderLevel: decimal("reorder_level", { precision: 10, scale: 2 }).default("0.00"),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).default("0.00"),
+  averageCost: decimal("average_cost", { precision: 10, scale: 2 }).default("0.00"),
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).default("0.00"),
+  lastPurchaseDate: timestamp("last_purchase_date"),
+  lastSaleDate: timestamp("last_sale_date"),
+  isActive: boolean("is_active").default(true),
+  trackInventory: boolean("track_inventory").default(true), // False for services
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyCodeUnique: unique().on(table.companyId, table.itemCode),
+  companyIdx: index("inventory_items_company_idx").on(table.companyId),
+  categoryIdx: index("inventory_items_category_idx").on(table.categoryId),
+  typeIdx: index("inventory_items_type_idx").on(table.itemType),
+}));
+
+export const inventoryMovements = pgTable("inventory_movements", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  itemId: integer("item_id").notNull().references(() => inventoryItems.id),
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id),
+  movementType: varchar("movement_type", { length: 20 }).notNull(), // purchase, sale, adjustment, transfer
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).notNull(),
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull(),
+  reference: varchar("reference", { length: 100 }),
+  description: text("description"),
+  movementDate: timestamp("movement_date").notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("inventory_movements_company_idx").on(table.companyId),
+  itemIdx: index("inventory_movements_item_idx").on(table.itemId),
+  typeIdx: index("inventory_movements_type_idx").on(table.movementType),
+  dateIdx: index("inventory_movements_date_idx").on(table.movementDate),
+}));
+
+// Enhanced Product/Service Management
+export const serviceCategories = pgTable("service_categories", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  revenueAccountId: integer("revenue_account_id").references(() => chartOfAccounts.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const services = pgTable("services", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  categoryId: integer("category_id").references(() => serviceCategories.id),
+  serviceCode: varchar("service_code", { length: 50 }).notNull(),
+  serviceName: varchar("service_name", { length: 255 }).notNull(),
+  description: text("description"),
+  unitOfMeasure: varchar("unit_of_measure", { length: 20 }).default("hour"),
+  standardRate: decimal("standard_rate", { precision: 10, scale: 2 }).default("0.00"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyCodeUnique: unique().on(table.companyId, table.serviceCode),
+  companyIdx: index("services_company_idx").on(table.companyId),
+  categoryIdx: index("services_category_idx").on(table.categoryId),
+}));
+
+// Financial Reporting Views and Calculations
+export const trialBalance = pgTable("trial_balance_cache", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  accountId: integer("account_id").notNull().references(() => chartOfAccounts.id),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0.00"),
+  debitMovements: decimal("debit_movements", { precision: 15, scale: 2 }).default("0.00"),
+  creditMovements: decimal("credit_movements", { precision: 15, scale: 2 }).default("0.00"),
+  closingBalance: decimal("closing_balance", { precision: 15, scale: 2 }).default("0.00"),
+  lastCalculated: timestamp("last_calculated").defaultNow(),
+}, (table) => ({
+  companyPeriodUnique: unique().on(table.companyId, table.accountId, table.periodStart, table.periodEnd),
+  companyIdx: index("trial_balance_company_idx").on(table.companyId),
+  periodIdx: index("trial_balance_period_idx").on(table.periodStart, table.periodEnd),
+}));
+
 // Chart of Accounts schemas
 export const insertChartOfAccountSchema = createInsertSchema(chartOfAccounts).omit({
   id: true,
@@ -866,6 +1021,91 @@ export const insertAccountBalanceSchema = createInsertSchema(accountBalances).om
   lastUpdated: true,
 });
 
+// Banking Module Schemas
+export const insertBankAccountSchema = createInsertSchema(bankAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankTransactionSchema = createInsertSchema(bankTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Inventory Module Schemas  
+export const insertInventoryCategorySchema = createInsertSchema(inventoryCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Service Module Schemas
+export const insertServiceCategorySchema = createInsertSchema(serviceCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertServiceSchema = createInsertSchema(services).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Financial Reporting Schema
+export const insertTrialBalanceSchema = createInsertSchema(trialBalance).omit({
+  id: true,
+  lastCalculated: true,
+});
+
+// Enhanced Invoice Schema with GL Integration
+export const enhancedInvoiceSchema = insertInvoiceSchema.extend({
+  revenueAccountId: z.number().optional(),
+  arAccountId: z.number().optional(),
+  autoPostToGL: z.boolean().default(true),
+});
+
+// Enhanced Payment Schema with GL Integration
+export const enhancedPaymentSchema = insertPaymentSchema.extend({
+  bankAccountId: z.number().optional(),
+  depositAccountId: z.number().optional(),
+  autoPostToGL: z.boolean().default(true),
+});
+
+// Journal Entry Creation Schema with Validation
+export const createJournalEntrySchema = z.object({
+  entryNumber: z.string().optional(),
+  transactionDate: z.string().transform((str) => new Date(str)),
+  description: z.string().min(1, "Description is required"),
+  reference: z.string().optional(),
+  sourceModule: z.string().optional(),
+  sourceId: z.number().optional(),
+  lines: z.array(z.object({
+    accountId: z.number(),
+    description: z.string().optional(),
+    debitAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Invalid debit amount"),
+    creditAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Invalid credit amount"),
+    reference: z.string().optional(),
+  })).min(2, "At least two journal entry lines are required"),
+}).refine((data) => {
+  const totalDebits = data.lines.reduce((sum, line) => sum + parseFloat(line.debitAmount), 0);
+  const totalCredits = data.lines.reduce((sum, line) => sum + parseFloat(line.creditAmount), 0);
+  return Math.abs(totalDebits - totalCredits) < 0.01; // Allow for minor rounding differences
+}, {
+  message: "Total debits must equal total credits",
+  path: ["lines"],
+});
+
 // Chart of Accounts types
 export type ChartOfAccount = typeof chartOfAccounts.$inferSelect;
 export type InsertChartOfAccount = z.infer<typeof insertChartOfAccountSchema>;
@@ -875,6 +1115,31 @@ export type JournalEntryLine = typeof journalEntryLines.$inferSelect;
 export type InsertJournalEntryLine = z.infer<typeof insertJournalEntryLineSchema>;
 export type AccountBalance = typeof accountBalances.$inferSelect;
 export type InsertAccountBalance = z.infer<typeof insertAccountBalanceSchema>;
+
+// Banking Module Types
+export type BankAccount = typeof bankAccounts.$inferSelect;
+export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
+export type BankTransaction = typeof bankTransactions.$inferSelect;
+export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
+
+// Inventory Module Types  
+export type InventoryCategory = typeof inventoryCategories.$inferSelect;
+export type InsertInventoryCategory = z.infer<typeof insertInventoryCategorySchema>;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type InsertInventoryMovement = z.infer<typeof insertInventoryMovementSchema>;
+
+// Service Module Types
+export type ServiceCategory = typeof serviceCategories.$inferSelect;
+export type InsertServiceCategory = z.infer<typeof insertServiceCategorySchema>;
+export type Service = typeof services.$inferSelect;
+export type InsertService = z.infer<typeof insertServiceSchema>;
+
+// Enhanced Schema Types
+export type EnhancedInvoice = z.infer<typeof enhancedInvoiceSchema>;
+export type EnhancedPayment = z.infer<typeof enhancedPaymentSchema>;
+export type CreateJournalEntry = z.infer<typeof createJournalEntrySchema>;
 
 // Extended types for Chart of Accounts
 export type ChartOfAccountWithBalance = ChartOfAccount & {

@@ -32,6 +32,8 @@ import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
 import ChartOfAccounts from "@/pages/chart-of-accounts";
 import JournalEntries from "@/pages/journal-entries";
+import Banking from "@/pages/banking";
+import Services from "@/pages/services";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -51,6 +53,8 @@ const PERMISSIONS = {
   PRODUCTS_CREATE: 'products:create',
   SETTINGS_VIEW: 'settings:view',
   INVENTORY_VIEW: 'inventory:view',
+  BANKING_VIEW: 'banking:view',
+  SERVICES_VIEW: 'services:view',
   CHART_OF_ACCOUNTS_VIEW: 'chart_of_accounts:view',
   JOURNAL_ENTRIES_VIEW: 'journal_entries:view',
 } as const;
@@ -155,6 +159,16 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/inventory">
           <Inventory />
+        </Route>
+        <Route path="/banking">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <Banking />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/services">
+          <ProtectedRoute permission={PERMISSIONS.SERVICES_VIEW}>
+            <Services />
+          </ProtectedRoute>
         </Route>
         <Route path="/companies">
           <Companies />

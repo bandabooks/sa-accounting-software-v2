@@ -1757,6 +1757,256 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Banking Module Routes
+  app.get('/api/banking/accounts', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+      const accounts = await storage.getBankAccounts(parseInt(companyId));
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error fetching bank accounts:", error);
+      res.status(500).json({ error: "Failed to fetch bank accounts" });
+    }
+  });
+
+  app.post('/api/banking/accounts', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.body.companyId;
+      const accountData = { ...req.body, companyId: parseInt(companyId) };
+      
+      const account = await storage.createBankAccount(accountData);
+      res.status(201).json(account);
+    } catch (error) {
+      console.error("Error creating bank account:", error);
+      res.status(500).json({ error: "Failed to create bank account" });
+    }
+  });
+
+  app.get('/api/banking/transactions', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      const bankAccountId = req.query.bankAccountId ? parseInt(req.query.bankAccountId) : undefined;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const transactions = await storage.getBankTransactions(parseInt(companyId), bankAccountId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching bank transactions:", error);
+      res.status(500).json({ error: "Failed to fetch bank transactions" });
+    }
+  });
+
+  app.post('/api/banking/transactions', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.body.companyId;
+      const transactionData = { 
+        ...req.body, 
+        companyId: parseInt(companyId),
+        transactionDate: new Date(req.body.transactionDate),
+        createdBy: req.user.id 
+      };
+
+      const transaction = await storage.createBankTransaction(transactionData);
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error creating bank transaction:", error);
+      res.status(500).json({ error: "Failed to create bank transaction" });
+    }
+  });
+
+  // Inventory Module Routes
+  app.get('/api/inventory/categories', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+      const categories = await storage.getInventoryCategories(parseInt(companyId));
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching inventory categories:", error);
+      res.status(500).json({ error: "Failed to fetch inventory categories" });
+    }
+  });
+
+  app.post('/api/inventory/categories', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.body.companyId;
+      const categoryData = { ...req.body, companyId: parseInt(companyId) };
+      
+      const category = await storage.createInventoryCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating inventory category:", error);
+      res.status(500).json({ error: "Failed to create inventory category" });
+    }
+  });
+
+  app.get('/api/inventory/items', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : undefined;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const items = await storage.getInventoryItems(parseInt(companyId), categoryId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching inventory items:", error);
+      res.status(500).json({ error: "Failed to fetch inventory items" });
+    }
+  });
+
+  app.post('/api/inventory/items', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.body.companyId;
+      const itemData = { ...req.body, companyId: parseInt(companyId) };
+      
+      const item = await storage.createInventoryItem(itemData);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating inventory item:", error);
+      res.status(500).json({ error: "Failed to create inventory item" });
+    }
+  });
+
+  app.put('/api/inventory/items/:id', authenticate, async (req: any, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const item = await storage.updateInventoryItem(itemId, updateData);
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating inventory item:", error);
+      res.status(500).json({ error: "Failed to update inventory item" });
+    }
+  });
+
+  app.get('/api/inventory/movements', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      const itemId = req.query.itemId ? parseInt(req.query.itemId) : undefined;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const movements = await storage.getInventoryMovements(parseInt(companyId), itemId);
+      res.json(movements);
+    } catch (error) {
+      console.error("Error fetching inventory movements:", error);
+      res.status(500).json({ error: "Failed to fetch inventory movements" });
+    }
+  });
+
+  app.post('/api/inventory/movements', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.body.companyId;
+      const movementData = { 
+        ...req.body, 
+        companyId: parseInt(companyId),
+        movementDate: new Date(req.body.movementDate),
+        createdBy: req.user.id 
+      };
+
+      const movement = await storage.createInventoryMovement(movementData);
+      res.status(201).json(movement);
+    } catch (error) {
+      console.error("Error creating inventory movement:", error);
+      res.status(500).json({ error: "Failed to create inventory movement" });
+    }
+  });
+
+  // Service Module Routes
+  app.get('/api/services/categories', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+      const categories = await storage.getServiceCategories(parseInt(companyId));
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching service categories:", error);
+      res.status(500).json({ error: "Failed to fetch service categories" });
+    }
+  });
+
+  app.post('/api/services/categories', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.body.companyId;
+      const categoryData = { ...req.body, companyId: parseInt(companyId) };
+      
+      const category = await storage.createServiceCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating service category:", error);
+      res.status(500).json({ error: "Failed to create service category" });
+    }
+  });
+
+  app.get('/api/services', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : undefined;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const services = await storage.getServices(parseInt(companyId), categoryId);
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      res.status(500).json({ error: "Failed to fetch services" });
+    }
+  });
+
+  app.post('/api/services', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.body.companyId;
+      const serviceData = { ...req.body, companyId: parseInt(companyId) };
+      
+      const service = await storage.createService(serviceData);
+      res.status(201).json(service);
+    } catch (error) {
+      console.error("Error creating service:", error);
+      res.status(500).json({ error: "Failed to create service" });
+    }
+  });
+
+  // Financial Reporting Routes
+  app.get('/api/reports/trial-balance', authenticate, async (req: any, res) => {
+    try {
+      const companyId = req.user.activeCompanyId || req.query.companyId;
+      const periodStart = req.query.periodStart;
+      const periodEnd = req.query.periodEnd;
+      
+      if (!companyId || !periodStart || !periodEnd) {
+        return res.status(400).json({ error: "Company ID, period start, and period end are required" });
+      }
+
+      const trialBalance = await storage.generateTrialBalance(parseInt(companyId), periodStart, periodEnd);
+      res.json(trialBalance);
+    } catch (error) {
+      console.error("Error generating trial balance:", error);
+      res.status(500).json({ error: "Failed to generate trial balance" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
