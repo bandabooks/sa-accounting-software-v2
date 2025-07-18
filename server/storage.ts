@@ -197,7 +197,7 @@ export class DatabaseStorage implements IStorage {
     return invoice || undefined;
   }
 
-  async updateInvoiceStatus(id: number, status: string): Promise<Invoice | undefined> {
+  async updateInvoiceStatus(id: number, status: "draft" | "sent" | "paid" | "overdue"): Promise<Invoice | undefined> {
     return this.updateInvoice(id, { status });
   }
 

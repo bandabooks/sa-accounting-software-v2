@@ -77,18 +77,32 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
   createdAt: true,
 });
 
-export const insertInvoiceSchema = createInsertSchema(invoices).omit({
-  id: true,
-  createdAt: true,
+export const insertInvoiceSchema = z.object({
+  customerId: z.number(),
+  invoiceNumber: z.string(),
+  issueDate: z.string().transform((str) => new Date(str)),
+  dueDate: z.string().transform((str) => new Date(str)),
+  subtotal: z.string(),
+  vatAmount: z.string(),
+  total: z.string(),
+  status: z.enum(["draft", "sent", "paid", "overdue"]).default("draft"),
+  notes: z.string().optional(),
 });
 
 export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
   id: true,
 });
 
-export const insertEstimateSchema = createInsertSchema(estimates).omit({
-  id: true,
-  createdAt: true,
+export const insertEstimateSchema = z.object({
+  customerId: z.number(),
+  estimateNumber: z.string(),
+  issueDate: z.string().transform((str) => new Date(str)),
+  expiryDate: z.string().transform((str) => new Date(str)),
+  subtotal: z.string(),
+  vatAmount: z.string(),
+  total: z.string(),
+  status: z.enum(["draft", "sent", "accepted", "rejected"]).default("draft"),
+  notes: z.string().optional(),
 });
 
 export const insertEstimateItemSchema = createInsertSchema(estimateItems).omit({
