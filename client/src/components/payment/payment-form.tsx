@@ -60,9 +60,20 @@ export default function PaymentForm({
 
   // Update amount when remaining amount changes
   useEffect(() => {
-    if (remainingAmount !== form.getValues("amount")) {
+    const currentAmount = form.getValues("amount");
+    if (remainingAmount !== currentAmount) {
       form.setValue("amount", remainingAmount);
     }
+  }, [remainingAmount, form]);
+
+  // Reset form when remaining amount changes
+  useEffect(() => {
+    form.reset({
+      amount: remainingAmount,
+      paymentMethod: "cash",
+      reference: "",
+      notes: "",
+    });
   }, [remainingAmount, form]);
 
   const onSubmit = async (data: PaymentFormData) => {

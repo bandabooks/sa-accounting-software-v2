@@ -33,6 +33,14 @@ function PaymentFormWrapper({ invoiceId, invoiceTotal, onPaymentAdded }: {
 
   const remainingAmount = Math.max(0, parseFloat(invoiceTotal) - totalPaid).toFixed(2);
 
+  // Debug logging for troubleshooting
+  console.log("Payment calculation:", {
+    invoiceTotal,
+    totalPaid,
+    remainingAmount,
+    payments: payments?.map(p => ({ amount: p.amount, status: p.status }))
+  });
+
   const handlePaymentAdded = () => {
     // Invalidate payment queries first
     queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
