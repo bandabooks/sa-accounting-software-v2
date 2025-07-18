@@ -344,22 +344,19 @@ export class DatabaseStorage implements IStorage {
     vatDue: string;
     recentInvoices: InvoiceWithCustomer[];
     revenueByMonth: { month: string; revenue: number }[];
+    outstandingInvoiceCount: number;
+    paidInvoiceCount: number;
   }> {
     // Get all invoices for calculations
     const allInvoices = await db.select().from(invoices);
     
     // Calculate totals
-    const totalRevenue = allInvoices
-      .filter(inv => inv.status === "paid")
-      .reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+    const paidInvoices = allInvoices.filter(inv => inv.status === "paid");
+    const outstandingInvoiceList = allInvoices.filter(inv => inv.status === "sent" || inv.status === "draft");
     
-    const outstandingInvoices = allInvoices
-      .filter(inv => inv.status === "sent" || inv.status === "draft")
-      .reduce((sum, inv) => sum + parseFloat(inv.total), 0);
-    
-    const vatDue = allInvoices
-      .filter(inv => inv.status === "paid")
-      .reduce((sum, inv) => sum + parseFloat(inv.vatAmount), 0);
+    const totalRevenue = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+    const outstandingInvoices = outstandingInvoiceList.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+    const vatDue = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.vatAmount), 0);
 
     // Get customer count
     const customerCount = await db.select({ count: count() }).from(customers);
@@ -368,15 +365,8 @@ export class DatabaseStorage implements IStorage {
     // Get recent invoices with customer info
     const recentInvoices = await this.getAllInvoices();
 
-    // Mock revenue by month data
-    const revenueByMonth = [
-      { month: "Jan", revenue: 1200 },
-      { month: "Feb", revenue: 1800 },
-      { month: "Mar", revenue: 2400 },
-      { month: "Apr", revenue: 1900 },
-      { month: "May", revenue: 2800 },
-      { month: "Jun", revenue: 3200 }
-    ];
+    // Calculate real revenue by month from actual invoices
+    const revenueByMonth = this.calculateRevenueByMonth(paidInvoices);
 
     return {
       totalRevenue: totalRevenue.toFixed(2),
@@ -384,8 +374,43 @@ export class DatabaseStorage implements IStorage {
       totalCustomers: Number(totalCustomers),
       vatDue: vatDue.toFixed(2),
       recentInvoices: recentInvoices.slice(0, 5),
-      revenueByMonth
+      revenueByMonth,
+      outstandingInvoiceCount: outstandingInvoiceList.length,
+      paidInvoiceCount: paidInvoices.length
     };
+  }
+
+  private calculateRevenueByMonth(paidInvoices: Invoice[]): { month: string; revenue: number }[] {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentYear = new Date().getFullYear();
+    
+    // Initialize last 6 months with zero revenue
+    const revenueByMonth: { month: string; revenue: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      revenueByMonth.push({
+        month: months[date.getMonth()],
+        revenue: 0
+      });
+    }
+    
+    // Add actual revenue from paid invoices
+    paidInvoices.forEach(invoice => {
+      const invoiceDate = new Date(invoice.issueDate);
+      const monthIndex = invoiceDate.getMonth();
+      const year = invoiceDate.getFullYear();
+      
+      if (year === currentYear) {
+        const monthName = months[monthIndex];
+        const monthData = revenueByMonth.find(m => m.month === monthName);
+        if (monthData) {
+          monthData.revenue += parseFloat(invoice.total);
+        }
+      }
+    });
+    
+    return revenueByMonth;
   }
 }
 

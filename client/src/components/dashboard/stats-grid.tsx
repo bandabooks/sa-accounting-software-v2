@@ -7,6 +7,8 @@ interface StatsGridProps {
     outstandingInvoices: string;
     totalCustomers: number;
     vatDue: string;
+    outstandingInvoiceCount: number;
+    paidInvoiceCount: number;
   };
 }
 
@@ -15,7 +17,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
     {
       title: "Total Revenue",
       value: formatCurrency(stats.totalRevenue),
-      change: "12.5% from last month",
+      change: `${stats.paidInvoiceCount} ${stats.paidInvoiceCount === 1 ? 'invoice' : 'invoices'} paid`,
       changeType: "positive",
       icon: ChartLine,
       iconBg: "bg-green-100",
@@ -24,7 +26,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
     {
       title: "Outstanding Invoices", 
       value: formatCurrency(stats.outstandingInvoices),
-      change: "8 invoices pending",
+      change: `${stats.outstandingInvoiceCount} ${stats.outstandingInvoiceCount === 1 ? 'invoice' : 'invoices'} pending`,
       changeType: "neutral",
       icon: Clock,
       iconBg: "bg-amber-100",
@@ -33,7 +35,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
     {
       title: "Total Customers",
       value: stats.totalCustomers.toString(),
-      change: "23 new this month",
+      change: `${stats.totalCustomers} ${stats.totalCustomers === 1 ? 'customer' : 'customers'}`,
       changeType: "positive",
       icon: Users,
       iconBg: "bg-blue-100",
@@ -42,7 +44,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
     {
       title: "VAT Due",
       value: formatCurrency(stats.vatDue),
-      change: "Due in 15 days",
+      change: "From paid invoices",
       changeType: "warning",
       icon: Receipt,
       iconBg: "bg-red-100",
