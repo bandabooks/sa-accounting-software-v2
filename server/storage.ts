@@ -880,126 +880,100 @@ export class DatabaseStorage implements IStorage {
 
   // Purchase Orders
   async getAllPurchaseOrders(): Promise<PurchaseOrderWithSupplier[]> {
-    return await db
-      .select({
-        id: purchaseOrders.id,
-        orderNumber: purchaseOrders.orderNumber,
-        supplierId: purchaseOrders.supplierId,
-        orderDate: purchaseOrders.orderDate,
-        deliveryDate: purchaseOrders.deliveryDate,
-        status: purchaseOrders.status,
-        subtotal: purchaseOrders.subtotal,
-        vatAmount: purchaseOrders.vatAmount,
-        total: purchaseOrders.total,
-        notes: purchaseOrders.notes,
-        createdAt: purchaseOrders.createdAt,
-        supplier: {
-          id: suppliers.id,
-          name: suppliers.name,
-          email: suppliers.email,
-          phone: suppliers.phone,
-          address: suppliers.address,
-          city: suppliers.city,
-          postalCode: suppliers.postalCode,
-          vatNumber: suppliers.vatNumber,
-          paymentTerms: suppliers.paymentTerms,
-          category: suppliers.category,
-          notes: suppliers.notes,
-          isActive: suppliers.isActive,
-          createdAt: suppliers.createdAt,
-        },
-      })
+    const results = await db
+      .select()
       .from(purchaseOrders)
       .leftJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
       .orderBy(desc(purchaseOrders.createdAt));
+
+    return results.map((result) => ({
+      ...result.purchase_orders,
+      supplier: result.suppliers || {
+        id: 0,
+        name: 'Unknown Supplier',
+        email: null,
+        phone: null,
+        address: null,
+        city: null,
+        postalCode: null,
+        vatNumber: null,
+        paymentTerms: null,
+        category: null,
+        notes: null,
+        isActive: null,
+        createdAt: null,
+      },
+    }));
   }
 
   async getPurchaseOrder(id: number): Promise<PurchaseOrderWithItems | undefined> {
-    const [order] = await db
-      .select({
-        id: purchaseOrders.id,
-        orderNumber: purchaseOrders.orderNumber,
-        supplierId: purchaseOrders.supplierId,
-        orderDate: purchaseOrders.orderDate,
-        deliveryDate: purchaseOrders.deliveryDate,
-        status: purchaseOrders.status,
-        subtotal: purchaseOrders.subtotal,
-        vatAmount: purchaseOrders.vatAmount,
-        total: purchaseOrders.total,
-        notes: purchaseOrders.notes,
-        createdAt: purchaseOrders.createdAt,
-        supplier: {
-          id: suppliers.id,
-          name: suppliers.name,
-          email: suppliers.email,
-          phone: suppliers.phone,
-          address: suppliers.address,
-          city: suppliers.city,
-          postalCode: suppliers.postalCode,
-          vatNumber: suppliers.vatNumber,
-          paymentTerms: suppliers.paymentTerms,
-          category: suppliers.category,
-          notes: suppliers.notes,
-          isActive: suppliers.isActive,
-          createdAt: suppliers.createdAt,
-        },
-      })
+    const [result] = await db
+      .select()
       .from(purchaseOrders)
       .leftJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
       .where(eq(purchaseOrders.id, id));
 
-    if (!order) return undefined;
+    if (!result) return undefined;
 
     const items = await db
       .select()
       .from(purchaseOrderItems)
       .where(eq(purchaseOrderItems.purchaseOrderId, id));
 
-    return { ...order, items };
+    return {
+      ...result.purchase_orders,
+      supplier: result.suppliers || {
+        id: 0,
+        name: 'Unknown Supplier',
+        email: null,
+        phone: null,
+        address: null,
+        city: null,
+        postalCode: null,
+        vatNumber: null,
+        paymentTerms: null,
+        category: null,
+        notes: null,
+        isActive: null,
+        createdAt: null,
+      },
+      items,
+    };
   }
 
   async getPurchaseOrderByNumber(orderNumber: string): Promise<PurchaseOrderWithItems | undefined> {
-    const [order] = await db
-      .select({
-        id: purchaseOrders.id,
-        orderNumber: purchaseOrders.orderNumber,
-        supplierId: purchaseOrders.supplierId,
-        orderDate: purchaseOrders.orderDate,
-        deliveryDate: purchaseOrders.deliveryDate,
-        status: purchaseOrders.status,
-        subtotal: purchaseOrders.subtotal,
-        vatAmount: purchaseOrders.vatAmount,
-        total: purchaseOrders.total,
-        notes: purchaseOrders.notes,
-        createdAt: purchaseOrders.createdAt,
-        supplier: {
-          id: suppliers.id,
-          name: suppliers.name,
-          email: suppliers.email,
-          phone: suppliers.phone,
-          address: suppliers.address,
-          city: suppliers.city,
-          postalCode: suppliers.postalCode,
-          vatNumber: suppliers.vatNumber,
-          paymentTerms: suppliers.paymentTerms,
-          category: suppliers.category,
-          notes: suppliers.notes,
-          isActive: suppliers.isActive,
-          createdAt: suppliers.createdAt,
-        },
-      })
+    const [result] = await db
+      .select()
       .from(purchaseOrders)
       .leftJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
       .where(eq(purchaseOrders.orderNumber, orderNumber));
 
-    if (!order) return undefined;
+    if (!result) return undefined;
 
     const items = await db
       .select()
       .from(purchaseOrderItems)
-      .where(eq(purchaseOrderItems.purchaseOrderId, order.id));
+      .where(eq(purchaseOrderItems.purchaseOrderId, result.purchase_orders.id));
 
-    return { ...order, items };
+    return {
+      ...result.purchase_orders,
+      supplier: result.suppliers || {
+        id: 0,
+        name: 'Unknown Supplier',
+        email: null,
+        phone: null,
+        address: null,
+        city: null,
+        postalCode: null,
+        vatNumber: null,
+        paymentTerms: null,
+        category: null,
+        notes: null,
+        isActive: null,
+        createdAt: null,
+      },
+      items,
+    };
   }
 
   async createPurchaseOrder(order: InsertPurchaseOrder, items: Omit<InsertPurchaseOrderItem, 'purchaseOrderId'>[]): Promise<PurchaseOrderWithItems> {
@@ -1080,37 +1054,30 @@ export class DatabaseStorage implements IStorage {
 
   // Supplier Payments
   async getAllSupplierPayments(): Promise<SupplierPaymentWithSupplier[]> {
-    return await db
-      .select({
-        id: supplierPayments.id,
-        supplierId: supplierPayments.supplierId,
-        purchaseOrderId: supplierPayments.purchaseOrderId,
-        amount: supplierPayments.amount,
-        paymentMethod: supplierPayments.paymentMethod,
-        paymentDate: supplierPayments.paymentDate,
-        reference: supplierPayments.reference,
-        notes: supplierPayments.notes,
-        status: supplierPayments.status,
-        createdAt: supplierPayments.createdAt,
-        supplier: {
-          id: suppliers.id,
-          name: suppliers.name,
-          email: suppliers.email,
-          phone: suppliers.phone,
-          address: suppliers.address,
-          city: suppliers.city,
-          postalCode: suppliers.postalCode,
-          vatNumber: suppliers.vatNumber,
-          paymentTerms: suppliers.paymentTerms,
-          category: suppliers.category,
-          notes: suppliers.notes,
-          isActive: suppliers.isActive,
-          createdAt: suppliers.createdAt,
-        },
-      })
+    const results = await db
+      .select()
       .from(supplierPayments)
       .leftJoin(suppliers, eq(supplierPayments.supplierId, suppliers.id))
       .orderBy(desc(supplierPayments.createdAt));
+
+    return results.map((result) => ({
+      ...result.supplier_payments,
+      supplier: result.suppliers || {
+        id: 0,
+        name: 'Unknown Supplier',
+        email: null,
+        phone: null,
+        address: null,
+        city: null,
+        postalCode: null,
+        vatNumber: null,
+        paymentTerms: null,
+        category: null,
+        notes: null,
+        isActive: null,
+        createdAt: null,
+      },
+    }));
   }
 
   async getSupplierPaymentsBySupplier(supplierId: number): Promise<SupplierPayment[]> {
