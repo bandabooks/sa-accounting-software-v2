@@ -1506,6 +1506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createAuditLog({
           userId,
           action: 'chart_of_accounts_viewed',
+          resource: 'chart_of_accounts',
           details: JSON.stringify({ companyId, accountCount: accounts.length }),
           ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         });
@@ -1544,6 +1545,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createAuditLog({
           userId,
           action: 'chart_of_accounts_created',
+          resource: 'chart_of_accounts',
+          resourceId: account.id,
           details: JSON.stringify({ 
             accountId: account.id, 
             accountCode: account.accountCode, 

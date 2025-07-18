@@ -26,6 +26,7 @@ import {
   journalEntries,
   journalEntryLines,
   accountBalances,
+  companies,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -89,7 +90,9 @@ import {
   type InsertAccountBalance,
   type ChartOfAccountWithBalance,
   type JournalEntryWithLines,
-  type AccountBalanceReport
+  type AccountBalanceReport,
+  type Company,
+  type InsertCompany,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -438,10 +441,12 @@ export class DatabaseStorage implements IStorage {
         id: auditLogs.id,
         userId: auditLogs.userId,
         action: auditLogs.action,
+        resource: auditLogs.resource,
+        resourceId: auditLogs.resourceId,
         details: auditLogs.details,
         ipAddress: auditLogs.ipAddress,
+        userAgent: auditLogs.userAgent,
         timestamp: auditLogs.timestamp,
-        createdAt: auditLogs.createdAt,
         userName: users.username,
         userEmail: users.email,
         userFullName: users.name,
@@ -457,10 +462,12 @@ export class DatabaseStorage implements IStorage {
       id: result.id,
       userId: result.userId,
       action: result.action,
+      resource: result.resource,
+      resourceId: result.resourceId,
       details: result.details,
       ipAddress: result.ipAddress,
+      userAgent: result.userAgent,
       timestamp: result.timestamp,
-      createdAt: result.createdAt,
       user: result.userId ? {
         id: result.userId,
         username: result.userName || 'Unknown',
@@ -2063,6 +2070,33 @@ export class DatabaseStorage implements IStorage {
     ];
 
     return this.createJournalEntry(entry, lines);
+  }
+
+  // Companies
+  async getAllCompanies(): Promise<Company[]> {
+    return await db.select().from(companies).orderBy(desc(companies.id));
+  }
+
+  async getCompany(id: number): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.id, id));
+    return company || undefined;
+  }
+
+  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+    const [company] = await db
+      .insert(companies)
+      .values(insertCompany)
+      .returning();
+    return company;
+  }
+
+  async updateCompany(id: number, updateData: Partial<InsertCompany>): Promise<Company | undefined> {
+    const [company] = await db
+      .update(companies)
+      .set(updateData)
+      .where(eq(companies.id, id))
+      .returning();
+    return company || undefined;
   }
 }
 
