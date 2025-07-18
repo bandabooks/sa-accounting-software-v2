@@ -6,6 +6,8 @@ import StatsGrid from "@/components/dashboard/stats-grid";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
 import ActivityFeed from "@/components/dashboard/activity-feed";
 import { dashboardApi } from "@/lib/api";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatCurrency } from "@/lib/utils-invoice";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
@@ -74,20 +76,41 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500">Monthly revenue for the past 6 months</p>
           </div>
           <div className="p-6">
-            <div className="h-64 bg-gradient-to-t from-primary/10 to-primary/5 rounded-lg flex items-end justify-between px-4 pb-4 space-x-2">
-              {stats.revenueByMonth.map((month, index) => {
-                const height = (month.revenue / Math.max(...stats.revenueByMonth.map(m => m.revenue))) * 180;
-                return (
-                  <div key={month.month} className="bg-primary/20 w-8 rounded-t flex items-end justify-center" style={{ height: `${height + 20}px` }}>
-                    <div className="bg-primary w-6 rounded-t" style={{ height: `${height}px` }}></div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-between mt-4 text-xs text-gray-500">
-              {stats.revenueByMonth.map(month => (
-                <span key={month.month}>{month.month}</span>
-              ))}
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.revenueByMonth}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(value) => `R${value.toLocaleString()}`}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [formatCurrency(value.toString()), "Revenue"]}
+                    labelFormatter={(label) => `${label} 2025`}
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Bar 
+                    dataKey="revenue" 
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                    stroke="#3b82f6"
+                    strokeWidth={0}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
