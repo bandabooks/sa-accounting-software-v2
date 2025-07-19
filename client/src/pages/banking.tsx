@@ -355,102 +355,99 @@ export default function Banking() {
         </Card>
       </div>
 
-      {/* Bank Accounts List */}
-      <div className="space-y-4">
+      {/* Bank Accounts Grid */}
+      <div className="space-y-6">
         {bankAccounts.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center h-64">
-              <Building className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No bank accounts found</h3>
-              <p className="text-gray-500 text-center max-w-md">
+          <Card className="border-dashed border-2 border-gray-300 bg-gray-50/50">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <Building className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No bank accounts found</h3>
+              <p className="text-gray-500 text-center max-w-md mb-6">
                 Get started by adding your first bank account to manage transactions and reconciliations.
               </p>
-              <Button className="mt-4" onClick={() => setShowAccountDialog(true)}>
+              <Button onClick={() => setShowAccountDialog(true)} size="lg" className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Your First Bank Account
               </Button>
             </CardContent>
           </Card>
         ) : (
-          bankAccounts.map((account: BankAccountWithTransactions) => (
-            <Card key={account.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <span>{account.accountName}</span>
-                      <Badge variant={account.isActive ? "default" : "secondary"}>
-                        {account.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      {account.bankName} • {account.accountNumber}
-                      {account.branchCode && ` • Branch: ${account.branchCode}`}
-                    </CardDescription>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {bankAccounts.map((account: BankAccountWithTransactions) => (
+              <Card key={account.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Building className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-semibold">{account.accountName}</CardTitle>
+                        <p className="text-sm text-gray-500">{account.bankName}</p>
+                      </div>
+                    </div>
+                    <Badge variant={account.isActive ? "default" : "secondary"}>
+                      {account.isActive ? "Active" : "Inactive"}
+                    </Badge>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold">R {parseFloat(account.currentBalance).toFixed(2)}</div>
-                    <div className="text-sm text-gray-500">{account.currency}</div>
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  <div className="text-center py-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-500 mb-1">Current Balance</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      R {parseFloat(account.currentBalance).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                    </p>
+                    <div className="flex items-center justify-center space-x-2 mt-2">
+                      <Badge variant="outline" className="text-xs">{account.accountType}</Badge>
+                      <Badge variant="outline" className="text-xs">{account.currency}</Badge>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-4">
-                    <Badge variant="outline">{account.accountType}</Badge>
-                    {account.chartAccount && (
-                      <span className="text-sm text-gray-600">
-                        Linked to: {account.chartAccount.accountCode} - {account.chartAccount.accountName}
-                      </span>
+
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500">Account Number</p>
+                    <p className="font-mono text-sm">****{account.accountNumber.slice(-4)}</p>
+                    {account.branchCode && (
+                      <>
+                        <p className="text-xs text-gray-500 mt-2">Branch Code</p>
+                        <p className="font-mono text-sm">{account.branchCode}</p>
+                      </>
                     )}
                   </div>
-                  <div className="flex space-x-2">
+
+                  {account.chartAccount && (
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                      <p className="text-xs text-green-700 font-medium mb-1">Chart of Accounts</p>
+                      <p className="text-sm text-green-800">
+                        {account.chartAccount.accountCode} - {account.chartAccount.accountName}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex space-x-2 pt-2">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="flex-1"
                       onClick={() => {
                         setSelectedAccount(account);
-                        transactionForm.setValue("bankAccountId", account.id);
                         setShowTransactionDialog(true);
+                        transactionForm.setValue("bankAccountId", account.id);
                       }}
                     >
-                      Add Transaction
+                      <Plus className="h-4 w-4 mr-1" />
+                      Transaction
                     </Button>
                     <Button variant="outline" size="sm">
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-                
-                {/* Recent Transactions */}
-                {account.transactions && account.transactions.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Recent Transactions</h4>
-                    <div className="space-y-2">
-                      {account.transactions.slice(0, 3).map((transaction) => (
-                        <div key={transaction.id} className="flex justify-between items-center text-sm">
-                          <div>
-                            <span className="font-medium">{transaction.description}</span>
-                            {transaction.reference && (
-                              <span className="text-gray-500 ml-2">({transaction.reference})</span>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className={transaction.transactionType === 'credit' ? 'text-green-600' : 'text-red-600'}>
-                              {transaction.transactionType === 'credit' ? '+' : '-'}R {parseFloat(transaction.amount).toFixed(2)}
-                            </span>
-                            <span className="text-gray-400">
-                              {new Date(transaction.transactionDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 
