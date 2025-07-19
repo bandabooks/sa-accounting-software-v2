@@ -187,7 +187,7 @@ export default function Expenses() {
                     </SelectTrigger>
                     <SelectContent>
                       {expenseCategories.map(category => (
-                        <SelectItem key={category} value={category}>
+                        <SelectItem key={category} value={category || ""}>
                           {formatCategoryName(category)}
                         </SelectItem>
                       ))}

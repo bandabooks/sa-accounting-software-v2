@@ -31,6 +31,7 @@ import {
   generalLedger,
   bankReconciliations,
   companies,
+  SOUTH_AFRICAN_CHART_OF_ACCOUNTS,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -1685,73 +1686,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async seedSouthAfricanChartOfAccounts(companyId: number): Promise<void> {
-    const saAccounts = [
-      // Assets
-      { companyId, accountCode: "1000", accountName: "Current Assets", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "1010", accountName: "Bank Account - Current", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1020", accountName: "Bank Account - Savings", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1030", accountName: "Petty Cash", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1100", accountName: "Accounts Receivable", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1200", accountName: "Inventory", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1300", accountName: "Prepaid Expenses", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1400", accountName: "VAT Input Tax", accountType: "Asset", accountSubType: "Current Asset", normalBalance: "Debit", level: 2, isSystemAccount: true, taxType: "VAT" },
-      
-      // Fixed Assets
-      { companyId, accountCode: "1500", accountName: "Fixed Assets", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "1510", accountName: "Equipment", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1520", accountName: "Vehicles", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1530", accountName: "Computer Equipment", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "1540", accountName: "Accumulated Depreciation", accountType: "Asset", accountSubType: "Fixed Asset", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      
-      // Liabilities
-      { companyId, accountCode: "2000", accountName: "Current Liabilities", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "2010", accountName: "Accounts Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "2020", accountName: "VAT Output Tax", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "VAT" },
-      { companyId, accountCode: "2030", accountName: "PAYE Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "PAYE" },
-      { companyId, accountCode: "2040", accountName: "UIF Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "UIF" },
-      { companyId, accountCode: "2050", accountName: "SDL Payable", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true, taxType: "SDL" },
-      { companyId, accountCode: "2060", accountName: "Accrued Expenses", accountType: "Liability", accountSubType: "Current Liability", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      
-      // Long-term Liabilities
-      { companyId, accountCode: "2500", accountName: "Long-term Liabilities", accountType: "Liability", accountSubType: "Long-term Liability", normalBalance: "Credit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "2510", accountName: "Long-term Loans", accountType: "Liability", accountSubType: "Long-term Liability", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      
-      // Equity
-      { companyId, accountCode: "3000", accountName: "Equity", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "3010", accountName: "Share Capital", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "3020", accountName: "Retained Earnings", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "3030", accountName: "Current Year Earnings", accountType: "Equity", accountSubType: "Owner's Equity", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      
-      // Revenue
-      { companyId, accountCode: "4000", accountName: "Revenue", accountType: "Revenue", accountSubType: "Operating Revenue", normalBalance: "Credit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "4010", accountName: "Sales Revenue", accountType: "Revenue", accountSubType: "Operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "4020", accountName: "Service Revenue", accountType: "Revenue", accountSubType: "Operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "4030", accountName: "Interest Income", accountType: "Revenue", accountSubType: "Non-operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "4040", accountName: "Other Income", accountType: "Revenue", accountSubType: "Non-operating Revenue", normalBalance: "Credit", level: 2, isSystemAccount: true },
-      
-      // Cost of Goods Sold
-      { companyId, accountCode: "5000", accountName: "Cost of Goods Sold", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "5010", accountName: "Purchases", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "5020", accountName: "Direct Labor", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "5030", accountName: "Freight In", accountType: "Expense", accountSubType: "Cost of Sales", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      
-      // Operating Expenses
-      { companyId, accountCode: "6000", accountName: "Operating Expenses", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 1, isSystemAccount: true },
-      { companyId, accountCode: "6010", accountName: "Salaries and Wages", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6020", accountName: "Rent Expense", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6030", accountName: "Utilities", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6040", accountName: "Telephone", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6050", accountName: "Insurance", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6060", accountName: "Depreciation", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6070", accountName: "Marketing and Advertising", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6080", accountName: "Professional Services", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6090", accountName: "Office Supplies", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6100", accountName: "Bank Charges", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-      { companyId, accountCode: "6110", accountName: "Interest Expense", accountType: "Expense", accountSubType: "Operating Expense", normalBalance: "Debit", level: 2, isSystemAccount: true },
-    ];
+    // Check if accounts already exist
+    const existingAccounts = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(eq(chartOfAccounts.companyId, companyId));
 
-    for (const account of saAccounts) {
-      await db.insert(chartOfAccounts).values(account).onConflictDoNothing();
+    if (existingAccounts.length === 0) {
+      // Insert comprehensive South African IFRS-compliant Chart of Accounts
+      for (const account of SOUTH_AFRICAN_CHART_OF_ACCOUNTS) {
+        await db.insert(chartOfAccounts).values({
+          ...account,
+          companyId,
+          isActive: true,
+          level: 1,
+          isSystemAccount: account.isSystemAccount || false,
+        }).onConflictDoNothing();
+      }
     }
   }
 
@@ -2338,16 +2289,16 @@ export class DatabaseStorage implements IStorage {
   }
   // Banking Methods
   async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
-    return db
+    const results = await db
       .select()
       .from(bankAccounts)
       .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
-      .where(eq(bankAccounts.companyId, companyId))
-      .then(async (results) => {
-        const accounts = results.map(row => ({
-          ...row.bank_accounts,
-          chartAccount: row.chart_of_accounts
-        }));
+      .where(eq(bankAccounts.companyId, companyId));
+      
+    const accounts = results.map(row => ({
+      ...row.bank_accounts,
+      chartAccount: row.chart_of_accounts || null
+    }));
 
         // Get transactions for each account
         const accountsWithTransactions = await Promise.all(
@@ -2366,8 +2317,7 @@ export class DatabaseStorage implements IStorage {
           })
         );
 
-        return accountsWithTransactions;
-      });
+    return accountsWithTransactions;
   }
 
   async getBankAccount(id: number): Promise<BankAccount | undefined> {

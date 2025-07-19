@@ -1075,4 +1075,218 @@ export type GeneralLedgerEntry = {
   runningBalance: string;
   entryNumber: string;
   sourceModule?: string;
+  sourceId?: string;
+  accountId: number;
+  companyId: number;
+  createdAt: Date;
 };
+
+// South African IFRS-compliant Chart of Accounts structure
+export const SOUTH_AFRICAN_CHART_OF_ACCOUNTS = [
+  // 1000-1999 ASSETS
+  // Current Assets
+  { accountCode: "1001", accountName: "Petty Cash", accountType: "Asset", category: "Current Assets", isSystemAccount: true },
+  { accountCode: "1100", accountName: "Bank Account - Current", accountType: "Asset", category: "Current Assets", isSystemAccount: true },
+  { accountCode: "1101", accountName: "Bank Account - Savings", accountType: "Asset", category: "Current Assets", isSystemAccount: true },
+  { accountCode: "1102", accountName: "Bank Account - Credit Card", accountType: "Asset", category: "Current Assets", isSystemAccount: true },
+  { accountCode: "1103", accountName: "Bank Account - Money Market", accountType: "Asset", category: "Current Assets", isSystemAccount: true },
+  { accountCode: "1200", accountName: "Accounts Receivable", accountType: "Asset", category: "Current Assets", isSystemAccount: true },
+  { accountCode: "1201", accountName: "Accounts Receivable - Trade", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1202", accountName: "Allowance for Doubtful Debts", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1210", accountName: "VAT Input", accountType: "Asset", category: "Current Assets", isSystemAccount: true },
+  { accountCode: "1211", accountName: "VAT Receivable", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1300", accountName: "Inventory - Raw Materials", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1301", accountName: "Inventory - Work in Progress", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1302", accountName: "Inventory - Finished Goods", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1303", accountName: "Inventory - Merchandise", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1400", accountName: "Prepaid Expenses", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1401", accountName: "Prepaid Rent", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1402", accountName: "Prepaid Insurance", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1403", accountName: "Prepaid Legal Fees", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1500", accountName: "Other Current Assets", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1501", accountName: "Loans to Employees", accountType: "Asset", category: "Current Assets" },
+  { accountCode: "1502", accountName: "Deposits Paid", accountType: "Asset", category: "Current Assets" },
+
+  // Non-Current Assets
+  { accountCode: "1600", accountName: "Property, Plant & Equipment", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1601", accountName: "Land", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1602", accountName: "Buildings", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1603", accountName: "Plant & Machinery", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1604", accountName: "Office Equipment", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1605", accountName: "Computer Equipment", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1606", accountName: "Motor Vehicles", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1607", accountName: "Furniture & Fittings", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1650", accountName: "Accumulated Depreciation - Buildings", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1651", accountName: "Accumulated Depreciation - Plant & Machinery", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1652", accountName: "Accumulated Depreciation - Office Equipment", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1653", accountName: "Accumulated Depreciation - Computer Equipment", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1654", accountName: "Accumulated Depreciation - Motor Vehicles", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1655", accountName: "Accumulated Depreciation - Furniture & Fittings", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1700", accountName: "Intangible Assets", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1701", accountName: "Goodwill", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1702", accountName: "Patents & Trademarks", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1703", accountName: "Software Licenses", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1750", accountName: "Accumulated Amortisation - Intangible Assets", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1800", accountName: "Investments", accountType: "Asset", category: "Non-Current Assets" },
+  { accountCode: "1801", accountName: "Long-term Investments", accountType: "Asset", category: "Non-Current Assets" },
+
+  // 2000-2999 LIABILITIES
+  // Current Liabilities
+  { accountCode: "2100", accountName: "Accounts Payable", accountType: "Liability", category: "Current Liabilities", isSystemAccount: true },
+  { accountCode: "2101", accountName: "Accounts Payable - Trade", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2110", accountName: "VAT Output", accountType: "Liability", category: "Current Liabilities", isSystemAccount: true },
+  { accountCode: "2111", accountName: "VAT Payable", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2120", accountName: "PAYE Payable", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2121", accountName: "UIF Payable", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2122", accountName: "SDL Payable", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2123", accountName: "WCA Payable", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2200", accountName: "Accrued Expenses", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2201", accountName: "Accrued Salaries", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2202", accountName: "Accrued Interest", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2203", accountName: "Accrued Utilities", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2300", accountName: "Short-term Loans", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2301", accountName: "Bank Overdraft", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2302", accountName: "Credit Card Liability", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2400", accountName: "Deferred Revenue", accountType: "Liability", category: "Current Liabilities" },
+  { accountCode: "2401", accountName: "Customer Deposits", accountType: "Liability", category: "Current Liabilities" },
+
+  // Non-Current Liabilities
+  { accountCode: "2500", accountName: "Long-term Debt", accountType: "Liability", category: "Non-Current Liabilities" },
+  { accountCode: "2501", accountName: "Mortgage Payable", accountType: "Liability", category: "Non-Current Liabilities" },
+  { accountCode: "2502", accountName: "Equipment Loans", accountType: "Liability", category: "Non-Current Liabilities" },
+  { accountCode: "2600", accountName: "Deferred Tax Liability", accountType: "Liability", category: "Non-Current Liabilities" },
+  { accountCode: "2700", accountName: "Provisions", accountType: "Liability", category: "Non-Current Liabilities" },
+  { accountCode: "2701", accountName: "Provision for Leave Pay", accountType: "Liability", category: "Non-Current Liabilities" },
+  { accountCode: "2702", accountName: "Provision for Bonus", accountType: "Liability", category: "Non-Current Liabilities" },
+
+  // 3000-3999 EQUITY
+  { accountCode: "3000", accountName: "Share Capital", accountType: "Equity", category: "Equity", isSystemAccount: true },
+  { accountCode: "3001", accountName: "Ordinary Shares", accountType: "Equity", category: "Equity" },
+  { accountCode: "3002", accountName: "Preference Shares", accountType: "Equity", category: "Equity" },
+  { accountCode: "3100", accountName: "Retained Earnings", accountType: "Equity", category: "Equity", isSystemAccount: true },
+  { accountCode: "3200", accountName: "Current Year Earnings", accountType: "Equity", category: "Equity" },
+  { accountCode: "3300", accountName: "Drawings", accountType: "Equity", category: "Equity" },
+  { accountCode: "3301", accountName: "Owner's Drawings", accountType: "Equity", category: "Equity" },
+  { accountCode: "3400", accountName: "Reserves", accountType: "Equity", category: "Equity" },
+  { accountCode: "3401", accountName: "Capital Reserves", accountType: "Equity", category: "Equity" },
+  { accountCode: "3402", accountName: "Revaluation Reserves", accountType: "Equity", category: "Equity" },
+
+  // 4000-4999 REVENUE
+  // Operating Revenue
+  { accountCode: "4000", accountName: "Sales Revenue", accountType: "Revenue", category: "Operating Revenue", isSystemAccount: true },
+  { accountCode: "4001", accountName: "Product Sales", accountType: "Revenue", category: "Operating Revenue" },
+  { accountCode: "4002", accountName: "Service Revenue", accountType: "Revenue", category: "Operating Revenue" },
+  { accountCode: "4003", accountName: "Consulting Revenue", accountType: "Revenue", category: "Operating Revenue" },
+  { accountCode: "4010", accountName: "Sales Returns & Allowances", accountType: "Revenue", category: "Operating Revenue" },
+  { accountCode: "4011", accountName: "Sales Discounts", accountType: "Revenue", category: "Operating Revenue" },
+
+  // Other Revenue
+  { accountCode: "4100", accountName: "Other Revenue", accountType: "Revenue", category: "Other Revenue" },
+  { accountCode: "4101", accountName: "Interest Income", accountType: "Revenue", category: "Other Revenue" },
+  { accountCode: "4102", accountName: "Dividend Income", accountType: "Revenue", category: "Other Revenue" },
+  { accountCode: "4103", accountName: "Rental Income", accountType: "Revenue", category: "Other Revenue" },
+  { accountCode: "4104", accountName: "Foreign Exchange Gains", accountType: "Revenue", category: "Other Revenue" },
+  { accountCode: "4105", accountName: "Gain on Sale of Assets", accountType: "Revenue", category: "Other Revenue" },
+
+  // 5000-5999 COST OF SALES
+  { accountCode: "5000", accountName: "Cost of Goods Sold", accountType: "Cost of Sales", category: "Cost of Sales", isSystemAccount: true },
+  { accountCode: "5001", accountName: "Cost of Materials", accountType: "Cost of Sales", category: "Cost of Sales" },
+  { accountCode: "5002", accountName: "Cost of Labor - Direct", accountType: "Cost of Sales", category: "Cost of Sales" },
+  { accountCode: "5003", accountName: "Manufacturing Overhead", accountType: "Cost of Sales", category: "Cost of Sales" },
+  { accountCode: "5010", accountName: "Freight & Shipping Costs", accountType: "Cost of Sales", category: "Cost of Sales" },
+  { accountCode: "5011", accountName: "Import Duties", accountType: "Cost of Sales", category: "Cost of Sales" },
+  { accountCode: "5020", accountName: "Inventory Adjustments", accountType: "Cost of Sales", category: "Cost of Sales" },
+  { accountCode: "5021", accountName: "Obsolete Inventory Write-off", accountType: "Cost of Sales", category: "Cost of Sales" },
+
+  // 6000-6999 OPERATING EXPENSES
+  // Administrative Expenses
+  { accountCode: "6000", accountName: "Administrative Expenses", accountType: "Expense", category: "Administrative Expenses" },
+  { accountCode: "6001", accountName: "Salaries & Wages - Admin", accountType: "Expense", category: "Administrative Expenses" },
+  { accountCode: "6002", accountName: "Employee Benefits", accountType: "Expense", category: "Administrative Expenses" },
+  { accountCode: "6003", accountName: "Pension Contributions", accountType: "Expense", category: "Administrative Expenses" },
+  { accountCode: "6004", accountName: "Medical Aid Contributions", accountType: "Expense", category: "Administrative Expenses" },
+  { accountCode: "6005", accountName: "UIF Contributions", accountType: "Expense", category: "Administrative Expenses" },
+  { accountCode: "6006", accountName: "SDL Contributions", accountType: "Expense", category: "Administrative Expenses" },
+  { accountCode: "6007", accountName: "WCA Contributions", accountType: "Expense", category: "Administrative Expenses" },
+  
+  // Office & General Expenses
+  { accountCode: "6100", accountName: "Office Rent", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6101", accountName: "Utilities", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6102", accountName: "Electricity", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6103", accountName: "Water & Rates", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6104", accountName: "Telephone & Internet", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6105", accountName: "Postage & Courier", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6106", accountName: "Office Supplies", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6107", accountName: "Stationery", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6108", accountName: "Cleaning & Maintenance", accountType: "Expense", category: "Office & General" },
+  { accountCode: "6109", accountName: "Security", accountType: "Expense", category: "Office & General" },
+
+  // Professional Services
+  { accountCode: "6200", accountName: "Professional Fees", accountType: "Expense", category: "Professional Services" },
+  { accountCode: "6201", accountName: "Legal Fees", accountType: "Expense", category: "Professional Services" },
+  { accountCode: "6202", accountName: "Accounting & Audit Fees", accountType: "Expense", category: "Professional Services" },
+  { accountCode: "6203", accountName: "Consulting Fees", accountType: "Expense", category: "Professional Services" },
+  { accountCode: "6204", accountName: "Tax Preparation Fees", accountType: "Expense", category: "Professional Services" },
+
+  // Marketing & Advertising
+  { accountCode: "6300", accountName: "Marketing & Advertising", accountType: "Expense", category: "Marketing & Sales" },
+  { accountCode: "6301", accountName: "Website & Online Marketing", accountType: "Expense", category: "Marketing & Sales" },
+  { accountCode: "6302", accountName: "Print Advertising", accountType: "Expense", category: "Marketing & Sales" },
+  { accountCode: "6303", accountName: "Trade Shows & Events", accountType: "Expense", category: "Marketing & Sales" },
+  { accountCode: "6304", accountName: "Sales Commissions", accountType: "Expense", category: "Marketing & Sales" },
+
+  // Travel & Entertainment
+  { accountCode: "6400", accountName: "Travel & Accommodation", accountType: "Expense", category: "Travel & Entertainment" },
+  { accountCode: "6401", accountName: "Local Travel", accountType: "Expense", category: "Travel & Entertainment" },
+  { accountCode: "6402", accountName: "Overseas Travel", accountType: "Expense", category: "Travel & Entertainment" },
+  { accountCode: "6403", accountName: "Meals & Entertainment", accountType: "Expense", category: "Travel & Entertainment" },
+
+  // Vehicle Expenses
+  { accountCode: "6500", accountName: "Motor Vehicle Expenses", accountType: "Expense", category: "Vehicle Expenses" },
+  { accountCode: "6501", accountName: "Fuel", accountType: "Expense", category: "Vehicle Expenses" },
+  { accountCode: "6502", accountName: "Vehicle Maintenance", accountType: "Expense", category: "Vehicle Expenses" },
+  { accountCode: "6503", accountName: "Vehicle Insurance", accountType: "Expense", category: "Vehicle Expenses" },
+  { accountCode: "6504", accountName: "Vehicle Licenses", accountType: "Expense", category: "Vehicle Expenses" },
+
+  // Insurance
+  { accountCode: "6600", accountName: "Insurance", accountType: "Expense", category: "Insurance" },
+  { accountCode: "6601", accountName: "Building Insurance", accountType: "Expense", category: "Insurance" },
+  { accountCode: "6602", accountName: "Equipment Insurance", accountType: "Expense", category: "Insurance" },
+  { accountCode: "6603", accountName: "Public Liability Insurance", accountType: "Expense", category: "Insurance" },
+  { accountCode: "6604", accountName: "Professional Indemnity Insurance", accountType: "Expense", category: "Insurance" },
+
+  // Finance Costs
+  { accountCode: "6700", accountName: "Finance Costs", accountType: "Expense", category: "Finance Costs" },
+  { accountCode: "6701", accountName: "Interest Expense", accountType: "Expense", category: "Finance Costs" },
+  { accountCode: "6702", accountName: "Bank Charges", accountType: "Expense", category: "Finance Costs" },
+  { accountCode: "6703", accountName: "Foreign Exchange Losses", accountType: "Expense", category: "Finance Costs" },
+  { accountCode: "6704", accountName: "Loss on Sale of Assets", accountType: "Expense", category: "Finance Costs" },
+
+  // Depreciation & Amortisation
+  { accountCode: "6800", accountName: "Depreciation", accountType: "Expense", category: "Depreciation & Amortisation" },
+  { accountCode: "6801", accountName: "Depreciation - Buildings", accountType: "Expense", category: "Depreciation & Amortisation" },
+  { accountCode: "6802", accountName: "Depreciation - Plant & Machinery", accountType: "Expense", category: "Depreciation & Amortisation" },
+  { accountCode: "6803", accountName: "Depreciation - Office Equipment", accountType: "Expense", category: "Depreciation & Amortisation" },
+  { accountCode: "6804", accountName: "Depreciation - Computer Equipment", accountType: "Expense", category: "Depreciation & Amortisation" },
+  { accountCode: "6805", accountName: "Depreciation - Motor Vehicles", accountType: "Expense", category: "Depreciation & Amortisation" },
+  { accountCode: "6806", accountName: "Depreciation - Furniture & Fittings", accountType: "Expense", category: "Depreciation & Amortisation" },
+  { accountCode: "6810", accountName: "Amortisation - Intangible Assets", accountType: "Expense", category: "Depreciation & Amortisation" },
+
+  // Other Expenses
+  { accountCode: "6900", accountName: "Other Expenses", accountType: "Expense", category: "Other Expenses" },
+  { accountCode: "6901", accountName: "Donations", accountType: "Expense", category: "Other Expenses" },
+  { accountCode: "6902", accountName: "Subscriptions & Memberships", accountType: "Expense", category: "Other Expenses" },
+  { accountCode: "6903", accountName: "Training & Development", accountType: "Expense", category: "Other Expenses" },
+  { accountCode: "6904", accountName: "Bad Debts", accountType: "Expense", category: "Other Expenses" },
+  { accountCode: "6905", accountName: "Penalties & Fines", accountType: "Expense", category: "Other Expenses" },
+
+  // 7000-7999 EXTRAORDINARY ITEMS
+  { accountCode: "7000", accountName: "Extraordinary Income", accountType: "Revenue", category: "Extraordinary Items" },
+  { accountCode: "7100", accountName: "Extraordinary Expenses", accountType: "Expense", category: "Extraordinary Items" },
+
+  // 8000-8999 TAX
+  { accountCode: "8000", accountName: "Income Tax Expense", accountType: "Expense", category: "Tax" },
+  { accountCode: "8001", accountName: "Current Tax", accountType: "Expense", category: "Tax" },
+  { accountCode: "8002", accountName: "Deferred Tax", accountType: "Expense", category: "Tax" },
+  { accountCode: "8100", accountName: "Income Tax Payable", accountType: "Liability", category: "Tax" },
+] as const;
