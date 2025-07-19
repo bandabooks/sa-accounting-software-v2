@@ -2460,7 +2460,10 @@ export class DatabaseStorage implements IStorage {
   // Banking Methods
   async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
     const accounts = await db
-      .select()
+      .select({
+        bank_accounts: bankAccounts,
+        chart_of_accounts: chartOfAccounts
+      })
       .from(bankAccounts)
       .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
       .where(eq(bankAccounts.companyId, companyId));
