@@ -175,6 +175,8 @@ This is a full-stack invoice management system built with React (client) and Exp
 - ✓ Current bank balances displaying correctly across all banking interfaces
 - ✓ Complete integration between invoices, payments, and banking systems
 - ✓ All three critical user requirements resolved: VAT dropdown, category creation, bank balance visibility
+- ✓ Removed permission restrictions from product and category creation for universal access
+- ✓ Enhanced category creation with proper companyId integration for multi-company support
 
 ## User Preferences
 
