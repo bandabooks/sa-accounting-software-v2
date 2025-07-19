@@ -90,6 +90,23 @@ export async function seedDatabase() {
       await storage.seedDefaultSouthAfricanBanks(defaultCompany.id);
       console.log("✓ Default South African banks seeded");
     }
+
+    // Seed South African VAT Types
+    const existingVatTypes = await storage.getVatTypes();
+    if (existingVatTypes.length === 0) {
+      const SOUTH_AFRICAN_VAT_TYPES = [
+        { code: "STD", name: "Standard Rate", rate: "15.00", description: "Standard VAT rate applicable to most goods and services", isSystemType: true },
+        { code: "ZER", name: "Zero-Rated", rate: "0.00", description: "Zero-rated supplies (exports, basic foodstuffs)", isSystemType: true },
+        { code: "EXE", name: "Exempt", rate: "0.00", description: "Exempt supplies (financial services, residential rent)", isSystemType: true },
+        { code: "NR", name: "Not Reportable", rate: "0.00", description: "Non-VAT transactions (wages, dividends)", isSystemType: true },
+        { code: "OUT", name: "Out of Scope", rate: "0.00", description: "Transactions outside the scope of VAT", isSystemType: true },
+      ];
+      
+      for (const vatType of SOUTH_AFRICAN_VAT_TYPES) {
+        await storage.createVatType(vatType);
+      }
+      console.log("✓ South African VAT types seeded");
+    }
     
     console.log("Database seeding completed successfully!");
   } catch (error) {

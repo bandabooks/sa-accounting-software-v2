@@ -682,6 +682,10 @@ export const companySettings = pgTable("company_settings", {
   autoEmailReminders: boolean("auto_email_reminders").default(false),
   fiscalYearStart: date("fiscal_year_start").default("2025-01-01"),
   taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("15.00"),
+  // VAT Registration Settings
+  vatRegistered: boolean("vat_registered").default(false),
+  vatPeriod: varchar("vat_period", { length: 20 }).default("monthly"), // monthly, bi-monthly
+  vatSubmissionDate: integer("vat_submission_date").default(25), // Day of month
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -758,6 +762,133 @@ export type EmailReminder = typeof emailReminders.$inferSelect;
 
 export type InsertCurrencyRate = z.infer<typeof insertCurrencyRateSchema>;
 export type CurrencyRate = typeof currencyRates.$inferSelect;
+
+// VAT Types - South African Standard VAT Categories
+export const vatTypes = pgTable("vat_types", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 10 }).notNull().unique(), // STD, ZER, EXE, NR
+  name: varchar("name", { length: 100 }).notNull(),
+  rate: decimal("rate", { precision: 5, scale: 2 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  isSystemType: boolean("is_system_type").default(false), // Cannot be deleted
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  codeIdx: index("vat_types_code_idx").on(table.code),
+  activeIdx: index("vat_types_active_idx").on(table.isActive),
+}));
+
+// VAT Returns - VAT201 Reports
+export const vatReports = pgTable("vat_reports", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  reportType: varchar("report_type", { length: 20 }).default("VAT201"), // VAT201, VAT202
+  
+  // VAT201 Fields - Standard South African VAT Return
+  totalSalesIncVat: decimal("total_sales_inc_vat", { precision: 15, scale: 2 }).default("0.00"),
+  totalSalesExcVat: decimal("total_sales_exc_vat", { precision: 15, scale: 2 }).default("0.00"),
+  totalSalesVat: decimal("total_sales_vat", { precision: 15, scale: 2 }).default("0.00"),
+  zeroRatedSales: decimal("zero_rated_sales", { precision: 15, scale: 2 }).default("0.00"),
+  exemptSales: decimal("exempt_sales", { precision: 15, scale: 2 }).default("0.00"),
+  
+  totalPurchasesIncVat: decimal("total_purchases_inc_vat", { precision: 15, scale: 2 }).default("0.00"),
+  totalPurchasesExcVat: decimal("total_purchases_exc_vat", { precision: 15, scale: 2 }).default("0.00"),
+  totalPurchasesVat: decimal("total_purchases_vat", { precision: 15, scale: 2 }).default("0.00"),
+  
+  // Net VAT Calculation
+  outputVat: decimal("output_vat", { precision: 15, scale: 2 }).default("0.00"), // VAT on sales
+  inputVat: decimal("input_vat", { precision: 15, scale: 2 }).default("0.00"), // VAT on purchases
+  netVatPayable: decimal("net_vat_payable", { precision: 15, scale: 2 }).default("0.00"),
+  netVatRefund: decimal("net_vat_refund", { precision: 15, scale: 2 }).default("0.00"),
+  
+  // Additional VAT201 Fields
+  badDebtReliefClaimed: decimal("bad_debt_relief_claimed", { precision: 15, scale: 2 }).default("0.00"),
+  adjustmentsToPreviousReturns: decimal("adjustments_to_previous_returns", { precision: 15, scale: 2 }).default("0.00"),
+  
+  // Status and submission
+  status: varchar("status", { length: 20 }).default("draft"), // draft, submitted, approved, paid
+  submittedAt: timestamp("submitted_at"),
+  submittedBy: integer("submitted_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: integer("approved_by").references(() => users.id),
+  
+  // Audit trail
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyPeriodUnique: unique().on(table.companyId, table.periodStart, table.periodEnd),
+  companyIdx: index("vat_reports_company_idx").on(table.companyId),
+  periodIdx: index("vat_reports_period_idx").on(table.periodStart, table.periodEnd),
+  statusIdx: index("vat_reports_status_idx").on(table.status),
+}));
+
+// VAT Transactions - Links invoices/purchases to VAT types
+export const vatTransactions = pgTable("vat_transactions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // sale, purchase
+  sourceModule: varchar("source_module", { length: 50 }).notNull(), // invoice, expense, purchase_order
+  sourceId: integer("source_id").notNull(), // ID from source module
+  vatTypeId: integer("vat_type_id").references(() => vatTypes.id),
+  
+  // Amounts
+  netAmount: decimal("net_amount", { precision: 15, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }).notNull(),
+  grossAmount: decimal("gross_amount", { precision: 15, scale: 2 }).notNull(),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull(),
+  
+  // Transaction details
+  transactionDate: timestamp("transaction_date").notNull(),
+  description: text("description"),
+  customerSupplierId: integer("customer_supplier_id"), // Customer or Supplier ID
+  
+  // VAT reporting
+  vatPeriodStart: date("vat_period_start"), // Which VAT period this belongs to
+  vatPeriodEnd: date("vat_period_end"),
+  includedInReturn: boolean("included_in_return").default(false),
+  vatReportId: integer("vat_report_id").references(() => vatReports.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("vat_transactions_company_idx").on(table.companyId),
+  typeIdx: index("vat_transactions_type_idx").on(table.transactionType),
+  sourceIdx: index("vat_transactions_source_idx").on(table.sourceModule, table.sourceId),
+  periodIdx: index("vat_transactions_period_idx").on(table.vatPeriodStart, table.vatPeriodEnd),
+  reportIdx: index("vat_transactions_report_idx").on(table.vatReportId),
+}));
+
+// VAT Types - Schema definitions after tables
+export const insertVatTypeSchema = createInsertSchema(vatTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVatReportSchema = createInsertSchema(vatReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVatTransactionSchema = createInsertSchema(vatTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type VatType = typeof vatTypes.$inferSelect;
+export type InsertVatType = z.infer<typeof insertVatTypeSchema>;
+
+export type VatReport = typeof vatReports.$inferSelect;
+export type InsertVatReport = z.infer<typeof insertVatReportSchema>;
+
+export type VatTransaction = typeof vatTransactions.$inferSelect;
+export type InsertVatTransaction = z.infer<typeof insertVatTransactionSchema>;
 
 // Chart of Accounts - South African Business Accounting Standards
 export const chartOfAccounts = pgTable("chart_of_accounts", {
@@ -1076,6 +1207,15 @@ export type GeneralLedgerEntry = {
   companyId: number;
   createdAt: Date;
 };
+
+// South African Standard VAT Types
+export const SOUTH_AFRICAN_VAT_TYPES = [
+  { code: "STD", name: "Standard Rate", rate: "15.00", description: "Standard VAT rate applicable to most goods and services", isSystemType: true },
+  { code: "ZER", name: "Zero-Rated", rate: "0.00", description: "Zero-rated supplies (exports, basic foodstuffs)", isSystemType: true },
+  { code: "EXE", name: "Exempt", rate: "0.00", description: "Exempt supplies (financial services, residential rent)", isSystemType: true },
+  { code: "NR", name: "Not Reportable", rate: "0.00", description: "Non-VAT transactions (wages, dividends)", isSystemType: true },
+  { code: "OUT", name: "Out of Scope", rate: "0.00", description: "Transactions outside the scope of VAT", isSystemType: true },
+];
 
 // South African IFRS-compliant Chart of Accounts structure
 export const SOUTH_AFRICAN_CHART_OF_ACCOUNTS = [

@@ -31,7 +31,11 @@ import {
   generalLedger,
   bankReconciliations,
   companies,
+  vatTypes,
+  vatReports,
+  vatTransactions,
   SOUTH_AFRICAN_CHART_OF_ACCOUNTS,
+  SOUTH_AFRICAN_VAT_TYPES,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -104,6 +108,12 @@ import {
   type GeneralLedgerEntry,
   type Company,
   type InsertCompany,
+  type VatType,
+  type InsertVatType,
+  type VatReport,
+  type InsertVatReport,
+  type VatTransaction,
+  type InsertVatTransaction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -309,6 +319,23 @@ export interface IStorage {
   createInvoiceJournalEntry(invoiceId: number): Promise<JournalEntryWithLines>;
   createPaymentJournalEntry(paymentId: number): Promise<JournalEntryWithLines>;
   createExpenseJournalEntry(expenseId: number): Promise<JournalEntryWithLines>;
+
+  // VAT Management
+  getVatTypes(): Promise<VatType[]>;
+  getVatType(id: number): Promise<VatType | undefined>;
+  createVatType(data: InsertVatType): Promise<VatType>;
+  getVatReports(companyId: number): Promise<VatReport[]>;
+  getVatReport(id: number): Promise<VatReport | undefined>;
+  createVatReport(data: InsertVatReport): Promise<VatReport>;
+  updateVatReport(id: number, data: Partial<InsertVatReport>): Promise<VatReport | undefined>;
+  getVatTransactions(companyId: number): Promise<VatTransaction[]>;
+  createVatTransaction(data: InsertVatTransaction): Promise<VatTransaction>;
+  updateCompanyVatSettings(companyId: number, settings: { 
+    vatRegistered: boolean; 
+    vatNumber?: string; 
+    vatPeriod?: string; 
+    vatSubmissionDate?: number;
+  }): Promise<Company | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2689,6 +2716,80 @@ export class DatabaseStorage implements IStorage {
           .where(eq(generalLedger.id, entry.id));
       }
     }
+  }
+
+  // VAT Management
+  async getVatTypes(): Promise<VatType[]> {
+    return await db.select().from(vatTypes).where(eq(vatTypes.isActive, true)).orderBy(vatTypes.code);
+  }
+
+  async getVatType(id: number): Promise<VatType | undefined> {
+    const [vatType] = await db.select().from(vatTypes).where(eq(vatTypes.id, id));
+    return vatType || undefined;
+  }
+
+  async createVatType(data: InsertVatType): Promise<VatType> {
+    const [vatType] = await db
+      .insert(vatTypes)
+      .values(data)
+      .returning();
+    return vatType;
+  }
+
+  async getVatReports(companyId: number): Promise<VatReport[]> {
+    return await db.select().from(vatReports)
+      .where(eq(vatReports.companyId, companyId))
+      .orderBy(desc(vatReports.periodStart));
+  }
+
+  async getVatReport(id: number): Promise<VatReport | undefined> {
+    const [vatReport] = await db.select().from(vatReports).where(eq(vatReports.id, id));
+    return vatReport || undefined;
+  }
+
+  async createVatReport(data: InsertVatReport): Promise<VatReport> {
+    const [vatReport] = await db
+      .insert(vatReports)
+      .values(data)
+      .returning();
+    return vatReport;
+  }
+
+  async updateVatReport(id: number, data: Partial<InsertVatReport>): Promise<VatReport | undefined> {
+    const [vatReport] = await db
+      .update(vatReports)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(vatReports.id, id))
+      .returning();
+    return vatReport || undefined;
+  }
+
+  async getVatTransactions(companyId: number): Promise<VatTransaction[]> {
+    return await db.select().from(vatTransactions)
+      .where(eq(vatTransactions.companyId, companyId))
+      .orderBy(desc(vatTransactions.transactionDate));
+  }
+
+  async createVatTransaction(data: InsertVatTransaction): Promise<VatTransaction> {
+    const [vatTransaction] = await db
+      .insert(vatTransactions)
+      .values(data)
+      .returning();
+    return vatTransaction;
+  }
+
+  async updateCompanyVatSettings(companyId: number, settings: { 
+    vatRegistered: boolean; 
+    vatNumber?: string; 
+    vatPeriod?: string; 
+    vatSubmissionDate?: number;
+  }): Promise<Company | undefined> {
+    const [company] = await db
+      .update(companies)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(companies.id, companyId))
+      .returning();
+    return company || undefined;
   }
 }
 

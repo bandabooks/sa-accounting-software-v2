@@ -11,9 +11,12 @@ import { Plus, Trash2 } from "lucide-react";
 import { customersApi, invoicesApi } from "@/lib/api";
 import { calculateInvoiceTotal, formatCurrency, generateInvoiceNumber } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
-import type { InsertInvoice, InsertInvoiceItem } from "@shared/schema";
+import { CustomerSelect } from "@/components/CustomerSelect";
+import { ProductServiceSelect } from "@/components/ProductServiceSelect";
+import type { InsertInvoice, InsertInvoiceItem, Customer, Product } from "@shared/schema";
 
 interface InvoiceItem {
+  productId?: number;
   description: string;
   quantity: string;
   unitPrice: string;
@@ -37,7 +40,7 @@ export default function InvoiceCreate() {
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
-    { description: "", quantity: "1", unitPrice: "0", vatRate: "15" }
+    { productId: undefined, description: "", quantity: "1", unitPrice: "0", vatRate: "15" }
   ]);
 
   const { data: customers } = useQuery({
@@ -71,7 +74,7 @@ export default function InvoiceCreate() {
   });
 
   const addItem = () => {
-    setItems([...items, { description: "", quantity: "1", unitPrice: "0", vatRate: "15" }]);
+    setItems([...items, { productId: undefined, description: "", quantity: "1", unitPrice: "0", vatRate: "15" }]);
   };
 
   const removeItem = (index: number) => {
@@ -80,9 +83,30 @@ export default function InvoiceCreate() {
     }
   };
 
-  const updateItem = (index: number, field: keyof InvoiceItem, value: string) => {
+  const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
     const newItems = [...items];
-    newItems[index][field] = value;
+    (newItems[index] as any)[field] = value;
+    setItems(newItems);
+    
+    // Recalculate totals
+    const totals = calculateInvoiceTotal(newItems);
+    setFormData(prev => ({
+      ...prev,
+      subtotal: totals.subtotal.toFixed(2),
+      vatAmount: totals.vatAmount.toFixed(2),
+      total: totals.total.toFixed(2)
+    }));
+  };
+
+  const handleProductSelect = (index: number, product: Product) => {
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      productId: product.id,
+      description: product.description || product.name,
+      unitPrice: product.price,
+      vatRate: product.vatRate || "15"
+    };
     setItems(newItems);
     
     // Recalculate totals
@@ -152,21 +176,11 @@ export default function InvoiceCreate() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="customer">Customer *</Label>
-              <Select 
-                value={formData.customerId.toString()} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: parseInt(value) }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers?.map(customer => (
-                    <SelectItem key={customer.id} value={customer.id.toString()}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomerSelect
+                value={formData.customerId || undefined}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
+                placeholder="Select a customer"
+              />
             </div>
 
             <div>
@@ -237,12 +251,21 @@ export default function InvoiceCreate() {
             {items.map((item, index) => (
               <div key={index} className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-4">
-                  <Label>Description</Label>
-                  <Input
-                    placeholder="Item description"
-                    value={item.description}
-                    onChange={(e) => updateItem(index, 'description', e.target.value)}
+                  <Label>Product/Service</Label>
+                  <ProductServiceSelect
+                    value={item.productId}
+                    onValueChange={(productId) => updateItem(index, 'productId', productId)}
+                    onProductSelect={(product) => handleProductSelect(index, product)}
+                    placeholder="Select or create product/service..."
                   />
+                  {!item.productId && (
+                    <Input
+                      className="mt-2"
+                      placeholder="Or enter description manually..."
+                      value={item.description}
+                      onChange={(e) => updateItem(index, 'description', e.target.value)}
+                    />
+                  )}
                 </div>
                 <div className="col-span-2">
                   <Label>Quantity</Label>

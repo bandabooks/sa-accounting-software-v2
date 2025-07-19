@@ -1956,6 +1956,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // VAT Management routes
+  app.get("/api/vat-types", authenticate, async (req, res) => {
+    try {
+      const vatTypes = await storage.getVatTypes();
+      res.json(vatTypes);
+    } catch (error) {
+      console.error("Error fetching VAT types:", error);
+      res.status(500).json({ message: "Failed to fetch VAT types" });
+    }
+  });
+
+  app.post("/api/vat-types", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req, res) => {
+    try {
+      const data = insertVatTypeSchema.parse(req.body);
+      const vatType = await storage.createVatType(data);
+      
+      await logAudit(req.user!.id, 'CREATE', 'vat_type', vatType.id, 'Created VAT type');
+      
+      res.json(vatType);
+    } catch (error) {
+      console.error("Error creating VAT type:", error);
+      res.status(500).json({ message: "Failed to create VAT type" });
+    }
+  });
+
+  app.get("/api/vat-reports", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = 2; // Fixed company ID for now
+      const vatReports = await storage.getVatReports(companyId);
+      res.json(vatReports);
+    } catch (error) {
+      console.error("Error fetching VAT reports:", error);
+      res.status(500).json({ message: "Failed to fetch VAT reports" });
+    }
+  });
+
+  app.post("/api/vat-reports", authenticate, requirePermission(PERMISSIONS.MANAGE_FINANCIAL_REPORTS), async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertVatReportSchema.parse({
+        ...req.body,
+        companyId: 2,
+        createdBy: req.user!.id
+      });
+      const vatReport = await storage.createVatReport(data);
+      
+      await logAudit(req.user!.id, 'CREATE', 'vat_report', vatReport.id, 'Created VAT report');
+      
+      res.json(vatReport);
+    } catch (error) {
+      console.error("Error creating VAT report:", error);
+      res.status(500).json({ message: "Failed to create VAT report" });
+    }
+  });
+
+  app.get("/api/vat-transactions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = 2; // Fixed company ID for now
+      const vatTransactions = await storage.getVatTransactions(companyId);
+      res.json(vatTransactions);
+    } catch (error) {
+      console.error("Error fetching VAT transactions:", error);
+      res.status(500).json({ message: "Failed to fetch VAT transactions" });
+    }
+  });
+
+  app.put("/api/companies/:id/vat-settings", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      if (isNaN(companyId)) {
+        return res.status(400).json({ message: "Invalid company ID" });
+      }
+
+      const vatSettings = z.object({
+        vatRegistered: z.boolean(),
+        vatNumber: z.string().optional(),
+        vatPeriod: z.string().optional(),
+        vatSubmissionDate: z.number().int().min(1).max(31).optional()
+      }).parse(req.body);
+
+      const company = await storage.updateCompanyVatSettings(companyId, vatSettings);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      await logAudit(req.user!.id, 'UPDATE', 'company', companyId, 'Updated VAT settings');
+
+      res.json(company);
+    } catch (error) {
+      console.error("Error updating company VAT settings:", error);
+      res.status(500).json({ message: "Failed to update VAT settings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
