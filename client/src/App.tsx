@@ -24,6 +24,7 @@ import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Products from "@/pages/products";
 import ProductCreate from "@/pages/product-create";
+import ProductEdit from "@/pages/product-edit";
 import Categories from "@/pages/categories";
 import Settings from "@/pages/settings";
 import Inventory from "@/pages/inventory";
@@ -137,6 +138,9 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/products/create">
           <ProductCreate />
+        </Route>
+        <Route path="/products/:id/edit">
+          <ProductEdit />
         </Route>
         <Route path="/products/categories">
           <Categories />

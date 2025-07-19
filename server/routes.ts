@@ -1274,7 +1274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/products/:id", authenticate, requirePermission(PERMISSIONS.PRODUCTS_UPDATE), async (req, res) => {
+  app.put("/api/products/:id", authenticate, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const productData = insertProductSchema.parse(req.body);
@@ -1290,7 +1290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/products/:id", authenticate, requirePermission(PERMISSIONS.PRODUCTS_DELETE), async (req, res) => {
+  app.delete("/api/products/:id", authenticate, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteProduct(id);

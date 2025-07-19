@@ -16,7 +16,7 @@ interface CategorySelectProps {
   placeholder?: string;
 }
 
-export default function CategorySelect({ value, onValueChange, placeholder = "Select a category" }: CategorySelectProps) {
+export function CategorySelect({ value, onValueChange, placeholder = "Select a category" }: CategorySelectProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
@@ -155,3 +155,5 @@ export default function CategorySelect({ value, onValueChange, placeholder = "Se
     </div>
   );
 }
+
+export default CategorySelect;
