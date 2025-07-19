@@ -3,7 +3,7 @@ import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receip
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: ChartLine },
-  { path: "/invoices", label: "Invoices", icon: FileText, badge: "12" },
+  { path: "/invoices", label: "Invoices", icon: FileText },
   { path: "/estimates", label: "Estimates", icon: FileText },
   { path: "/customers", label: "Customers", icon: Users },
   { path: "/suppliers", label: "Suppliers", icon: Building },
@@ -25,8 +25,8 @@ export default function Sidebar() {
   const [location] = useLocation();
 
   return (
-    <aside className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 lg:block hidden">
-      <div className="p-6 border-b border-gray-200">
+    <aside className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 lg:block hidden flex flex-col">
+      <div className="p-6 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
             <Calculator className="text-white" size={20} />
@@ -38,7 +38,7 @@ export default function Sidebar() {
         </div>
       </div>
       
-      <nav className="mt-6 px-3">
+      <nav className="flex-1 overflow-y-auto mt-6 px-3 pb-6">
         <div className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -62,7 +62,6 @@ export default function Sidebar() {
           })}
         </div>
       </nav>
-      
 
     </aside>
   );

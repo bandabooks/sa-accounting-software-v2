@@ -155,6 +155,8 @@ This is a full-stack invoice management system built with React (client) and Exp
 - ✓ Product/service dropdown automatically populates price, description, and VAT rate
 - ✓ Manual description input available as fallback option for custom items
 - ✓ Cleared demo invoices for clean system state
+- ✓ Added scrollable sidebar navigation for desktop and mobile interfaces
+- ✓ Fixed mobile menu with complete navigation items and scroll functionality
 
 **Status**: Complete enterprise-grade accounting system with multi-company support, full authentication, authorization, multi-currency support, inventory management, mobile optimization, comprehensive business settings, IFRS-compliant South African Chart of Accounts, Banking and General Ledger systems - Production ready with full audit trails - READY FOR LIVE ACCOUNTING USE
 
