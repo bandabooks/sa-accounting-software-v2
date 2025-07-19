@@ -440,12 +440,13 @@ export default function Settings() {
 
                 <div className="flex justify-end">
                   <Button
+                    type="button"
                     onClick={() => form.handleSubmit(onSubmit)()}
                     disabled={updateSettingsMutation.isPending}
                     className="flex items-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    Save Document Settings
+                    {updateSettingsMutation.isPending ? "Saving..." : "Save Document Settings"}
                   </Button>
                 </div>
               </div>
@@ -516,12 +517,13 @@ export default function Settings() {
 
                 <div className="flex justify-end">
                   <Button
+                    type="button"
                     onClick={() => form.handleSubmit(onSubmit)()}
                     disabled={updateSettingsMutation.isPending}
                     className="flex items-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    Save Notification Settings
+                    {updateSettingsMutation.isPending ? "Saving..." : "Save Notification Settings"}
                   </Button>
                 </div>
               </div>
