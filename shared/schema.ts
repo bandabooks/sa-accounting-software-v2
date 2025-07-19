@@ -413,6 +413,7 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 });
 
 export const insertPaymentSchema = z.object({
+  companyId: z.number(),
   invoiceId: z.number(),
   amount: z.string(),
   paymentMethod: z.enum(["cash", "card", "eft", "payfast"]),

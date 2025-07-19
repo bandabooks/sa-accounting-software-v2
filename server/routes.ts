@@ -601,10 +601,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/payments", async (req, res) => {
     try {
-      const validatedData = insertPaymentSchema.parse(req.body);
+      console.log("Payment request body:", req.body);
+      // Add default companyId if not provided
+      const paymentData = {
+        ...req.body,
+        companyId: req.body.companyId || 2 // Default company ID
+      };
+      const validatedData = insertPaymentSchema.parse(paymentData);
+      console.log("Validated payment data:", validatedData);
       const payment = await storage.createPayment(validatedData);
       res.status(201).json(payment);
     } catch (error) {
+      console.error("Payment creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
