@@ -282,10 +282,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customers
+  // Customers with search
   app.get("/api/customers", async (req, res) => {
     try {
+      const { search } = req.query;
       const customers = await storage.getAllCustomers();
+      
+      if (search && typeof search === 'string') {
+        const filteredCustomers = customers.filter(customer => 
+          customer.name.toLowerCase().includes(search.toLowerCase()) ||
+          (customer.email && customer.email.toLowerCase().includes(search.toLowerCase())) ||
+          (customer.phone && customer.phone.includes(search)) ||
+          (customer.vatNumber && customer.vatNumber.includes(search))
+        );
+        return res.json(filteredCustomers);
+      }
+      
       res.json(customers);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch customers" });
@@ -307,10 +319,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/customers", async (req, res) => {
     try {
-      const validatedData = insertCustomerSchema.parse(req.body);
+      const validatedData = insertCustomerSchema.parse({
+        ...req.body,
+        companyId: 2 // Default company ID
+      });
       const customer = await storage.createCustomer(validatedData);
       res.status(201).json(customer);
     } catch (error) {
+      console.error("Customer creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
@@ -362,10 +378,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoices
+  // Invoices with search
   app.get("/api/invoices", async (req, res) => {
     try {
+      const { search } = req.query;
       const invoices = await storage.getAllInvoices();
+      
+      if (search && typeof search === 'string') {
+        const filteredInvoices = invoices.filter(invoice => 
+          invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
+          (invoice.customer && invoice.customer.name.toLowerCase().includes(search.toLowerCase())) ||
+          invoice.status.toLowerCase().includes(search.toLowerCase())
+        );
+        return res.json(filteredInvoices);
+      }
+      
       res.json(invoices);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch invoices" });
@@ -411,9 +438,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/invoices", async (req, res) => {
     try {
       const validatedData = createInvoiceSchema.parse(req.body);
-      const invoice = await storage.createInvoice(validatedData.invoice, validatedData.items);
+      // Ensure companyId is set
+      const invoiceData = {
+        ...validatedData.invoice,
+        companyId: 2 // Default company ID
+      };
+      const invoice = await storage.createInvoice(invoiceData, validatedData.items);
       res.status(201).json(invoice);
     } catch (error) {
+      console.error("Invoice creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
@@ -470,10 +503,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Estimates
+  // Estimates with search
   app.get("/api/estimates", async (req, res) => {
     try {
+      const { search } = req.query;
       const estimates = await storage.getAllEstimates();
+      
+      if (search && typeof search === 'string') {
+        const filteredEstimates = estimates.filter(estimate => 
+          estimate.estimateNumber.toLowerCase().includes(search.toLowerCase()) ||
+          (estimate.customer && estimate.customer.name.toLowerCase().includes(search.toLowerCase())) ||
+          estimate.status.toLowerCase().includes(search.toLowerCase())
+        );
+        return res.json(filteredEstimates);
+      }
+      
       res.json(estimates);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch estimates" });
@@ -509,9 +553,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/estimates", async (req, res) => {
     try {
       const validatedData = createEstimateSchema.parse(req.body);
-      const estimate = await storage.createEstimate(validatedData.estimate, validatedData.items);
+      // Ensure companyId is set
+      const estimateData = {
+        ...validatedData.estimate,
+        companyId: 2 // Default company ID
+      };
+      const estimate = await storage.createEstimate(estimateData, validatedData.items);
       res.status(201).json(estimate);
     } catch (error) {
+      console.error("Estimate creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
@@ -872,10 +922,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order Management
-  // Suppliers
+  // Suppliers with search
   app.get("/api/suppliers", async (req, res) => {
     try {
+      const { search } = req.query;
       const suppliers = await storage.getAllSuppliers();
+      
+      if (search && typeof search === 'string') {
+        const filteredSuppliers = suppliers.filter(supplier => 
+          supplier.name.toLowerCase().includes(search.toLowerCase()) ||
+          (supplier.email && supplier.email.toLowerCase().includes(search.toLowerCase())) ||
+          (supplier.phone && supplier.phone.includes(search)) ||
+          (supplier.vatNumber && supplier.vatNumber.includes(search))
+        );
+        return res.json(filteredSuppliers);
+      }
+      
       res.json(suppliers);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch suppliers" });
@@ -897,10 +959,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/suppliers", async (req, res) => {
     try {
-      const validatedData = insertSupplierSchema.parse(req.body);
+      const validatedData = insertSupplierSchema.parse({
+        ...req.body,
+        companyId: 2 // Default company ID
+      });
       const supplier = await storage.createSupplier(validatedData);
       res.status(201).json(supplier);
     } catch (error) {
+      console.error("Supplier creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
@@ -938,10 +1004,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase Orders
+  // Purchase Orders with search
   app.get("/api/purchase-orders", async (req, res) => {
     try {
+      const { search } = req.query;
       const orders = await storage.getAllPurchaseOrders();
+      
+      if (search && typeof search === 'string') {
+        const filteredOrders = orders.filter(order => 
+          order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+          (order.supplier && order.supplier.name.toLowerCase().includes(search.toLowerCase())) ||
+          order.status.toLowerCase().includes(search.toLowerCase())
+        );
+        return res.json(filteredOrders);
+      }
+      
       res.json(orders);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch purchase orders" });
@@ -964,12 +1041,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/purchase-orders", async (req, res) => {
     try {
       const { items, ...orderData } = req.body;
-      const validatedOrder = insertPurchaseOrderSchema.parse(orderData);
+      const validatedOrder = insertPurchaseOrderSchema.parse({
+        ...orderData,
+        companyId: 2 // Default company ID
+      });
       const validatedItems = items.map((item: any) => insertPurchaseOrderItemSchema.omit({ purchaseOrderId: true }).parse(item));
       
       const order = await storage.createPurchaseOrder(validatedOrder, validatedItems);
       res.status(201).json(order);
     } catch (error) {
+      console.error("Purchase order creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
