@@ -950,3 +950,129 @@ export const accountBalancesRelations = relations(accountBalances, ({ one }) => 
     references: [chartOfAccounts.id],
   }),
 }));
+
+// Bank Accounts
+export const bankAccounts = pgTable("bank_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  accountName: text("account_name").notNull(),
+  bankName: text("bank_name").notNull(),
+  accountNumber: text("account_number").notNull(),
+  branchCode: text("branch_code"),
+  accountType: text("account_type").notNull().default("current"), // current, savings, credit, loan
+  currency: text("currency").notNull().default("ZAR"),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0.00"),
+  currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).default("0.00"),
+  reconcileBalance: decimal("reconcile_balance", { precision: 15, scale: 2 }).default("0.00"),
+  lastReconciled: timestamp("last_reconciled"),
+  chartAccountId: integer("chart_account_id").references(() => chartOfAccounts.id),
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bank Transactions
+export const bankTransactions = pgTable("bank_transactions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  transactionDate: timestamp("transaction_date").notNull(),
+  description: text("description").notNull(),
+  reference: text("reference"),
+  transactionType: text("transaction_type").notNull(), // debit, credit
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  runningBalance: decimal("running_balance", { precision: 15, scale: 2 }),
+  category: text("category"), // deposit, withdrawal, transfer, fee, interest
+  isReconciled: boolean("is_reconciled").default(false),
+  reconciledAt: timestamp("reconciled_at"),
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id),
+  importBatch: text("import_batch"), // For statement imports
+  statementId: text("statement_id"), // Bank statement reference
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// General Ledger View (Real-time calculated from journal entries)
+export const generalLedger = pgTable("general_ledger", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  accountId: integer("account_id").notNull().references(() => chartOfAccounts.id),
+  journalEntryId: integer("journal_entry_id").notNull().references(() => journalEntries.id),
+  journalEntryLineId: integer("journal_entry_line_id").notNull().references(() => journalEntryLines.id),
+  transactionDate: timestamp("transaction_date").notNull(),
+  entryNumber: text("entry_number").notNull(),
+  description: text("description").notNull(),
+  reference: text("reference"),
+  debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  runningBalance: decimal("running_balance", { precision: 15, scale: 2 }).default("0.00"),
+  sourceModule: text("source_module"), // invoice, expense, journal, bank, etc.
+  sourceId: integer("source_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Bank Reconciliation
+export const bankReconciliations = pgTable("bank_reconciliations", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  reconciliationDate: timestamp("reconciliation_date").notNull(),
+  statementDate: timestamp("statement_date").notNull(),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).notNull(),
+  closingBalance: decimal("closing_balance", { precision: 15, scale: 2 }).notNull(),
+  statementBalance: decimal("statement_balance", { precision: 15, scale: 2 }).notNull(),
+  difference: decimal("difference", { precision: 15, scale: 2 }).default("0.00"),
+  isComplete: boolean("is_complete").default(false),
+  notes: text("notes"),
+  reconciledBy: integer("reconciled_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Banking and GL schemas
+export const insertBankAccountSchema = createInsertSchema(bankAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankTransactionSchema = createInsertSchema(bankTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankReconciliationSchema = createInsertSchema(bankReconciliations).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+// Banking and GL types
+export type BankAccount = typeof bankAccounts.$inferSelect;
+export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
+export type BankTransaction = typeof bankTransactions.$inferSelect;
+export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
+export type GeneralLedger = typeof generalLedger.$inferSelect;
+export type BankReconciliation = typeof bankReconciliations.$inferSelect;
+export type InsertBankReconciliation = z.infer<typeof insertBankReconciliationSchema>;
+
+export type BankAccountWithTransactions = BankAccount & {
+  transactions: BankTransaction[];
+  chartAccount?: ChartOfAccount;
+};
+
+export type GeneralLedgerEntry = {
+  id: number;
+  transactionDate: Date;
+  accountCode: string;
+  accountName: string;
+  description: string;
+  reference?: string;
+  debitAmount: string;
+  creditAmount: string;
+  runningBalance: string;
+  entryNumber: string;
+  sourceModule?: string;
+};

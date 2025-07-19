@@ -32,6 +32,8 @@ import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
 import ChartOfAccounts from "@/pages/chart-of-accounts";
 import JournalEntries from "@/pages/journal-entries";
+import Banking from "@/pages/banking";
+import GeneralLedger from "@/pages/general-ledger";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -53,6 +55,8 @@ const PERMISSIONS = {
   INVENTORY_VIEW: 'inventory:view',
   CHART_OF_ACCOUNTS_VIEW: 'chart_of_accounts:view',
   JOURNAL_ENTRIES_VIEW: 'journal_entries:view',
+  BANKING_VIEW: 'banking:view',
+  GENERAL_LEDGER_VIEW: 'general_ledger:view',
 } as const;
 
 function AuthenticatedApp() {
@@ -173,6 +177,16 @@ function AuthenticatedApp() {
         <Route path="/journal-entries">
           <ProtectedRoute permission={PERMISSIONS.JOURNAL_ENTRIES_VIEW}>
             <JournalEntries />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/banking">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <Banking />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/general-ledger">
+          <ProtectedRoute permission={PERMISSIONS.GENERAL_LEDGER_VIEW}>
+            <GeneralLedger />
           </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />

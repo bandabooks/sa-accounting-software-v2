@@ -1497,7 +1497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Chart of Accounts Routes
   app.get("/api/chart-of-accounts", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 1; // Default company for now
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2; // Default company for now
       const userId = (req as AuthenticatedRequest).user?.id;
       const accounts = await storage.getAllChartOfAccounts(companyId);
       
@@ -1535,7 +1535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/chart-of-accounts", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
       const userId = (req as AuthenticatedRequest).user?.id;
       const validatedData = insertChartOfAccountSchema.parse({ ...req.body, companyId });
       const account = await storage.createChartOfAccount(validatedData);
@@ -1601,7 +1601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/chart-of-accounts/seed-sa", authenticate, requireRole("admin"), async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
       await storage.seedSouthAfricanChartOfAccounts(companyId);
       res.json({ message: "South African Chart of Accounts seeded successfully" });
     } catch (error) {
@@ -1613,7 +1613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Journal Entries Routes
   app.get("/api/journal-entries", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
       const entries = await storage.getAllJournalEntries(companyId);
       res.json(entries);
     } catch (error) {
@@ -1754,6 +1754,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating expense journal entry:", error);
       res.status(500).json({ error: "Failed to create expense journal entry" });
+    }
+  });
+
+  // Banking Routes
+  app.get("/api/bank-accounts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const accounts = await storage.getAllBankAccounts(companyId);
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error fetching bank accounts:", error);
+      res.status(500).json({ error: "Failed to fetch bank accounts" });
+    }
+  });
+
+  app.get("/api/bank-accounts/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const account = await storage.getBankAccount(id);
+      if (!account) {
+        return res.status(404).json({ error: "Bank account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      console.error("Error fetching bank account:", error);
+      res.status(500).json({ error: "Failed to fetch bank account" });
+    }
+  });
+
+  app.post("/api/bank-accounts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const validatedData = { ...req.body, companyId };
+      const account = await storage.createBankAccount(validatedData);
+      res.status(201).json(account);
+    } catch (error) {
+      console.error("Error creating bank account:", error);
+      res.status(500).json({ error: "Failed to create bank account" });
+    }
+  });
+
+  app.put("/api/bank-accounts/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const account = await storage.updateBankAccount(id, req.body);
+      if (!account) {
+        return res.status(404).json({ error: "Bank account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      console.error("Error updating bank account:", error);
+      res.status(500).json({ error: "Failed to update bank account" });
+    }
+  });
+
+  app.delete("/api/bank-accounts/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteBankAccount(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Bank account not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting bank account:", error);
+      res.status(500).json({ error: "Failed to delete bank account" });
+    }
+  });
+
+  // Bank Transactions Routes
+  app.get("/api/bank-transactions", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const bankAccountId = req.query.bankAccountId ? parseInt(req.query.bankAccountId as string) : undefined;
+      const transactions = await storage.getAllBankTransactions(companyId, bankAccountId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching bank transactions:", error);
+      res.status(500).json({ error: "Failed to fetch bank transactions" });
+    }
+  });
+
+  app.post("/api/bank-transactions", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const validatedData = { ...req.body, companyId };
+      const transaction = await storage.createBankTransaction(validatedData);
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error creating bank transaction:", error);
+      res.status(500).json({ error: "Failed to create bank transaction" });
+    }
+  });
+
+  // General Ledger Routes
+  app.get("/api/general-ledger", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const accountId = req.query.accountId ? parseInt(req.query.accountId as string) : undefined;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const ledger = await storage.getGeneralLedger(companyId, accountId, startDate, endDate);
+      res.json(ledger);
+    } catch (error) {
+      console.error("Error fetching general ledger:", error);
+      res.status(500).json({ error: "Failed to fetch general ledger" });
+    }
+  });
+
+  app.post("/api/general-ledger/sync", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      await storage.syncGeneralLedgerFromJournalEntries(companyId);
+      res.json({ message: "General ledger synchronized successfully" });
+    } catch (error) {
+      console.error("Error syncing general ledger:", error);
+      res.status(500).json({ error: "Failed to sync general ledger" });
     }
   });
 

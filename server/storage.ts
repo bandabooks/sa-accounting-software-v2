@@ -26,6 +26,10 @@ import {
   journalEntries,
   journalEntryLines,
   accountBalances,
+  bankAccounts,
+  bankTransactions,
+  generalLedger,
+  bankReconciliations,
   companies,
   type Customer, 
   type InsertCustomer,
@@ -91,6 +95,12 @@ import {
   type ChartOfAccountWithBalance,
   type JournalEntryWithLines,
   type AccountBalanceReport,
+  type BankAccount,
+  type InsertBankAccount,
+  type BankTransaction,
+  type InsertBankTransaction,
+  type BankAccountWithTransactions,
+  type GeneralLedgerEntry,
   type Company,
   type InsertCompany,
 } from "@shared/schema";
@@ -1881,6 +1891,234 @@ export class DatabaseStorage implements IStorage {
     return balance.toFixed(2);
   }
 
+  // Banking Implementation
+  async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
+    const accounts = await db.select().from(bankAccounts)
+      .where(and(eq(bankAccounts.companyId, companyId), eq(bankAccounts.isActive, true)))
+      .orderBy(bankAccounts.accountName);
+    
+    return await Promise.all(accounts.map(async (account) => {
+      const transactions = await db.select().from(bankTransactions)
+        .where(eq(bankTransactions.bankAccountId, account.id))
+        .orderBy(desc(bankTransactions.transactionDate))
+        .limit(10);
+      
+      let chartAccount;
+      if (account.chartAccountId) {
+        chartAccount = await this.getChartOfAccount(account.chartAccountId);
+      }
+      
+      return { ...account, transactions, chartAccount };
+    }));
+  }
+
+  async getBankAccount(id: number): Promise<BankAccountWithTransactions | undefined> {
+    const [account] = await db.select().from(bankAccounts).where(eq(bankAccounts.id, id));
+    if (!account) return undefined;
+    
+    const transactions = await db.select().from(bankTransactions)
+      .where(eq(bankTransactions.bankAccountId, id))
+      .orderBy(desc(bankTransactions.transactionDate));
+    
+    let chartAccount;
+    if (account.chartAccountId) {
+      chartAccount = await this.getChartOfAccount(account.chartAccountId);
+    }
+    
+    return { ...account, transactions, chartAccount };
+  }
+
+  async createBankAccount(account: InsertBankAccount): Promise<BankAccount> {
+    const [newAccount] = await db.insert(bankAccounts).values(account).returning();
+    return newAccount;
+  }
+
+  async updateBankAccount(id: number, account: Partial<InsertBankAccount>): Promise<BankAccount | undefined> {
+    const [updated] = await db
+      .update(bankAccounts)
+      .set({ ...account, updatedAt: new Date() })
+      .where(eq(bankAccounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteBankAccount(id: number): Promise<boolean> {
+    const result = await db.delete(bankAccounts).where(eq(bankAccounts.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getAllBankTransactions(companyId: number, bankAccountId?: number): Promise<BankTransaction[]> {
+    let query = db.select().from(bankTransactions).where(eq(bankTransactions.companyId, companyId));
+    
+    if (bankAccountId) {
+      query = query.where(eq(bankTransactions.bankAccountId, bankAccountId));
+    }
+    
+    return await query.orderBy(desc(bankTransactions.transactionDate));
+  }
+
+  async createBankTransaction(transaction: InsertBankTransaction): Promise<BankTransaction> {
+    const [newTransaction] = await db.insert(bankTransactions).values(transaction).returning();
+    
+    // Update bank account balance
+    const account = await this.getBankAccount(transaction.bankAccountId);
+    if (account) {
+      const newBalance = transaction.transactionType === 'credit' 
+        ? parseFloat(account.currentBalance) + parseFloat(transaction.amount.toString())
+        : parseFloat(account.currentBalance) - parseFloat(transaction.amount.toString());
+      
+      await this.updateBankAccount(transaction.bankAccountId, {
+        currentBalance: newBalance.toString()
+      });
+    }
+    
+    return newTransaction;
+  }
+
+  async updateBankTransaction(id: number, transaction: Partial<InsertBankTransaction>): Promise<BankTransaction | undefined> {
+    const [updated] = await db
+      .update(bankTransactions)
+      .set({ ...transaction, updatedAt: new Date() })
+      .where(eq(bankTransactions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteBankTransaction(id: number): Promise<boolean> {
+    const result = await db.delete(bankTransactions).where(eq(bankTransactions.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // General Ledger Implementation
+  async getGeneralLedger(companyId: number, accountId?: number, startDate?: Date, endDate?: Date): Promise<GeneralLedgerEntry[]> {
+    let query = db
+      .select({
+        id: journalEntryLines.id,
+        transactionDate: journalEntries.transactionDate,
+        accountCode: chartOfAccounts.accountCode,
+        accountName: chartOfAccounts.accountName,
+        description: journalEntryLines.description,
+        reference: journalEntryLines.reference,
+        debitAmount: journalEntryLines.debitAmount,
+        creditAmount: journalEntryLines.creditAmount,
+        entryNumber: journalEntries.entryNumber,
+        sourceModule: journalEntries.sourceModule,
+      })
+      .from(journalEntryLines)
+      .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+      .innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+      .where(
+        and(
+          eq(chartOfAccounts.companyId, companyId),
+          eq(journalEntries.isPosted, true)
+        )
+      );
+
+    if (accountId) {
+      query = query.where(eq(journalEntryLines.accountId, accountId));
+    }
+
+    if (startDate) {
+      query = query.where(gte(journalEntries.transactionDate, startDate));
+    }
+
+    if (endDate) {
+      query = query.where(lte(journalEntries.transactionDate, endDate));
+    }
+
+    const results = await query.orderBy(
+      journalEntries.transactionDate,
+      chartOfAccounts.accountCode,
+      journalEntries.entryNumber
+    );
+
+    // Calculate running balances
+    let runningBalance = 0;
+    return results.map((row) => {
+      const debitAmount = parseFloat(row.debitAmount || "0");
+      const creditAmount = parseFloat(row.creditAmount || "0");
+      runningBalance += debitAmount - creditAmount;
+      
+      return {
+        id: row.id,
+        transactionDate: row.transactionDate,
+        accountCode: row.accountCode,
+        accountName: row.accountName,
+        description: row.description || "",
+        reference: row.reference || undefined,
+        debitAmount: row.debitAmount,
+        creditAmount: row.creditAmount,
+        runningBalance: runningBalance.toFixed(2),
+        entryNumber: row.entryNumber,
+        sourceModule: row.sourceModule || undefined,
+      };
+    });
+  }
+
+  async syncGeneralLedgerFromJournalEntries(companyId: number): Promise<void> {
+    // Clear existing GL entries for the company
+    await db.delete(generalLedger).where(eq(generalLedger.companyId, companyId));
+
+    // Get all posted journal entries with their lines
+    const entries = await db
+      .select({
+        entryId: journalEntries.id,
+        lineId: journalEntryLines.id,
+        accountId: journalEntryLines.accountId,
+        transactionDate: journalEntries.transactionDate,
+        entryNumber: journalEntries.entryNumber,
+        description: journalEntryLines.description,
+        reference: journalEntryLines.reference,
+        debitAmount: journalEntryLines.debitAmount,
+        creditAmount: journalEntryLines.creditAmount,
+        sourceModule: journalEntries.sourceModule,
+        sourceId: journalEntries.sourceId,
+      })
+      .from(journalEntries)
+      .innerJoin(journalEntryLines, eq(journalEntries.id, journalEntryLines.journalEntryId))
+      .where(
+        and(
+          eq(journalEntries.companyId, companyId),
+          eq(journalEntries.isPosted, true)
+        )
+      )
+      .orderBy(journalEntries.transactionDate, journalEntries.entryNumber);
+
+    // Calculate running balances by account
+    const accountBalances: Record<number, number> = {};
+    const glEntries = entries.map((entry) => {
+      const debitAmount = parseFloat(entry.debitAmount || "0");
+      const creditAmount = parseFloat(entry.creditAmount || "0");
+      
+      if (!accountBalances[entry.accountId]) {
+        accountBalances[entry.accountId] = 0;
+      }
+      
+      accountBalances[entry.accountId] += debitAmount - creditAmount;
+
+      return {
+        companyId,
+        accountId: entry.accountId,
+        journalEntryId: entry.entryId,
+        journalEntryLineId: entry.lineId,
+        transactionDate: entry.transactionDate,
+        entryNumber: entry.entryNumber,
+        description: entry.description || "",
+        reference: entry.reference,
+        debitAmount: entry.debitAmount,
+        creditAmount: entry.creditAmount,
+        runningBalance: accountBalances[entry.accountId].toFixed(2),
+        sourceModule: entry.sourceModule,
+        sourceId: entry.sourceId,
+      };
+    });
+
+    // Batch insert GL entries
+    if (glEntries.length > 0) {
+      await db.insert(generalLedger).values(glEntries);
+    }
+  }
+
   async getAccountBalanceReport(companyId: number, periodStart: Date, periodEnd: Date): Promise<AccountBalanceReport[]> {
     const accounts = await db.select().from(chartOfAccounts)
       .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.isActive, true)))
@@ -2097,6 +2335,238 @@ export class DatabaseStorage implements IStorage {
       .where(eq(companies.id, id))
       .returning();
     return company || undefined;
+  }
+  // Banking Methods
+  async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
+    return db
+      .select()
+      .from(bankAccounts)
+      .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
+      .where(eq(bankAccounts.companyId, companyId))
+      .then(async (results) => {
+        const accounts = results.map(row => ({
+          ...row.bank_accounts,
+          chartAccount: row.chart_of_accounts
+        }));
+
+        // Get transactions for each account
+        const accountsWithTransactions = await Promise.all(
+          accounts.map(async (account) => {
+            const transactions = await db
+              .select()
+              .from(bankTransactions)
+              .where(eq(bankTransactions.bankAccountId, account.id))
+              .orderBy(desc(bankTransactions.transactionDate))
+              .limit(10);
+
+            return {
+              ...account,
+              transactions: transactions || []
+            };
+          })
+        );
+
+        return accountsWithTransactions;
+      });
+  }
+
+  async getBankAccount(id: number): Promise<BankAccount | undefined> {
+    const [account] = await db.select().from(bankAccounts).where(eq(bankAccounts.id, id));
+    return account;
+  }
+
+  async createBankAccount(data: InsertBankAccount): Promise<BankAccount> {
+    const [account] = await db.insert(bankAccounts).values(data).returning();
+    return account;
+  }
+
+  async updateBankAccount(id: number, data: Partial<InsertBankAccount>): Promise<BankAccount | undefined> {
+    const [account] = await db
+      .update(bankAccounts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(bankAccounts.id, id))
+      .returning();
+    return account;
+  }
+
+  async deleteBankAccount(id: number): Promise<boolean> {
+    const result = await db.delete(bankAccounts).where(eq(bankAccounts.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getAllBankTransactions(companyId: number, bankAccountId?: number): Promise<BankTransaction[]> {
+    let query = db.select().from(bankTransactions).where(eq(bankTransactions.companyId, companyId));
+    
+    if (bankAccountId) {
+      query = query.where(eq(bankTransactions.bankAccountId, bankAccountId));
+    }
+    
+    return query.orderBy(desc(bankTransactions.transactionDate));
+  }
+
+  async createBankTransaction(data: InsertBankTransaction): Promise<BankTransaction> {
+    const [transaction] = await db.insert(bankTransactions).values(data).returning();
+
+    // Update bank account balance
+    const account = await this.getBankAccount(data.bankAccountId);
+    if (account) {
+      const currentBalance = parseFloat(account.currentBalance);
+      const transactionAmount = parseFloat(data.amount);
+      const newBalance = data.transactionType === 'credit' 
+        ? currentBalance + transactionAmount 
+        : currentBalance - transactionAmount;
+
+      await this.updateBankAccount(data.bankAccountId, { 
+        currentBalance: newBalance.toFixed(2) 
+      });
+    }
+
+    return transaction;
+  }
+
+  // General Ledger Methods
+  async getGeneralLedger(
+    companyId: number, 
+    accountId?: number, 
+    startDate?: Date, 
+    endDate?: Date
+  ): Promise<GeneralLedgerEntry[]> {
+    let query = db
+      .select({
+        id: generalLedger.id,
+        entryNumber: generalLedger.entryNumber,
+        accountId: generalLedger.accountId,
+        accountCode: generalLedger.accountCode,
+        accountName: generalLedger.accountName,
+        transactionDate: generalLedger.transactionDate,
+        description: generalLedger.description,
+        reference: generalLedger.reference,
+        debitAmount: generalLedger.debitAmount,
+        creditAmount: generalLedger.creditAmount,
+        runningBalance: generalLedger.runningBalance,
+        sourceModule: generalLedger.sourceModule,
+        sourceId: generalLedger.sourceId,
+        companyId: generalLedger.companyId,
+        createdAt: generalLedger.createdAt,
+      })
+      .from(generalLedger)
+      .where(eq(generalLedger.companyId, companyId));
+
+    if (accountId) {
+      query = query.where(eq(generalLedger.accountId, accountId));
+    }
+
+    if (startDate) {
+      query = query.where(gte(generalLedger.transactionDate, startDate));
+    }
+
+    if (endDate) {
+      query = query.where(lte(generalLedger.transactionDate, endDate));
+    }
+
+    return query.orderBy(
+      generalLedger.transactionDate, 
+      generalLedger.entryNumber, 
+      generalLedger.id
+    );
+  }
+
+  async syncGeneralLedgerFromJournalEntries(companyId: number): Promise<void> {
+    // Clear existing GL entries for this company
+    await db.delete(generalLedger).where(eq(generalLedger.companyId, companyId));
+
+    // Get all posted journal entries with their lines
+    const entries = await db
+      .select()
+      .from(journalEntries)
+      .leftJoin(journalEntryLines, eq(journalEntries.id, journalEntryLines.journalEntryId))
+      .leftJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+      .where(and(
+        eq(journalEntries.companyId, companyId),
+        eq(journalEntries.status, 'posted')
+      ))
+      .orderBy(journalEntries.entryDate, journalEntries.entryNumber);
+
+    // Group by journal entry
+    const entriesMap = new Map();
+    for (const row of entries) {
+      const entryId = row.journal_entries.id;
+      if (!entriesMap.has(entryId)) {
+        entriesMap.set(entryId, {
+          entry: row.journal_entries,
+          lines: []
+        });
+      }
+      if (row.journal_entry_lines) {
+        entriesMap.get(entryId).lines.push({
+          ...row.journal_entry_lines,
+          account: row.chart_of_accounts
+        });
+      }
+    }
+
+    // Create GL entries for each journal entry line
+    const glEntries = [];
+    for (const { entry, lines } of entriesMap.values()) {
+      for (const line of lines) {
+        glEntries.push({
+          entryNumber: entry.entryNumber,
+          accountId: line.accountId,
+          accountCode: line.account.accountCode,
+          accountName: line.account.accountName,
+          transactionDate: entry.entryDate,
+          description: entry.description,
+          reference: entry.reference || null,
+          debitAmount: line.debitAmount || "0.00",
+          creditAmount: line.creditAmount || "0.00",
+          runningBalance: "0.00", // Will calculate below
+          sourceModule: "journal_entries",
+          sourceId: entry.id.toString(),
+          companyId: companyId,
+        });
+      }
+    }
+
+    // Insert GL entries
+    if (glEntries.length > 0) {
+      await db.insert(generalLedger).values(glEntries);
+
+      // Calculate running balances
+      await this.calculateRunningBalances(companyId);
+    }
+  }
+
+  async calculateRunningBalances(companyId: number): Promise<void> {
+    // Get all accounts with GL entries
+    const accounts = await db
+      .select({ accountId: generalLedger.accountId })
+      .from(generalLedger)
+      .where(eq(generalLedger.companyId, companyId))
+      .groupBy(generalLedger.accountId);
+
+    for (const { accountId } of accounts) {
+      // Get entries for this account in chronological order
+      const entries = await db
+        .select()
+        .from(generalLedger)
+        .where(and(
+          eq(generalLedger.companyId, companyId),
+          eq(generalLedger.accountId, accountId)
+        ))
+        .orderBy(generalLedger.transactionDate, generalLedger.id);
+
+      let runningBalance = 0;
+      for (const entry of entries) {
+        const debit = parseFloat(entry.debitAmount);
+        const credit = parseFloat(entry.creditAmount);
+        runningBalance += debit - credit;
+
+        await db
+          .update(generalLedger)
+          .set({ runningBalance: runningBalance.toFixed(2) })
+          .where(eq(generalLedger.id, entry.id));
+      }
+    }
   }
 }
 

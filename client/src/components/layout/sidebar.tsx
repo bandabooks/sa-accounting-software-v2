@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building, Archive, Building2, BookOpen } from "lucide-react";
+import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building, Archive, Building2, BookOpen, Landmark, BookOpenCheck } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: ChartLine },
@@ -13,6 +13,8 @@ const navItems = [
   { path: "/expenses", label: "Expenses", icon: Receipt },
   { path: "/chart-of-accounts", label: "Chart of Accounts", icon: Calculator },
   { path: "/journal-entries", label: "Journal Entries", icon: BookOpen },
+  { path: "/banking", label: "Banking", icon: Landmark },
+  { path: "/general-ledger", label: "General Ledger", icon: BookOpenCheck },
   { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp },
   { path: "/reports", label: "Business Reports", icon: BarChart3 },
   { path: "/companies", label: "Companies", icon: Building2 },
@@ -61,15 +63,7 @@ export default function Sidebar() {
         </div>
       </nav>
       
-      <div className="absolute bottom-6 left-3 right-3">
-        <div className="bg-gradient-to-r from-primary to-secondary p-4 rounded-lg text-white">
-          <h3 className="font-semibold text-sm">Upgrade to Pro</h3>
-          <p className="text-xs opacity-90 mt-1">Unlock unlimited features</p>
-          <button className="bg-white text-primary text-xs font-medium px-3 py-1 rounded mt-2 hover:bg-gray-100 transition-colors">
-            Upgrade Now
-          </button>
-        </div>
-      </div>
+
     </aside>
   );
 }
