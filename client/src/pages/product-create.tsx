@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { ProductCategory } from "@shared/schema";
+import CategorySelect from "@/components/CategorySelect";
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -152,23 +153,13 @@ export default function ProductCreate() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
-                        value={field.value?.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id.toString()}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <CategorySelect
+                          value={field.value?.toString()}
+                          onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                          placeholder="Select a category"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
