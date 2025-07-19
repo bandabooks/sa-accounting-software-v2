@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -75,23 +75,25 @@ export default function Settings() {
   });
 
   // Reset form when settings are loaded
-  if (settings && !isLoading) {
-    form.reset({
-      companyName: settings?.companyName || "",
-      companyEmail: settings?.companyEmail || "",
-      companyPhone: settings?.companyPhone || "",
-      companyAddress: settings?.companyAddress || "",
-      vatNumber: settings?.vatNumber || "",
-      registrationNumber: settings?.registrationNumber || "",
-      primaryCurrency: settings?.primaryCurrency || "ZAR",
-      invoicePrefix: settings?.invoicePrefix || "INV",
-      estimatePrefix: settings?.estimatePrefix || "EST",
-      paymentTerms: settings?.paymentTerms || "",
-      autoEmailReminders: settings?.autoEmailReminders || false,
-      fiscalYearStart: settings?.fiscalYearStart || "2025-01-01",
-      taxRate: settings?.taxRate || "15.00",
-    });
-  }
+  useEffect(() => {
+    if (settings && !isLoading) {
+      form.reset({
+        companyName: settings?.companyName || "",
+        companyEmail: settings?.companyEmail || "",
+        companyPhone: settings?.companyPhone || "",
+        companyAddress: settings?.companyAddress || "",
+        vatNumber: settings?.vatNumber || "",
+        registrationNumber: settings?.registrationNumber || "",
+        primaryCurrency: settings?.primaryCurrency || "ZAR",
+        invoicePrefix: settings?.invoicePrefix || "INV",
+        estimatePrefix: settings?.estimatePrefix || "EST",
+        paymentTerms: settings?.paymentTerms || "",
+        autoEmailReminders: settings?.autoEmailReminders || false,
+        fiscalYearStart: settings?.fiscalYearStart || "2025-01-01",
+        taxRate: settings?.taxRate || "15.00",
+      });
+    }
+  }, [settings, isLoading, form]);
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: CompanySettingsFormData) => {
