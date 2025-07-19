@@ -1706,6 +1706,176 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async seedDefaultSouthAfricanBanks(companyId: number): Promise<void> {
+    // Check if bank accounts already exist
+    const existingBanks = await db
+      .select()
+      .from(bankAccounts)
+      .where(eq(bankAccounts.companyId, companyId));
+
+    if (existingBanks.length === 0) {
+      // Find relevant chart of accounts for banking
+      const bankingAccounts = await db
+        .select()
+        .from(chartOfAccounts)
+        .where(
+          and(
+            eq(chartOfAccounts.companyId, companyId),
+            or(
+              eq(chartOfAccounts.accountCode, "1100"), // Bank Account - Current
+              eq(chartOfAccounts.accountCode, "1101"), // Bank Account - Savings
+              eq(chartOfAccounts.accountCode, "1103"), // Bank Account - Money Market
+            )
+          )
+        );
+
+      const currentAccount = bankingAccounts.find(acc => acc.accountCode === "1100");
+      const savingsAccount = bankingAccounts.find(acc => acc.accountCode === "1101");
+      const moneyMarketAccount = bankingAccounts.find(acc => acc.accountCode === "1103");
+
+      // Top 6 South African Banks
+      const defaultBanks = [
+        {
+          companyId,
+          accountName: "FNB Business Current Account",
+          bankName: "First National Bank (FNB)",
+          accountNumber: "74500123456",
+          branchCode: "250655",
+          accountType: "current",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: currentAccount?.id,
+          isActive: true,
+          notes: "Primary business banking account"
+        },
+        {
+          companyId,
+          accountName: "Standard Bank Business Account",
+          bankName: "Standard Bank",
+          accountNumber: "11070012345",
+          branchCode: "051001",
+          accountType: "current",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: currentAccount?.id,
+          isActive: true,
+          notes: "Secondary business account"
+        },
+        {
+          companyId,
+          accountName: "ABSA Business Plus Account",
+          bankName: "ABSA Bank",
+          accountNumber: "40480012345",
+          branchCode: "632005",
+          accountType: "current",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: currentAccount?.id,
+          isActive: true,
+          notes: "ABSA business banking"
+        },
+        {
+          companyId,
+          accountName: "Nedbank Business Account",
+          bankName: "Nedbank",
+          accountNumber: "11980012345",
+          branchCode: "198765",
+          accountType: "current",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: currentAccount?.id,
+          isActive: true,
+          notes: "Nedbank business solutions"
+        },
+        {
+          companyId,
+          accountName: "Capitec Business Account",
+          bankName: "Capitec Bank",
+          accountNumber: "14700012345",
+          branchCode: "470010",
+          accountType: "current",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: currentAccount?.id,
+          isActive: true,
+          notes: "Capitec business banking"
+        },
+        {
+          companyId,
+          accountName: "Investec Business Account",
+          bankName: "Investec Bank",
+          accountNumber: "58050012345",
+          branchCode: "580105",
+          accountType: "current",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: currentAccount?.id,
+          isActive: true,
+          notes: "Investec private banking"
+        },
+        
+        // Top 3 Investment/Money Market Accounts
+        {
+          companyId,
+          accountName: "FNB Money Market Plus",
+          bankName: "First National Bank (FNB)",
+          accountNumber: "74520987654",
+          branchCode: "250655",
+          accountType: "money_market",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: moneyMarketAccount?.id,
+          isActive: true,
+          notes: "High yield money market account"
+        },
+        {
+          companyId,
+          accountName: "Nedbank Money Market Account",
+          bankName: "Nedbank",
+          accountNumber: "11985678901",
+          branchCode: "198765",
+          accountType: "money_market",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: moneyMarketAccount?.id,
+          isActive: true,
+          notes: "Nedbank money market investment"
+        },
+        {
+          companyId,
+          accountName: "ABSA Investment Account",
+          bankName: "ABSA Bank",
+          accountNumber: "40489876543",
+          branchCode: "632005",
+          accountType: "investment",
+          currency: "ZAR",
+          openingBalance: "0.00",
+          currentBalance: "0.00",
+          chartAccountId: savingsAccount?.id,
+          isActive: true,
+          notes: "ABSA investment and savings account"
+        }
+      ];
+
+      // Insert default bank accounts
+      for (const bank of defaultBanks) {
+        try {
+          await db.insert(bankAccounts).values(bank).onConflictDoNothing();
+        } catch (error) {
+          console.log(`Skipping duplicate bank: ${bank.accountName}`);
+        }
+      }
+    }
+  }
+
   // Journal Entries
   async getAllJournalEntries(companyId: number): Promise<JournalEntryWithLines[]> {
     const entries = await db.select().from(journalEntries)
@@ -2289,33 +2459,32 @@ export class DatabaseStorage implements IStorage {
   }
   // Banking Methods
   async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
-    const results = await db
+    const accounts = await db
       .select()
       .from(bankAccounts)
       .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
       .where(eq(bankAccounts.companyId, companyId));
-      
-    const accounts = results.map(row => ({
-      ...row.bank_accounts,
-      chartAccount: row.chart_of_accounts || null
-    }));
 
-        // Get transactions for each account
-        const accountsWithTransactions = await Promise.all(
-          accounts.map(async (account) => {
-            const transactions = await db
-              .select()
-              .from(bankTransactions)
-              .where(eq(bankTransactions.bankAccountId, account.id))
-              .orderBy(desc(bankTransactions.transactionDate))
-              .limit(10);
+    // Get transactions for each account
+    const accountsWithTransactions = await Promise.all(
+      accounts.map(async (row) => {
+        const account = row.bank_accounts;
+        const chartAccount = row.chart_of_accounts;
+        
+        const transactions = await db
+          .select()
+          .from(bankTransactions)
+          .where(eq(bankTransactions.bankAccountId, account.id))
+          .orderBy(desc(bankTransactions.transactionDate))
+          .limit(10);
 
-            return {
-              ...account,
-              transactions: transactions || []
-            };
-          })
-        );
+        return {
+          ...account,
+          chartAccount: chartAccount || null,
+          transactions: transactions || []
+        };
+      })
+    );
 
     return accountsWithTransactions;
   }

@@ -83,6 +83,13 @@ export async function seedDatabase() {
       await storage.seedSouthAfricanChartOfAccounts(defaultCompany.id);
       console.log("✓ South African Chart of Accounts seeded");
     }
+
+    // Seed Default South African Banks for default company
+    const existingBanks = await storage.getAllBankAccounts(defaultCompany.id);
+    if (existingBanks.length === 0) {
+      await storage.seedDefaultSouthAfricanBanks(defaultCompany.id);
+      console.log("✓ Default South African banks seeded");
+    }
     
     console.log("Database seeding completed successfully!");
   } catch (error) {
