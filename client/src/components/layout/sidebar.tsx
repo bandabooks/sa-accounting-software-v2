@@ -38,7 +38,7 @@ export default function Sidebar() {
         </div>
       </div>
       
-      <nav className="flex-1 overflow-y-auto mt-6 px-3 pb-6">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden mt-6 px-3 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
         <div className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
