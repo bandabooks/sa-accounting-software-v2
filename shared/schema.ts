@@ -909,6 +909,178 @@ export const vatTransactions = pgTable("vat_transactions", {
   reportIdx: index("vat_transactions_report_idx").on(table.vatReportId),
 }));
 
+// Fixed Assets Management
+export const fixedAssets = pgTable("fixed_assets", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  assetName: varchar("asset_name", { length: 255 }).notNull(),
+  assetCode: varchar("asset_code", { length: 50 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  description: text("description"),
+  purchaseDate: date("purchase_date").notNull(),
+  purchasePrice: decimal("purchase_price", { precision: 12, scale: 2 }).notNull(),
+  currentValue: decimal("current_value", { precision: 12, scale: 2 }).notNull(),
+  depreciationMethod: varchar("depreciation_method", { length: 50 }).notNull().default("straight_line"),
+  usefulLife: integer("useful_life").notNull(), // in years
+  residualValue: decimal("residual_value", { precision: 12, scale: 2 }).default("0.00"),
+  location: varchar("location", { length: 255 }),
+  supplier: varchar("supplier", { length: 255 }),
+  serialNumber: varchar("serial_number", { length: 100 }),
+  warrantyExpiry: date("warranty_expiry"),
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active, disposed, sold
+  disposalDate: date("disposal_date"),
+  disposalValue: decimal("disposal_value", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("fixed_assets_company_idx").on(table.companyId),
+  statusIdx: index("fixed_assets_status_idx").on(table.status),
+}));
+
+// Depreciation Records
+export const depreciationRecords = pgTable("depreciation_records", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  assetId: integer("asset_id").notNull().references(() => fixedAssets.id),
+  period: varchar("period", { length: 7 }).notNull(), // YYYY-MM format
+  depreciationAmount: decimal("depreciation_amount", { precision: 10, scale: 2 }).notNull(),
+  accumulatedDepreciation: decimal("accumulated_depreciation", { precision: 12, scale: 2 }).notNull(),
+  bookValue: decimal("book_value", { precision: 12, scale: 2 }).notNull(),
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("depreciation_records_company_idx").on(table.companyId),
+  assetIdx: index("depreciation_records_asset_idx").on(table.assetId),
+  periodIdx: index("depreciation_records_period_idx").on(table.period),
+}));
+
+// Budgets
+export const budgets = pgTable("budgets", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  budgetType: varchar("budget_type", { length: 50 }).notNull(), // annual, quarterly, monthly, project
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  totalBudget: decimal("total_budget", { precision: 15, scale: 2 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("draft"), // draft, active, completed, cancelled
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("budgets_company_idx").on(table.companyId),
+  statusIdx: index("budgets_status_idx").on(table.status),
+  typeIdx: index("budgets_type_idx").on(table.budgetType),
+}));
+
+// Budget Lines
+export const budgetLines = pgTable("budget_lines", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  budgetId: integer("budget_id").notNull().references(() => budgets.id),
+  accountId: integer("account_id").notNull().references(() => chartOfAccounts.id),
+  category: varchar("category", { length: 100 }).notNull(),
+  description: varchar("description", { length: 255 }),
+  budgetedAmount: decimal("budgeted_amount", { precision: 12, scale: 2 }).notNull(),
+  actualAmount: decimal("actual_amount", { precision: 12, scale: 2 }).default("0.00"),
+  variance: decimal("variance", { precision: 12, scale: 2 }).default("0.00"),
+  variancePercent: decimal("variance_percent", { precision: 5, scale: 2 }).default("0.00"),
+  period: varchar("period", { length: 7 }), // YYYY-MM for monthly budgets
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("budget_lines_company_idx").on(table.companyId),
+  budgetIdx: index("budget_lines_budget_idx").on(table.budgetId),
+  accountIdx: index("budget_lines_account_idx").on(table.accountId),
+}));
+
+// Cash Flow Forecasts
+export const cashFlowForecasts = pgTable("cash_flow_forecasts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  forecastType: varchar("forecast_type", { length: 50 }).notNull(), // weekly, monthly, quarterly
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  basedOnHistorical: boolean("based_on_historical").default(true),
+  historicalMonths: integer("historical_months").default(12),
+  confidence: varchar("confidence", { length: 20 }).default("medium"), // low, medium, high
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("cash_flow_forecasts_company_idx").on(table.companyId),
+  typeIdx: index("cash_flow_forecasts_type_idx").on(table.forecastType),
+}));
+
+// Cash Flow Forecast Lines
+export const cashFlowForecastLines = pgTable("cash_flow_forecast_lines", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  forecastId: integer("forecast_id").notNull().references(() => cashFlowForecasts.id),
+  period: date("period").notNull(), // Start of period (week/month/quarter)
+  category: varchar("category", { length: 100 }).notNull(), // inflow, outflow
+  subcategory: varchar("subcategory", { length: 100 }).notNull(),
+  description: varchar("description", { length: 255 }),
+  forecastAmount: decimal("forecast_amount", { precision: 12, scale: 2 }).notNull(),
+  actualAmount: decimal("actual_amount", { precision: 12, scale: 2 }).default("0.00"),
+  variance: decimal("variance", { precision: 12, scale: 2 }).default("0.00"),
+  probability: decimal("probability", { precision: 3, scale: 2 }).default("1.00"), // 0.00 to 1.00
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("cash_flow_forecast_lines_company_idx").on(table.companyId),
+  forecastIdx: index("cash_flow_forecast_lines_forecast_idx").on(table.forecastId),
+  periodIdx: index("cash_flow_forecast_lines_period_idx").on(table.period),
+  categoryIdx: index("cash_flow_forecast_lines_category_idx").on(table.category),
+}));
+
+// Advanced Reports
+export const advancedReports = pgTable("advanced_reports", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  reportName: varchar("report_name", { length: 255 }).notNull(),
+  reportType: varchar("report_type", { length: 50 }).notNull(), // financial_analysis, budget_variance, cash_flow, asset_register, custom
+  parameters: jsonb("parameters"), // Store report parameters as JSON
+  schedule: varchar("schedule", { length: 20 }), // manual, daily, weekly, monthly, quarterly
+  recipients: jsonb("recipients"), // Array of email addresses
+  lastGenerated: timestamp("last_generated"),
+  nextScheduled: timestamp("next_scheduled"),
+  isActive: boolean("is_active").default(true),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("advanced_reports_company_idx").on(table.companyId),
+  typeIdx: index("advanced_reports_type_idx").on(table.reportType),
+  scheduleIdx: index("advanced_reports_schedule_idx").on(table.schedule),
+}));
+
+// Bank Reconciliation Items
+export const bankReconciliationItems = pgTable("bank_reconciliation_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  reconciliationId: integer("reconciliation_id").notNull().references(() => bankReconciliations.id),
+  transactionId: integer("transaction_id").references(() => bankTransactions.id),
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // bank, book
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  transactionDate: date("transaction_date").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("unmatched"), // matched, unmatched, pending
+  matchedWith: integer("matched_with"), // Reference to matching item
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bank_reconciliation_items_company_idx").on(table.companyId),
+  reconciliationIdx: index("bank_reconciliation_items_reconciliation_idx").on(table.reconciliationId),
+  statusIdx: index("bank_reconciliation_items_status_idx").on(table.status),
+}));
+
 // VAT Types - Schema definitions after tables
 export const insertVatTypeSchema = createInsertSchema(vatTypes).omit({
   id: true,
@@ -936,6 +1108,78 @@ export type InsertVatReport = z.infer<typeof insertVatReportSchema>;
 
 export type VatTransaction = typeof vatTransactions.$inferSelect;
 export type InsertVatTransaction = z.infer<typeof insertVatTransactionSchema>;
+
+// Advanced Financial Management - Schema definitions
+export const insertFixedAssetSchema = createInsertSchema(fixedAssets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDepreciationRecordSchema = createInsertSchema(depreciationRecords).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBudgetSchema = createInsertSchema(budgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBudgetLineSchema = createInsertSchema(budgetLines).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCashFlowForecastSchema = createInsertSchema(cashFlowForecasts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCashFlowForecastLineSchema = createInsertSchema(cashFlowForecastLines).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAdvancedReportSchema = createInsertSchema(advancedReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankReconciliationItemSchema = createInsertSchema(bankReconciliationItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Advanced Financial Management - Type definitions
+export type FixedAsset = typeof fixedAssets.$inferSelect;
+export type InsertFixedAsset = z.infer<typeof insertFixedAssetSchema>;
+
+export type DepreciationRecord = typeof depreciationRecords.$inferSelect;
+export type InsertDepreciationRecord = z.infer<typeof insertDepreciationRecordSchema>;
+
+export type Budget = typeof budgets.$inferSelect;
+export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+
+export type BudgetLine = typeof budgetLines.$inferSelect;
+export type InsertBudgetLine = z.infer<typeof insertBudgetLineSchema>;
+
+export type CashFlowForecast = typeof cashFlowForecasts.$inferSelect;
+export type InsertCashFlowForecast = z.infer<typeof insertCashFlowForecastSchema>;
+
+export type CashFlowForecastLine = typeof cashFlowForecastLines.$inferSelect;
+export type InsertCashFlowForecastLine = z.infer<typeof insertCashFlowForecastLineSchema>;
+
+export type AdvancedReport = typeof advancedReports.$inferSelect;
+export type InsertAdvancedReport = z.infer<typeof insertAdvancedReportSchema>;
+
+export type BankReconciliationItem = typeof bankReconciliationItems.$inferSelect;
+export type InsertBankReconciliationItem = z.infer<typeof insertBankReconciliationItemSchema>;
 
 // Chart of Accounts - South African Business Accounting Standards
 export const chartOfAccounts = pgTable("chart_of_accounts", {

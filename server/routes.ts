@@ -39,6 +39,14 @@ import {
   insertUserRoleSchema,
   insertChartOfAccountSchema,
   insertJournalEntrySchema,
+  insertFixedAssetSchema,
+  insertDepreciationRecordSchema,
+  insertBudgetSchema,
+  insertBudgetLineSchema,
+  insertCashFlowForecastSchema,
+  insertCashFlowForecastLineSchema,
+  insertAdvancedReportSchema,
+  insertBankReconciliationItemSchema,
   type LoginRequest,
   type ChangePasswordRequest
 } from "@shared/schema";
@@ -2056,6 +2064,323 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating company VAT settings:", error);
       res.status(500).json({ message: "Failed to update VAT settings" });
+    }
+  });
+
+  // Advanced Financial Management Routes
+
+  // Fixed Assets Management
+  app.get("/api/fixed-assets", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const assets = await storage.getFixedAssets(companyId);
+      res.json(assets);
+    } catch (error) {
+      console.error("Failed to fetch fixed assets:", error);
+      res.status(500).json({ message: "Failed to fetch fixed assets" });
+    }
+  });
+
+  app.get("/api/fixed-assets/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const asset = await storage.getFixedAsset(parseInt(id));
+      if (!asset) {
+        return res.status(404).json({ message: "Fixed asset not found" });
+      }
+      res.json(asset);
+    } catch (error) {
+      console.error("Failed to fetch fixed asset:", error);
+      res.status(500).json({ message: "Failed to fetch fixed asset" });
+    }
+  });
+
+  app.post("/api/fixed-assets", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertFixedAssetSchema.parse(req.body);
+      const asset = await storage.createFixedAsset({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'fixed_asset', asset.id, null, asset);
+      res.json(asset);
+    } catch (error) {
+      console.error("Failed to create fixed asset:", error);
+      res.status(500).json({ message: "Failed to create fixed asset" });
+    }
+  });
+
+  app.put("/api/fixed-assets/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldAsset = await storage.getFixedAsset(parseInt(id));
+      const data = insertFixedAssetSchema.partial().parse(req.body);
+      const asset = await storage.updateFixedAsset(parseInt(id), data);
+      if (!asset) {
+        return res.status(404).json({ message: "Fixed asset not found" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'fixed_asset', asset.id, oldAsset, asset);
+      res.json(asset);
+    } catch (error) {
+      console.error("Failed to update fixed asset:", error);
+      res.status(500).json({ message: "Failed to update fixed asset" });
+    }
+  });
+
+  app.delete("/api/fixed-assets/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldAsset = await storage.getFixedAsset(parseInt(id));
+      const success = await storage.deleteFixedAsset(parseInt(id));
+      if (!success) {
+        return res.status(404).json({ message: "Fixed asset not found" });
+      }
+      await logAudit(req.user.id, 'DELETE', 'fixed_asset', parseInt(id), oldAsset, null);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete fixed asset:", error);
+      res.status(500).json({ message: "Failed to delete fixed asset" });
+    }
+  });
+
+  app.get("/api/fixed-assets/:id/depreciation", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const records = await storage.getDepreciationRecords(parseInt(id));
+      res.json(records);
+    } catch (error) {
+      console.error("Failed to fetch depreciation records:", error);
+      res.status(500).json({ message: "Failed to fetch depreciation records" });
+    }
+  });
+
+  app.post("/api/fixed-assets/:id/depreciation/:period", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id, period } = req.params;
+      await storage.calculateDepreciation(parseInt(id), period);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to calculate depreciation:", error);
+      res.status(500).json({ message: "Failed to calculate depreciation" });
+    }
+  });
+
+  // Budgeting Routes
+  app.get("/api/budgets", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const budgets = await storage.getBudgets(companyId);
+      res.json(budgets);
+    } catch (error) {
+      console.error("Failed to fetch budgets:", error);
+      res.status(500).json({ message: "Failed to fetch budgets" });
+    }
+  });
+
+  app.get("/api/budgets/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const budget = await storage.getBudget(parseInt(id));
+      if (!budget) {
+        return res.status(404).json({ message: "Budget not found" });
+      }
+      const lines = await storage.getBudgetLines(parseInt(id));
+      res.json({ ...budget, lines });
+    } catch (error) {
+      console.error("Failed to fetch budget:", error);
+      res.status(500).json({ message: "Failed to fetch budget" });
+    }
+  });
+
+  app.post("/api/budgets", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertBudgetSchema.parse(req.body);
+      const budget = await storage.createBudget({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'budget', budget.id, null, budget);
+      res.json(budget);
+    } catch (error) {
+      console.error("Failed to create budget:", error);
+      res.status(500).json({ message: "Failed to create budget" });
+    }
+  });
+
+  app.put("/api/budgets/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldBudget = await storage.getBudget(parseInt(id));
+      const data = insertBudgetSchema.partial().parse(req.body);
+      const budget = await storage.updateBudget(parseInt(id), data);
+      if (!budget) {
+        return res.status(404).json({ message: "Budget not found" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'budget', budget.id, oldBudget, budget);
+      res.json(budget);
+    } catch (error) {
+      console.error("Failed to update budget:", error);
+      res.status(500).json({ message: "Failed to update budget" });
+    }
+  });
+
+  app.delete("/api/budgets/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldBudget = await storage.getBudget(parseInt(id));
+      const success = await storage.deleteBudget(parseInt(id));
+      if (!success) {
+        return res.status(404).json({ message: "Budget not found" });
+      }
+      await logAudit(req.user.id, 'DELETE', 'budget', parseInt(id), oldBudget, null);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete budget:", error);
+      res.status(500).json({ message: "Failed to delete budget" });
+    }
+  });
+
+  app.post("/api/budgets/:id/lines", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const data = insertBudgetLineSchema.parse(req.body);
+      const budgetLine = await storage.createBudgetLine({ ...data, budgetId: parseInt(id) });
+      res.json(budgetLine);
+    } catch (error) {
+      console.error("Failed to create budget line:", error);
+      res.status(500).json({ message: "Failed to create budget line" });
+    }
+  });
+
+  // Cash Flow Forecasting Routes
+  app.get("/api/cash-flow-forecasts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const forecasts = await storage.getCashFlowForecasts(companyId);
+      res.json(forecasts);
+    } catch (error) {
+      console.error("Failed to fetch cash flow forecasts:", error);
+      res.status(500).json({ message: "Failed to fetch cash flow forecasts" });
+    }
+  });
+
+  app.get("/api/cash-flow-forecasts/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const forecast = await storage.getCashFlowForecast(parseInt(id));
+      if (!forecast) {
+        return res.status(404).json({ message: "Cash flow forecast not found" });
+      }
+      const lines = await storage.getCashFlowForecastLines(parseInt(id));
+      res.json({ ...forecast, lines });
+    } catch (error) {
+      console.error("Failed to fetch cash flow forecast:", error);
+      res.status(500).json({ message: "Failed to fetch cash flow forecast" });
+    }
+  });
+
+  app.post("/api/cash-flow-forecasts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertCashFlowForecastSchema.parse(req.body);
+      const forecast = await storage.createCashFlowForecast({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'cash_flow_forecast', forecast.id, null, forecast);
+      res.json(forecast);
+    } catch (error) {
+      console.error("Failed to create cash flow forecast:", error);
+      res.status(500).json({ message: "Failed to create cash flow forecast" });
+    }
+  });
+
+  app.get("/api/cash-flow-projections", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const { months = 12 } = req.query;
+      const projections = await storage.generateCashFlowProjections(companyId, parseInt(months as string));
+      res.json(projections);
+    } catch (error) {
+      console.error("Failed to generate cash flow projections:", error);
+      res.status(500).json({ message: "Failed to generate cash flow projections" });
+    }
+  });
+
+  // Advanced Reporting Routes
+  app.get("/api/advanced-reports", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const reports = await storage.getAdvancedReports(companyId);
+      res.json(reports);
+    } catch (error) {
+      console.error("Failed to fetch advanced reports:", error);
+      res.status(500).json({ message: "Failed to fetch advanced reports" });
+    }
+  });
+
+  app.get("/api/advanced-reports/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const report = await storage.getAdvancedReport(parseInt(id));
+      if (!report) {
+        return res.status(404).json({ message: "Advanced report not found" });
+      }
+      res.json(report);
+    } catch (error) {
+      console.error("Failed to fetch advanced report:", error);
+      res.status(500).json({ message: "Failed to fetch advanced report" });
+    }
+  });
+
+  app.post("/api/advanced-reports", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertAdvancedReportSchema.parse(req.body);
+      const report = await storage.createAdvancedReport({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'advanced_report', report.id, null, report);
+      res.json(report);
+    } catch (error) {
+      console.error("Failed to create advanced report:", error);
+      res.status(500).json({ message: "Failed to create advanced report" });
+    }
+  });
+
+  app.post("/api/advanced-reports/:id/generate", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const reportData = await storage.generateReport(parseInt(id));
+      if (!reportData) {
+        return res.status(404).json({ message: "Report not found or could not be generated" });
+      }
+      res.json(reportData);
+    } catch (error) {
+      console.error("Failed to generate report:", error);
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  // Bank Reconciliation Routes
+  app.get("/api/bank-reconciliations/:id/items", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const items = await storage.getBankReconciliationItems(parseInt(id));
+      res.json(items);
+    } catch (error) {
+      console.error("Failed to fetch reconciliation items:", error);
+      res.status(500).json({ message: "Failed to fetch reconciliation items" });
+    }
+  });
+
+  app.post("/api/bank-reconciliations/:id/match", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      await storage.matchBankTransactions(parseInt(id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to match bank transactions:", error);
+      res.status(500).json({ message: "Failed to match bank transactions" });
+    }
+  });
+
+  app.get("/api/bank-accounts/:id/unmatched-transactions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const companyId = req.user.companyId;
+      const transactions = await storage.getUnmatchedTransactions(companyId, parseInt(id));
+      res.json(transactions);
+    } catch (error) {
+      console.error("Failed to fetch unmatched transactions:", error);
+      res.status(500).json({ message: "Failed to fetch unmatched transactions" });
     }
   });
 

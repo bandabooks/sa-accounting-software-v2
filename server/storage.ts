@@ -34,6 +34,14 @@ import {
   vatTypes,
   vatReports,
   vatTransactions,
+  fixedAssets,
+  depreciationRecords,
+  budgets,
+  budgetLines,
+  cashFlowForecasts,
+  cashFlowForecastLines,
+  advancedReports,
+  bankReconciliationItems,
   SOUTH_AFRICAN_CHART_OF_ACCOUNTS,
   SOUTH_AFRICAN_VAT_TYPES,
   type Customer, 
@@ -114,6 +122,22 @@ import {
   type InsertVatReport,
   type VatTransaction,
   type InsertVatTransaction,
+  type FixedAsset,
+  type InsertFixedAsset,
+  type DepreciationRecord,
+  type InsertDepreciationRecord,
+  type Budget,
+  type InsertBudget,
+  type BudgetLine,
+  type InsertBudgetLine,
+  type CashFlowForecast,
+  type InsertCashFlowForecast,
+  type CashFlowForecastLine,
+  type InsertCashFlowForecastLine,
+  type AdvancedReport,
+  type InsertAdvancedReport,
+  type BankReconciliationItem,
+  type InsertBankReconciliationItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -336,6 +360,56 @@ export interface IStorage {
     vatPeriod?: string; 
     vatSubmissionDate?: number;
   }): Promise<Company | undefined>;
+
+  // Fixed Assets Management
+  getFixedAssets(companyId: number): Promise<FixedAsset[]>;
+  getFixedAsset(id: number): Promise<FixedAsset | undefined>;
+  createFixedAsset(data: InsertFixedAsset): Promise<FixedAsset>;
+  updateFixedAsset(id: number, data: Partial<InsertFixedAsset>): Promise<FixedAsset | undefined>;
+  deleteFixedAsset(id: number): Promise<boolean>;
+  getDepreciationRecords(assetId: number): Promise<DepreciationRecord[]>;
+  createDepreciationRecord(data: InsertDepreciationRecord): Promise<DepreciationRecord>;
+  calculateDepreciation(assetId: number, period: string): Promise<void>;
+
+  // Budgeting
+  getBudgets(companyId: number): Promise<Budget[]>;
+  getBudget(id: number): Promise<Budget | undefined>;
+  createBudget(data: InsertBudget): Promise<Budget>;
+  updateBudget(id: number, data: Partial<InsertBudget>): Promise<Budget | undefined>;
+  deleteBudget(id: number): Promise<boolean>;
+  getBudgetLines(budgetId: number): Promise<BudgetLine[]>;
+  createBudgetLine(data: InsertBudgetLine): Promise<BudgetLine>;
+  updateBudgetLine(id: number, data: Partial<InsertBudgetLine>): Promise<BudgetLine | undefined>;
+  deleteBudgetLine(id: number): Promise<boolean>;
+  updateBudgetActuals(companyId: number, period: string): Promise<void>;
+
+  // Cash Flow Forecasting
+  getCashFlowForecasts(companyId: number): Promise<CashFlowForecast[]>;
+  getCashFlowForecast(id: number): Promise<CashFlowForecast | undefined>;
+  createCashFlowForecast(data: InsertCashFlowForecast): Promise<CashFlowForecast>;
+  updateCashFlowForecast(id: number, data: Partial<InsertCashFlowForecast>): Promise<CashFlowForecast | undefined>;
+  deleteCashFlowForecast(id: number): Promise<boolean>;
+  getCashFlowForecastLines(forecastId: number): Promise<CashFlowForecastLine[]>;
+  createCashFlowForecastLine(data: InsertCashFlowForecastLine): Promise<CashFlowForecastLine>;
+  updateCashFlowForecastLine(id: number, data: Partial<InsertCashFlowForecastLine>): Promise<CashFlowForecastLine | undefined>;
+  deleteCashFlowForecastLine(id: number): Promise<boolean>;
+  generateCashFlowProjections(companyId: number, months: number): Promise<any>;
+
+  // Advanced Reporting
+  getAdvancedReports(companyId: number): Promise<AdvancedReport[]>;
+  getAdvancedReport(id: number): Promise<AdvancedReport | undefined>;
+  createAdvancedReport(data: InsertAdvancedReport): Promise<AdvancedReport>;
+  updateAdvancedReport(id: number, data: Partial<InsertAdvancedReport>): Promise<AdvancedReport | undefined>;
+  deleteAdvancedReport(id: number): Promise<boolean>;
+  generateReport(reportId: number): Promise<any>;
+
+  // Bank Reconciliation
+  getBankReconciliationItems(reconciliationId: number): Promise<BankReconciliationItem[]>;
+  createBankReconciliationItem(data: InsertBankReconciliationItem): Promise<BankReconciliationItem>;
+  updateBankReconciliationItem(id: number, data: Partial<InsertBankReconciliationItem>): Promise<BankReconciliationItem | undefined>;
+  deleteBankReconciliationItem(id: number): Promise<boolean>;
+  matchBankTransactions(reconciliationId: number): Promise<void>;
+  getUnmatchedTransactions(companyId: number, bankAccountId: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2827,6 +2901,506 @@ export class DatabaseStorage implements IStorage {
       .where(eq(companies.id, companyId))
       .returning();
     return company || undefined;
+  }
+
+  // Fixed Assets Management
+  async getFixedAssets(companyId: number): Promise<FixedAsset[]> {
+    return await db.select().from(fixedAssets)
+      .where(eq(fixedAssets.companyId, companyId))
+      .orderBy(fixedAssets.assetName);
+  }
+
+  async getFixedAsset(id: number): Promise<FixedAsset | undefined> {
+    const [asset] = await db.select().from(fixedAssets).where(eq(fixedAssets.id, id));
+    return asset || undefined;
+  }
+
+  async createFixedAsset(data: InsertFixedAsset): Promise<FixedAsset> {
+    const [asset] = await db
+      .insert(fixedAssets)
+      .values(data)
+      .returning();
+    return asset;
+  }
+
+  async updateFixedAsset(id: number, data: Partial<InsertFixedAsset>): Promise<FixedAsset | undefined> {
+    const [updatedAsset] = await db
+      .update(fixedAssets)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(fixedAssets.id, id))
+      .returning();
+    return updatedAsset || undefined;
+  }
+
+  async deleteFixedAsset(id: number): Promise<boolean> {
+    const result = await db.delete(fixedAssets).where(eq(fixedAssets.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getDepreciationRecords(assetId: number): Promise<DepreciationRecord[]> {
+    return await db.select().from(depreciationRecords)
+      .where(eq(depreciationRecords.assetId, assetId))
+      .orderBy(depreciationRecords.period);
+  }
+
+  async createDepreciationRecord(data: InsertDepreciationRecord): Promise<DepreciationRecord> {
+    const [record] = await db
+      .insert(depreciationRecords)
+      .values(data)
+      .returning();
+    return record;
+  }
+
+  async calculateDepreciation(assetId: number, period: string): Promise<void> {
+    const asset = await this.getFixedAsset(assetId);
+    if (!asset) return;
+
+    const depreciableAmount = parseFloat(asset.purchasePrice) - parseFloat(asset.residualValue);
+    const monthlyDepreciation = depreciableAmount / (asset.usefulLife * 12);
+    
+    // Get previous accumulated depreciation
+    const previousRecords = await db.select().from(depreciationRecords)
+      .where(and(
+        eq(depreciationRecords.assetId, assetId),
+        sql`${depreciationRecords.period} < ${period}`
+      ))
+      .orderBy(desc(depreciationRecords.period));
+
+    const accumulatedDepreciation = previousRecords.length > 0 
+      ? parseFloat(previousRecords[0].accumulatedDepreciation) + monthlyDepreciation
+      : monthlyDepreciation;
+
+    const bookValue = parseFloat(asset.currentValue) - accumulatedDepreciation;
+
+    await this.createDepreciationRecord({
+      companyId: asset.companyId,
+      assetId: assetId,
+      period: period,
+      depreciationAmount: monthlyDepreciation.toFixed(2),
+      accumulatedDepreciation: accumulatedDepreciation.toFixed(2),
+      bookValue: Math.max(bookValue, parseFloat(asset.residualValue)).toFixed(2)
+    });
+  }
+
+  // Budgeting
+  async getBudgets(companyId: number): Promise<Budget[]> {
+    return await db.select().from(budgets)
+      .where(eq(budgets.companyId, companyId))
+      .orderBy(desc(budgets.startDate));
+  }
+
+  async getBudget(id: number): Promise<Budget | undefined> {
+    const [budget] = await db.select().from(budgets).where(eq(budgets.id, id));
+    return budget || undefined;
+  }
+
+  async createBudget(data: InsertBudget): Promise<Budget> {
+    const [budget] = await db
+      .insert(budgets)
+      .values(data)
+      .returning();
+    return budget;
+  }
+
+  async updateBudget(id: number, data: Partial<InsertBudget>): Promise<Budget | undefined> {
+    const [updatedBudget] = await db
+      .update(budgets)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(budgets.id, id))
+      .returning();
+    return updatedBudget || undefined;
+  }
+
+  async deleteBudget(id: number): Promise<boolean> {
+    const result = await db.delete(budgets).where(eq(budgets.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getBudgetLines(budgetId: number): Promise<BudgetLine[]> {
+    return await db.select().from(budgetLines)
+      .where(eq(budgetLines.budgetId, budgetId))
+      .orderBy(budgetLines.category);
+  }
+
+  async createBudgetLine(data: InsertBudgetLine): Promise<BudgetLine> {
+    const [budgetLine] = await db
+      .insert(budgetLines)
+      .values(data)
+      .returning();
+    return budgetLine;
+  }
+
+  async updateBudgetLine(id: number, data: Partial<InsertBudgetLine>): Promise<BudgetLine | undefined> {
+    const [updatedLine] = await db
+      .update(budgetLines)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(budgetLines.id, id))
+      .returning();
+    return updatedLine || undefined;
+  }
+
+  async deleteBudgetLine(id: number): Promise<boolean> {
+    const result = await db.delete(budgetLines).where(eq(budgetLines.id, id));
+    return result.rowCount > 0;
+  }
+
+  async updateBudgetActuals(companyId: number, period: string): Promise<void> {
+    // Update budget actuals based on journal entries for the period
+    const periodStart = new Date(period + '-01');
+    const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0);
+
+    const budgetLinesResult = await db.select()
+      .from(budgetLines)
+      .innerJoin(budgets, eq(budgetLines.budgetId, budgets.id))
+      .where(eq(budgets.companyId, companyId));
+
+    for (const { budget_lines: line } of budgetLinesResult) {
+      const actualAmount = await this.calculateAccountBalance(line.accountId, periodEnd);
+      const variance = parseFloat(actualAmount) - parseFloat(line.budgetedAmount);
+      const variancePercent = parseFloat(line.budgetedAmount) !== 0 
+        ? (variance / parseFloat(line.budgetedAmount)) * 100 
+        : 0;
+
+      await db.update(budgetLines)
+        .set({
+          actualAmount: actualAmount,
+          variance: variance.toFixed(2),
+          variancePercent: variancePercent.toFixed(2),
+          updatedAt: new Date()
+        })
+        .where(eq(budgetLines.id, line.id));
+    }
+  }
+
+  // Cash Flow Forecasting
+  async getCashFlowForecasts(companyId: number): Promise<CashFlowForecast[]> {
+    return await db.select().from(cashFlowForecasts)
+      .where(eq(cashFlowForecasts.companyId, companyId))
+      .orderBy(desc(cashFlowForecasts.startDate));
+  }
+
+  async getCashFlowForecast(id: number): Promise<CashFlowForecast | undefined> {
+    const [forecast] = await db.select().from(cashFlowForecasts).where(eq(cashFlowForecasts.id, id));
+    return forecast || undefined;
+  }
+
+  async createCashFlowForecast(data: InsertCashFlowForecast): Promise<CashFlowForecast> {
+    const [forecast] = await db
+      .insert(cashFlowForecasts)
+      .values(data)
+      .returning();
+    return forecast;
+  }
+
+  async updateCashFlowForecast(id: number, data: Partial<InsertCashFlowForecast>): Promise<CashFlowForecast | undefined> {
+    const [updatedForecast] = await db
+      .update(cashFlowForecasts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(cashFlowForecasts.id, id))
+      .returning();
+    return updatedForecast || undefined;
+  }
+
+  async deleteCashFlowForecast(id: number): Promise<boolean> {
+    const result = await db.delete(cashFlowForecasts).where(eq(cashFlowForecasts.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getCashFlowForecastLines(forecastId: number): Promise<CashFlowForecastLine[]> {
+    return await db.select().from(cashFlowForecastLines)
+      .where(eq(cashFlowForecastLines.forecastId, forecastId))
+      .orderBy(cashFlowForecastLines.period, cashFlowForecastLines.category);
+  }
+
+  async createCashFlowForecastLine(data: InsertCashFlowForecastLine): Promise<CashFlowForecastLine> {
+    const [forecastLine] = await db
+      .insert(cashFlowForecastLines)
+      .values(data)
+      .returning();
+    return forecastLine;
+  }
+
+  async updateCashFlowForecastLine(id: number, data: Partial<InsertCashFlowForecastLine>): Promise<CashFlowForecastLine | undefined> {
+    const [updatedLine] = await db
+      .update(cashFlowForecastLines)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(cashFlowForecastLines.id, id))
+      .returning();
+    return updatedLine || undefined;
+  }
+
+  async deleteCashFlowForecastLine(id: number): Promise<boolean> {
+    const result = await db.delete(cashFlowForecastLines).where(eq(cashFlowForecastLines.id, id));
+    return result.rowCount > 0;
+  }
+
+  async generateCashFlowProjections(companyId: number, months: number): Promise<any> {
+    const projections = [];
+    const currentDate = new Date();
+
+    for (let i = 0; i < months; i++) {
+      const projectionDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+      
+      // Calculate historical averages for inflows and outflows based on actual data
+      const historicalInflows = await this.calculateHistoricalCashFlow(companyId, 'inflow', 12);
+      const historicalOutflows = await this.calculateHistoricalCashFlow(companyId, 'outflow', 12);
+
+      projections.push({
+        period: projectionDate.toISOString().substring(0, 7),
+        projectedInflow: historicalInflows,
+        projectedOutflow: historicalOutflows,
+        netCashFlow: historicalInflows - historicalOutflows,
+        confidence: 'medium'
+      });
+    }
+
+    return projections;
+  }
+
+  private async calculateHistoricalCashFlow(companyId: number, type: 'inflow' | 'outflow', months: number): Promise<number> {
+    const endDate = new Date();
+    const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - months, 1);
+    
+    if (type === 'inflow') {
+      // Calculate revenue from invoices
+      const invoiceTotal = await db.select({ total: sum(invoices.totalAmount) })
+        .from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.status, 'paid'),
+          gte(invoices.issueDate, startDate),
+          lte(invoices.issueDate, endDate)
+        ));
+      
+      return parseFloat(invoiceTotal[0]?.total || '0') / months;
+    } else {
+      // Calculate expenses
+      const expenseTotal = await db.select({ total: sum(expenses.amount) })
+        .from(expenses)
+        .where(and(
+          eq(expenses.companyId, companyId),
+          gte(expenses.expenseDate, startDate),
+          lte(expenses.expenseDate, endDate)
+        ));
+      
+      return parseFloat(expenseTotal[0]?.total || '0') / months;
+    }
+  }
+
+  // Advanced Reporting
+  async getAdvancedReports(companyId: number): Promise<AdvancedReport[]> {
+    return await db.select().from(advancedReports)
+      .where(eq(advancedReports.companyId, companyId))
+      .orderBy(advancedReports.reportName);
+  }
+
+  async getAdvancedReport(id: number): Promise<AdvancedReport | undefined> {
+    const [report] = await db.select().from(advancedReports).where(eq(advancedReports.id, id));
+    return report || undefined;
+  }
+
+  async createAdvancedReport(data: InsertAdvancedReport): Promise<AdvancedReport> {
+    const [report] = await db
+      .insert(advancedReports)
+      .values(data)
+      .returning();
+    return report;
+  }
+
+  async updateAdvancedReport(id: number, data: Partial<InsertAdvancedReport>): Promise<AdvancedReport | undefined> {
+    const [updatedReport] = await db
+      .update(advancedReports)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(advancedReports.id, id))
+      .returning();
+    return updatedReport || undefined;
+  }
+
+  async deleteAdvancedReport(id: number): Promise<boolean> {
+    const result = await db.delete(advancedReports).where(eq(advancedReports.id, id));
+    return result.rowCount > 0;
+  }
+
+  async generateReport(reportId: number): Promise<any> {
+    const report = await this.getAdvancedReport(reportId);
+    if (!report) return null;
+
+    const parameters = report.parameters as any;
+    
+    switch (report.reportType) {
+      case 'financial_analysis':
+        return await this.generateFinancialAnalysisReport(report.companyId, parameters);
+      case 'budget_variance':
+        return await this.generateBudgetVarianceReport(report.companyId, parameters);
+      case 'cash_flow':
+        return await this.generateCashFlowReport(report.companyId, parameters);
+      case 'asset_register':
+        return await this.generateAssetRegisterReport(report.companyId, parameters);
+      default:
+        return null;
+    }
+  }
+
+  private async generateFinancialAnalysisReport(companyId: number, parameters: any): Promise<any> {
+    const startDate = new Date(parameters.startDate);
+    const endDate = new Date(parameters.endDate);
+    
+    const trialBalance = await this.getTrialBalance(companyId, endDate);
+    const totalRevenue = trialBalance
+      .filter(account => account.accountType === 'Revenue')
+      .reduce((sum, account) => sum + parseFloat(account.balance || '0'), 0);
+    
+    const totalExpenses = trialBalance
+      .filter(account => account.accountType === 'Expense')
+      .reduce((sum, account) => sum + parseFloat(account.balance || '0'), 0);
+
+    return {
+      reportType: 'financial_analysis',
+      period: { startDate, endDate },
+      totalRevenue,
+      totalExpenses,
+      netIncome: totalRevenue - totalExpenses,
+      trialBalance,
+      generatedAt: new Date()
+    };
+  }
+
+  private async generateBudgetVarianceReport(companyId: number, parameters: any): Promise<any> {
+    const budgets = await this.getBudgets(companyId);
+    const budgetData = [];
+
+    for (const budget of budgets) {
+      const lines = await this.getBudgetLines(budget.id);
+      budgetData.push({
+        budget,
+        lines,
+        totalBudgeted: lines.reduce((sum, line) => sum + parseFloat(line.budgetedAmount), 0),
+        totalActual: lines.reduce((sum, line) => sum + parseFloat(line.actualAmount), 0),
+        totalVariance: lines.reduce((sum, line) => sum + parseFloat(line.variance), 0)
+      });
+    }
+
+    return {
+      reportType: 'budget_variance',
+      budgets: budgetData,
+      generatedAt: new Date()
+    };
+  }
+
+  private async generateCashFlowReport(companyId: number, parameters: any): Promise<any> {
+    const forecasts = await this.getCashFlowForecasts(companyId);
+    const forecastData = [];
+
+    for (const forecast of forecasts) {
+      const lines = await this.getCashFlowForecastLines(forecast.id);
+      forecastData.push({
+        forecast,
+        lines,
+        totalInflow: lines.filter(l => l.category === 'inflow').reduce((sum, line) => sum + parseFloat(line.forecastAmount), 0),
+        totalOutflow: lines.filter(l => l.category === 'outflow').reduce((sum, line) => sum + parseFloat(line.forecastAmount), 0)
+      });
+    }
+
+    return {
+      reportType: 'cash_flow',
+      forecasts: forecastData,
+      generatedAt: new Date()
+    };
+  }
+
+  private async generateAssetRegisterReport(companyId: number, parameters: any): Promise<any> {
+    const assets = await this.getFixedAssets(companyId);
+    const assetData = [];
+
+    for (const asset of assets) {
+      const depreciationRecords = await this.getDepreciationRecords(asset.id);
+      const totalDepreciation = depreciationRecords.reduce((sum, record) => sum + parseFloat(record.depreciationAmount), 0);
+      
+      assetData.push({
+        ...asset,
+        totalDepreciation,
+        netBookValue: parseFloat(asset.currentValue) - totalDepreciation,
+        depreciationRecords
+      });
+    }
+
+    return {
+      reportType: 'asset_register',
+      assets: assetData,
+      totalAssetValue: assetData.reduce((sum, asset) => sum + parseFloat(asset.purchasePrice), 0),
+      totalDepreciation: assetData.reduce((sum, asset) => sum + asset.totalDepreciation, 0),
+      totalNetBookValue: assetData.reduce((sum, asset) => sum + asset.netBookValue, 0),
+      generatedAt: new Date()
+    };
+  }
+
+  // Bank Reconciliation
+  async getBankReconciliationItems(reconciliationId: number): Promise<BankReconciliationItem[]> {
+    return await db.select().from(bankReconciliationItems)
+      .where(eq(bankReconciliationItems.reconciliationId, reconciliationId))
+      .orderBy(bankReconciliationItems.transactionDate);
+  }
+
+  async createBankReconciliationItem(data: InsertBankReconciliationItem): Promise<BankReconciliationItem> {
+    const [item] = await db
+      .insert(bankReconciliationItems)
+      .values(data)
+      .returning();
+    return item;
+  }
+
+  async updateBankReconciliationItem(id: number, data: Partial<InsertBankReconciliationItem>): Promise<BankReconciliationItem | undefined> {
+    const [updatedItem] = await db
+      .update(bankReconciliationItems)
+      .set(data)
+      .where(eq(bankReconciliationItems.id, id))
+      .returning();
+    return updatedItem || undefined;
+  }
+
+  async deleteBankReconciliationItem(id: number): Promise<boolean> {
+    const result = await db.delete(bankReconciliationItems).where(eq(bankReconciliationItems.id, id));
+    return result.rowCount > 0;
+  }
+
+  async matchBankTransactions(reconciliationId: number): Promise<void> {
+    const items = await this.getBankReconciliationItems(reconciliationId);
+    const bankItems = items.filter(item => item.transactionType === 'bank');
+    const bookItems = items.filter(item => item.transactionType === 'book');
+
+    for (const bankItem of bankItems) {
+      const matchingBookItem = bookItems.find(bookItem => 
+        Math.abs(parseFloat(bankItem.amount) - parseFloat(bookItem.amount)) < 0.01 &&
+        Math.abs(new Date(bankItem.transactionDate).getTime() - new Date(bookItem.transactionDate).getTime()) < (7 * 24 * 60 * 60 * 1000)
+      );
+
+      if (matchingBookItem) {
+        await db.update(bankReconciliationItems)
+          .set({ status: 'matched', matchedWith: matchingBookItem.id })
+          .where(eq(bankReconciliationItems.id, bankItem.id));
+
+        await db.update(bankReconciliationItems)
+          .set({ status: 'matched', matchedWith: bankItem.id })
+          .where(eq(bankReconciliationItems.id, matchingBookItem.id));
+      }
+    }
+  }
+
+  async getUnmatchedTransactions(companyId: number, bankAccountId: number): Promise<any[]> {
+    const bankTransactions = await db.select()
+      .from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        isNull(bankTransactions.reconciledAt)
+      ))
+      .orderBy(desc(bankTransactions.transactionDate));
+
+    return bankTransactions.map(transaction => ({
+      ...transaction,
+      type: 'bank',
+      matched: false
+    }));
   }
 }
 
