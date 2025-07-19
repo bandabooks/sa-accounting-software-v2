@@ -1184,15 +1184,15 @@ export const SOUTH_AFRICAN_CHART_OF_ACCOUNTS = [
   { accountCode: "4104", accountName: "Foreign Exchange Gains", accountType: "Revenue", category: "Other Revenue", normalBalance: "Credit" },
   { accountCode: "4105", accountName: "Gain on Sale of Assets", accountType: "Revenue", category: "Other Revenue", normalBalance: "Credit" },
 
-  // 5000-5999 COST OF SALES
-  { accountCode: "5000", accountName: "Cost of Goods Sold", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit", isSystemAccount: true },
-  { accountCode: "5001", accountName: "Cost of Materials", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit" },
-  { accountCode: "5002", accountName: "Cost of Labor - Direct", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit" },
-  { accountCode: "5003", accountName: "Manufacturing Overhead", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit" },
-  { accountCode: "5010", accountName: "Freight & Shipping Costs", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit" },
-  { accountCode: "5011", accountName: "Import Duties", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit" },
-  { accountCode: "5020", accountName: "Inventory Adjustments", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit" },
-  { accountCode: "5021", accountName: "Obsolete Inventory Write-off", accountType: "Cost of Sales", category: "Cost of Sales", normalBalance: "Debit" },
+  // 5000-5999 COST OF GOODS SOLD
+  { accountCode: "5000", accountName: "Cost of Goods Sold", accountType: "Cost of Goods Sold", category: "Direct Materials", normalBalance: "Debit", isSystemAccount: true },
+  { accountCode: "5001", accountName: "Cost of Materials", accountType: "Cost of Goods Sold", category: "Direct Materials", normalBalance: "Debit" },
+  { accountCode: "5002", accountName: "Cost of Labor - Direct", accountType: "Cost of Goods Sold", category: "Direct Labor", normalBalance: "Debit" },
+  { accountCode: "5003", accountName: "Manufacturing Overhead", accountType: "Cost of Goods Sold", category: "Manufacturing Overhead", normalBalance: "Debit" },
+  { accountCode: "5010", accountName: "Freight & Shipping Costs", accountType: "Cost of Goods Sold", category: "Direct Materials", normalBalance: "Debit" },
+  { accountCode: "5011", accountName: "Import Duties", accountType: "Cost of Goods Sold", category: "Direct Materials", normalBalance: "Debit" },
+  { accountCode: "5020", accountName: "Inventory Adjustments", accountType: "Cost of Goods Sold", category: "Finished Goods", normalBalance: "Debit" },
+  { accountCode: "5021", accountName: "Obsolete Inventory Write-off", accountType: "Cost of Goods Sold", category: "Finished Goods", normalBalance: "Debit" },
 
   // 6000-6999 OPERATING EXPENSES
   // Administrative Expenses

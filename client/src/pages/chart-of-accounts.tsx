@@ -25,6 +25,7 @@ const accountTypes = [
   { value: "Liability", label: "Liability" },
   { value: "Equity", label: "Equity" },
   { value: "Revenue", label: "Revenue" },
+  { value: "Cost of Goods Sold", label: "Cost of Goods Sold" },
   { value: "Expense", label: "Expense" },
 ];
 
@@ -32,7 +33,8 @@ const assetSubTypes = ["Current Asset", "Fixed Asset", "Other Asset"];
 const liabilitySubTypes = ["Current Liability", "Long-term Liability"];
 const equitySubTypes = ["Owner's Equity", "Retained Earnings"];
 const revenueSubTypes = ["Operating Revenue", "Non-operating Revenue"];
-const expenseSubTypes = ["Cost of Sales", "Operating Expense", "Non-operating Expense"];
+const cogsSubTypes = ["Direct Materials", "Direct Labor", "Manufacturing Overhead", "Finished Goods"];
+const expenseSubTypes = ["Operating Expense", "Non-operating Expense"];
 
 const getSubTypes = (accountType: string) => {
   switch (accountType) {
@@ -40,6 +42,7 @@ const getSubTypes = (accountType: string) => {
     case "Liability": return liabilitySubTypes;
     case "Equity": return equitySubTypes;
     case "Revenue": return revenueSubTypes;
+    case "Cost of Goods Sold": return cogsSubTypes;
     case "Expense": return expenseSubTypes;
     default: return [];
   }
@@ -51,6 +54,7 @@ const getAccountTypeColor = (type: string) => {
     case "Liability": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
     case "Equity": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
     case "Revenue": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+    case "Cost of Goods Sold": return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200";
     case "Expense": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
     default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
   }
