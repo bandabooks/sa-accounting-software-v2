@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building, Archive, Building2, BookOpen, Landmark, BookOpenCheck } from "lucide-react";
+import { Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, CreditCard, Settings, TrendingUp, DollarSign, Package, Building, Archive, Building2, BookOpen, Landmark, BookOpenCheck, ReceiptText } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: ChartLine },
@@ -15,6 +15,7 @@ const navItems = [
   { path: "/journal-entries", label: "Journal Entries", icon: BookOpen },
   { path: "/banking", label: "Banking", icon: Landmark },
   { path: "/general-ledger", label: "General Ledger", icon: BookOpenCheck },
+  { path: "/vat-management", label: "VAT Management", icon: ReceiptText },
   { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp },
   { path: "/reports", label: "Business Reports", icon: BarChart3 },
   { path: "/companies", label: "Companies", icon: Building2 },

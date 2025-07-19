@@ -36,6 +36,7 @@ import ChartOfAccounts from "@/pages/chart-of-accounts";
 import JournalEntries from "@/pages/journal-entries";
 import Banking from "@/pages/banking";
 import GeneralLedger from "@/pages/general-ledger";
+import VatManagement from "@/pages/vat-management";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -195,6 +196,11 @@ function AuthenticatedApp() {
         <Route path="/general-ledger">
           <ProtectedRoute permission={PERMISSIONS.GENERAL_LEDGER_VIEW}>
             <GeneralLedger />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-management">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <VatManagement />
           </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />

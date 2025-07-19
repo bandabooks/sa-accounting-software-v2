@@ -19,3 +19,12 @@ export function formatCurrency(amount: number | string): string {
     currency: 'ZAR',
   }).format(value);
 }
+
+export function formatDate(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return new Intl.DateTimeFormat('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(dateObj);
+}
