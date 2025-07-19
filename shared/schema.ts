@@ -92,13 +92,18 @@ export const invoices = pgTable("invoices", {
 
 export const invoiceItems = pgTable("invoice_items", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   invoiceId: integer("invoice_id").notNull(),
   description: text("description").notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-});
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("invoice_items_company_idx").on(table.companyId),
+}));
 
 export const estimates = pgTable("estimates", {
   id: serial("id").primaryKey(),
@@ -121,13 +126,18 @@ export const estimates = pgTable("estimates", {
 
 export const estimateItems = pgTable("estimate_items", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   estimateId: integer("estimate_id").notNull(),
   description: text("description").notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-});
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("estimate_items_company_idx").on(table.companyId),
+}));
 
 // Financial reporting tables
 export const expenses = pgTable("expenses", {
@@ -204,15 +214,23 @@ export const userRoles = pgTable("user_roles", {
 
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id"), // Nullable for system-level actions
   userId: integer("user_id").references(() => users.id),
   action: text("action").notNull(), // login, logout, create, update, delete, etc.
   resource: text("resource").notNull(), // table/entity name
   resourceId: integer("resource_id"), // ID of the affected record
+  oldValues: jsonb("old_values"), // JSON of previous values
+  newValues: jsonb("new_values"), // JSON of new values
   details: text("details"), // JSON string with additional details
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   timestamp: timestamp("timestamp").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("audit_logs_company_idx").on(table.companyId),
+  userIdx: index("audit_logs_user_idx").on(table.userId),
+  resourceIdx: index("audit_logs_resource_idx").on(table.resource, table.resourceId),
+  timestampIdx: index("audit_logs_timestamp_idx").on(table.timestamp),
+}));
 
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
@@ -263,6 +281,7 @@ export const purchaseOrders = pgTable("purchase_orders", {
 
 export const purchaseOrderItems = pgTable("purchase_order_items", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   purchaseOrderId: integer("purchase_order_id").notNull(),
   description: text("description").notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
@@ -270,7 +289,11 @@ export const purchaseOrderItems = pgTable("purchase_order_items", {
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   expenseCategory: text("expense_category").default("office_supplies"), // Links to expense categories
-});
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("purchase_order_items_company_idx").on(table.companyId),
+}));
 
 export const supplierPayments = pgTable("supplier_payments", {
   id: serial("id").primaryKey(),
@@ -575,7 +598,10 @@ export const recurringInvoices = pgTable("recurring_invoices", {
   nextInvoiceDate: timestamp("next_invoice_date").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("recurring_invoices_company_idx").on(table.companyId),
+}));
 
 export const insertRecurringInvoiceSchema = z.object({
   templateInvoiceId: z.number(),
@@ -706,11 +732,15 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
   notes: text("notes"),
   userId: integer("user_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("inventory_transactions_company_idx").on(table.companyId),
+}));
 
 // Email reminders table
 export const emailReminders = pgTable("email_reminders", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
   invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
   reminderType: varchar("reminder_type", { length: 20 }).notNull(), // 'overdue', 'payment_due'
   daysBefore: integer("days_before").notNull(),
@@ -718,11 +748,15 @@ export const emailReminders = pgTable("email_reminders", {
   sentAt: timestamp("sent_at"),
   scheduledFor: timestamp("scheduled_for").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("email_reminders_company_idx").on(table.companyId),
+}));
 
 // Currency exchange rates table
 export const currencyRates = pgTable("currency_rates", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id"), // Nullable for global rates
   fromCurrency: varchar("from_currency", { length: 3 }).notNull(),
   toCurrency: varchar("to_currency", { length: 3 }).notNull(),
   rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
@@ -730,7 +764,11 @@ export const currencyRates = pgTable("currency_rates", {
   validTo: timestamp("valid_to"),
   source: varchar("source", { length: 50 }).default("manual"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyCurrencyUnique: unique().on(table.companyId, table.fromCurrency, table.toCurrency, table.validFrom),
+  companyIdx: index("currency_rates_company_idx").on(table.companyId),
+}));
 
 // Schema exports
 export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({
@@ -742,16 +780,19 @@ export const insertCompanySettingsSchema = createInsertSchema(companySettings).o
 export const insertInventoryTransactionSchema = createInsertSchema(inventoryTransactions).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export const insertEmailReminderSchema = createInsertSchema(emailReminders).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export const insertCurrencyRateSchema = createInsertSchema(currencyRates).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
@@ -769,7 +810,8 @@ export type CurrencyRate = typeof currencyRates.$inferSelect;
 // VAT Types - South African Standard VAT Categories
 export const vatTypes = pgTable("vat_types", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 10 }).notNull().unique(), // STD, ZER, EXE, NR
+  companyId: integer("company_id"), // Nullable for system-wide types
+  code: varchar("code", { length: 10 }).notNull(), // STD, ZER, EXE, NR
   name: varchar("name", { length: 100 }).notNull(),
   rate: decimal("rate", { precision: 5, scale: 2 }).notNull(),
   description: text("description"),
@@ -778,8 +820,10 @@ export const vatTypes = pgTable("vat_types", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  companyCodeUnique: unique().on(table.companyId, table.code),
   codeIdx: index("vat_types_code_idx").on(table.code),
   activeIdx: index("vat_types_active_idx").on(table.isActive),
+  companyIdx: index("vat_types_company_idx").on(table.companyId),
 }));
 
 // VAT Returns - VAT201 Reports

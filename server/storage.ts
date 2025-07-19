@@ -2751,8 +2751,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   // VAT Management
-  async getVatTypes(): Promise<VatType[]> {
-    return await db.select().from(vatTypes).where(eq(vatTypes.isActive, true)).orderBy(vatTypes.code);
+  async getVatTypes(companyId?: number): Promise<VatType[]> {
+    return await db.select().from(vatTypes)
+      .where(and(
+        eq(vatTypes.isActive, true),
+        companyId ? eq(vatTypes.companyId, companyId) : isNull(vatTypes.companyId)
+      ))
+      .orderBy(vatTypes.code);
   }
 
   async getVatType(id: number): Promise<VatType | undefined> {
