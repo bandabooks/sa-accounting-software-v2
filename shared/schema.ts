@@ -981,14 +981,10 @@ export const bankTransactions = pgTable("bank_transactions", {
   description: text("description").notNull(),
   reference: text("reference"),
   transactionType: text("transaction_type").notNull(), // debit, credit
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-  runningBalance: decimal("running_balance", { precision: 15, scale: 2 }),
-  category: text("category"), // deposit, withdrawal, transfer, fee, interest
-  isReconciled: boolean("is_reconciled").default(false),
-  reconciledAt: timestamp("reconciled_at"),
-  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id),
-  importBatch: text("import_batch"), // For statement imports
-  statementId: text("statement_id"), // Bank statement reference
+  debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  balance: decimal("balance", { precision: 15, scale: 2 }),
+  status: text("status").default("pending"), // pending, cleared, reconciled
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -49,8 +49,13 @@ export default function Banking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: bankAccounts = [], isLoading } = useQuery({
+  const { data: bankAccounts = [], isLoading, error } = useQuery({
     queryKey: ["/api/bank-accounts"],
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors
+      if (error?.message?.includes('401')) return false;
+      return failureCount < 2;
+    }
   });
 
   const { data: chartAccounts = [] } = useQuery<ChartOfAccount[]>({
