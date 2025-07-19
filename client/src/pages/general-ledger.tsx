@@ -12,7 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { GeneralLedgerEntry, ChartOfAccount } from "@shared/schema";
 
 export default function GeneralLedger() {
-  const [selectedAccount, setSelectedAccount] = useState<string>("");
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const { toast } = useToast();
@@ -20,7 +20,7 @@ export default function GeneralLedger() {
 
   // Build query parameters
   const queryParams = new URLSearchParams();
-  if (selectedAccount) queryParams.set("accountId", selectedAccount);
+  if (selectedAccount && selectedAccount !== "all") queryParams.set("accountId", selectedAccount);
   if (startDate) queryParams.set("startDate", startDate);
   if (endDate) queryParams.set("endDate", endDate);
 
@@ -28,9 +28,7 @@ export default function GeneralLedger() {
     queryKey: ["/api/general-ledger", queryParams.toString()],
     queryFn: async () => {
       const url = `/api/general-ledger${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch general ledger");
-      return response.json();
+      return apiRequest("GET", url);
     },
   });
 
@@ -59,7 +57,7 @@ export default function GeneralLedger() {
   };
 
   const clearFilters = () => {
-    setSelectedAccount("");
+    setSelectedAccount("all");
     setStartDate("");
     setEndDate("");
   };
@@ -153,7 +151,7 @@ export default function GeneralLedger() {
                   <SelectValue placeholder="All accounts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All accounts</SelectItem>
+                  <SelectItem value="all">All accounts</SelectItem>
                   {chartAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id.toString()}>
                       {account.accountCode} - {account.accountName}
