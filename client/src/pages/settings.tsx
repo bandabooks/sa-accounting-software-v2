@@ -134,7 +134,8 @@ export default function Settings() {
         <p className="text-gray-600 dark:text-gray-400">Configure your company information and system preferences</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Form {...form}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="company">Company Info</TabsTrigger>
           <TabsTrigger value="currency">Currency</TabsTrigger>
@@ -154,8 +155,7 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
@@ -276,7 +276,6 @@ export default function Settings() {
                     </Button>
                   </div>
                 </form>
-              </Form>
             </CardContent>
           </Card>
         </TabsContent>
@@ -530,7 +529,8 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </Form>
     </div>
   );
 }
