@@ -1595,7 +1595,12 @@ export class DatabaseStorage implements IStorage {
   async updateCompanySettings(updates: Partial<any>): Promise<any> {
     const existing = await this.getCompanySettings();
     if (!existing) {
+      // Get the active company ID
+      const activeCompany = await this.getActiveCompany();
+      const companyId = activeCompany?.id || 2; // Default to company ID 2
+      
       const settingsData = {
+        companyId,
         companyName: updates.companyName || "My Company",
         ...updates
       };
