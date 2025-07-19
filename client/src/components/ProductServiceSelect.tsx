@@ -358,23 +358,38 @@ export function ProductServiceSelect({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
-                <Select
-                  value={quickCreateData.categoryId}
-                  onValueChange={(value) =>
-                    setQuickCreateData(prev => ({ ...prev, categoryId: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category: ProductCategory) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={quickCreateData.categoryId}
+                    onValueChange={(value) =>
+                      setQuickCreateData(prev => ({ ...prev, categoryId: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category: ProductCategory) => (
+                        <SelectItem key={category.id} value={category.id.toString()}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const categoryName = prompt("Enter new category name:");
+                      if (categoryName) {
+                        createCategoryMutation.mutate({ name: categoryName });
+                      }
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
