@@ -24,6 +24,7 @@ import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Products from "@/pages/products";
 import ProductCreate from "@/pages/product-create";
+import Categories from "@/pages/categories";
 import Settings from "@/pages/settings";
 import Inventory from "@/pages/inventory";
 import Companies from "@/pages/companies";
@@ -136,6 +137,9 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/products/create">
           <ProductCreate />
+        </Route>
+        <Route path="/products/categories">
+          <Categories />
         </Route>
         <Route path="/reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
