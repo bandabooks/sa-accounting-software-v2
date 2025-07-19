@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -27,6 +28,7 @@ import { formatCurrency } from "@/lib/utils-invoice";
 const paymentFormSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
   paymentMethod: z.enum(["cash", "card", "eft", "payfast"]),
+  bankAccountId: z.string().min(1, "Bank account is required"),
   reference: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -48,11 +50,17 @@ export default function PaymentForm({
 }: PaymentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch bank accounts
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ["/api/bank-accounts"],
+  });
+
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
       amount: remainingAmount,
       paymentMethod: "cash",
+      bankAccountId: "",
       reference: "",
       notes: "",
     },
@@ -71,6 +79,7 @@ export default function PaymentForm({
     form.reset({
       amount: remainingAmount,
       paymentMethod: "cash",
+      bankAccountId: "",
       reference: "",
       notes: "",
     });
@@ -86,6 +95,7 @@ export default function PaymentForm({
         },
         body: JSON.stringify({
           ...data,
+          bankAccountId: parseInt(data.bankAccountId),
           invoiceId,
           status: "completed",
         }),
@@ -99,6 +109,7 @@ export default function PaymentForm({
       form.reset({
         amount: "",
         paymentMethod: "cash",
+        bankAccountId: "",
         reference: "",
         notes: "",
       });
@@ -209,6 +220,36 @@ export default function PaymentForm({
                           </SelectItem>
                         );
                       })}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="bankAccountId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Deposit To Bank Account</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select bank account" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {bankAccounts.map((account: any) => (
+                        <SelectItem key={account.id} value={account.id.toString()}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{account.accountName}</span>
+                            <span className="text-sm text-gray-500">
+                              {account.bankName} - {account.accountNumber}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

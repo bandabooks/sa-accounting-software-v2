@@ -918,6 +918,14 @@ export class DatabaseStorage implements IStorage {
       .values(insertPayment)
       .returning();
     
+    // Update bank account balance if bankAccountId is provided
+    if (insertPayment.bankAccountId && insertPayment.status === 'completed') {
+      await this.updateBankAccountBalance(
+        insertPayment.bankAccountId, 
+        parseFloat(insertPayment.amount)
+      );
+    }
+    
     // Update invoice status and amount based on payments
     await this.updateInvoicePaymentStatus(insertPayment.invoiceId);
     
@@ -974,6 +982,28 @@ export class DatabaseStorage implements IStorage {
     if (newStatus !== invoice.status) {
       await this.updateInvoiceStatus(invoiceId, newStatus);
     }
+  }
+
+  private async updateBankAccountBalance(bankAccountId: number, amount: number): Promise<void> {
+    // Get current balance
+    const [account] = await db
+      .select()
+      .from(bankAccounts)
+      .where(eq(bankAccounts.id, bankAccountId));
+    
+    if (!account) return;
+    
+    const currentBalance = parseFloat(account.currentBalance);
+    const newBalance = currentBalance + amount;
+    
+    // Update bank account balance
+    await db
+      .update(bankAccounts)
+      .set({ 
+        currentBalance: newBalance.toFixed(2),
+        updatedAt: new Date()
+      })
+      .where(eq(bankAccounts.id, bankAccountId));
   }
 
   // Expenses

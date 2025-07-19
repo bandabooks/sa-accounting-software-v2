@@ -218,6 +218,7 @@ export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   invoiceId: integer("invoice_id").notNull(),
+  bankAccountId: integer("bank_account_id").references(() => bankAccounts.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   paymentMethod: text("payment_method").notNull(), // 'cash', 'card', 'eft', 'payfast'
   paymentDate: timestamp("payment_date").defaultNow(),
@@ -415,6 +416,7 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 export const insertPaymentSchema = z.object({
   companyId: z.number(),
   invoiceId: z.number(),
+  bankAccountId: z.number().optional(),
   amount: z.string(),
   paymentMethod: z.enum(["cash", "card", "eft", "payfast"]),
   paymentDate: z.string().optional().transform((str) => str ? new Date(str) : new Date()),
