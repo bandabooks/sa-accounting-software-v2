@@ -106,6 +106,38 @@ export async function seedDatabase() {
         await storage.createVatType(vatType);
       }
       console.log("✓ South African VAT types seeded");
+
+      // Seed default product categories for South African businesses
+      const existingCategories = await storage.getAllProductCategories(defaultCompany.id);
+      if (existingCategories.length === 0) {
+        const DEFAULT_PRODUCT_CATEGORIES = [
+          { name: "Professional Services", description: "Accounting, legal, consulting, and other professional services", companyId: defaultCompany.id },
+          { name: "Software & Technology", description: "Software licenses, technology services, and IT solutions", companyId: defaultCompany.id },
+          { name: "Office Supplies", description: "Stationery, office equipment, and administrative supplies", companyId: defaultCompany.id },
+          { name: "Marketing & Advertising", description: "Marketing materials, advertising services, and promotional items", companyId: defaultCompany.id },
+          { name: "Training & Education", description: "Training courses, educational materials, and workshops", companyId: defaultCompany.id },
+          { name: "Consulting Services", description: "Business consulting, advisory services, and expert guidance", companyId: defaultCompany.id },
+          { name: "Financial Services", description: "Banking services, insurance, and financial products", companyId: defaultCompany.id },
+          { name: "Manufacturing", description: "Manufacturing products, industrial goods, and production materials", companyId: defaultCompany.id },
+          { name: "Retail Products", description: "Retail goods, consumer products, and merchandise", companyId: defaultCompany.id },
+          { name: "Construction", description: "Construction services, building materials, and contracting", companyId: defaultCompany.id },
+          { name: "Transportation", description: "Transport services, logistics, and delivery", companyId: defaultCompany.id },
+          { name: "Healthcare", description: "Medical services, healthcare products, and wellness services", companyId: defaultCompany.id },
+          { name: "Food & Beverage", description: "Food products, beverages, and catering services", companyId: defaultCompany.id },
+          { name: "Telecommunications", description: "Phone services, internet, and communication solutions", companyId: defaultCompany.id },
+          { name: "Utilities", description: "Electricity, water, gas, and other utility services", companyId: defaultCompany.id },
+          { name: "Maintenance & Repairs", description: "Maintenance services, repairs, and facility management", companyId: defaultCompany.id },
+          { name: "Travel & Accommodation", description: "Travel services, accommodation, and hospitality", companyId: defaultCompany.id },
+          { name: "Entertainment", description: "Entertainment services, events, and recreational activities", companyId: defaultCompany.id },
+          { name: "Security Services", description: "Security services, surveillance, and protection", companyId: defaultCompany.id },
+          { name: "Cleaning Services", description: "Cleaning services, janitorial supplies, and sanitation", companyId: defaultCompany.id }
+        ];
+
+        for (const category of DEFAULT_PRODUCT_CATEGORIES) {
+          await storage.createProductCategory(category);
+        }
+        console.log("✓ Default product categories seeded");
+      }
     }
     
     console.log("Database seeding completed successfully!");

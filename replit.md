@@ -177,6 +177,9 @@ This is a full-stack invoice management system built with React (client) and Exp
 - ✓ All three critical user requirements resolved: VAT dropdown, category creation, bank balance visibility
 - ✓ Removed permission restrictions from product and category creation for universal access
 - ✓ Enhanced category creation with proper companyId integration for multi-company support
+- ✓ Fixed currency formatting "R NaN" issue with proper null/undefined handling
+- ✓ Added 20 default South African product categories for new companies
+- ✓ Categories automatically seeded including Professional Services, Software & Technology, Office Supplies, etc.
 
 ## User Preferences
 

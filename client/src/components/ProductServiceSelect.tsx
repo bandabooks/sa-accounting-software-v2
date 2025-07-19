@@ -35,7 +35,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import type { Product, ProductCategory } from "@shared/schema";
 
 interface ProductServiceSelectProps {
@@ -260,7 +260,7 @@ export function ProductServiceSelect({
                         </div>
                       )}
                       <div className="text-sm font-medium text-green-600">
-                        R {parseFloat(product.price).toFixed(2)}
+                        {formatCurrency(product.price || 0)}
                       </div>
                     </div>
                   </CommandItem>
