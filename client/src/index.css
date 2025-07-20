@@ -69,6 +69,14 @@
   .sidebar-link.active {
     @apply bg-primary text-white;
   }
+
+  .sidebar-sublink {
+    @apply flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors;
+  }
+
+  .sidebar-sublink.active {
+    @apply bg-blue-50 text-primary font-medium;
+  }
   
   .sidebar-link.active i {
     @apply text-white;
