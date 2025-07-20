@@ -3402,6 +3402,425 @@ export class DatabaseStorage implements IStorage {
       matched: false
     }));
   }
+
+  // WORLD-CLASS FINANCIAL REPORTING SUITE
+
+  async getBalanceSheetReport(companyId: number, from: string, to: string) {
+    try {
+      const toDate = to || new Date().toISOString().split('T')[0];
+      
+      // Get all accounts with their balances
+      const accounts = await db
+        .select({
+          id: chartOfAccounts.id,
+          accountName: chartOfAccounts.accountName,
+          accountCode: chartOfAccounts.accountCode,
+          category: chartOfAccounts.category,
+          subcategory: chartOfAccounts.subcategory,
+          accountType: chartOfAccounts.accountType,
+          balance: sql<string>`COALESCE(SUM(
+            CASE 
+              WHEN ${journalEntries.entryType} = 'debit' THEN ${journalEntries.amount}
+              ELSE -${journalEntries.amount}
+            END
+          ), 0)`.as('balance')
+        })
+        .from(chartOfAccounts)
+        .leftJoin(journalEntries, 
+          and(
+            eq(journalEntries.accountId, chartOfAccounts.id),
+            eq(journalEntries.companyId, companyId),
+            lte(journalEntries.transactionDate, toDate)
+          )
+        )
+        .where(eq(chartOfAccounts.companyId, companyId))
+        .groupBy(chartOfAccounts.id, chartOfAccounts.accountName, chartOfAccounts.accountCode, 
+                chartOfAccounts.category, chartOfAccounts.subcategory, chartOfAccounts.accountType);
+
+      // Categorize accounts
+      const currentAssets = accounts
+        .filter(acc => acc.accountType === 'Asset' && acc.subcategory?.includes('Current'))
+        .map(acc => ({ account: acc.accountName, amount: acc.balance }));
+
+      const nonCurrentAssets = accounts
+        .filter(acc => acc.accountType === 'Asset' && !acc.subcategory?.includes('Current'))
+        .map(acc => ({ account: acc.accountName, amount: acc.balance }));
+
+      const currentLiabilities = accounts
+        .filter(acc => acc.accountType === 'Liability' && acc.subcategory?.includes('Current'))
+        .map(acc => ({ account: acc.accountName, amount: acc.balance }));
+
+      const nonCurrentLiabilities = accounts
+        .filter(acc => acc.accountType === 'Liability' && !acc.subcategory?.includes('Current'))
+        .map(acc => ({ account: acc.accountName, amount: acc.balance }));
+
+      const equity = accounts
+        .filter(acc => acc.accountType === 'Equity')
+        .map(acc => ({ account: acc.accountName, amount: acc.balance }));
+
+      // Calculate totals
+      const totalCurrentAssets = currentAssets.reduce((sum, acc) => sum + parseFloat(acc.amount), 0);
+      const totalNonCurrentAssets = nonCurrentAssets.reduce((sum, acc) => sum + parseFloat(acc.amount), 0);
+      const totalAssets = totalCurrentAssets + totalNonCurrentAssets;
+
+      const totalCurrentLiabilities = currentLiabilities.reduce((sum, acc) => sum + parseFloat(acc.amount), 0);
+      const totalNonCurrentLiabilities = nonCurrentLiabilities.reduce((sum, acc) => sum + parseFloat(acc.amount), 0);
+      const totalLiabilities = totalCurrentLiabilities + totalNonCurrentLiabilities;
+
+      const totalEquity = equity.reduce((sum, acc) => sum + parseFloat(acc.amount), 0);
+
+      return {
+        assets: {
+          currentAssets,
+          nonCurrentAssets,
+          totalAssets: totalAssets.toFixed(2)
+        },
+        liabilities: {
+          currentLiabilities,
+          nonCurrentLiabilities,
+          totalLiabilities: totalLiabilities.toFixed(2)
+        },
+        equity: {
+          items: equity,
+          totalEquity: totalEquity.toFixed(2)
+        },
+        totalLiabilitiesAndEquity: (totalLiabilities + totalEquity).toFixed(2)
+      };
+    } catch (error) {
+      console.error("Error generating balance sheet:", error);
+      throw error;
+    }
+  }
+
+  async getTrialBalanceReport(companyId: number, from: string, to: string) {
+    try {
+      const toDate = to || new Date().toISOString().split('T')[0];
+      
+      // Get all accounts with their debit and credit balances
+      const accounts = await db
+        .select({
+          accountCode: chartOfAccounts.accountCode,
+          accountName: chartOfAccounts.accountName,
+          accountType: chartOfAccounts.accountType,
+          debitTotal: sql<string>`COALESCE(SUM(
+            CASE WHEN ${journalEntries.entryType} = 'debit' THEN ${journalEntries.amount} ELSE 0 END
+          ), 0)`.as('debit_total'),
+          creditTotal: sql<string>`COALESCE(SUM(
+            CASE WHEN ${journalEntries.entryType} = 'credit' THEN ${journalEntries.amount} ELSE 0 END
+          ), 0)`.as('credit_total')
+        })
+        .from(chartOfAccounts)
+        .leftJoin(journalEntries, 
+          and(
+            eq(journalEntries.accountId, chartOfAccounts.id),
+            eq(journalEntries.companyId, companyId),
+            lte(journalEntries.transactionDate, toDate)
+          )
+        )
+        .where(eq(chartOfAccounts.companyId, companyId))
+        .groupBy(chartOfAccounts.id, chartOfAccounts.accountCode, chartOfAccounts.accountName, chartOfAccounts.accountType)
+        .orderBy(chartOfAccounts.accountCode);
+
+      // Calculate trial balance based on account type
+      const trialBalanceAccounts = accounts.map(account => {
+        const debitAmount = parseFloat(account.debitTotal);
+        const creditAmount = parseFloat(account.creditTotal);
+        
+        let debit = "0.00";
+        let credit = "0.00";
+        
+        // For assets and expenses, debit balance is positive
+        if (account.accountType === 'Asset' || account.accountType === 'Expense') {
+          const balance = debitAmount - creditAmount;
+          if (balance > 0) {
+            debit = balance.toFixed(2);
+          } else {
+            credit = Math.abs(balance).toFixed(2);
+          }
+        }
+        // For liabilities, equity, and revenue, credit balance is positive
+        else if (account.accountType === 'Liability' || account.accountType === 'Equity' || account.accountType === 'Revenue') {
+          const balance = creditAmount - debitAmount;
+          if (balance > 0) {
+            credit = balance.toFixed(2);
+          } else {
+            debit = Math.abs(balance).toFixed(2);
+          }
+        }
+
+        return {
+          accountCode: account.accountCode,
+          accountName: account.accountName,
+          debit,
+          credit
+        };
+      });
+
+      const totalDebits = trialBalanceAccounts.reduce((sum, acc) => sum + parseFloat(acc.debit), 0);
+      const totalCredits = trialBalanceAccounts.reduce((sum, acc) => sum + parseFloat(acc.credit), 0);
+
+      return {
+        accounts: trialBalanceAccounts,
+        totalDebits: totalDebits.toFixed(2),
+        totalCredits: totalCredits.toFixed(2)
+      };
+    } catch (error) {
+      console.error("Error generating trial balance:", error);
+      throw error;
+    }
+  }
+
+  async getGeneralLedgerReport(companyId: number, from: string, to: string, accountId?: number) {
+    try {
+      const fromDate = from || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+      const toDate = to || new Date().toISOString().split('T')[0];
+      
+      const whereConditions = [
+        eq(journalEntries.companyId, companyId),
+        gte(journalEntries.transactionDate, fromDate),
+        lte(journalEntries.transactionDate, toDate)
+      ];
+
+      if (accountId) {
+        whereConditions.push(eq(journalEntries.accountId, accountId));
+      }
+
+      const ledgerEntries = await db
+        .select({
+          accountId: journalEntries.accountId,
+          accountCode: chartOfAccounts.accountCode,
+          accountName: chartOfAccounts.accountName,
+          transactionDate: journalEntries.transactionDate,
+          description: journalEntries.description,
+          reference: journalEntries.reference,
+          debitAmount: sql<string>`CASE WHEN ${journalEntries.entryType} = 'debit' THEN ${journalEntries.amount} ELSE 0 END`,
+          creditAmount: sql<string>`CASE WHEN ${journalEntries.entryType} = 'credit' THEN ${journalEntries.amount} ELSE 0 END`,
+          amount: journalEntries.amount,
+          entryType: journalEntries.entryType
+        })
+        .from(journalEntries)
+        .innerJoin(chartOfAccounts, eq(journalEntries.accountId, chartOfAccounts.id))
+        .where(and(...whereConditions))
+        .orderBy(chartOfAccounts.accountCode, journalEntries.transactionDate);
+
+      // Group by account
+      const accountsMap = new Map();
+      
+      ledgerEntries.forEach(entry => {
+        const key = `${entry.accountCode}-${entry.accountName}`;
+        if (!accountsMap.has(key)) {
+          accountsMap.set(key, {
+            accountCode: entry.accountCode,
+            accountName: entry.accountName,
+            transactions: [],
+            openingBalance: "0.00",
+            closingBalance: "0.00"
+          });
+        }
+        
+        const account = accountsMap.get(key);
+        account.transactions.push({
+          date: entry.transactionDate,
+          description: entry.description,
+          reference: entry.reference || "",
+          debit: entry.debitAmount,
+          credit: entry.creditAmount,
+          balance: "0.00" // Would need running balance calculation
+        });
+      });
+
+      return {
+        accounts: Array.from(accountsMap.values())
+      };
+    } catch (error) {
+      console.error("Error generating general ledger:", error);
+      throw error;
+    }
+  }
+
+  async getAgedReceivablesReport(companyId: number, asAt: string) {
+    try {
+      const asAtDate = asAt || new Date().toISOString().split('T')[0];
+      
+      // Get outstanding invoices
+      const outstandingInvoices = await db
+        .select({
+          customerName: customers.name,
+          invoiceId: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          invoiceDate: invoices.issueDate,
+          dueDate: invoices.dueDate,
+          totalAmount: invoices.totalAmount,
+          paidAmount: sql<string>`COALESCE(SUM(${payments.amount}), 0)`.as('paid_amount')
+        })
+        .from(invoices)
+        .innerJoin(customers, eq(invoices.customerId, customers.id))
+        .leftJoin(payments, eq(payments.invoiceId, invoices.id))
+        .where(
+          and(
+            eq(invoices.companyId, companyId),
+            ne(invoices.status, 'paid'),
+            lte(invoices.issueDate, asAtDate)
+          )
+        )
+        .groupBy(
+          customers.name, invoices.id, invoices.invoiceNumber, 
+          invoices.issueDate, invoices.dueDate, invoices.totalAmount
+        );
+
+      // Calculate aging
+      const customersMap = new Map();
+      
+      outstandingInvoices.forEach(invoice => {
+        const outstanding = parseFloat(invoice.totalAmount) - parseFloat(invoice.paidAmount);
+        if (outstanding <= 0) return;
+
+        const daysDiff = Math.floor((new Date(asAtDate).getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (!customersMap.has(invoice.customerName)) {
+          customersMap.set(invoice.customerName, {
+            customerName: invoice.customerName,
+            current: 0,
+            days30: 0,
+            days60: 0,
+            days90: 0,
+            total: 0
+          });
+        }
+        
+        const customer = customersMap.get(invoice.customerName);
+        
+        if (daysDiff <= 0) {
+          customer.current += outstanding;
+        } else if (daysDiff <= 30) {
+          customer.days30 += outstanding;
+        } else if (daysDiff <= 60) {
+          customer.days60 += outstanding;
+        } else {
+          customer.days90 += outstanding;
+        }
+        
+        customer.total += outstanding;
+      });
+
+      const customers_list = Array.from(customersMap.values()).map(customer => ({
+        customerName: customer.customerName,
+        current: customer.current.toFixed(2),
+        days30: customer.days30.toFixed(2),
+        days60: customer.days60.toFixed(2),
+        days90: customer.days90.toFixed(2),
+        total: customer.total.toFixed(2)
+      }));
+
+      const totals = customers_list.reduce((acc, customer) => ({
+        current: (parseFloat(acc.current) + parseFloat(customer.current)).toFixed(2),
+        days30: (parseFloat(acc.days30) + parseFloat(customer.days30)).toFixed(2),
+        days60: (parseFloat(acc.days60) + parseFloat(customer.days60)).toFixed(2),
+        days90: (parseFloat(acc.days90) + parseFloat(customer.days90)).toFixed(2),
+        total: (parseFloat(acc.total) + parseFloat(customer.total)).toFixed(2)
+      }), { current: "0.00", days30: "0.00", days60: "0.00", days90: "0.00", total: "0.00" });
+
+      return {
+        customers: customers_list,
+        totals
+      };
+    } catch (error) {
+      console.error("Error generating aged receivables:", error);
+      throw error;
+    }
+  }
+
+  async getAgedPayablesReport(companyId: number, asAt: string) {
+    try {
+      const asAtDate = asAt || new Date().toISOString().split('T')[0];
+      
+      // Get outstanding purchase orders
+      const outstandingPOs = await db
+        .select({
+          supplierName: suppliers.name,
+          poId: purchaseOrders.id,
+          poNumber: purchaseOrders.orderNumber,
+          orderDate: purchaseOrders.orderDate,
+          expectedDate: purchaseOrders.expectedDate,
+          totalAmount: purchaseOrders.totalAmount,
+          paidAmount: sql<string>`COALESCE(SUM(${purchaseOrderPayments.amount}), 0)`.as('paid_amount')
+        })
+        .from(purchaseOrders)
+        .innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
+        .leftJoin(purchaseOrderPayments, eq(purchaseOrderPayments.purchaseOrderId, purchaseOrders.id))
+        .where(
+          and(
+            eq(purchaseOrders.companyId, companyId),
+            ne(purchaseOrders.status, 'paid'),
+            lte(purchaseOrders.orderDate, asAtDate)
+          )
+        )
+        .groupBy(
+          suppliers.name, purchaseOrders.id, purchaseOrders.orderNumber, 
+          purchaseOrders.orderDate, purchaseOrders.expectedDate, purchaseOrders.totalAmount
+        );
+
+      // Calculate aging
+      const suppliersMap = new Map();
+      
+      outstandingPOs.forEach(po => {
+        const outstanding = parseFloat(po.totalAmount) - parseFloat(po.paidAmount);
+        if (outstanding <= 0) return;
+
+        const daysDiff = Math.floor((new Date(asAtDate).getTime() - new Date(po.expectedDate || po.orderDate).getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (!suppliersMap.has(po.supplierName)) {
+          suppliersMap.set(po.supplierName, {
+            supplierName: po.supplierName,
+            current: 0,
+            days30: 0,
+            days60: 0,
+            days90: 0,
+            total: 0
+          });
+        }
+        
+        const supplier = suppliersMap.get(po.supplierName);
+        
+        if (daysDiff <= 0) {
+          supplier.current += outstanding;
+        } else if (daysDiff <= 30) {
+          supplier.days30 += outstanding;
+        } else if (daysDiff <= 60) {
+          supplier.days60 += outstanding;
+        } else {
+          supplier.days90 += outstanding;
+        }
+        
+        supplier.total += outstanding;
+      });
+
+      const suppliers_list = Array.from(suppliersMap.values()).map(supplier => ({
+        supplierName: supplier.supplierName,
+        current: supplier.current.toFixed(2),
+        days30: supplier.days30.toFixed(2),
+        days60: supplier.days60.toFixed(2),
+        days90: supplier.days90.toFixed(2),
+        total: supplier.total.toFixed(2)
+      }));
+
+      const totals = suppliers_list.reduce((acc, supplier) => ({
+        current: (parseFloat(acc.current) + parseFloat(supplier.current)).toFixed(2),
+        days30: (parseFloat(acc.days30) + parseFloat(supplier.days30)).toFixed(2),
+        days60: (parseFloat(acc.days60) + parseFloat(supplier.days60)).toFixed(2),
+        days90: (parseFloat(acc.days90) + parseFloat(supplier.days90)).toFixed(2),
+        total: (parseFloat(acc.total) + parseFloat(supplier.total)).toFixed(2)
+      }), { current: "0.00", days30: "0.00", days60: "0.00", days90: "0.00", total: "0.00" });
+
+      return {
+        suppliers: suppliers_list,
+        totals
+      };
+    } catch (error) {
+      console.error("Error generating aged payables:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

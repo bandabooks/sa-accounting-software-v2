@@ -1,486 +1,847 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { 
-  FileText, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Calculator, 
-  Download,
-  Calendar,
-  Receipt,
-  PieChart,
-  BarChart3,
-  ArrowUpDown
-} from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils-invoice";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FileText, Download, TrendingUp, Calculator, BarChart3, PieChart, Activity, DollarSign, Building, FileBarChart } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
 
-interface FinancialSummary {
-  totalRevenue: string;
-  totalExpenses: string;
+interface BalanceSheetData {
+  assets: {
+    currentAssets: Array<{ account: string; amount: string }>;
+    nonCurrentAssets: Array<{ account: string; amount: string }>;
+    totalAssets: string;
+  };
+  liabilities: {
+    currentLiabilities: Array<{ account: string; amount: string }>;
+    nonCurrentLiabilities: Array<{ account: string; amount: string }>;
+    totalLiabilities: string;
+  };
+  equity: {
+    items: Array<{ account: string; amount: string }>;
+    totalEquity: string;
+  };
+  totalLiabilitiesAndEquity: string;
+}
+
+interface TrialBalanceData {
+  accounts: Array<{
+    accountCode: string;
+    accountName: string;
+    debit: string;
+    credit: string;
+  }>;
+  totalDebits: string;
+  totalCredits: string;
+}
+
+interface ProfitLossData {
+  revenue: Array<{ category: string; amount: string }>;
+  expenses: Array<{ category: string; amount: string }>;
   grossProfit: string;
   netProfit: string;
-  totalVatCollected: string;
-  totalVatPaid: string;
+  totalRevenue: string;
+  totalExpenses: string;
 }
 
-interface ProfitLossReport {
-  revenue: { category: string; amount: string }[];
-  expenses: { category: string; amount: string }[];
-  netProfit: string;
-}
-
-interface CashFlowReport {
-  cashInflow: { source: string; amount: string }[];
-  cashOutflow: { category: string; amount: string }[];
+interface CashFlowData {
+  operatingActivities: Array<{ item: string; amount: string }>;
+  investingActivities: Array<{ item: string; amount: string }>;
+  financingActivities: Array<{ item: string; amount: string }>;
   netCashFlow: string;
+  openingBalance: string;
+  closingBalance: string;
 }
 
-interface VatCalculation {
-  periodStart: string;
-  periodEnd: string;
-  totalVatCollected: string;
-  totalVatPaid: string;
-  vatPayable: string;
-  status: string;
+interface GeneralLedgerData {
+  accounts: Array<{
+    accountCode: string;
+    accountName: string;
+    transactions: Array<{
+      date: string;
+      description: string;
+      reference: string;
+      debit: string;
+      credit: string;
+      balance: string;
+    }>;
+    openingBalance: string;
+    closingBalance: string;
+  }>;
+}
+
+interface AgedReceivablesData {
+  customers: Array<{
+    customerName: string;
+    current: string;
+    days30: string;
+    days60: string;
+    days90: string;
+    total: string;
+  }>;
+  totals: {
+    current: string;
+    days30: string;
+    days60: string;
+    days90: string;
+    total: string;
+  };
+}
+
+interface AgedPayablesData {
+  suppliers: Array<{
+    supplierName: string;
+    current: string;
+    days30: string;
+    days60: string;
+    days90: string;
+    total: string;
+  }>;
+  totals: {
+    current: string;
+    days30: string;
+    days60: string;
+    days90: string;
+    total: string;
+  };
 }
 
 export default function FinancialReports() {
-  const [dateRange, setDateRange] = useState({
-    startDate: '2024-01-01', // Start from 2024 to capture all existing data
-    endDate: (() => {
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      return tomorrow.toISOString().split('T')[0];
-    })() // Tomorrow to include all of today's transactions
-  });
-  const { toast } = useToast();
+  const [dateFrom, setDateFrom] = useState(format(new Date(new Date().getFullYear(), 0, 1), "yyyy-MM-dd"));
+  const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [activeTab, setActiveTab] = useState("balance-sheet");
 
-  const { data: financialSummary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['/api/reports/financial-summary', dateRange.startDate, dateRange.endDate],
-    queryFn: async () => {
-      const response = await fetch(`/api/reports/financial-summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
-      if (!response.ok) throw new Error('Failed to fetch financial summary');
-      return response.json() as Promise<FinancialSummary>;
+  // Balance Sheet Query
+  const { data: balanceSheet, isLoading: balanceSheetLoading } = useQuery<BalanceSheetData>({
+    queryKey: ["/api/reports/balance-sheet", dateFrom, dateTo],
+    enabled: activeTab === "balance-sheet"
+  });
+
+  // Trial Balance Query
+  const { data: trialBalance, isLoading: trialBalanceLoading } = useQuery<TrialBalanceData>({
+    queryKey: ["/api/reports/trial-balance", dateFrom, dateTo],
+    enabled: activeTab === "trial-balance"
+  });
+
+  // Profit & Loss Query
+  const { data: profitLoss, isLoading: profitLossLoading } = useQuery<ProfitLossData>({
+    queryKey: ["/api/reports/profit-loss", dateFrom, dateTo],
+    enabled: activeTab === "profit-loss"
+  });
+
+  // Cash Flow Query
+  const { data: cashFlow, isLoading: cashFlowLoading } = useQuery<CashFlowData>({
+    queryKey: ["/api/reports/cash-flow", dateFrom, dateTo],
+    enabled: activeTab === "cash-flow"
+  });
+
+  // General Ledger Query
+  const { data: generalLedger, isLoading: generalLedgerLoading } = useQuery<GeneralLedgerData>({
+    queryKey: ["/api/reports/general-ledger", dateFrom, dateTo],
+    enabled: activeTab === "general-ledger"
+  });
+
+  // Aged Receivables Query
+  const { data: agedReceivables, isLoading: agedReceivablesLoading } = useQuery<AgedReceivablesData>({
+    queryKey: ["/api/reports/aged-receivables", dateTo],
+    enabled: activeTab === "aged-receivables"
+  });
+
+  // Aged Payables Query
+  const { data: agedPayables, isLoading: agedPayablesLoading } = useQuery<AgedPayablesData>({
+    queryKey: ["/api/reports/aged-payables", dateTo],
+    enabled: activeTab === "aged-payables"
+  });
+
+  const reportTabs = [
+    { 
+      id: "balance-sheet", 
+      label: "Balance Sheet", 
+      icon: <Building className="h-4 w-4" />,
+      description: "Financial position statement showing assets, liabilities, and equity"
     },
-  });
-
-  const { data: profitLoss, isLoading: profitLossLoading } = useQuery({
-    queryKey: ['/api/reports/profit-loss', dateRange.startDate, dateRange.endDate],
-    queryFn: async () => {
-      const response = await fetch(`/api/reports/profit-loss?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
-      if (!response.ok) throw new Error('Failed to fetch profit & loss report');
-      return response.json() as Promise<ProfitLossReport>;
+    { 
+      id: "trial-balance", 
+      label: "Trial Balance", 
+      icon: <Calculator className="h-4 w-4" />,
+      description: "Summary of all general ledger account balances"
     },
-  });
-
-  const { data: cashFlow, isLoading: cashFlowLoading } = useQuery({
-    queryKey: ['/api/reports/cash-flow', dateRange.startDate, dateRange.endDate],
-    queryFn: async () => {
-      const response = await fetch(`/api/reports/cash-flow?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
-      if (!response.ok) throw new Error('Failed to fetch cash flow report');
-      return response.json() as Promise<CashFlowReport>;
+    { 
+      id: "profit-loss", 
+      label: "Profit & Loss", 
+      icon: <TrendingUp className="h-4 w-4" />,
+      description: "Income statement showing revenue, expenses, and net profit"
     },
-  });
-
-  const { data: vatCalculation, isLoading: vatLoading } = useQuery({
-    queryKey: ['/api/reports/vat-calculation', dateRange.startDate, dateRange.endDate],
-    queryFn: async () => {
-      const response = await fetch(`/api/reports/vat-calculation?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
-      if (!response.ok) throw new Error('Failed to fetch VAT calculation');
-      return response.json() as Promise<VatCalculation>;
+    { 
+      id: "cash-flow", 
+      label: "Cash Flow", 
+      icon: <Activity className="h-4 w-4" />,
+      description: "Statement of cash flows from operating, investing, and financing activities"
     },
-  });
-
-  const handleDateRangeChange = (field: 'startDate' | 'endDate', value: string) => {
-    setDateRange(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+    { 
+      id: "general-ledger", 
+      label: "General Ledger", 
+      icon: <FileText className="h-4 w-4" />,
+      description: "Detailed transaction history for all accounts"
+    },
+    { 
+      id: "aged-receivables", 
+      label: "Aged Receivables", 
+      icon: <DollarSign className="h-4 w-4" />,
+      description: "Outstanding customer balances by age"
+    },
+    { 
+      id: "aged-payables", 
+      label: "Aged Payables", 
+      icon: <FileBarChart className="h-4 w-4" />,
+      description: "Outstanding supplier balances by age"
+    }
+  ];
 
   const downloadReport = (reportType: string) => {
-    // In a real implementation, this would generate and download a PDF report
-    toast({
-      title: "Report Download",
-      description: `${reportType} report download will be implemented with PDF generation.`,
-    });
+    window.open(`/api/reports/${reportType}/download?from=${dateFrom}&to=${dateTo}`, '_blank');
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Financial Reports</h1>
-          <p className="text-gray-600 mt-1">Comprehensive financial analysis and reporting</p>
+          <h1 className="text-3xl font-bold tracking-tight">Financial Reports</h1>
+          <p className="text-muted-foreground">Comprehensive financial analysis and reporting</p>
         </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="startDate" className="text-sm font-medium">From:</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={dateRange.startDate}
-              onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
-              className="w-40"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="endDate" className="text-sm font-medium">To:</Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={dateRange.endDate}
-              onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
-              className="w-40"
-            />
-          </div>
-        </div>
+        <Badge variant="secondary" className="text-xs">
+          IFRS Compliant
+        </Badge>
       </div>
 
-      <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="summary">Financial Summary</TabsTrigger>
-          <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>
-          <TabsTrigger value="cash-flow">Cash Flow</TabsTrigger>
-          <TabsTrigger value="vat-returns">VAT Returns</TabsTrigger>
+      {/* Date Filter Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Report Parameters
+          </CardTitle>
+          <CardDescription>
+            Select date range for financial reports
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-end gap-4">
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <Label htmlFor="dateFrom">From</Label>
+            <Input
+              type="date"
+              id="dateFrom"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <Label htmlFor="dateTo">To</Label>
+            <Input
+              type="date"
+              id="dateTo"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => downloadReport(activeTab)}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Financial Reports Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+          {reportTabs.map((tab) => (
+            <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
+              {tab.icon}
+              <span className="hidden sm:inline">{tab.label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="summary" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {summaryLoading ? "Loading..." : formatCurrency(financialSummary?.totalRevenue || '0')}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  From paid invoices
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-                <TrendingDown className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  {summaryLoading ? "Loading..." : formatCurrency(financialSummary?.totalExpenses || '0')}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Business expenses
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-                <DollarSign className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {summaryLoading ? "Loading..." : formatCurrency(financialSummary?.netProfit || '0')}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Revenue minus expenses
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">VAT Collected</CardTitle>
-                <Calculator className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
-                  {summaryLoading ? "Loading..." : formatCurrency(financialSummary?.totalVatCollected || '0')}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  VAT on sales
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">VAT Paid</CardTitle>
-                <Receipt className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  {summaryLoading ? "Loading..." : formatCurrency(financialSummary?.totalVatPaid || '0')}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  VAT on purchases
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Gross Profit</CardTitle>
-                <BarChart3 className="h-4 w-4 text-indigo-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-indigo-600">
-                  {summaryLoading ? "Loading..." : formatCurrency(financialSummary?.grossProfit || '0')}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Before expenses
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
+        {/* Balance Sheet */}
+        <TabsContent value="balance-sheet" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Financial Summary Report</span>
-                <Button onClick={() => downloadReport('Financial Summary')} variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Balance Sheet
               </CardTitle>
+              <CardDescription>
+                As at {format(new Date(dateTo), "dd MMMM yyyy")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              {balanceSheetLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : balanceSheet ? (
+                <div className="space-y-6">
+                  {/* Assets */}
                   <div>
-                    <h4 className="font-medium text-gray-900">Period</h4>
-                    <p className="text-sm text-gray-600">
-                      {formatDate(new Date(dateRange.startDate))} - {formatDate(new Date(dateRange.endDate))}
-                    </p>
+                    <h3 className="text-lg font-semibold mb-3">ASSETS</h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground mb-2">Current Assets</h4>
+                        <div className="space-y-1">
+                          {balanceSheet.assets.currentAssets.map((asset, index) => (
+                            <div key={index} className="flex justify-between py-1">
+                              <span className="text-sm">{asset.account}</span>
+                              <span className="font-mono text-sm">{formatCurrency(parseFloat(asset.amount))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground mb-2">Non-Current Assets</h4>
+                        <div className="space-y-1">
+                          {balanceSheet.assets.nonCurrentAssets.map((asset, index) => (
+                            <div key={index} className="flex justify-between py-1">
+                              <span className="text-sm">{asset.account}</span>
+                              <span className="font-mono text-sm">{formatCurrency(parseFloat(asset.amount))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between font-semibold">
+                          <span>TOTAL ASSETS</span>
+                          <span className="font-mono">{formatCurrency(parseFloat(balanceSheet.assets.totalAssets))}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Liabilities & Equity */}
                   <div>
-                    <h4 className="font-medium text-gray-900">Report Generated</h4>
-                    <p className="text-sm text-gray-600">{formatDate(new Date())}</p>
+                    <h3 className="text-lg font-semibold mb-3">LIABILITIES AND EQUITY</h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground mb-2">Current Liabilities</h4>
+                        <div className="space-y-1">
+                          {balanceSheet.liabilities.currentLiabilities.map((liability, index) => (
+                            <div key={index} className="flex justify-between py-1">
+                              <span className="text-sm">{liability.account}</span>
+                              <span className="font-mono text-sm">{formatCurrency(parseFloat(liability.amount))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground mb-2">Non-Current Liabilities</h4>
+                        <div className="space-y-1">
+                          {balanceSheet.liabilities.nonCurrentLiabilities.map((liability, index) => (
+                            <div key={index} className="flex justify-between py-1">
+                              <span className="text-sm">{liability.account}</span>
+                              <span className="font-mono text-sm">{formatCurrency(parseFloat(liability.amount))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between font-medium">
+                          <span>Total Liabilities</span>
+                          <span className="font-mono">{formatCurrency(parseFloat(balanceSheet.liabilities.totalLiabilities))}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-sm text-muted-foreground mb-2">Equity</h4>
+                        <div className="space-y-1">
+                          {balanceSheet.equity.items.map((equity, index) => (
+                            <div key={index} className="flex justify-between py-1">
+                              <span className="text-sm">{equity.account}</span>
+                              <span className="font-mono text-sm">{formatCurrency(parseFloat(equity.amount))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between font-medium">
+                          <span>Total Equity</span>
+                          <span className="font-mono">{formatCurrency(parseFloat(balanceSheet.equity.totalEquity))}</span>
+                        </div>
+                      </div>
+
+                      <div className="border-t-2 border-black pt-2">
+                        <div className="flex justify-between font-semibold text-lg">
+                          <span>TOTAL LIABILITIES AND EQUITY</span>
+                          <span className="font-mono">{formatCurrency(parseFloat(balanceSheet.totalLiabilitiesAndEquity))}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-600">
-                    This summary includes all financial activity for the selected period. 
-                    Revenue figures are based on paid invoices only.
-                  </p>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No balance sheet data available for the selected period
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="profit-loss" className="space-y-6">
+        {/* Trial Balance */}
+        <TabsContent value="trial-balance" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Profit & Loss Statement</span>
-                <Button onClick={() => downloadReport('Profit & Loss')} variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                Trial Balance
               </CardTitle>
+              <CardDescription>
+                As at {format(new Date(dateTo), "dd MMMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {trialBalanceLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : trialBalance ? (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 text-sm font-medium">Account Code</th>
+                          <th className="text-left py-2 text-sm font-medium">Account Name</th>
+                          <th className="text-right py-2 text-sm font-medium">Debit</th>
+                          <th className="text-right py-2 text-sm font-medium">Credit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {trialBalance.accounts.map((account, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="py-2 text-sm font-mono">{account.accountCode}</td>
+                            <td className="py-2 text-sm">{account.accountName}</td>
+                            <td className="py-2 text-sm text-right font-mono">
+                              {parseFloat(account.debit) > 0 ? formatCurrency(parseFloat(account.debit)) : "-"}
+                            </td>
+                            <td className="py-2 text-sm text-right font-mono">
+                              {parseFloat(account.credit) > 0 ? formatCurrency(parseFloat(account.credit)) : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t-2 border-black font-semibold">
+                          <td className="py-2"></td>
+                          <td className="py-2 text-sm">TOTALS</td>
+                          <td className="py-2 text-sm text-right font-mono">
+                            {formatCurrency(parseFloat(trialBalance.totalDebits))}
+                          </td>
+                          <td className="py-2 text-sm text-right font-mono">
+                            {formatCurrency(parseFloat(trialBalance.totalCredits))}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No trial balance data available for the selected period
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Profit & Loss */}
+        <TabsContent value="profit-loss" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Profit & Loss Statement
+              </CardTitle>
+              <CardDescription>
+                For the period {format(new Date(dateFrom), "dd MMM yyyy")} to {format(new Date(dateTo), "dd MMM yyyy")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {profitLossLoading ? (
                 <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : (
+              ) : profitLoss ? (
                 <div className="space-y-6">
+                  {/* Revenue */}
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Revenue</h4>
-                    <div className="space-y-2">
-                      {profitLoss?.revenue.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b">
+                    <h3 className="text-lg font-semibold mb-3">REVENUE</h3>
+                    <div className="space-y-1">
+                      {profitLoss.revenue.map((item, index) => (
+                        <div key={index} className="flex justify-between py-1">
                           <span className="text-sm">{item.category}</span>
-                          <span className="font-medium text-green-600">{formatCurrency(item.amount)}</span>
+                          <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
                         </div>
                       ))}
                     </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Expenses</h4>
-                    <div className="space-y-2">
-                      {profitLoss?.expenses.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b">
-                          <span className="text-sm">{item.category}</span>
-                          <span className="font-medium text-red-600">{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
+                    <div className="border-t pt-2 mt-3">
+                      <div className="flex justify-between font-semibold">
+                        <span>Total Revenue</span>
+                        <span className="font-mono">{formatCurrency(parseFloat(profitLoss.totalRevenue))}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold">Net Profit</span>
-                      <span className={`text-xl font-bold ${
-                        parseFloat(profitLoss?.netProfit || '0') >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {formatCurrency(profitLoss?.netProfit || '0')}
+                  {/* Expenses */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">EXPENSES</h3>
+                    <div className="space-y-1">
+                      {profitLoss.expenses.map((item, index) => (
+                        <div key={index} className="flex justify-between py-1">
+                          <span className="text-sm">{item.category}</span>
+                          <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t pt-2 mt-3">
+                      <div className="flex justify-between font-semibold">
+                        <span>Total Expenses</span>
+                        <span className="font-mono">{formatCurrency(parseFloat(profitLoss.totalExpenses))}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Net Profit */}
+                  <div className="border-t-2 border-black pt-4">
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>NET PROFIT</span>
+                      <span className={`font-mono ${parseFloat(profitLoss.netProfit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(parseFloat(profitLoss.netProfit))}
                       </span>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No profit & loss data available for the selected period
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="cash-flow" className="space-y-6">
+        {/* Cash Flow */}
+        <TabsContent value="cash-flow" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Cash Flow Report</span>
-                <Button onClick={() => downloadReport('Cash Flow')} variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Cash Flow Statement
               </CardTitle>
+              <CardDescription>
+                For the period {format(new Date(dateFrom), "dd MMM yyyy")} to {format(new Date(dateTo), "dd MMM yyyy")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {cashFlowLoading ? (
                 <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : cashFlow ? (
+                <div className="space-y-6">
+                  {/* Opening Balance */}
+                  <div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Opening Cash Balance</span>
+                      <span className="font-mono">{formatCurrency(parseFloat(cashFlow.openingBalance))}</span>
+                    </div>
+                  </div>
+
+                  {/* Operating Activities */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">CASH FLOWS FROM OPERATING ACTIVITIES</h3>
+                    <div className="space-y-1">
+                      {cashFlow.operatingActivities.map((item, index) => (
+                        <div key={index} className="flex justify-between py-1">
+                          <span className="text-sm">{item.item}</span>
+                          <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Investing Activities */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">CASH FLOWS FROM INVESTING ACTIVITIES</h3>
+                    <div className="space-y-1">
+                      {cashFlow.investingActivities.map((item, index) => (
+                        <div key={index} className="flex justify-between py-1">
+                          <span className="text-sm">{item.item}</span>
+                          <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Financing Activities */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">CASH FLOWS FROM FINANCING ACTIVITIES</h3>
+                    <div className="space-y-1">
+                      {cashFlow.financingActivities.map((item, index) => (
+                        <div key={index} className="flex justify-between py-1">
+                          <span className="text-sm">{item.item}</span>
+                          <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Net Cash Flow */}
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between font-semibold">
+                      <span>Net Increase/(Decrease) in Cash</span>
+                      <span className={`font-mono ${parseFloat(cashFlow.netCashFlow) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(parseFloat(cashFlow.netCashFlow))}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Closing Balance */}
+                  <div className="border-t-2 border-black pt-3">
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>CLOSING CASH BALANCE</span>
+                      <span className="font-mono">{formatCurrency(parseFloat(cashFlow.closingBalance))}</span>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
-                      Cash Inflow
-                    </h4>
-                    <div className="space-y-2">
-                      {cashFlow?.cashInflow.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b">
-                          <span className="text-sm">{item.source}</span>
-                          <span className="font-medium text-green-600">{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <TrendingDown className="h-4 w-4 mr-2 text-red-600" />
-                      Cash Outflow
-                    </h4>
-                    <div className="space-y-2">
-                      {cashFlow?.cashOutflow.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b">
-                          <span className="text-sm">{item.category}</span>
-                          <span className="font-medium text-red-600">{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold flex items-center">
-                        <ArrowUpDown className="h-4 w-4 mr-2" />
-                        Net Cash Flow
-                      </span>
-                      <span className={`text-xl font-bold ${
-                        parseFloat(cashFlow?.netCashFlow || '0') >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {formatCurrency(cashFlow?.netCashFlow || '0')}
-                      </span>
-                    </div>
-                  </div>
+                <div className="text-center py-8 text-muted-foreground">
+                  No cash flow data available for the selected period
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="vat-returns" className="space-y-6">
+        {/* General Ledger */}
+        <TabsContent value="general-ledger" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>VAT Return Calculation</span>
-                <Button onClick={() => downloadReport('VAT Return')} variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                General Ledger
               </CardTitle>
+              <CardDescription>
+                Detailed transaction history for all accounts from {format(new Date(dateFrom), "dd MMM yyyy")} to {format(new Date(dateTo), "dd MMM yyyy")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {vatLoading ? (
+              {generalLedgerLoading ? (
                 <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : generalLedger ? (
+                <div className="space-y-6">
+                  {generalLedger.accounts.map((account, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">
+                          {account.accountCode} - {account.accountName}
+                        </h3>
+                        <div className="text-sm text-muted-foreground">
+                          Opening: {formatCurrency(parseFloat(account.openingBalance))} | 
+                          Closing: {formatCurrency(parseFloat(account.closingBalance))}
+                        </div>
+                      </div>
+                      
+                      {account.transactions.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-2 text-sm font-medium">Date</th>
+                                <th className="text-left py-2 text-sm font-medium">Description</th>
+                                <th className="text-left py-2 text-sm font-medium">Reference</th>
+                                <th className="text-right py-2 text-sm font-medium">Debit</th>
+                                <th className="text-right py-2 text-sm font-medium">Credit</th>
+                                <th className="text-right py-2 text-sm font-medium">Balance</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {account.transactions.map((transaction, txIndex) => (
+                                <tr key={txIndex} className="border-b border-gray-100">
+                                  <td className="py-2 text-sm">{format(new Date(transaction.date), "dd/MM/yyyy")}</td>
+                                  <td className="py-2 text-sm">{transaction.description}</td>
+                                  <td className="py-2 text-sm">{transaction.reference}</td>
+                                  <td className="py-2 text-sm text-right font-mono">
+                                    {parseFloat(transaction.debit) > 0 ? formatCurrency(parseFloat(transaction.debit)) : "-"}
+                                  </td>
+                                  <td className="py-2 text-sm text-right font-mono">
+                                    {parseFloat(transaction.credit) > 0 ? formatCurrency(parseFloat(transaction.credit)) : "-"}
+                                  </td>
+                                  <td className="py-2 text-sm text-right font-mono">
+                                    {formatCurrency(parseFloat(transaction.balance))}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground">
+                          No transactions for this account in the selected period
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-3">VAT Period</h4>
-                      <p className="text-sm text-gray-600">
-                        {formatDate(new Date(vatCalculation?.periodStart || dateRange.startDate))} - {formatDate(new Date(vatCalculation?.periodEnd || dateRange.endDate))}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Status</h4>
-                      <Badge variant="outline" className="capitalize">
-                        {vatCalculation?.status || 'calculated'}
-                      </Badge>
-                    </div>
-                  </div>
+                <div className="text-center py-8 text-muted-foreground">
+                  No general ledger data available for the selected period
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">VAT Collected (Output VAT)</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
-                          {formatCurrency(vatCalculation?.totalVatCollected || '0')}
-                        </div>
-                        <p className="text-xs text-muted-foreground">VAT on sales</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">VAT Paid (Input VAT)</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-orange-600">
-                          {formatCurrency(vatCalculation?.totalVatPaid || '0')}
-                        </div>
-                        <p className="text-xs text-muted-foreground">VAT on purchases</p>
-                      </CardContent>
-                    </Card>
+        {/* Aged Receivables */}
+        <TabsContent value="aged-receivables" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Aged Receivables Analysis
+              </CardTitle>
+              <CardDescription>
+                Outstanding customer balances as at {format(new Date(dateTo), "dd MMMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {agedReceivablesLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : agedReceivables ? (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 text-sm font-medium">Customer</th>
+                          <th className="text-right py-2 text-sm font-medium">Current</th>
+                          <th className="text-right py-2 text-sm font-medium">1-30 Days</th>
+                          <th className="text-right py-2 text-sm font-medium">31-60 Days</th>
+                          <th className="text-right py-2 text-sm font-medium">61-90 Days</th>
+                          <th className="text-right py-2 text-sm font-medium">90+ Days</th>
+                          <th className="text-right py-2 text-sm font-medium">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {agedReceivables.customers.map((customer, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="py-2 text-sm">{customer.customerName}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(customer.current))}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(customer.days30))}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(customer.days60))}</td>
+                            <td className="py-2 text-sm text-right font-mono text-orange-600">{formatCurrency(parseFloat(customer.days90))}</td>
+                            <td className="py-2 text-sm text-right font-mono text-red-600">{formatCurrency(parseFloat(customer.days90))}</td>
+                            <td className="py-2 text-sm text-right font-mono font-semibold">{formatCurrency(parseFloat(customer.total))}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t-2 border-black font-semibold">
+                          <td className="py-2 text-sm">TOTALS</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedReceivables.totals.current))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedReceivables.totals.days30))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedReceivables.totals.days60))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedReceivables.totals.days90))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedReceivables.totals.days90))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedReceivables.totals.total))}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No aged receivables data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold">VAT Payable</span>
-                      <span className={`text-xl font-bold ${
-                        parseFloat(vatCalculation?.vatPayable || '0') >= 0 ? 'text-red-600' : 'text-green-600'
-                      }`}>
-                        {formatCurrency(vatCalculation?.vatPayable || '0')}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-2">
-                      {parseFloat(vatCalculation?.vatPayable || '0') >= 0 
-                        ? 'Amount to be paid to SARS' 
-                        : 'Amount to be refunded by SARS'}
-                    </p>
+        {/* Aged Payables */}
+        <TabsContent value="aged-payables" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileBarChart className="h-5 w-5" />
+                Aged Payables Analysis
+              </CardTitle>
+              <CardDescription>
+                Outstanding supplier balances as at {format(new Date(dateTo), "dd MMMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {agedPayablesLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : agedPayables ? (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 text-sm font-medium">Supplier</th>
+                          <th className="text-right py-2 text-sm font-medium">Current</th>
+                          <th className="text-right py-2 text-sm font-medium">1-30 Days</th>
+                          <th className="text-right py-2 text-sm font-medium">31-60 Days</th>
+                          <th className="text-right py-2 text-sm font-medium">61-90 Days</th>
+                          <th className="text-right py-2 text-sm font-medium">90+ Days</th>
+                          <th className="text-right py-2 text-sm font-medium">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {agedPayables.suppliers.map((supplier, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="py-2 text-sm">{supplier.supplierName}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(supplier.current))}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(supplier.days30))}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(supplier.days60))}</td>
+                            <td className="py-2 text-sm text-right font-mono text-orange-600">{formatCurrency(parseFloat(supplier.days90))}</td>
+                            <td className="py-2 text-sm text-right font-mono text-red-600">{formatCurrency(parseFloat(supplier.days90))}</td>
+                            <td className="py-2 text-sm text-right font-mono font-semibold">{formatCurrency(parseFloat(supplier.total))}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t-2 border-black font-semibold">
+                          <td className="py-2 text-sm">TOTALS</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedPayables.totals.current))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedPayables.totals.days30))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedPayables.totals.days60))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedPayables.totals.days90))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedPayables.totals.days90))}</td>
+                          <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(agedPayables.totals.total))}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No aged payables data available
                 </div>
               )}
             </CardContent>

@@ -937,6 +937,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WORLD-CLASS FINANCIAL REPORTING SUITE
+  
+  // Balance Sheet Report
+  app.get("/api/reports/balance-sheet", authenticate, async (req, res) => {
+    try {
+      const { user } = req as any;
+      const { from, to } = req.query;
+      
+      const report = await storage.getBalanceSheetReport(
+        user.companyId, 
+        from as string, 
+        to as string
+      );
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating balance sheet:", error);
+      res.status(500).json({ error: "Failed to generate balance sheet" });
+    }
+  });
+
+  // Trial Balance Report
+  app.get("/api/reports/trial-balance", authenticate, async (req, res) => {
+    try {
+      const { user } = req as any;
+      const { from, to } = req.query;
+      
+      const report = await storage.getTrialBalanceReport(
+        user.companyId, 
+        from as string, 
+        to as string
+      );
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating trial balance:", error);
+      res.status(500).json({ error: "Failed to generate trial balance" });
+    }
+  });
+
+  // General Ledger Report
+  app.get("/api/reports/general-ledger", authenticate, async (req, res) => {
+    try {
+      const { user } = req as any;
+      const { from, to, accountId } = req.query;
+      
+      const report = await storage.getGeneralLedgerReport(
+        user.companyId, 
+        from as string, 
+        to as string,
+        accountId ? parseInt(accountId as string) : undefined
+      );
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating general ledger:", error);
+      res.status(500).json({ error: "Failed to generate general ledger" });
+    }
+  });
+
+  // Aged Receivables Report
+  app.get("/api/reports/aged-receivables", authenticate, async (req, res) => {
+    try {
+      const { user } = req as any;
+      const { asAt } = req.query;
+      
+      const report = await storage.getAgedReceivablesReport(
+        user.companyId, 
+        asAt as string
+      );
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating aged receivables:", error);
+      res.status(500).json({ error: "Failed to generate aged receivables" });
+    }
+  });
+
+  // Aged Payables Report
+  app.get("/api/reports/aged-payables", authenticate, async (req, res) => {
+    try {
+      const { user } = req as any;
+      const { asAt } = req.query;
+      
+      const report = await storage.getAgedPayablesReport(
+        user.companyId, 
+        asAt as string
+      );
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating aged payables:", error);
+      res.status(500).json({ error: "Failed to generate aged payables" });
+    }
+  });
+
   // Purchase Order Management
   // Suppliers with search
   app.get("/api/suppliers", async (req, res) => {
