@@ -182,7 +182,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 hidden lg:flex lg:flex-col">
+    <aside className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 flex flex-col">
       <div className="p-6 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
