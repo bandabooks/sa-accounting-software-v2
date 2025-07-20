@@ -3065,8 +3065,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async addUserToCompany(userId: number, companyId: number, role: string): Promise<void> {
-    await db
+  async addUserToCompany(userId: number, companyId: number, role: string): Promise<any> {
+    const result = await db
       .insert(companyUsers)
       .values({
         userId,
@@ -3076,7 +3076,54 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoUpdate({
         target: [companyUsers.companyId, companyUsers.userId],
         set: { role },
-      });
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async getCompanyUsers(companyId: number): Promise<any[]> {
+    const results = await db
+      .select({
+        id: companyUsers.id,
+        userId: companyUsers.userId,
+        companyId: companyUsers.companyId,
+        role: companyUsers.role,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          isActive: users.isActive,
+        }
+      })
+      .from(companyUsers)
+      .innerJoin(users, eq(companyUsers.userId, users.id))
+      .where(eq(companyUsers.companyId, companyId))
+      .orderBy(users.name);
+    
+    return results;
+  }
+
+  async updateUserCompanyRole(userId: number, companyId: number, role: string): Promise<any> {
+    const result = await db
+      .update(companyUsers)
+      .set({ role })
+      .where(and(
+        eq(companyUsers.userId, userId),
+        eq(companyUsers.companyId, companyId)
+      ))
+      .returning();
+    
+    return result[0];
+  }
+
+  async removeUserFromCompany(userId: number, companyId: number): Promise<void> {
+    await db
+      .delete(companyUsers)
+      .where(and(
+        eq(companyUsers.userId, userId),
+        eq(companyUsers.companyId, companyId)
+      ));
   }
 
   // Get active accounts for a company

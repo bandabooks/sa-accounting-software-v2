@@ -8,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Building, Users, CreditCard, Settings } from "lucide-react";
+import { ArrowLeft, Building, Users, CreditCard, Settings, Plus, UserPlus, Trash2, Edit } from "lucide-react";
 import { Link } from "wouter";
 
 export default function SuperAdminCompanyDetail() {
@@ -18,6 +20,7 @@ export default function SuperAdminCompanyDetail() {
   const companyId = params?.id;
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   // Fetch company details
   const { data: company, isLoading } = useQuery({
@@ -28,6 +31,17 @@ export default function SuperAdminCompanyDetail() {
   // Fetch subscription plans for dropdown
   const { data: plans } = useQuery({
     queryKey: ["/api/super-admin/subscription-plans"],
+  });
+
+  // Fetch company users
+  const { data: companyUsers, isLoading: companyUsersLoading } = useQuery({
+    queryKey: ["/api/super-admin/companies", companyId, "users"],
+    enabled: !!companyId,
+  });
+
+  // Fetch all available users for assignment
+  const { data: allUsers } = useQuery({
+    queryKey: ["/api/super-admin/users"],
   });
 
   // Update company mutation
@@ -64,6 +78,81 @@ export default function SuperAdminCompanyDetail() {
     };
     updateCompanyMutation.mutate(data);
   };
+
+  // Add user to company mutation
+  const addUserMutation = useMutation({
+    mutationFn: async (data: { userId: number; role: string }) => {
+      return apiRequest("POST", `/api/super-admin/companies/${companyId}/users`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User added to company successfully",
+      });
+      setIsAddUserDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/companies", companyId, "users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add user to company",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove user from company mutation
+  const removeUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return apiRequest("DELETE", `/api/super-admin/companies/${companyId}/users/${userId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User removed from company successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/companies", companyId, "users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove user from company",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update user role mutation
+  const updateUserRoleMutation = useMutation({
+    mutationFn: async (data: { userId: number; role: string }) => {
+      return apiRequest("PUT", `/api/super-admin/companies/${companyId}/users/${data.userId}`, { role: data.role });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/companies", companyId, "users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddUser = async (formData: FormData) => {
+    const userId = parseInt(formData.get("userId") as string);
+    const role = formData.get("role") as string;
+    addUserMutation.mutate({ userId, role });
+  };
+
+  // Get available users (not already assigned to this company)
+  const availableUsers = allUsers?.filter(
+    (user: any) => !companyUsers?.some((cu: any) => cu.userId === user.id)
+  );
 
   if (isLoading) {
     return (
@@ -268,14 +357,140 @@ export default function SuperAdminCompanyDetail() {
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>Company Users</span>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5" />
+                  <span>Company Users</span>
+                </div>
+                <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add User to Company</DialogTitle>
+                      <DialogDescription>
+                        Select a user and assign their role in the company
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form action={handleAddUser} className="space-y-4">
+                      <div>
+                        <Label htmlFor="userId">Select User</Label>
+                        <Select name="userId" required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a user..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableUsers?.map((user: any) => (
+                              <SelectItem key={user.id} value={user.id.toString()}>
+                                {user.name} ({user.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="role">Role</Label>
+                        <Select name="role" required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="accountant">Accountant</SelectItem>
+                            <SelectItem value="employee">Employee</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button type="submit" disabled={addUserMutation.isPending}>
+                        {addUserMutation.isPending ? "Adding..." : "Add User"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </CardTitle>
               <CardDescription>Users associated with this company</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">User management functionality coming soon...</p>
+              {companyUsersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : companyUsers?.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No users assigned to this company yet.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Click "Add User" to assign users to this company.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {companyUsers?.map((companyUser: any) => (
+                      <TableRow key={companyUser.id}>
+                        <TableCell className="font-medium">
+                          {companyUser.user?.name || companyUser.userName || 'Unknown User'}
+                        </TableCell>
+                        <TableCell>
+                          {companyUser.user?.email || companyUser.userEmail || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            defaultValue={companyUser.role}
+                            onValueChange={(newRole) => 
+                              updateUserRoleMutation.mutate({ 
+                                userId: companyUser.userId, 
+                                role: newRole 
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="owner">Owner</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="manager">Manager</SelectItem>
+                              <SelectItem value="accountant">Accountant</SelectItem>
+                              <SelectItem value="employee">Employee</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={companyUser.user?.isActive ? "default" : "secondary"}>
+                            {companyUser.user?.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removeUserMutation.mutate(companyUser.userId)}
+                            disabled={removeUserMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

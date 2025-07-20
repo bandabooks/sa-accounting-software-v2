@@ -2524,6 +2524,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Company User Management (Super Admin)
+  app.get("/api/super-admin/companies/:id/users", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const companyUsers = await storage.getCompanyUsers(companyId);
+      res.json(companyUsers);
+    } catch (error) {
+      console.error("Failed to fetch company users:", error);
+      res.status(500).json({ message: "Failed to fetch company users" });
+    }
+  });
+
+  app.post("/api/super-admin/companies/:id/users", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const { userId, role } = req.body;
+      
+      const userCompany = await storage.addUserToCompany(userId, companyId, role);
+      
+      await logAudit(req.user!.id, 'CREATE', 'user_company', userCompany.id, `Added user ${userId} to company ${companyId} with role ${role}`);
+      
+      res.json(userCompany);
+    } catch (error) {
+      console.error("Failed to add user to company:", error);
+      res.status(500).json({ message: "Failed to add user to company" });
+    }
+  });
+
+  app.put("/api/super-admin/companies/:id/users/:userId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+      const { role } = req.body;
+      
+      const updatedUserCompany = await storage.updateUserCompanyRole(userId, companyId, role);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'user_company', userId, `Updated user ${userId} role in company ${companyId} to ${role}`);
+      
+      res.json(updatedUserCompany);
+    } catch (error) {
+      console.error("Failed to update user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.delete("/api/super-admin/companies/:id/users/:userId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+      
+      await storage.removeUserFromCompany(userId, companyId);
+      
+      await logAudit(req.user!.id, 'DELETE', 'user_company', userId, `Removed user ${userId} from company ${companyId}`);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to remove user from company:", error);
+      res.status(500).json({ message: "Failed to remove user from company" });
+    }
+  });
+
   // Public Subscription Plans (for company admins to view)
   app.get("/api/subscription-plans", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
