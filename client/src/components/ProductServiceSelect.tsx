@@ -1,24 +1,6 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Command,
   CommandEmpty,
@@ -32,11 +14,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
-import type { Product, ProductCategory } from "@shared/schema";
+import type { Product } from "@shared/schema";
 
 interface ProductServiceSelectProps {
   value?: number;
@@ -46,14 +26,7 @@ interface ProductServiceSelectProps {
   disabled?: boolean;
 }
 
-interface QuickCreateData {
-  name: string;
-  description: string;
-  price: string;
-  categoryId: string;
-  sku: string;
-  vatRate: string;
-}
+
 
 export function ProductServiceSelect({
   value,
@@ -63,15 +36,6 @@ export function ProductServiceSelect({
   disabled = false,
 }: ProductServiceSelectProps) {
   const [open, setOpen] = useState(false);
-  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
-  const [quickCreateData, setQuickCreateData] = useState<QuickCreateData>({
-    name: "",
-    description: "",
-    price: "0.00",
-    categoryId: "",
-    sku: "",
-    vatRate: "15.00",
-  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -214,8 +178,8 @@ export function ProductServiceSelect({
                   <Button
                     size="sm"
                     onClick={() => {
-                      setQuickCreateOpen(true);
-                      setOpen(false);
+                      // Navigate to product creation page instead of opening modal
+                      window.location.href = '/products/create';
                     }}
                     className="w-full"
                   >
@@ -227,8 +191,8 @@ export function ProductServiceSelect({
               <CommandGroup>
                 <CommandItem
                   onSelect={() => {
-                    setQuickCreateOpen(true);
-                    setOpen(false);
+                    // Navigate to product creation page instead of opening modal
+                    window.location.href = '/products/create';
                   }}
                   className="bg-muted/50 font-medium"
                 >
@@ -270,142 +234,6 @@ export function ProductServiceSelect({
           </Command>
         </PopoverContent>
       </Popover>
-
-      {/* Quick Create Dialog */}
-      <Dialog open={quickCreateOpen} onOpenChange={setQuickCreateOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create New Product/Service</DialogTitle>
-            <DialogDescription>
-              Add a new product or service to your catalog.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={quickCreateData.name}
-                onChange={(e) =>
-                  setQuickCreateData(prev => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="Product or service name"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={quickCreateData.description}
-                onChange={(e) =>
-                  setQuickCreateData(prev => ({ ...prev, description: e.target.value }))
-                }
-                placeholder="Product description"
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="price">Price (R)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  value={quickCreateData.price}
-                  onChange={(e) =>
-                    setQuickCreateData(prev => ({ ...prev, price: e.target.value }))
-                  }
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="vatRate">VAT Rate (%)</Label>
-                <Select
-                  value={quickCreateData.vatRate}
-                  onValueChange={(value) =>
-                    setQuickCreateData(prev => ({ ...prev, vatRate: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vatTypes.map((vatType: any) => (
-                      <SelectItem key={vatType.id} value={vatType.rate}>
-                        {vatType.name} ({vatType.rate}%)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="sku">SKU</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="sku"
-                    value={quickCreateData.sku}
-                    onChange={(e) =>
-                      setQuickCreateData(prev => ({ ...prev, sku: e.target.value }))
-                    }
-                    placeholder="Product SKU"
-                  />
-                  <Button type="button" variant="outline" size="sm" onClick={generateSKU}>
-                    Generate
-                  </Button>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={quickCreateData.categoryId}
-                    onValueChange={(value) =>
-                      setQuickCreateData(prev => ({ ...prev, categoryId: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category: ProductCategory) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const categoryName = prompt("Enter new category name:");
-                      if (categoryName) {
-                        createCategoryMutation.mutate({ name: categoryName });
-                      }
-                    }}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQuickCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleQuickCreate}
-              disabled={createProductMutation.isPending}
-            >
-              {createProductMutation.isPending ? "Creating..." : "Create Product"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
