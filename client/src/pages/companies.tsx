@@ -186,15 +186,19 @@ export default function Companies() {
               Create Company
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Company</DialogTitle>
-              <DialogDescription>
-                Enter the details for your new company. You will be the owner with full access.
+              <DialogDescription className="space-y-2">
+                <span>Enter the details for your new company. You will be the owner with full access.</span>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
+                  <strong>Clean Start:</strong> Your new company will begin with zero balances, no transactional data, 
+                  and industry-appropriate chart of accounts. VAT types will be automatically configured.
+                </div>
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-6 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Company Name *</Label>
                   <Input 
@@ -202,6 +206,7 @@ export default function Companies() {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     required 
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -211,6 +216,7 @@ export default function Companies() {
                     value={formData.displayName}
                     onChange={(e) => handleInputChange('displayName', e.target.value)}
                     required 
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -227,7 +233,7 @@ export default function Companies() {
                 <p className="text-sm text-gray-500 mt-1">Used in URLs (lowercase, no spaces)</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="email">Email *</Label>
                   <Input 
@@ -236,6 +242,7 @@ export default function Companies() {
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     required 
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -244,6 +251,7 @@ export default function Companies() {
                     id="phone" 
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -257,13 +265,14 @@ export default function Companies() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="city">City</Label>
                   <Input 
                     id="city" 
                     value={formData.city}
                     onChange={(e) => handleInputChange('city', e.target.value)}
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -272,6 +281,7 @@ export default function Companies() {
                     id="postalCode" 
                     value={formData.postalCode}
                     onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -280,7 +290,7 @@ export default function Companies() {
                     value={formData.country} 
                     onValueChange={(value) => handleInputChange('country', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -293,13 +303,14 @@ export default function Companies() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="vatNumber">VAT Number</Label>
                   <Input 
                     id="vatNumber" 
                     value={formData.vatNumber}
                     onChange={(e) => handleInputChange('vatNumber', e.target.value)}
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -308,6 +319,7 @@ export default function Companies() {
                     id="registrationNumber" 
                     value={formData.registrationNumber}
                     onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -340,11 +352,11 @@ export default function Companies() {
                 </p>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="min-w-[100px]">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createCompanyMutation.isPending}>
+                <Button type="submit" disabled={createCompanyMutation.isPending} className="min-w-[140px]">
                   {createCompanyMutation.isPending ? "Creating..." : "Create Company"}
                 </Button>
               </div>

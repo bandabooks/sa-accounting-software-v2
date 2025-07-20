@@ -38,8 +38,8 @@ export function registerCompanyRoutes(app: Express) {
       const userId = req.user.id;
       const companyData = insertCompanySchema.parse(req.body);
       
-      // Create company
-      const company = await companyStorage.createCompany(companyData);
+      // Create company with user ID for proper initialization
+      const company = await companyStorage.createCompany(companyData, userId);
       
       // Add creator as owner
       await companyStorage.addUserToCompany({

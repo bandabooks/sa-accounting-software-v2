@@ -26,7 +26,7 @@ export interface ICompanyStorage {
 
 export class CompanyStorage implements ICompanyStorage {
   // Company management
-  async createCompany(companyData: InsertCompany): Promise<Company> {
+  async createCompany(companyData: InsertCompany, userId?: number): Promise<Company> {
     const [company] = await db
       .insert(companies)
       .values(companyData)

@@ -2616,21 +2616,123 @@ export class DatabaseStorage implements IStorage {
     return company || undefined;
   }
 
-  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+  async createCompany(insertCompany: InsertCompany, userId?: number): Promise<Company> {
     const [company] = await db
       .insert(companies)
       .values(insertCompany)
       .returning();
 
-    // Activate Chart of Accounts based on industry template
-    if (company.industry && company.industry !== 'general') {
-      await this.activateIndustryChartOfAccounts(company.id, company.industry, 1); // Use user ID 1 for now
-    } else {
-      // For general industry, activate basic accounts
-      await this.activateBasicChartOfAccounts(company.id, 1);
-    }
+    // Initialize company with clean data and essential setup
+    await this.initializeNewCompany(company.id, company.industry || 'general', userId || 1);
 
     return company;
+  }
+
+  // Initialize a new company with clean data and essential configurations
+  async initializeNewCompany(companyId: number, industryCode: string, userId: number): Promise<void> {
+    try {
+      // 1. Initialize Chart of Accounts based on industry template
+      if (industryCode && industryCode !== 'general') {
+        await this.activateIndustryChartOfAccounts(companyId, industryCode, userId);
+      } else {
+        await this.activateBasicChartOfAccounts(companyId, userId);
+      }
+
+      // 2. Initialize VAT types for the company
+      await this.initializeCompanyVatTypes(companyId);
+
+      // 3. Initialize company settings with defaults
+      await this.initializeCompanySettings(companyId);
+
+      // 4. Create initial bank account
+      await this.createDefaultBankAccount(companyId);
+
+      console.log(`✓ New company ${companyId} initialized with clean data and essential configurations`);
+    } catch (error) {
+      console.error(`Error initializing company ${companyId}:`, error);
+      throw error;
+    }
+  }
+
+  // Initialize VAT types for a new company
+  async initializeCompanyVatTypes(companyId: number): Promise<void> {
+    try {
+      // Get all system VAT types
+      const systemVatTypes = await db
+        .select()
+        .from(vatTypes)
+        .where(eq(vatTypes.isSystemType, true));
+
+      // Create company-specific VAT types based on system defaults
+      const companyVatTypes = systemVatTypes.map(vatType => ({
+        companyId,
+        code: vatType.code,
+        name: vatType.name,
+        rate: vatType.rate,
+        description: vatType.description,
+        isSystemType: false, // Company-specific copy
+        isActive: true,
+      }));
+
+      if (companyVatTypes.length > 0) {
+        await db.insert(vatTypes).values(companyVatTypes).onConflictDoNothing();
+        console.log(`✓ Initialized ${companyVatTypes.length} VAT types for company ${companyId}`);
+      }
+    } catch (error) {
+      console.error(`Error initializing VAT types for company ${companyId}:`, error);
+      // Don't throw - VAT types can be set up later if needed
+    }
+  }
+
+  // Initialize company settings with safe defaults
+  async initializeCompanySettings(companyId: number): Promise<void> {
+    try {
+      const defaultSettings = {
+        companyId,
+        companyName: '', // Will be filled from company data
+        fiscalYearStart: '01-01',
+        baseCurrency: 'ZAR',
+        emailNotifications: true,
+        smsNotifications: false,
+        autoBackup: true,
+        vatSubmissionFrequency: 'monthly',
+        vatSubmissionDate: '01',
+        companyType: 'private',
+        enableMultiCurrency: false,
+        defaultPaymentTerms: 30,
+        enableInventoryTracking: true,
+        enableProjectTracking: false,
+      };
+
+      await db.insert(companySettings).values(defaultSettings).onConflictDoNothing();
+      console.log(`✓ Initialized default settings for company ${companyId}`);
+    } catch (error) {
+      console.error(`Error initializing settings for company ${companyId}:`, error);
+      // Don't throw - settings can be configured later
+    }
+  }
+
+  // Create a default bank account for the new company
+  async createDefaultBankAccount(companyId: number): Promise<void> {
+    try {
+      const defaultBankAccount = {
+        companyId,
+        accountName: 'Primary Bank Account',
+        bankName: '',
+        accountNumber: '',
+        branchCode: '',
+        accountType: 'cheque' as const,
+        balance: '0.00',
+        currency: 'ZAR',
+        isActive: true,
+      };
+
+      await db.insert(bankAccounts).values(defaultBankAccount);
+      console.log(`✓ Created default bank account for company ${companyId}`);
+    } catch (error) {
+      console.error(`Error creating default bank account for company ${companyId}:`, error);
+      // Don't throw - bank account can be set up later
+    }
   }
 
   async updateCompany(id: number, updateData: Partial<InsertCompany>): Promise<Company | undefined> {
