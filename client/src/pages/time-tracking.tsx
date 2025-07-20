@@ -234,7 +234,7 @@ export default function TimeTrackingPage() {
         </div>
         <div className="text-right">
           <p className="text-2xl font-mono font-bold">{currentTime}</p>
-          <p className="text-sm text-muted-foreground">Current Time</p>
+          <p className="text-sm text-muted-foreground">System Clock</p>
         </div>
       </div>
 
