@@ -1691,17 +1691,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req as AuthenticatedRequest).user?.id;
       const accounts = await storage.getAllChartOfAccounts(companyId);
       
-      // Create audit log for Chart of Accounts access
-      if (userId) {
-        await storage.createAuditLog({
-          userId,
-          companyId,
-          action: 'chart_of_accounts_viewed',
-          resource: 'chart_of_accounts',
-          details: JSON.stringify({ companyId, accountCount: accounts.length }),
-          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-        });
-      }
+      // Create audit log for Chart of Accounts access (temporarily disabled)
+      // if (userId) {
+      //   await storage.createAuditLog({
+      //     userId,
+      //     companyId,
+      //     action: 'chart_of_accounts_viewed',
+      //     resource: 'chart_of_accounts',
+      //     details: JSON.stringify({ companyId, accountCount: accounts.length }),
+      //     ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+      //   });
+      // }
       
       res.json(accounts);
     } catch (error) {
@@ -1731,23 +1731,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertChartOfAccountSchema.parse({ ...req.body, companyId });
       const account = await storage.createChartOfAccount(validatedData);
       
-      // Create audit log for account creation
-      if (userId) {
-        await storage.createAuditLog({
-          userId,
-          companyId,
-          action: 'chart_of_accounts_created',
-          resource: 'chart_of_accounts',
-          resourceId: account.id,
-          details: JSON.stringify({ 
-            accountId: account.id, 
-            accountCode: account.accountCode, 
-            accountName: account.accountName,
-            companyId 
-          }),
-          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-        });
-      }
+      // Create audit log for account creation (temporarily disabled)
+      // if (userId) {
+      //   await storage.createAuditLog({
+      //     userId,
+      //     companyId,
+      //     action: 'chart_of_accounts_created',
+      //     resource: 'chart_of_accounts',
+      //     resourceId: account.id,
+      //     details: JSON.stringify({ 
+      //       accountId: account.id, 
+      //       accountCode: account.accountCode, 
+      //       accountName: account.accountName,
+      //       companyId 
+      //     }),
+      //     ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+      //   });
+      // }
       
       res.status(201).json(account);
     } catch (error) {
