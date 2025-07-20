@@ -3823,6 +3823,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Import VAT routes
+  const { registerVATRoutes } = await import("./vat-api");
+  registerVATRoutes(app);
+
   const httpServer = createServer(app);
   return httpServer;
 }

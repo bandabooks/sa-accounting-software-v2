@@ -28,6 +28,8 @@ import { insertEstimateSchema, insertEstimateItemSchema } from "@shared/schema";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils-invoice";
+import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
+import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
 
 // Create form schema combining estimate and items
 const estimateFormSchema = insertEstimateSchema.extend({
@@ -59,6 +61,8 @@ export default function EstimateCreate() {
           quantity: "1",
           unitPrice: "0.00",
           vatRate: "15",
+          vatInclusive: false,
+          vatAmount: "0.00",
           total: "0.00",
         },
       ],

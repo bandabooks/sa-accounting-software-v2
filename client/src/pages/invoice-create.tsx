@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CustomerSelect } from "@/components/CustomerSelect";
 import { ProductServiceSelect } from "@/components/ProductServiceSelect";
 import { VatRateSelect, VatFieldWrapper } from "@/components/vat-management/vat-conditional-fields";
+import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
+import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
 import type { InsertInvoice, InsertInvoiceItem, Customer, Product } from "@shared/schema";
 
 interface InvoiceItem {
@@ -22,6 +24,8 @@ interface InvoiceItem {
   quantity: string;
   unitPrice: string;
   vatRate: string;
+  vatInclusive: boolean;
+  vatAmount: string;
 }
 
 export default function InvoiceCreate() {
@@ -41,7 +45,7 @@ export default function InvoiceCreate() {
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
-    { productId: undefined, description: "", quantity: "1", unitPrice: "0", vatRate: "15" }
+    { productId: undefined, description: "", quantity: "1", unitPrice: "0", vatRate: "15", vatInclusive: false, vatAmount: "0.00" }
   ]);
 
   const { data: customers } = useQuery({

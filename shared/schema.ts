@@ -34,6 +34,8 @@ export const companies = pgTable("companies", {
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   industry: text("industry").default("general"), // retail, services, manufacturing, construction, nonprofit, technology, healthcare, consulting, trading, agriculture
   industryTemplate: text("industry_template").default("general"), // COA template used
+  vatInclusivePricing: boolean("vat_inclusive_pricing").default(false), // Whether prices include VAT
+  defaultVatRate: decimal("default_vat_rate", { precision: 5, scale: 2 }).default("15.00"), // Default VAT rate for the company
   settings: jsonb("settings").default({}),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -104,6 +106,8 @@ export const invoiceItems = pgTable("invoice_items", {
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatInclusive: boolean("vat_inclusive").default(false), // Whether the unit price includes VAT
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -138,6 +142,8 @@ export const estimateItems = pgTable("estimate_items", {
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatInclusive: boolean("vat_inclusive").default(false), // Whether the unit price includes VAT
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -152,6 +158,8 @@ export const expenses = pgTable("expenses", {
   description: text("description").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   category: text("category").notNull(), // office_supplies, travel, utilities, etc.
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatInclusive: boolean("vat_inclusive").default(false), // Whether amount includes VAT
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   expenseDate: timestamp("expense_date").notNull(),
   isDeductible: boolean("is_deductible").default(true),
@@ -1366,6 +1374,9 @@ export const journalEntryLines = pgTable("journal_entry_lines", {
   description: text("description"),
   debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }).default("0.00"),
   creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).default("0.00"),
+  vatInclusive: boolean("vat_inclusive").default(false),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).default("0.00"),
   reference: varchar("reference", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
