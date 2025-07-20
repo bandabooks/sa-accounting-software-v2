@@ -108,10 +108,12 @@ function NavigationGroup({ group, location, userPermissions, isExpanded, onToggl
     return (
       <Link
         href={item.path}
-        className={`sidebar-link ${isActive ? "active" : ""}`}
+        className={`flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors ${
+          isActive ? "bg-primary text-white hover:bg-primary/90" : ""
+        }`}
       >
         <Icon size={18} />
-        {item.label}
+        <span className="font-medium">{item.label}</span>
       </Link>
     );
   }
@@ -143,10 +145,12 @@ function NavigationGroup({ group, location, userPermissions, isExpanded, onToggl
               <Link
                 key={item.path}
                 href={item.path}
-                className={`sidebar-sublink ${isActive ? "active" : ""}`}
+                className={`flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors ${
+                  isActive ? "bg-primary/10 text-primary font-medium" : ""
+                }`}
               >
                 <Icon size={16} />
-                {item.label}
+                <span>{item.label}</span>
               </Link>
             );
           })}
