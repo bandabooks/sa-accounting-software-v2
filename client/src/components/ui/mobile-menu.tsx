@@ -177,12 +177,7 @@ export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
   const { user } = useAuth();
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    sales: true,
-    accounting: true,
-    vat: true,
-    reports: true
-  });
+  const [expandedGroup, setExpandedGroup] = useState<string | null>("sales");
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
   const userPermissions = user?.permissions || [
@@ -194,10 +189,8 @@ export default function MobileMenu() {
   ];
 
   const toggleGroup = (groupId: string) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId]
-    }));
+    // If clicking the same group, collapse it. Otherwise, expand the new group
+    setExpandedGroup(prev => prev === groupId ? null : groupId);
   };
 
   const handleItemClick = () => {
@@ -234,7 +227,7 @@ export default function MobileMenu() {
                   group={group}
                   location={location}
                   userPermissions={userPermissions}
-                  isExpanded={expandedGroups[group.id] || false}
+                  isExpanded={expandedGroup === group.id}
                   onToggle={() => toggleGroup(group.id)}
                   onItemClick={handleItemClick}
                 />
