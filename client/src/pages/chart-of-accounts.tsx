@@ -12,7 +12,9 @@ import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertChartOfAccountSchema, type ChartOfAccountWithBalance } from "@shared/schema";
-import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, Zap } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, Zap, Power, PowerOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -147,12 +149,40 @@ export default function ChartOfAccounts() {
     },
     onError: () => {
       toast({
-        title: "Error",
+        title: "Error", 
         description: "Failed to delete account",
         variant: "destructive",
       });
     },
   });
+
+  const toggleActivationMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
+      apiRequest("PATCH", `/api/chart-of-accounts/${id}/toggle`, { isActive }),
+    onSuccess: (_, { isActive }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
+      toast({
+        title: "Success",
+        description: `Account ${isActive ? 'activated' : 'deactivated'} successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message?.includes("permissions") 
+          ? "You don't have permission to manage account activation"
+          : "Failed to toggle account activation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleToggleActivation = (account: ChartOfAccountWithBalance) => {
+    toggleActivationMutation.mutate({
+      id: account.id,
+      isActive: !account.isActive,
+    });
+  };
 
   const createForm = useForm<AccountFormData>({
     resolver: zodResolver(accountFormSchema),
@@ -526,8 +556,14 @@ export default function ChartOfAccounts() {
                                   System
                                 </Badge>
                               )}
+                              <Badge 
+                                variant={account.isActive ? "default" : "secondary"} 
+                                className={`text-xs ${account.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
+                              >
+                                {account.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
                             </div>
-                            <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                            <h3 className={`font-medium ${account.isActive ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-500'}`}>
                               {account.accountName}
                             </h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -550,7 +586,29 @@ export default function ChartOfAccounts() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-3 ml-4">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={account.isActive}
+                                  onCheckedChange={() => handleToggleActivation(account)}
+                                  disabled={toggleActivationMutation.isPending}
+                                  className={account.isActive ? "data-[state=checked]:bg-green-500" : ""}
+                                />
+                                {account.isActive ? (
+                                  <Power className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <PowerOff className="h-4 w-4 text-gray-400" />
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{account.isActive ? 'Account is active - click to deactivate' : 'Account is inactive - click to activate'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Button
                           variant="ghost"
                           size="sm"

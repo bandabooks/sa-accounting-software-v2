@@ -317,11 +317,13 @@ export interface IStorage {
 
   // Chart of Accounts
   getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]>;
+  getActiveChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]>;
   getChartOfAccount(id: number): Promise<ChartOfAccount | undefined>;
   getChartOfAccountByCode(companyId: number, accountCode: string): Promise<ChartOfAccount | undefined>;
   createChartOfAccount(account: InsertChartOfAccount): Promise<ChartOfAccount>;
   updateChartOfAccount(id: number, account: Partial<InsertChartOfAccount>): Promise<ChartOfAccount | undefined>;
   deleteChartOfAccount(id: number): Promise<boolean>;
+  toggleAccountActivation(accountId: number, isActive: boolean, companyId: number): Promise<ChartOfAccount | undefined>;
   seedSouthAfricanChartOfAccounts(companyId: number): Promise<void>;
   
   // Journal Entries
@@ -1779,13 +1781,46 @@ export class DatabaseStorage implements IStorage {
   // Chart of Accounts Implementation
   async getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
     const accounts = await db.select().from(chartOfAccounts)
-      .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.isActive, true)))
+      .where(eq(chartOfAccounts.companyId, companyId))
       .orderBy(chartOfAccounts.accountCode);
     
     return await Promise.all(accounts.map(async (account) => ({
       ...account,
       currentBalance: await this.calculateAccountBalance(account.id),
     })));
+  }
+
+  async getActiveChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
+    const accounts = await db.select().from(chartOfAccounts)
+      .where(
+        and(
+          eq(chartOfAccounts.companyId, companyId),
+          eq(chartOfAccounts.isActive, true)
+        )
+      )
+      .orderBy(chartOfAccounts.accountCode);
+
+    return await Promise.all(accounts.map(async (account) => ({
+      ...account,
+      currentBalance: await this.calculateAccountBalance(account.id),
+    })));
+  }
+
+  async toggleAccountActivation(accountId: number, isActive: boolean, companyId: number): Promise<ChartOfAccount | undefined> {
+    const [updatedAccount] = await db
+      .update(chartOfAccounts)
+      .set({ 
+        isActive,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(chartOfAccounts.id, accountId),
+          eq(chartOfAccounts.companyId, companyId)
+        )
+      )
+      .returning();
+    return updatedAccount;
   }
 
   async getChartOfAccount(id: number): Promise<ChartOfAccount | undefined> {

@@ -1710,6 +1710,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/chart-of-accounts/active", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const accounts = await storage.getActiveChartOfAccounts(companyId);
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error fetching active chart of accounts:", error);
+      res.status(500).json({ error: "Failed to fetch active chart of accounts" });
+    }
+  });
+
+  app.patch("/api/chart-of-accounts/:id/toggle", authenticate, async (req, res) => {
+    try {
+      const accountId = parseInt(req.params.id);
+      const { isActive } = req.body;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = (req as AuthenticatedRequest).user?.id;
+
+      // Check user permissions (admin, accountant)
+      const user = (req as AuthenticatedRequest).user;
+      if (!user || !['admin', 'accountant', 'super_admin'].includes(user.role?.toLowerCase() || '')) {
+        return res.status(403).json({ error: "Insufficient permissions to manage account activation" });
+      }
+
+      const updatedAccount = await storage.toggleAccountActivation(accountId, isActive, companyId);
+      
+      if (!updatedAccount) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+
+      // Create audit log for account activation change (temporarily disabled)
+      // if (userId) {
+      //   await storage.createAuditLog({
+      //     userId,
+      //     companyId,
+      //     action: isActive ? 'account_activated' : 'account_deactivated',
+      //     resource: 'chart_of_accounts',
+      //     resourceId: accountId,
+      //     details: JSON.stringify({ 
+      //       accountId, 
+      //       accountCode: updatedAccount.accountCode,
+      //       accountName: updatedAccount.accountName,
+      //       previousStatus: !isActive,
+      //       newStatus: isActive,
+      //       companyId 
+      //     }),
+      //     ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+      //   });
+      // }
+
+      res.json(updatedAccount);
+    } catch (error) {
+      console.error("Error toggling account activation:", error);
+      res.status(500).json({ error: "Failed to toggle account activation" });
+    }
+  });
+
   app.get("/api/chart-of-accounts/:id", authenticate, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
