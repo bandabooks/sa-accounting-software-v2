@@ -34,6 +34,8 @@ import {
   industryTemplates,
   companyChartOfAccounts,
   companyUsers,
+  subscriptionPlans,
+  companySubscriptions,
   vatTypes,
   vatReports,
   vatTransactions,
@@ -119,6 +121,12 @@ import {
   type GeneralLedgerEntry,
   type Company,
   type InsertCompany,
+  type CompanyUser,
+  type InsertCompanyUser,
+  type SubscriptionPlan,
+  type InsertSubscriptionPlan,
+  type CompanySubscription,
+  type InsertCompanySubscription,
   type VatType,
   type InsertVatType,
   type VatReport,
@@ -1703,17 +1711,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Company Settings
-  async getCompanySettings(): Promise<any> {
+  async getCompanySettings(companyId?: number): Promise<any> {
+    if (companyId) {
+      const [settings] = await db
+        .select()
+        .from(companySettings)
+        .where(eq(companySettings.companyId, companyId));
+      return settings || null;
+    }
+    
     const [settings] = await db.select().from(companySettings);
     return settings || null;
   }
 
-  async updateCompanySettings(updates: Partial<any>): Promise<any> {
-    const existing = await this.getCompanySettings();
+  async updateCompanySettings(companyId: number, updates: Partial<any>): Promise<any> {
+    const existing = await this.getCompanySettings(companyId);
     if (!existing) {
-      // Use default company ID 2 for new settings
       const settingsData = {
-        companyId: 2,
+        companyId,
         companyName: updates.companyName || "My Company",
         ...updates
       };
@@ -1723,10 +1738,131 @@ export class DatabaseStorage implements IStorage {
     
     const [updated] = await db
       .update(companySettings)
-      .set(updates)
+      .set({ ...updates, updatedAt: new Date() })
       .where(eq(companySettings.id, existing.id))
       .returning();
     return updated;
+  }
+
+  // Subscription Plan Management (Super Admin Only)
+  async getAllSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    return await db
+      .select()
+      .from(subscriptionPlans)
+      .orderBy(subscriptionPlans.sortOrder, subscriptionPlans.name);
+  }
+
+  async getActiveSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    return await db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.isActive, true))
+      .orderBy(subscriptionPlans.sortOrder, subscriptionPlans.name);
+  }
+
+  async getSubscriptionPlan(id: number): Promise<SubscriptionPlan | undefined> {
+    const [plan] = await db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, id));
+    return plan;
+  }
+
+  async createSubscriptionPlan(planData: InsertSubscriptionPlan): Promise<SubscriptionPlan> {
+    const [plan] = await db
+      .insert(subscriptionPlans)
+      .values(planData)
+      .returning();
+    return plan;
+  }
+
+  async updateSubscriptionPlan(id: number, updates: Partial<InsertSubscriptionPlan>): Promise<SubscriptionPlan | undefined> {
+    const [plan] = await db
+      .update(subscriptionPlans)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(subscriptionPlans.id, id))
+      .returning();
+    return plan;
+  }
+
+  async deleteSubscriptionPlan(id: number): Promise<boolean> {
+    const result = await db
+      .update(subscriptionPlans)
+      .set({ isActive: false })
+      .where(eq(subscriptionPlans.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Company Subscription Management
+  async getCompanySubscription(companyId: number): Promise<CompanySubscription | undefined> {
+    const [subscription] = await db
+      .select({
+        subscription: companySubscriptions,
+        plan: subscriptionPlans,
+      })
+      .from(companySubscriptions)
+      .innerJoin(subscriptionPlans, eq(companySubscriptions.planId, subscriptionPlans.id))
+      .where(eq(companySubscriptions.companyId, companyId))
+      .orderBy(desc(companySubscriptions.createdAt))
+      .limit(1);
+    
+    return subscription ? { ...subscription.subscription, plan: subscription.plan } : undefined;
+  }
+
+  async createCompanySubscription(subscriptionData: InsertCompanySubscription): Promise<CompanySubscription> {
+    const [subscription] = await db
+      .insert(companySubscriptions)
+      .values(subscriptionData)
+      .returning();
+    return subscription;
+  }
+
+  async updateCompanySubscription(companyId: number, updates: Partial<InsertCompanySubscription>): Promise<CompanySubscription | undefined> {
+    const [subscription] = await db
+      .update(companySubscriptions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(companySubscriptions.companyId, companyId))
+      .returning();
+    return subscription;
+  }
+
+  // Super Admin Analytics
+  async getSystemAnalytics(): Promise<any> {
+    const totalCompanies = await db.select({ count: sql`count(*)` }).from(companies);
+    const activeCompanies = await db.select({ count: sql`count(*)` }).from(companies).where(eq(companies.isActive, true));
+    const totalUsers = await db.select({ count: sql`count(*)` }).from(users);
+    const activeUsers = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.isActive, true));
+    
+    // Subscription stats
+    const subscriptionStats = await db
+      .select({
+        plan: subscriptionPlans.displayName,
+        count: sql`count(*)`,
+      })
+      .from(companySubscriptions)
+      .innerJoin(subscriptionPlans, eq(companySubscriptions.planId, subscriptionPlans.id))
+      .where(eq(companySubscriptions.status, 'active'))
+      .groupBy(subscriptionPlans.displayName);
+
+    return {
+      totalCompanies: totalCompanies[0]?.count || 0,
+      activeCompanies: activeCompanies[0]?.count || 0,
+      totalUsers: totalUsers[0]?.count || 0,
+      activeUsers: activeUsers[0]?.count || 0,
+      subscriptionStats,
+    };
+  }
+
+  async checkUserAccess(userId: number, companyId: number): Promise<boolean> {
+    const [access] = await db
+      .select()
+      .from(companyUsers)
+      .where(and(
+        eq(companyUsers.userId, userId),
+        eq(companyUsers.companyId, companyId),
+        eq(companyUsers.isActive, true)
+      ));
+    return !!access;
   }
 
   // Inventory Transactions

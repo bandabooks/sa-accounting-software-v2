@@ -5,6 +5,7 @@ import {
   authenticate, 
   requirePermission, 
   requireRole, 
+  requireSuperAdmin,
   hashPassword, 
   verifyPassword, 
   generateSessionToken, 
@@ -47,6 +48,8 @@ import {
   insertCashFlowForecastLineSchema,
   insertAdvancedReportSchema,
   insertBankReconciliationItemSchema,
+  insertSubscriptionPlanSchema,
+  insertCompanySubscriptionSchema,
   type LoginRequest,
   type ChangePasswordRequest
 } from "@shared/schema";
@@ -1545,10 +1548,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Company Settings routes
-  app.get('/api/settings', authenticate, async (req, res) => {
+  // Company Settings routes - Context-aware
+  app.get('/api/settings/company', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const settings = await storage.getCompanySettings();
+      const companyId = req.user.companyId;
+      const settings = await storage.getCompanySettings(companyId);
       res.json(settings);
     } catch (error) {
       console.error('Error fetching company settings:', error);
@@ -1556,10 +1560,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/settings', authenticate, async (req, res) => {
+  app.put('/api/settings/company', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      const companyId = req.user.companyId;
       const settingsData = req.body;
-      const settings = await storage.updateCompanySettings(settingsData);
+      const settings = await storage.updateCompanySettings(companyId, settingsData);
+      res.json(settings);
+    } catch (error) {
+      console.error('Error updating company settings:', error);
+      res.status(500).json({ error: 'Failed to update company settings' });
+    }
+  });
+
+  // Company-specific settings by ID (for editing specific companies)
+  app.get('/api/companies/:id/settings', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      // Verify user has access to this company
+      const hasAccess = await storage.checkUserAccess(userId, companyId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this company" });
+      }
+      
+      const settings = await storage.getCompanySettings(companyId);
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+      res.status(500).json({ error: 'Failed to fetch company settings' });
+    }
+  });
+
+  app.put('/api/companies/:id/settings', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      // Verify user has access to this company
+      const hasAccess = await storage.checkUserAccess(userId, companyId);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this company" });
+      }
+      
+      const settingsData = req.body;
+      const settings = await storage.updateCompanySettings(companyId, settingsData);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'company_settings', companyId, 'Updated company settings');
+      
       res.json(settings);
     } catch (error) {
       console.error('Error updating company settings:', error);
@@ -2206,6 +2254,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating company VAT settings:", error);
       res.status(500).json({ message: "Failed to update VAT settings" });
+    }
+  });
+
+  // Super Admin Routes
+  
+  // System Analytics
+  app.get("/api/super-admin/analytics", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const analytics = await storage.getSystemAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Failed to fetch system analytics:", error);
+      res.status(500).json({ message: "Failed to fetch system analytics" });
+    }
+  });
+
+  // Subscription Plans Management
+  app.get("/api/super-admin/subscription-plans", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const plans = await storage.getAllSubscriptionPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Failed to fetch subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  app.post("/api/super-admin/subscription-plans", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const planData = insertSubscriptionPlanSchema.parse(req.body);
+      const plan = await storage.createSubscriptionPlan(planData);
+      
+      await logAudit(req.user!.id, 'CREATE', 'subscription_plan', plan.id, 'Created subscription plan');
+      
+      res.json(plan);
+    } catch (error) {
+      console.error("Failed to create subscription plan:", error);
+      res.status(500).json({ message: "Failed to create subscription plan" });
+    }
+  });
+
+  app.put("/api/super-admin/subscription-plans/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const updates = insertSubscriptionPlanSchema.partial().parse(req.body);
+      const plan = await storage.updateSubscriptionPlan(planId, updates);
+      
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      await logAudit(req.user!.id, 'UPDATE', 'subscription_plan', plan.id, 'Updated subscription plan');
+      
+      res.json(plan);
+    } catch (error) {
+      console.error("Failed to update subscription plan:", error);
+      res.status(500).json({ message: "Failed to update subscription plan" });
+    }
+  });
+
+  app.delete("/api/super-admin/subscription-plans/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const success = await storage.deleteSubscriptionPlan(planId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      await logAudit(req.user!.id, 'DELETE', 'subscription_plan', planId, 'Deleted subscription plan');
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete subscription plan:", error);
+      res.status(500).json({ message: "Failed to delete subscription plan" });
+    }
+  });
+
+  // User Management (Super Admin)
+  app.get("/api/super-admin/users", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Remove sensitive data
+      const sanitizedUsers = users.map(user => ({
+        ...user,
+        password: undefined,
+        twoFactorSecret: undefined
+      }));
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Failed to fetch all users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Company Management (Super Admin)
+  app.get("/api/super-admin/companies", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companies = await storage.getAllCompanies();
+      res.json(companies);
+    } catch (error) {
+      console.error("Failed to fetch all companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  app.put("/api/super-admin/companies/:id/subscription", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const subscriptionData = insertCompanySubscriptionSchema.parse({
+        ...req.body,
+        companyId
+      });
+      
+      const subscription = await storage.createCompanySubscription(subscriptionData);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'company_subscription', companyId, 'Updated company subscription');
+      
+      res.json(subscription);
+    } catch (error) {
+      console.error("Failed to update company subscription:", error);
+      res.status(500).json({ message: "Failed to update company subscription" });
+    }
+  });
+
+  // User Impersonation (Super Admin)
+  app.post("/api/super-admin/impersonate/:userId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const targetUserId = parseInt(req.params.userId);
+      const targetUser = await storage.getUser(targetUserId);
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Generate impersonation token
+      const impersonationToken = generateJWT({
+        userId: targetUser.id,
+        impersonatedBy: req.user!.id,
+        type: 'impersonation'
+      }, '2h');
+      
+      await logAudit(req.user!.id, 'IMPERSONATE', 'user', targetUserId, `Impersonated user ${targetUser.username}`);
+      
+      res.json({
+        token: impersonationToken,
+        user: {
+          id: targetUser.id,
+          username: targetUser.username,
+          name: targetUser.name,
+          email: targetUser.email,
+          role: targetUser.role
+        }
+      });
+    } catch (error) {
+      console.error("Failed to impersonate user:", error);
+      res.status(500).json({ message: "Failed to impersonate user" });
+    }
+  });
+
+  // Public Subscription Plans (for company admins to view)
+  app.get("/api/subscription-plans", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const plans = await storage.getActiveSubscriptionPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Failed to fetch subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  // Company Subscription Management
+  app.get("/api/company/subscription", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No active company" });
+      }
+      
+      const subscription = await storage.getCompanySubscription(companyId);
+      res.json(subscription);
+    } catch (error) {
+      console.error("Failed to fetch company subscription:", error);
+      res.status(500).json({ message: "Failed to fetch company subscription" });
+    }
+  });
+
+  app.post("/api/company/subscription/request", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No active company" });
+      }
+      
+      const { planId, billingPeriod } = req.body;
+      
+      // This would typically create a subscription request/order
+      // For now, we'll log the request
+      await logAudit(req.user!.id, 'REQUEST', 'subscription_change', planId, `Requested subscription change to plan ${planId} for company ${companyId}`);
+      
+      res.json({ message: "Subscription change request submitted successfully" });
+    } catch (error) {
+      console.error("Failed to request subscription change:", error);
+      res.status(500).json({ message: "Failed to request subscription change" });
     }
   });
 

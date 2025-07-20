@@ -84,7 +84,17 @@ const navigationGroups = [
     icon: Building2,
     items: [
       { path: "/companies", label: "Companies", icon: Building2, permission: "COMPANY_VIEW" },
+      { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null },
       { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW" }
+    ]
+  },
+  {
+    id: "super-admin",
+    label: "Super Admin",
+    icon: Settings,
+    requiredRole: "super_admin",
+    items: [
+      { path: "/super-admin", label: "Super Admin Dashboard", icon: Settings, requiredRole: "super_admin" }
     ]
   }
 ];
@@ -93,13 +103,25 @@ interface NavigationGroupProps {
   group: typeof navigationGroups[0];
   location: string;
   userPermissions: string[];
+  userRole: string;
   isExpanded: boolean;
   onToggle: () => void;
 }
 
-function NavigationGroup({ group, location, userPermissions, isExpanded, onToggle }: NavigationGroupProps) {
-  // Temporarily show all items - permissions will be handled later
-  const visibleItems = group.items;
+function NavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle }: NavigationGroupProps) {
+  // Check if group should be visible based on role requirements
+  if (group.requiredRole && userRole !== group.requiredRole) {
+    return null;
+  }
+
+  // Filter items based on permissions and role requirements
+  const visibleItems = group.items.filter(item => {
+    if (item.requiredRole && userRole !== item.requiredRole) {
+      return false;
+    }
+    // Temporarily show all items - permissions will be handled later
+    return true;
+  });
 
   if (visibleItems.length === 0) return null;
 
@@ -210,6 +232,7 @@ export default function Sidebar() {
               group={group}
               location={location}
               userPermissions={userPermissions}
+              userRole={user?.role || ""}
               isExpanded={expandedGroup === group.id}
               onToggle={() => toggleGroup(group.id)}
             />

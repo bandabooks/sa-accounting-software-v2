@@ -180,7 +180,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
-  role: text("role").notNull().default("admin"), // admin, manager, employee, accountant
+  role: text("role").notNull().default("admin"), // super_admin, admin, manager, employee, accountant
   permissions: text("permissions").array().default([]), // Array of permission strings
   activeCompanyId: integer("active_company_id"), // Currently active company for this user
   isActive: boolean("is_active").default(true),
@@ -214,6 +214,43 @@ export const userRoles = pgTable("user_roles", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Subscription Plans Table
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(),
+  annualPrice: decimal("annual_price", { precision: 10, scale: 2 }).notNull(),
+  features: jsonb("features").default([]), // Array of feature names
+  limits: jsonb("limits").default({}), // Object with limits like {users: 5, invoices: 100}
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Company Subscriptions Table
+export const companySubscriptions = pgTable("company_subscriptions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  planId: integer("plan_id").notNull().references(() => subscriptionPlans.id),
+  status: text("status").notNull().default("active"), // active, suspended, cancelled, expired
+  billingPeriod: text("billing_period").notNull().default("monthly"), // monthly, annual
+  startDate: timestamp("start_date").notNull().defaultNow(),
+  endDate: timestamp("end_date").notNull(),
+  autoRenew: boolean("auto_renew").default(true),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method"), // card, bank_transfer, etc.
+  lastPaymentDate: timestamp("last_payment_date"),
+  nextBillingDate: timestamp("next_billing_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("company_subscriptions_company_idx").on(table.companyId),
+  planIdx: index("company_subscriptions_plan_idx").on(table.planId),
+}));
 
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
@@ -626,6 +663,12 @@ export type InsertCompany = typeof companies.$inferInsert;
 export type CompanyUser = typeof companyUsers.$inferSelect;
 export type InsertCompanyUser = typeof companyUsers.$inferInsert;
 
+// Subscription Types
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export type CompanySubscription = typeof companySubscriptions.$inferSelect;
+export type InsertCompanySubscription = typeof companySubscriptions.$inferInsert;
+
 // Multi-Company Schemas
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
@@ -636,6 +679,19 @@ export const insertCompanySchema = createInsertSchema(companies).omit({
 export const insertCompanyUserSchema = createInsertSchema(companyUsers).omit({
   id: true,
   joinedAt: true,
+});
+
+// Subscription Schemas
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCompanySubscriptionSchema = createInsertSchema(companySubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Company Relations

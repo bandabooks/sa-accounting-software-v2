@@ -41,6 +41,8 @@ import Budgeting from "@/pages/budgeting";
 import CashFlowForecasting from "@/pages/cash-flow-forecasting";
 import BankReconciliation from "@/pages/bank-reconciliation";
 import VatManagement from "@/pages/vat-management";
+import SuperAdminDashboard from "@/pages/super-admin-dashboard";
+import Subscription from "@/pages/subscription";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -217,6 +219,16 @@ function AuthenticatedApp() {
         <Route path="/vat-management">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <VatManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/super-admin">
+          <ProtectedRoute requiredRole="super_admin">
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/subscription">
+          <ProtectedRoute>
+            <Subscription />
           </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />

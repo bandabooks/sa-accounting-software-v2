@@ -69,13 +69,25 @@ export const PERMISSIONS = {
   SETTINGS_VIEW: 'settings:view',
   SETTINGS_UPDATE: 'settings:update',
   AUDIT_VIEW: 'audit:view',
+  
+  // Super Admin permissions
+  SUPER_ADMIN: 'super_admin:access',
+  MANAGE_ALL_COMPANIES: 'super_admin:manage_companies',
+  MANAGE_ALL_USERS: 'super_admin:manage_users',
+  MANAGE_SUBSCRIPTION_PLANS: 'super_admin:manage_plans',
+  VIEW_SYSTEM_ANALYTICS: 'super_admin:analytics',
+  IMPERSONATE_USERS: 'super_admin:impersonate',
 } as const;
 
 // Role definitions with permissions
 export const ROLES = {
+  super_admin: {
+    name: 'Super Administrator',
+    permissions: Object.values(PERMISSIONS),
+  },
   admin: {
     name: 'Administrator',
-    permissions: Object.values(PERMISSIONS),
+    permissions: Object.values(PERMISSIONS).filter(p => !p.startsWith('super_admin:')),
   },
   manager: {
     name: 'Manager',
@@ -293,6 +305,21 @@ export const requireRole = (role: string) => {
 
     if (req.user.role !== role) {
       return res.status(403).json({ message: 'Insufficient role' });
+    }
+
+    next();
+  };
+};
+
+// Super Admin middleware
+export const requireSuperAdmin = () => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Super admin access required' });
     }
 
     next();
