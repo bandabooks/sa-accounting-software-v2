@@ -4,7 +4,8 @@ import {
   Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, 
   Settings, TrendingUp, Package, Building, Archive, Building2, BookOpen, 
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
-  DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield
+  DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
+  Briefcase, FolderOpen, CheckSquare, Clock
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -62,8 +63,18 @@ const navigationGroups = [
     ]
   },
   {
+    id: "projects",
+    label: "Project Management",
+    icon: Briefcase,
+    items: [
+      { path: "/projects", label: "Projects", icon: FolderOpen, permission: "PROJECTS_VIEW" },
+      { path: "/tasks", label: "Tasks", icon: CheckSquare, permission: "TASKS_VIEW" },
+      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW" }
+    ]
+  },
+  {
     id: "vat",
-    label: "VAT Management",
+    label: "VAT Management", 
     icon: ReceiptText,
     items: [
       { path: "/vat-management", label: "VAT Management", icon: ReceiptText, permission: "VAT_VIEW" }

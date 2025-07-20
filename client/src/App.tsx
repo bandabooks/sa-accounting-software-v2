@@ -50,6 +50,9 @@ import Subscription from "@/pages/subscription";
 import SubscriptionPayment from "@/pages/subscription-payment";
 import PaymentSuccess from "@/pages/payment-success";
 import PaymentCancel from "@/pages/payment-cancel";
+import Projects from "@/pages/projects";
+import Tasks from "@/pages/tasks";
+import TimeTracking from "@/pages/time-tracking";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -73,6 +76,11 @@ const PERMISSIONS = {
   JOURNAL_ENTRIES_VIEW: 'journal_entries:view',
   BANKING_VIEW: 'banking:view',
   GENERAL_LEDGER_VIEW: 'general_ledger:view',
+  PROJECTS_VIEW: 'projects:view',
+  PROJECTS_CREATE: 'projects:create',
+  TASKS_VIEW: 'tasks:view',
+  TASKS_CREATE: 'tasks:create',
+  TIME_TRACKING_VIEW: 'time_tracking:view',
 } as const;
 
 function AuthenticatedApp() {
@@ -226,6 +234,21 @@ function AuthenticatedApp() {
         <Route path="/vat-management">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <VatManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/projects">
+          <ProtectedRoute permission={PERMISSIONS.PROJECTS_VIEW}>
+            <Projects />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/tasks">
+          <ProtectedRoute permission={PERMISSIONS.TASKS_VIEW}>
+            <Tasks />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/time-tracking">
+          <ProtectedRoute permission={PERMISSIONS.TIME_TRACKING_VIEW}>
+            <TimeTracking />
           </ProtectedRoute>
         </Route>
         <Route path="/super-admin">

@@ -1850,3 +1850,227 @@ export const SOUTH_AFRICAN_CHART_OF_ACCOUNTS = [
   { accountCode: "8002", accountName: "Deferred Tax", accountType: "Expense", category: "Tax" },
   { accountCode: "8100", accountName: "Income Tax Payable", accountType: "Liability", category: "Tax" },
 ] as const;
+
+// Project Management Tables
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  customerId: integer("customer_id").references(() => customers.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 20 }).default("active"), // active, on_hold, completed, cancelled
+  priority: varchar("priority", { length: 20 }).default("medium"), // low, medium, high, urgent
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  estimatedHours: decimal("estimated_hours", { precision: 10, scale: 2 }),
+  actualHours: decimal("actual_hours", { precision: 10, scale: 2 }).default("0"),
+  budgetAmount: decimal("budget_amount", { precision: 10, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 10, scale: 2 }).default("0"),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  isInternal: boolean("is_internal").default(false),
+  projectManagerId: integer("project_manager_id").references(() => users.id),
+  color: varchar("color", { length: 7 }).default("#3B82F6"), // Hex color for UI
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  companyIdx: index("projects_company_idx").on(table.companyId),
+  statusIdx: index("projects_status_idx").on(table.status),
+  customerIdx: index("projects_customer_idx").on(table.customerId),
+}));
+
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  projectId: integer("project_id").references(() => projects.id), // nullable for standalone tasks
+  customerId: integer("customer_id").references(() => customers.id), // nullable for internal tasks
+  parentTaskId: integer("parent_task_id").references(() => tasks.id), // for subtasks
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 20 }).default("todo"), // todo, in_progress, review, completed, cancelled
+  priority: varchar("priority", { length: 20 }).default("medium"), // low, medium, high, urgent
+  assignedToId: integer("assigned_to_id").references(() => users.id),
+  startDate: date("start_date"),
+  dueDate: date("due_date"),
+  completedDate: date("completed_date"),
+  estimatedHours: decimal("estimated_hours", { precision: 10, scale: 2 }),
+  actualHours: decimal("actual_hours", { precision: 10, scale: 2 }).default("0"),
+  isInternal: boolean("is_internal").default(false),
+  isBillable: boolean("is_billable").default(true),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  progress: integer("progress").default(0), // 0-100 percentage
+  tags: jsonb("tags"), // array of tags
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  companyIdx: index("tasks_company_idx").on(table.companyId),
+  statusIdx: index("tasks_status_idx").on(table.status),
+  projectIdx: index("tasks_project_idx").on(table.projectId),
+  assignedIdx: index("tasks_assigned_idx").on(table.assignedToId),
+}));
+
+export const timeEntries = pgTable("time_entries", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  projectId: integer("project_id").references(() => projects.id),
+  taskId: integer("task_id").references(() => tasks.id),
+  customerId: integer("customer_id").references(() => customers.id),
+  description: text("description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // in seconds
+  isBillable: boolean("is_billable").default(true),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  amount: decimal("amount", { precision: 10, scale: 2 }),
+  isRunning: boolean("is_running").default(false), // for active timers
+  invoiceId: integer("invoice_id").references(() => invoices.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  companyIdx: index("time_entries_company_idx").on(table.companyId),
+  userIdx: index("time_entries_user_idx").on(table.userId),
+  projectIdx: index("time_entries_project_idx").on(table.projectId),
+  taskIdx: index("time_entries_task_idx").on(table.taskId),
+  runningIdx: index("time_entries_running_idx").on(table.isRunning),
+}));
+
+export const projectMembers = pgTable("project_members", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  role: varchar("role", { length: 50 }).default("member"), // owner, manager, member, viewer
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueProjectUser: unique().on(table.projectId, table.userId),
+}));
+
+export const taskComments = pgTable("task_comments", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").references(() => tasks.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").default(false), // client can't see internal comments
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const projectFiles = pgTable("project_files", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id),
+  taskId: integer("task_id").references(() => tasks.id),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  originalName: varchar("original_name", { length: 255 }).notNull(),
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  isPublic: boolean("is_public").default(false), // client can access
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const projectTemplates = pgTable("project_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  isPublic: boolean("is_public").default(false), // available to all companies
+  templateData: jsonb("template_data").notNull(), // project structure, tasks, etc.
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Insert schemas for project management
+export const insertProjectSchema = createInsertSchema(projects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaskSchema = createInsertSchema(tasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({
+  id: true,
+  addedAt: true,
+});
+
+export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProjectFileSchema = createInsertSchema(projectFiles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProjectTemplateSchema = createInsertSchema(projectTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for project management
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+export type TimeEntry = typeof timeEntries.$inferSelect;
+export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
+
+export type ProjectMember = typeof projectMembers.$inferSelect;
+export type InsertProjectMember = z.infer<typeof insertProjectMemberSchema>;
+
+export type TaskComment = typeof taskComments.$inferSelect;
+export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
+
+export type ProjectFile = typeof projectFiles.$inferSelect;
+export type InsertProjectFile = z.infer<typeof insertProjectFileSchema>;
+
+export type ProjectTemplate = typeof projectTemplates.$inferSelect;
+export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
+
+// Extended types for API responses
+export type ProjectWithDetails = Project & {
+  customer?: Customer;
+  projectManager?: User;
+  members?: ProjectMember[];
+  tasks?: Task[];
+  totalHours?: number;
+  completedTasks?: number;
+  totalTasks?: number;
+};
+
+export type TaskWithDetails = Task & {
+  project?: Project;
+  customer?: Customer;
+  assignedTo?: User;
+  comments?: TaskComment[];
+  timeEntries?: TimeEntry[];
+  files?: ProjectFile[];
+  totalTimeSpent?: number;
+};
+
+export type TimeEntryWithDetails = TimeEntry & {
+  project?: Project;
+  task?: Task;
+  user?: User;
+  customer?: Customer;
+};

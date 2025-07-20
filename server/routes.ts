@@ -50,6 +50,11 @@ import {
   insertBankReconciliationItemSchema,
   insertSubscriptionPlanSchema,
   insertCompanySubscriptionSchema,
+  insertProjectSchema,
+  insertTaskSchema,
+  insertTimeEntrySchema,
+  insertProjectMemberSchema,
+  insertTaskCommentSchema,
   type LoginRequest,
   type ChangePasswordRequest
 } from "@shared/schema";
@@ -3295,6 +3300,526 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating company:", error);
       res.status(500).json({ message: "Failed to create company" });
+    }
+  });
+
+  // Project Management Routes
+  // Projects
+  app.get("/api/projects", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const projects = await storage.getProjects(companyId);
+      res.json(projects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  app.get("/api/projects/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const projectId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      console.error("Error fetching project:", error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  app.post("/api/projects", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const validatedData = insertProjectSchema.parse({
+        ...req.body,
+        companyId,
+        createdBy: req.user.id
+      });
+      
+      const project = await storage.createProject(validatedData);
+      
+      await logAudit(
+        req.user.id,
+        'create',
+        'Project',
+        project.id,
+        `Created project: ${project.name}`,
+        companyId
+      );
+      
+      res.status(201).json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating project:", error);
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
+  app.put("/api/projects/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const projectId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const validatedData = insertProjectSchema.partial().parse(req.body);
+      const project = await storage.updateProject(projectId, validatedData, companyId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      await logAudit(
+        req.user.id,
+        'update',
+        'Project',
+        project.id,
+        `Updated project: ${project.name}`,
+        companyId
+      );
+      
+      res.json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating project:", error);
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  app.delete("/api/projects/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const projectId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const success = await storage.deleteProject(projectId, companyId);
+      if (!success) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      await logAudit(
+        req.user.id,
+        'delete',
+        'Project',
+        projectId,
+        `Deleted project`,
+        companyId
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
+  // Tasks
+  app.get("/api/tasks", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const tasks = await storage.getTasks(companyId, projectId);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.get("/api/tasks/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const taskId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const task = await storage.getTask(taskId, companyId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      res.json(task);
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  app.post("/api/tasks", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const validatedData = insertTaskSchema.parse({
+        ...req.body,
+        companyId,
+        createdBy: req.user.id
+      });
+      
+      const task = await storage.createTask(validatedData);
+      
+      await logAudit(
+        req.user.id,
+        'create',
+        'Task',
+        task.id,
+        `Created task: ${task.title}`,
+        companyId
+      );
+      
+      res.status(201).json(task);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.put("/api/tasks/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const taskId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const validatedData = insertTaskSchema.partial().parse(req.body);
+      const task = await storage.updateTask(taskId, validatedData, companyId);
+      
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      await logAudit(
+        req.user.id,
+        'update',
+        'Task',
+        task.id,
+        `Updated task: ${task.title}`,
+        companyId
+      );
+      
+      res.json(task);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating task:", error);
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete("/api/tasks/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const taskId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const success = await storage.deleteTask(taskId, companyId);
+      if (!success) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      await logAudit(
+        req.user.id,
+        'delete',
+        'Task',
+        taskId,
+        `Deleted task`,
+        companyId
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Time Entries
+  app.get("/api/time-entries", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const taskId = req.query.taskId ? parseInt(req.query.taskId as string) : undefined;
+      
+      const timeEntries = await storage.getTimeEntries(companyId, userId, projectId, taskId);
+      res.json(timeEntries);
+    } catch (error) {
+      console.error("Error fetching time entries:", error);
+      res.status(500).json({ message: "Failed to fetch time entries" });
+    }
+  });
+
+  app.get("/api/time-entries/active", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const activeEntry = await storage.getActiveTimeEntry(userId, companyId);
+      res.json(activeEntry);
+    } catch (error) {
+      console.error("Error fetching active time entry:", error);
+      res.status(500).json({ message: "Failed to fetch active time entry" });
+    }
+  });
+
+  app.post("/api/time-entries", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const validatedData = insertTimeEntrySchema.parse({
+        ...req.body,
+        companyId,
+        userId: req.user.id
+      });
+      
+      const timeEntry = await storage.createTimeEntry(validatedData);
+      
+      await logAudit(
+        req.user.id,
+        'create',
+        'TimeEntry',
+        timeEntry.id,
+        `Started time tracking`,
+        companyId
+      );
+      
+      res.status(201).json(timeEntry);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating time entry:", error);
+      res.status(500).json({ message: "Failed to create time entry" });
+    }
+  });
+
+  app.put("/api/time-entries/:id/stop", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const timeEntryId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const timeEntry = await storage.stopTimeEntry(timeEntryId, companyId, new Date());
+      if (!timeEntry) {
+        return res.status(404).json({ message: "Time entry not found" });
+      }
+      
+      await logAudit(
+        req.user.id,
+        'update',
+        'TimeEntry',
+        timeEntry.id,
+        `Stopped time tracking`,
+        companyId
+      );
+      
+      res.json(timeEntry);
+    } catch (error) {
+      console.error("Error stopping time entry:", error);
+      res.status(500).json({ message: "Failed to stop time entry" });
+    }
+  });
+
+  app.put("/api/time-entries/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const timeEntryId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const validatedData = insertTimeEntrySchema.partial().parse(req.body);
+      const timeEntry = await storage.updateTimeEntry(timeEntryId, validatedData, companyId);
+      
+      if (!timeEntry) {
+        return res.status(404).json({ message: "Time entry not found" });
+      }
+      
+      await logAudit(
+        req.user.id,
+        'update',
+        'TimeEntry',
+        timeEntry.id,
+        `Updated time entry`,
+        companyId
+      );
+      
+      res.json(timeEntry);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating time entry:", error);
+      res.status(500).json({ message: "Failed to update time entry" });
+    }
+  });
+
+  app.delete("/api/time-entries/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const timeEntryId = parseInt(req.params.id);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const success = await storage.deleteTimeEntry(timeEntryId, companyId);
+      if (!success) {
+        return res.status(404).json({ message: "Time entry not found" });
+      }
+      
+      await logAudit(
+        req.user.id,
+        'delete',
+        'TimeEntry',
+        timeEntryId,
+        `Deleted time entry`,
+        companyId
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting time entry:", error);
+      res.status(500).json({ message: "Failed to delete time entry" });
+    }
+  });
+
+  // Task Comments
+  app.post("/api/tasks/:taskId/comments", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      const validatedData = insertTaskCommentSchema.parse({
+        ...req.body,
+        taskId,
+        userId: req.user.id
+      });
+      
+      const comment = await storage.createTaskComment(validatedData);
+      res.status(201).json(comment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating task comment:", error);
+      res.status(500).json({ message: "Failed to create task comment" });
+    }
+  });
+
+  app.get("/api/tasks/:taskId/comments", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      const comments = await storage.getTaskComments(taskId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching task comments:", error);
+      res.status(500).json({ message: "Failed to fetch task comments" });
+    }
+  });
+
+  // Project Members
+  app.post("/api/projects/:projectId/members", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const validatedData = insertProjectMemberSchema.parse({
+        ...req.body,
+        projectId
+      });
+      
+      const member = await storage.addProjectMember(validatedData);
+      res.status(201).json(member);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error adding project member:", error);
+      res.status(500).json({ message: "Failed to add project member" });
+    }
+  });
+
+  app.get("/api/projects/:projectId/members", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const members = await storage.getProjectMembers(projectId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching project members:", error);
+      res.status(500).json({ message: "Failed to fetch project members" });
+    }
+  });
+
+  app.delete("/api/projects/:projectId/members/:userId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const userId = parseInt(req.params.userId);
+      
+      const success = await storage.removeProjectMember(projectId, userId);
+      if (!success) {
+        return res.status(404).json({ message: "Project member not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing project member:", error);
+      res.status(500).json({ message: "Failed to remove project member" });
     }
   });
 

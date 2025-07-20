@@ -1,0 +1,554 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Plus, Play, Pause, Clock, Calendar, DollarSign, Trash2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { insertTimeEntrySchema, type TimeEntryWithDetails } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+
+const formSchema = insertTimeEntrySchema.omit({ companyId: true, userId: true });
+
+export default function TimeTrackingPage() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Update current time every second
+  useState(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    }, 1000);
+    return () => clearInterval(interval);
+  });
+
+  const { data: timeEntries = [], isLoading } = useQuery({
+    queryKey: ["/api/time-entries"],
+  });
+
+  const { data: activeTimeEntry } = useQuery({
+    queryKey: ["/api/time-entries/active"],
+  });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["/api/projects"],
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["/api/tasks"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      return await apiRequest("/api/time-entries", {
+        method: "POST",
+        body: JSON.stringify({
+          ...data,
+          startTime: new Date(),
+          isRunning: true,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      setIsDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Time tracking started",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start time tracking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const stopTimeMutation = useMutation({
+    mutationFn: async (timeEntryId: number) => {
+      return await apiRequest(`/api/time-entries/${timeEntryId}/stop`, {
+        method: "PUT",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      toast({
+        title: "Success",
+        description: "Time tracking stopped",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to stop time tracking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (timeEntryId: number) => {
+      return await apiRequest(`/api/time-entries/${timeEntryId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
+      toast({
+        title: "Success",
+        description: "Time entry deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete time entry",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      description: "",
+      isBillable: true,
+      hourlyRate: 0,
+    },
+  });
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (activeTimeEntry) {
+      toast({
+        title: "Active Time Entry",
+        description: "Please stop the current time entry before starting a new one",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate(values);
+  };
+
+  const handleStopTime = () => {
+    if (activeTimeEntry) {
+      stopTimeMutation.mutate(activeTimeEntry.id);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
+
+  const getActiveTimeDisplay = () => {
+    if (!activeTimeEntry) return null;
+    
+    const startTime = new Date(activeTimeEntry.startTime);
+    const currentTime = new Date();
+    const elapsedSeconds = Math.floor((currentTime.getTime() - startTime.getTime()) / 1000);
+    
+    return formatDuration(elapsedSeconds);
+  };
+
+  const totalTimeToday = timeEntries
+    .filter((entry: TimeEntryWithDetails) => {
+      const entryDate = new Date(entry.startTime);
+      const today = new Date();
+      return entryDate.toDateString() === today.toDateString() && !entry.isRunning;
+    })
+    .reduce((total: number, entry: TimeEntryWithDetails) => total + (entry.duration || 0), 0);
+
+  const totalBillableToday = timeEntries
+    .filter((entry: TimeEntryWithDetails) => {
+      const entryDate = new Date(entry.startTime);
+      const today = new Date();
+      return entryDate.toDateString() === today.toDateString() && entry.isBillable && !entry.isRunning;
+    })
+    .reduce((total: number, entry: TimeEntryWithDetails) => total + (entry.amount || 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Time Tracking</h1>
+          <p className="text-muted-foreground">
+            Track your time and manage work hours
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-mono font-bold">{currentTime}</p>
+          <p className="text-sm text-muted-foreground">Current Time</p>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Time</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {activeTimeEntry ? getActiveTimeDisplay() : "00:00:00"}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {activeTimeEntry ? "Currently tracking" : "No active tracking"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Time</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatTime(totalTimeToday)}</div>
+            <p className="text-xs text-muted-foreground">
+              Total tracked today
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R{totalBillableToday.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              Billable amount today
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Active Time Entry */}
+      {activeTimeEntry && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse" />
+                <div>
+                  <h3 className="font-medium text-lg">Currently Tracking</h3>
+                  <p className="text-muted-foreground">
+                    {activeTimeEntry.description || "No description"}
+                  </p>
+                  {activeTimeEntry.task && (
+                    <p className="text-sm text-muted-foreground">
+                      Task: {activeTimeEntry.task.title}
+                    </p>
+                  )}
+                  {activeTimeEntry.project && (
+                    <p className="text-sm text-muted-foreground">
+                      Project: {activeTimeEntry.project.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="text-right space-y-2">
+                <div className="text-3xl font-mono font-bold text-green-600">
+                  {getActiveTimeDisplay()}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleStopTime}
+                  disabled={stopTimeMutation.isPending}
+                >
+                  <Pause className="h-4 w-4 mr-2" />
+                  Stop Timer
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Start New Timer */}
+      {!activeTimeEntry && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Start New Timer</CardTitle>
+            <CardDescription>
+              Begin tracking time for a task or project
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-4">
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Play className="h-4 w-4 mr-2" />
+                    Start Timer
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Start Time Tracking</DialogTitle>
+                    <DialogDescription>
+                      Start tracking time for a task or project
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Input placeholder="What are you working on?" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="projectId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Project (Optional)</FormLabel>
+                              <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select project" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">No Project</SelectItem>
+                                  {projects.map((project: any) => (
+                                    <SelectItem key={project.id} value={project.id.toString()}>
+                                      {project.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="taskId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Task (Optional)</FormLabel>
+                              <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select task" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">No Task</SelectItem>
+                                  {tasks.map((task: any) => (
+                                    <SelectItem key={task.id} value={task.id.toString()}>
+                                      {task.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="isBillable"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Billable</FormLabel>
+                              <Select onValueChange={(value) => field.onChange(value === "true")} value={field.value ? "true" : "false"}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="true">Billable</SelectItem>
+                                  <SelectItem value="false">Non-billable</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="hourlyRate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Hourly Rate</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  step="0.01"
+                                  placeholder="0.00" 
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={createMutation.isPending}>
+                          <Play className="h-4 w-4 mr-2" />
+                          {createMutation.isPending ? "Starting..." : "Start Timer"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Time Entries */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Time Entries</CardTitle>
+          <CardDescription>
+            Your recent time tracking history
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {timeEntries.length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No time entries yet</h3>
+              <p className="text-muted-foreground">
+                Start your first timer to begin tracking time
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {timeEntries.slice(0, 10).map((entry: TimeEntryWithDetails) => (
+                <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{entry.description || "No description"}</h4>
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
+                      <span>{new Date(entry.startTime).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(entry.startTime).toLocaleTimeString()} - 
+                        {entry.endTime ? new Date(entry.endTime).toLocaleTimeString() : "Running"}
+                      </span>
+                      {entry.project && <span>Project: {entry.project.name}</span>}
+                      {entry.task && <span>Task: {entry.task.title}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {entry.duration ? formatTime(entry.duration) : "Running"}
+                      </div>
+                      {entry.isBillable && entry.amount && (
+                        <div className="text-sm text-muted-foreground">
+                          R{entry.amount.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {entry.isBillable && (
+                        <Badge variant="secondary">Billable</Badge>
+                      )}
+                      {!entry.isRunning && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteMutation.mutate(entry.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

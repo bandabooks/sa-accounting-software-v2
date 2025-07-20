@@ -50,6 +50,13 @@ import {
   bankReconciliationItems,
   SOUTH_AFRICAN_CHART_OF_ACCOUNTS,
   SOUTH_AFRICAN_VAT_TYPES,
+  projects,
+  tasks,
+  timeEntries,
+  projectMembers,
+  taskComments,
+  projectFiles,
+  projectTemplates,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -156,6 +163,23 @@ import {
   type InsertIndustryTemplate,
   type CompanyChartOfAccount,
   type InsertCompanyChartOfAccount,
+  type Project,
+  type InsertProject,
+  type Task,
+  type InsertTask,
+  type TimeEntry,
+  type InsertTimeEntry,
+  type ProjectMember,
+  type InsertProjectMember,
+  type TaskComment,
+  type InsertTaskComment,
+  type ProjectFile,
+  type InsertProjectFile,
+  type ProjectTemplate,
+  type InsertProjectTemplate,
+  type ProjectWithDetails,
+  type TaskWithDetails,
+  type TimeEntryWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -432,6 +456,39 @@ export interface IStorage {
   deleteBankReconciliationItem(id: number): Promise<boolean>;
   matchBankTransactions(reconciliationId: number): Promise<void>;
   getUnmatchedTransactions(companyId: number, bankAccountId: number): Promise<any[]>;
+
+  // Project Management
+  // Projects
+  getProjects(companyId: number): Promise<ProjectWithDetails[]>;
+  getProject(id: number, companyId: number): Promise<ProjectWithDetails | undefined>;
+  createProject(project: InsertProject): Promise<Project>;
+  updateProject(id: number, project: Partial<InsertProject>, companyId: number): Promise<Project | undefined>;
+  deleteProject(id: number, companyId: number): Promise<boolean>;
+  
+  // Tasks
+  getTasks(companyId: number, projectId?: number): Promise<TaskWithDetails[]>;
+  getTask(id: number, companyId: number): Promise<TaskWithDetails | undefined>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: number, task: Partial<InsertTask>, companyId: number): Promise<Task | undefined>;
+  deleteTask(id: number, companyId: number): Promise<boolean>;
+  
+  // Time Entries
+  getTimeEntries(companyId: number, userId?: number, projectId?: number, taskId?: number): Promise<TimeEntryWithDetails[]>;
+  getActiveTimeEntry(userId: number, companyId: number): Promise<TimeEntry | undefined>;
+  createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry>;
+  updateTimeEntry(id: number, entry: Partial<InsertTimeEntry>, companyId: number): Promise<TimeEntry | undefined>;
+  stopTimeEntry(id: number, companyId: number, endTime: Date): Promise<TimeEntry | undefined>;
+  deleteTimeEntry(id: number, companyId: number): Promise<boolean>;
+  
+  // Task Comments
+  createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+  getTaskComments(taskId: number): Promise<TaskComment[]>;
+  deleteTaskComment(id: number): Promise<boolean>;
+  
+  // Project Members
+  addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
+  removeProjectMember(projectId: number, userId: number): Promise<boolean>;
+  getProjectMembers(projectId: number): Promise<ProjectMember[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4635,6 +4692,453 @@ export class DatabaseStorage implements IStorage {
       console.error("Error generating aged payables:", error);
       throw error;
     }
+  }
+
+  // Project Management Methods
+  // Projects
+  async getProjects(companyId: number): Promise<ProjectWithDetails[]> {
+    const result = await db
+      .select({
+        id: projects.id,
+        companyId: projects.companyId,
+        customerId: projects.customerId,
+        name: projects.name,
+        description: projects.description,
+        status: projects.status,
+        priority: projects.priority,
+        startDate: projects.startDate,
+        endDate: projects.endDate,
+        estimatedHours: projects.estimatedHours,
+        actualHours: projects.actualHours,
+        budgetAmount: projects.budgetAmount,
+        actualCost: projects.actualCost,
+        hourlyRate: projects.hourlyRate,
+        isInternal: projects.isInternal,
+        projectManagerId: projects.projectManagerId,
+        color: projects.color,
+        createdBy: projects.createdBy,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+        customerName: customers.name,
+        projectManagerName: users.name,
+      })
+      .from(projects)
+      .leftJoin(customers, eq(projects.customerId, customers.id))
+      .leftJoin(users, eq(projects.projectManagerId, users.id))
+      .where(eq(projects.companyId, companyId))
+      .orderBy(desc(projects.createdAt));
+
+    // Get task counts for each project
+    const projectTasks = await db
+      .select({
+        projectId: tasks.projectId,
+        totalTasks: sql<number>`count(*)`,
+        completedTasks: sql<number>`count(case when ${tasks.status} = 'completed' then 1 end)`,
+      })
+      .from(tasks)
+      .where(eq(tasks.companyId, companyId))
+      .groupBy(tasks.projectId);
+
+    const taskMap = new Map(
+      projectTasks.map((t) => [t.projectId, t])
+    );
+
+    return result.map((project) => ({
+      ...project,
+      customer: project.customerName ? { name: project.customerName } : undefined,
+      projectManager: project.projectManagerName ? { name: project.projectManagerName } : undefined,
+      totalTasks: taskMap.get(project.id)?.totalTasks || 0,
+      completedTasks: taskMap.get(project.id)?.completedTasks || 0,
+    })) as ProjectWithDetails[];
+  }
+
+  async getProject(id: number, companyId: number): Promise<ProjectWithDetails | undefined> {
+    const [project] = await db
+      .select({
+        id: projects.id,
+        companyId: projects.companyId,
+        customerId: projects.customerId,
+        name: projects.name,
+        description: projects.description,
+        status: projects.status,
+        priority: projects.priority,
+        startDate: projects.startDate,
+        endDate: projects.endDate,
+        estimatedHours: projects.estimatedHours,
+        actualHours: projects.actualHours,
+        budgetAmount: projects.budgetAmount,
+        actualCost: projects.actualCost,
+        hourlyRate: projects.hourlyRate,
+        isInternal: projects.isInternal,
+        projectManagerId: projects.projectManagerId,
+        color: projects.color,
+        createdBy: projects.createdBy,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+        customerName: customers.name,
+        projectManagerName: users.name,
+      })
+      .from(projects)
+      .leftJoin(customers, eq(projects.customerId, customers.id))
+      .leftJoin(users, eq(projects.projectManagerId, users.id))
+      .where(and(eq(projects.id, id), eq(projects.companyId, companyId)));
+
+    if (!project) return undefined;
+
+    // Get project tasks
+    const projectTasks = await this.getTasks(companyId, project.id);
+
+    // Get project members
+    const members = await db
+      .select({
+        id: projectMembers.id,
+        projectId: projectMembers.projectId,
+        userId: projectMembers.userId,
+        role: projectMembers.role,
+        hourlyRate: projectMembers.hourlyRate,
+        addedAt: projectMembers.addedAt,
+        userName: users.name,
+      })
+      .from(projectMembers)
+      .leftJoin(users, eq(projectMembers.userId, users.id))
+      .where(eq(projectMembers.projectId, id));
+
+    return {
+      ...project,
+      customer: project.customerName ? { name: project.customerName } : undefined,
+      projectManager: project.projectManagerName ? { name: project.projectManagerName } : undefined,
+      tasks: projectTasks,
+      members: members as ProjectMember[],
+      totalTasks: projectTasks.length,
+      completedTasks: projectTasks.filter(t => t.status === 'completed').length,
+    } as ProjectWithDetails;
+  }
+
+  async createProject(project: InsertProject): Promise<Project> {
+    const [newProject] = await db.insert(projects).values(project).returning();
+    return newProject;
+  }
+
+  async updateProject(id: number, project: Partial<InsertProject>, companyId: number): Promise<Project | undefined> {
+    const [updated] = await db
+      .update(projects)
+      .set({ ...project, updatedAt: new Date() })
+      .where(and(eq(projects.id, id), eq(projects.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteProject(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(projects)
+      .where(and(eq(projects.id, id), eq(projects.companyId, companyId)));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Tasks
+  async getTasks(companyId: number, projectId?: number): Promise<TaskWithDetails[]> {
+    let whereCondition = eq(tasks.companyId, companyId);
+    if (projectId) {
+      whereCondition = and(whereCondition, eq(tasks.projectId, projectId));
+    }
+
+    const result = await db
+      .select({
+        id: tasks.id,
+        companyId: tasks.companyId,
+        projectId: tasks.projectId,
+        customerId: tasks.customerId,
+        parentTaskId: tasks.parentTaskId,
+        title: tasks.title,
+        description: tasks.description,
+        status: tasks.status,
+        priority: tasks.priority,
+        assignedToId: tasks.assignedToId,
+        startDate: tasks.startDate,
+        dueDate: tasks.dueDate,
+        completedDate: tasks.completedDate,
+        estimatedHours: tasks.estimatedHours,
+        actualHours: tasks.actualHours,
+        isInternal: tasks.isInternal,
+        isBillable: tasks.isBillable,
+        hourlyRate: tasks.hourlyRate,
+        progress: tasks.progress,
+        tags: tasks.tags,
+        createdBy: tasks.createdBy,
+        createdAt: tasks.createdAt,
+        updatedAt: tasks.updatedAt,
+        projectName: projects.name,
+        customerName: customers.name,
+        assignedToName: users.name,
+      })
+      .from(tasks)
+      .leftJoin(projects, eq(tasks.projectId, projects.id))
+      .leftJoin(customers, eq(tasks.customerId, customers.id))
+      .leftJoin(users, eq(tasks.assignedToId, users.id))
+      .where(whereCondition)
+      .orderBy(desc(tasks.createdAt));
+
+    // Get time entries for each task
+    const taskTimeEntries = await db
+      .select({
+        taskId: timeEntries.taskId,
+        totalTime: sql<number>`coalesce(sum(${timeEntries.duration}), 0)`,
+      })
+      .from(timeEntries)
+      .where(eq(timeEntries.companyId, companyId))
+      .groupBy(timeEntries.taskId);
+
+    const timeMap = new Map(
+      taskTimeEntries.map((t) => [t.taskId, t.totalTime])
+    );
+
+    return result.map((task) => ({
+      ...task,
+      project: task.projectName ? { name: task.projectName } : undefined,
+      customer: task.customerName ? { name: task.customerName } : undefined,
+      assignedTo: task.assignedToName ? { name: task.assignedToName } : undefined,
+      totalTimeSpent: timeMap.get(task.id) || 0,
+    })) as TaskWithDetails[];
+  }
+
+  async getTask(id: number, companyId: number): Promise<TaskWithDetails | undefined> {
+    const [task] = await db
+      .select({
+        id: tasks.id,
+        companyId: tasks.companyId,
+        projectId: tasks.projectId,
+        customerId: tasks.customerId,
+        parentTaskId: tasks.parentTaskId,
+        title: tasks.title,
+        description: tasks.description,
+        status: tasks.status,
+        priority: tasks.priority,
+        assignedToId: tasks.assignedToId,
+        startDate: tasks.startDate,
+        dueDate: tasks.dueDate,
+        completedDate: tasks.completedDate,
+        estimatedHours: tasks.estimatedHours,
+        actualHours: tasks.actualHours,
+        isInternal: tasks.isInternal,
+        isBillable: tasks.isBillable,
+        hourlyRate: tasks.hourlyRate,
+        progress: tasks.progress,
+        tags: tasks.tags,
+        createdBy: tasks.createdBy,
+        createdAt: tasks.createdAt,
+        updatedAt: tasks.updatedAt,
+        projectName: projects.name,
+        customerName: customers.name,
+        assignedToName: users.name,
+      })
+      .from(tasks)
+      .leftJoin(projects, eq(tasks.projectId, projects.id))
+      .leftJoin(customers, eq(tasks.customerId, customers.id))
+      .leftJoin(users, eq(tasks.assignedToId, users.id))
+      .where(and(eq(tasks.id, id), eq(tasks.companyId, companyId)));
+
+    if (!task) return undefined;
+
+    // Get comments
+    const comments = await db
+      .select({
+        id: taskComments.id,
+        taskId: taskComments.taskId,
+        userId: taskComments.userId,
+        content: taskComments.content,
+        isInternal: taskComments.isInternal,
+        createdAt: taskComments.createdAt,
+        updatedAt: taskComments.updatedAt,
+        userName: users.name,
+      })
+      .from(taskComments)
+      .leftJoin(users, eq(taskComments.userId, users.id))
+      .where(eq(taskComments.taskId, id))
+      .orderBy(taskComments.createdAt);
+
+    // Get time entries
+    const taskTimeEntries = await db
+      .select()
+      .from(timeEntries)
+      .where(eq(timeEntries.taskId, id))
+      .orderBy(desc(timeEntries.startTime));
+
+    return {
+      ...task,
+      project: task.projectName ? { name: task.projectName } : undefined,
+      customer: task.customerName ? { name: task.customerName } : undefined,
+      assignedTo: task.assignedToName ? { name: task.assignedToName } : undefined,
+      comments: comments as TaskComment[],
+      timeEntries: taskTimeEntries,
+      totalTimeSpent: taskTimeEntries.reduce((sum, entry) => sum + (entry.duration || 0), 0),
+    } as TaskWithDetails;
+  }
+
+  async createTask(task: InsertTask): Promise<Task> {
+    const [newTask] = await db.insert(tasks).values(task).returning();
+    return newTask;
+  }
+
+  async updateTask(id: number, task: Partial<InsertTask>, companyId: number): Promise<Task | undefined> {
+    const [updated] = await db
+      .update(tasks)
+      .set({ ...task, updatedAt: new Date() })
+      .where(and(eq(tasks.id, id), eq(tasks.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteTask(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.companyId, companyId)));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Time Entries
+  async getTimeEntries(companyId: number, userId?: number, projectId?: number, taskId?: number): Promise<TimeEntryWithDetails[]> {
+    let whereCondition = eq(timeEntries.companyId, companyId);
+    
+    if (userId) whereCondition = and(whereCondition, eq(timeEntries.userId, userId));
+    if (projectId) whereCondition = and(whereCondition, eq(timeEntries.projectId, projectId));
+    if (taskId) whereCondition = and(whereCondition, eq(timeEntries.taskId, taskId));
+
+    const result = await db
+      .select({
+        id: timeEntries.id,
+        companyId: timeEntries.companyId,
+        userId: timeEntries.userId,
+        projectId: timeEntries.projectId,
+        taskId: timeEntries.taskId,
+        customerId: timeEntries.customerId,
+        description: timeEntries.description,
+        startTime: timeEntries.startTime,
+        endTime: timeEntries.endTime,
+        duration: timeEntries.duration,
+        isBillable: timeEntries.isBillable,
+        hourlyRate: timeEntries.hourlyRate,
+        amount: timeEntries.amount,
+        isRunning: timeEntries.isRunning,
+        invoiceId: timeEntries.invoiceId,
+        notes: timeEntries.notes,
+        createdAt: timeEntries.createdAt,
+        updatedAt: timeEntries.updatedAt,
+        projectName: projects.name,
+        taskTitle: tasks.title,
+        userName: users.name,
+        customerName: customers.name,
+      })
+      .from(timeEntries)
+      .leftJoin(projects, eq(timeEntries.projectId, projects.id))
+      .leftJoin(tasks, eq(timeEntries.taskId, tasks.id))
+      .leftJoin(users, eq(timeEntries.userId, users.id))
+      .leftJoin(customers, eq(timeEntries.customerId, customers.id))
+      .where(whereCondition)
+      .orderBy(desc(timeEntries.startTime));
+
+    return result.map((entry) => ({
+      ...entry,
+      project: entry.projectName ? { name: entry.projectName } : undefined,
+      task: entry.taskTitle ? { title: entry.taskTitle } : undefined,
+      user: entry.userName ? { name: entry.userName } : undefined,
+      customer: entry.customerName ? { name: entry.customerName } : undefined,
+    })) as TimeEntryWithDetails[];
+  }
+
+  async getActiveTimeEntry(userId: number, companyId: number): Promise<TimeEntry | undefined> {
+    const [entry] = await db
+      .select()
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.userId, userId),
+        eq(timeEntries.companyId, companyId),
+        eq(timeEntries.isRunning, true)
+      ));
+    return entry;
+  }
+
+  async createTimeEntry(entry: InsertTimeEntry): Promise<TimeEntry> {
+    const [newEntry] = await db.insert(timeEntries).values(entry).returning();
+    return newEntry;
+  }
+
+  async updateTimeEntry(id: number, entry: Partial<InsertTimeEntry>, companyId: number): Promise<TimeEntry | undefined> {
+    const [updated] = await db
+      .update(timeEntries)
+      .set({ ...entry, updatedAt: new Date() })
+      .where(and(eq(timeEntries.id, id), eq(timeEntries.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async stopTimeEntry(id: number, companyId: number, endTime: Date): Promise<TimeEntry | undefined> {
+    const duration = await db
+      .select({ startTime: timeEntries.startTime })
+      .from(timeEntries)
+      .where(and(eq(timeEntries.id, id), eq(timeEntries.companyId, companyId)));
+
+    if (duration.length === 0) return undefined;
+
+    const durationSeconds = Math.floor((endTime.getTime() - duration[0].startTime.getTime()) / 1000);
+
+    const [updated] = await db
+      .update(timeEntries)
+      .set({
+        endTime,
+        duration: durationSeconds,
+        isRunning: false,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(timeEntries.id, id), eq(timeEntries.companyId, companyId)))
+      .returning();
+
+    return updated;
+  }
+
+  async deleteTimeEntry(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(timeEntries)
+      .where(and(eq(timeEntries.id, id), eq(timeEntries.companyId, companyId)));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Task Comments
+  async createTaskComment(comment: InsertTaskComment): Promise<TaskComment> {
+    const [newComment] = await db.insert(taskComments).values(comment).returning();
+    return newComment;
+  }
+
+  async getTaskComments(taskId: number): Promise<TaskComment[]> {
+    return await db
+      .select()
+      .from(taskComments)
+      .where(eq(taskComments.taskId, taskId))
+      .orderBy(taskComments.createdAt);
+  }
+
+  async deleteTaskComment(id: number): Promise<boolean> {
+    const result = await db.delete(taskComments).where(eq(taskComments.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Project Members
+  async addProjectMember(member: InsertProjectMember): Promise<ProjectMember> {
+    const [newMember] = await db.insert(projectMembers).values(member).returning();
+    return newMember;
+  }
+
+  async removeProjectMember(projectId: number, userId: number): Promise<boolean> {
+    const result = await db
+      .delete(projectMembers)
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
+    return await db
+      .select()
+      .from(projectMembers)
+      .where(eq(projectMembers.projectId, projectId));
   }
 }
 
