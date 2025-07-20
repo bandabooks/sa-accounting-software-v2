@@ -317,14 +317,14 @@ export default function TasksPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Project (Optional)</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                        <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select project" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No Project (Standalone Task)</SelectItem>
+                            <SelectItem value="none">No Project (Standalone Task)</SelectItem>
                             {projects.map((project: any) => (
                               <SelectItem key={project.id} value={project.id.toString()}>
                                 {project.name}
@@ -342,14 +342,14 @@ export default function TasksPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Customer (Optional)</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                        <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select customer" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No Customer (Internal Task)</SelectItem>
+                            <SelectItem value="none">No Customer (Internal Task)</SelectItem>
                             {customers.map((customer: any) => (
                               <SelectItem key={customer.id} value={customer.id.toString()}>
                                 {customer.name}
@@ -420,13 +420,14 @@ export default function TasksPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Assigned To</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                        <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Assign to user" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="none">Unassigned</SelectItem>
                             {users.map((user: any) => (
                               <SelectItem key={user.id} value={user.id.toString()}>
                                 {user.name}

@@ -372,14 +372,14 @@ export default function TimeTrackingPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Project (Optional)</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                              <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select project" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">No Project</SelectItem>
+                                  <SelectItem value="none">No Project</SelectItem>
                                   {projects.map((project: any) => (
                                     <SelectItem key={project.id} value={project.id.toString()}>
                                       {project.name}
@@ -397,14 +397,14 @@ export default function TimeTrackingPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Task (Optional)</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                              <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select task" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">No Task</SelectItem>
+                                  <SelectItem value="none">No Task</SelectItem>
                                   {tasks.map((task: any) => (
                                     <SelectItem key={task.id} value={task.id.toString()}>
                                       {task.title}

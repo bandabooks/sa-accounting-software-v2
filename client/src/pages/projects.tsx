@@ -178,13 +178,14 @@ export default function ProjectsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Customer</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                        <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select customer" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="none">No Customer (Internal Project)</SelectItem>
                             {customers.map((customer: any) => (
                               <SelectItem key={customer.id} value={customer.id.toString()}>
                                 {customer.name}
@@ -326,13 +327,14 @@ export default function ProjectsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Project Manager</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                      <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select project manager" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="none">No Project Manager</SelectItem>
                           {users.map((user: any) => (
                             <SelectItem key={user.id} value={user.id.toString()}>
                               {user.name}
