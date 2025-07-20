@@ -134,6 +134,11 @@ export default function Settings() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Company Settings</h1>
         <p className="text-gray-600 dark:text-gray-400">Configure your company information and system preferences</p>
+        {settings?.companyName && (
+          <div className="mt-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-md inline-block">
+            <span className="text-sm text-blue-800 font-medium">Current Company: {settings.companyName}</span>
+          </div>
+        )}
       </div>
 
       <Form {...form}>
@@ -158,6 +163,24 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Company Logo Upload */}
+                  <div className="flex flex-col space-y-4">
+                    <Label>Company Logo</Label>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <Building className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <div>
+                        <Button type="button" variant="outline" size="sm">
+                          Upload Logo
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Upload a PNG or JPG file (max 2MB, recommended: 400x400px)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}

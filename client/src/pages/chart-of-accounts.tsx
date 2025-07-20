@@ -62,11 +62,19 @@ const getAccountTypeColor = (type: string) => {
   }
 };
 
-const formatCurrency = (amount: string) => {
+const formatCurrency = (amount: string | number | null | undefined) => {
+  const value = typeof amount === 'string' ? parseFloat(amount) : amount;
+  // Handle NaN, null, undefined, or invalid values
+  if (isNaN(value as number) || value == null) {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+    }).format(0);
+  }
   return new Intl.NumberFormat('en-ZA', {
     style: 'currency',
     currency: 'ZAR',
-  }).format(parseFloat(amount));
+  }).format(value as number);
 };
 
 export default function ChartOfAccounts() {

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Building, Plus, Users, Settings, Crown, Shield, User, UserPlus } from "lucide-react";
+import { Building, Plus, Users, Settings, Crown, Shield, User, UserPlus, Edit } from "lucide-react";
 import { insertCompanySchema, type Company, type CompanyUser } from "@shared/schema";
 import { z } from "zod";
 
@@ -610,6 +610,53 @@ export default function Companies() {
                     </div>
                   </div>
                 )}
+
+                {/* Admin/Super Admin Editing Controls */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="font-semibold mb-4 flex items-center gap-2">
+                    <Edit className="h-4 w-4" />
+                    Company Management
+                  </h4>
+                  <div className="flex gap-3">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        // Navigate to company settings for this company
+                        window.location.href = `/settings?company=${selectedCompany.id}`;
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Company Settings
+                    </Button>
+                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          // Add company editing modal or navigate to edit page
+                          toast({
+                            title: "Admin Access",
+                            description: `You have ${user.role === 'super_admin' ? 'Super Admin' : 'Admin'} privileges to edit ${selectedCompany.name}`,
+                          });
+                        }}
+                        className="flex items-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        <Shield className="h-4 w-4" />
+                        {user.role === 'super_admin' ? 'Super Admin Edit' : 'Admin Edit'}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                    <p className="text-xs text-gray-600">
+                      <strong>Editing Access:</strong><br />
+                      • <strong>Owner/Admin:</strong> Can edit all company details, manage users, and access all settings<br />
+                      • <strong>Super Admin:</strong> Has unrestricted access to edit any company across the platform<br />
+                      • <strong>Manager:</strong> Can view company details and access limited settings<br />
+                      • <strong>Employee:</strong> Can only view basic company information
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

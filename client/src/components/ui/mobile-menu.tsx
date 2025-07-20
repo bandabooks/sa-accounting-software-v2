@@ -228,7 +228,7 @@ export default function MobileMenu() {
                 <Link
                   href="/super-admin"
                   onClick={handleItemClick}
-                  className="flex items-center space-x-3 px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="flex items-center space-x-3 px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   <Shield size={16} />
                   <span>Super Admin Panel</span>
