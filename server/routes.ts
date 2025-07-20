@@ -2262,6 +2262,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced VAT Management API Routes
+  
+  // Get company VAT settings
+  app.get("/api/companies/:id/vat-settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      if (isNaN(companyId)) {
+        return res.status(400).json({ message: "Invalid company ID" });
+      }
+
+      const vatSettings = await storage.getCompanyVatSettings(companyId);
+      res.json(vatSettings);
+    } catch (error) {
+      console.error("Error fetching company VAT settings:", error);
+      res.status(500).json({ message: "Failed to fetch VAT settings" });
+    }
+  });
+
+  // Update company VAT settings
   app.put("/api/companies/:id/vat-settings", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = parseInt(req.params.id);
@@ -2270,10 +2289,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const vatSettings = z.object({
-        vatRegistered: z.boolean(),
+        isVatRegistered: z.boolean(),
         vatNumber: z.string().optional(),
-        vatPeriod: z.string().optional(),
-        vatSubmissionDate: z.number().int().min(1).max(31).optional()
+        vatRegistrationDate: z.string().optional(),
+        vatPeriodMonths: z.number().int().min(1).max(12).optional(),
+        vatSubmissionDay: z.number().int().min(1).max(31).optional()
       }).parse(req.body);
 
       const company = await storage.updateCompanyVatSettings(companyId, vatSettings);
@@ -2281,12 +2301,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Company not found" });
       }
 
-      await logAudit(req.user!.id, 'UPDATE', 'company', companyId, 'Updated VAT settings');
+      await logAudit(req.user!.id, 'UPDATE', 'company_vat_settings', companyId, 'Updated VAT settings');
 
-      res.json(company);
+      res.json({ success: true, company });
     } catch (error) {
       console.error("Error updating company VAT settings:", error);
       res.status(500).json({ message: "Failed to update VAT settings" });
+    }
+  });
+
+  // Get available VAT types based on company registration
+  app.get("/api/companies/:id/vat-types", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      if (isNaN(companyId)) {
+        return res.status(400).json({ message: "Invalid company ID" });
+      }
+
+      const vatTypes = await storage.getAvailableVatTypes(companyId);
+      res.json(vatTypes);
+    } catch (error) {
+      console.error("Error fetching available VAT types:", error);
+      res.status(500).json({ message: "Failed to fetch VAT types" });
+    }
+  });
+
+  // Manage company-specific VAT type (activate/deactivate)
+  app.put("/api/companies/:id/vat-types/:typeId", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const vatTypeId = parseInt(req.params.typeId);
+      
+      if (isNaN(companyId) || isNaN(vatTypeId)) {
+        return res.status(400).json({ message: "Invalid company or VAT type ID" });
+      }
+
+      const { isActive } = z.object({
+        isActive: z.boolean()
+      }).parse(req.body);
+
+      await storage.manageCompanyVatType(companyId, vatTypeId, isActive);
+      
+      await logAudit(req.user!.id, isActive ? 'ACTIVATE' : 'DEACTIVATE', 'vat_type', vatTypeId, `${isActive ? 'Activated' : 'Deactivated'} VAT type for company`);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error managing VAT type:", error);
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to manage VAT type" });
+    }
+  });
+
+  // Seed default VAT types
+  app.post("/api/vat-types/seed", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthenticatedRequest, res) => {
+    try {
+      await storage.seedDefaultVatTypes();
+      res.json({ success: true, message: "Default VAT types seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding VAT types:", error);
+      res.status(500).json({ message: "Failed to seed VAT types" });
     }
   });
 

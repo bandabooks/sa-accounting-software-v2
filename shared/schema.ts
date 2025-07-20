@@ -17,6 +17,10 @@ export const companies = pgTable("companies", {
   country: text("country").default("South Africa"),
   vatNumber: text("vat_number"),
   registrationNumber: text("registration_number"),
+  isVatRegistered: boolean("is_vat_registered").default(false),
+  vatRegistrationDate: date("vat_registration_date"),
+  vatPeriodMonths: integer("vat_period_months").default(2), // 1=monthly, 2=bi-monthly, 6=bi-annual
+  vatSubmissionDay: integer("vat_submission_day").default(25), // Day of month for VAT submissions
   logo: text("logo"), // URL to company logo
   primaryColor: text("primary_color").default("#3b82f6"),
   secondaryColor: text("secondary_color").default("#64748b"),

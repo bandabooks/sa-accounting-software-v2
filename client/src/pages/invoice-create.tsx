@@ -13,6 +13,7 @@ import { calculateInvoiceTotal, formatCurrency, generateInvoiceNumber } from "@/
 import { useToast } from "@/hooks/use-toast";
 import { CustomerSelect } from "@/components/CustomerSelect";
 import { ProductServiceSelect } from "@/components/ProductServiceSelect";
+import { VatRateSelect, VatFieldWrapper } from "@/components/vat-management/vat-conditional-fields";
 import type { InsertInvoice, InsertInvoiceItem, Customer, Product } from "@shared/schema";
 
 interface InvoiceItem {

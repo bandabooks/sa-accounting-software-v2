@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CompanySettings } from "@shared/schema";
+import { VatStatusToggle } from "@/components/vat-management/vat-status-toggle";
 
 const companySettingsSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -143,8 +144,9 @@ export default function Settings() {
 
       <Form {...form}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="company">Company Info</TabsTrigger>
+          <TabsTrigger value="vat">VAT Settings</TabsTrigger>
           <TabsTrigger value="currency">Currency</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -303,6 +305,19 @@ export default function Settings() {
                 </form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="vat" className="space-y-6">
+          <VatStatusToggle 
+            companyId={4} // TODO: Get from active company context
+            initialSettings={{
+              isVatRegistered: false,
+              vatNumber: settings?.vatNumber || "",
+              vatRegistrationDate: undefined,
+              vatPeriodMonths: 2,
+              vatSubmissionDay: 25
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="currency" className="space-y-6">

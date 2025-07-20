@@ -3578,18 +3578,144 @@ export class DatabaseStorage implements IStorage {
     return vatTransaction;
   }
 
-  async updateCompanyVatSettings(companyId: number, settings: { 
-    vatRegistered: boolean; 
-    vatNumber?: string; 
-    vatPeriod?: string; 
-    vatSubmissionDate?: number;
+  // Enhanced VAT Management System
+  async updateCompanyVatSettings(companyId: number, vatSettings: {
+    isVatRegistered: boolean;
+    vatNumber?: string;
+    vatRegistrationDate?: string;
+    vatPeriodMonths?: number;
+    vatSubmissionDay?: number;
   }): Promise<Company | undefined> {
     const [company] = await db
       .update(companies)
-      .set({ ...settings, updatedAt: new Date() })
+      .set({
+        isVatRegistered: vatSettings.isVatRegistered,
+        vatNumber: vatSettings.vatNumber,
+        vatRegistrationDate: vatSettings.vatRegistrationDate,
+        vatPeriodMonths: vatSettings.vatPeriodMonths,
+        vatSubmissionDay: vatSettings.vatSubmissionDay,
+        updatedAt: new Date()
+      })
       .where(eq(companies.id, companyId))
       .returning();
+      
+    // Audit log for VAT settings change
+    await this.createAuditLog({
+      companyId,
+      userId: 1, // System user - will need to be updated with actual user context
+      action: "UPDATE",
+      resource: "company_vat_settings",
+      resourceId: companyId.toString(),
+      oldValues: {},
+      newValues: vatSettings,
+      metadata: { feature: "vat_management" }
+    });
+    
     return company || undefined;
+  }
+
+  async getCompanyVatSettings(companyId: number): Promise<any> {
+    const [company] = await db
+      .select({
+        isVatRegistered: companies.isVatRegistered,
+        vatNumber: companies.vatNumber,
+        vatRegistrationDate: companies.vatRegistrationDate,
+        vatPeriodMonths: companies.vatPeriodMonths,
+        vatSubmissionDay: companies.vatSubmissionDay
+      })
+      .from(companies)
+      .where(eq(companies.id, companyId));
+    
+    return company || {
+      isVatRegistered: false,
+      vatNumber: null,
+      vatRegistrationDate: null,
+      vatPeriodMonths: 2,
+      vatSubmissionDay: 25
+    };
+  }
+
+  async getAvailableVatTypes(companyId: number): Promise<VatType[]> {
+    const company = await this.getCompanyVatSettings(companyId);
+    
+    // If company is not VAT registered, return empty array
+    if (!company.isVatRegistered) {
+      return [];
+    }
+
+    // Get all active VAT types for this company (system + company-specific)
+    const vatTypesResult = await db
+      .select()
+      .from(vatTypes)
+      .where(
+        and(
+          eq(vatTypes.isActive, true),
+          or(
+            isNull(vatTypes.companyId), // System-wide types
+            eq(vatTypes.companyId, companyId) // Company-specific types
+          )
+        )
+      );
+    
+    return vatTypesResult;
+  }
+
+  async seedDefaultVatTypes(companyId?: number): Promise<void> {
+    // Seed system-wide South African VAT types if they don't exist
+    const existingSystemTypes = await db
+      .select()
+      .from(vatTypes)
+      .where(isNull(vatTypes.companyId));
+      
+    if (existingSystemTypes.length === 0) {
+      await db.insert(vatTypes).values(
+        SOUTH_AFRICAN_VAT_TYPES.map(type => ({
+          companyId: null,
+          code: type.code,
+          name: type.name,
+          rate: type.rate,
+          description: type.description,
+          isActive: true,
+          isSystemType: type.isSystemType
+        }))
+      );
+    }
+  }
+
+  async manageCompanyVatType(companyId: number, vatTypeId: number, isActive: boolean): Promise<void> {
+    // Only allow activation/deactivation of company-specific types
+    // System types cannot be deactivated
+    const [vatType] = await db
+      .select()
+      .from(vatTypes)
+      .where(eq(vatTypes.id, vatTypeId));
+      
+    if (!vatType || vatType.isSystemType) {
+      throw new Error("Cannot modify system VAT types");
+    }
+    
+    if (vatType.companyId !== companyId) {
+      throw new Error("Cannot modify VAT types of other companies");
+    }
+
+    await db.update(vatTypes)
+      .set({ 
+        isActive,
+        updatedAt: new Date()
+      })
+      .where(eq(vatTypes.id, vatTypeId));
+      
+    // Audit log
+    await this.createAuditLog({
+      companyId,
+      userId: 1,
+      action: isActive ? "ACTIVATE" : "DEACTIVATE",
+      resource: "vat_type",
+      resourceId: vatTypeId.toString(),
+      oldValues: { isActive: !isActive },
+      newValues: { isActive },
+      metadata: { vatTypeCode: vatType.code }
+    });
   }
 
   // Fixed Assets Management
