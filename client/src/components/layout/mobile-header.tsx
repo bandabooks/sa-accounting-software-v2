@@ -2,7 +2,8 @@ import { Bell, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MobileMenu from "@/components/ui/mobile-menu";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
+import CompanySwitcher from "./company-switcher";
 
 export default function MobileHeader() {
   const { user } = useAuth();
@@ -23,10 +24,11 @@ export default function MobileHeader() {
         </div>
         
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Search className="h-4 w-4" />
-            <span className="sr-only">Search</span>
-          </Button>
+          {/* Mobile Company Switcher */}
+          <div className="hidden sm:block">
+            <CompanySwitcher />
+          </div>
+          
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <Bell className="h-4 w-4" />
             <span className="sr-only">Notifications</span>

@@ -2510,6 +2510,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Company Management Routes
+  app.get("/api/companies/my", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const companies = await storage.getUserCompanies(userId);
+      res.json(companies);
+    } catch (error) {
+      console.error("Error fetching user companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  app.get("/api/companies/active", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const activeCompany = await storage.getUserActiveCompany(userId);
+      if (!activeCompany) {
+        return res.status(404).json({ message: "No active company found" });
+      }
+      res.json(activeCompany);
+    } catch (error) {
+      console.error("Error fetching active company:", error);
+      res.status(500).json({ message: "Failed to fetch active company" });
+    }
+  });
+
+  app.post("/api/companies/switch", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const { companyId } = req.body;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Verify user has access to this company
+      const userCompanies = await storage.getUserCompanies(userId);
+      const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied to this company" });
+      }
+
+      // Update user's active company
+      await storage.setUserActiveCompany(userId, companyId);
+      
+      // Get the switched company details
+      const company = await storage.getCompany(companyId);
+      
+      res.json({ 
+        success: true, 
+        company,
+        message: "Company switched successfully" 
+      });
+    } catch (error) {
+      console.error("Error switching company:", error);
+      res.status(500).json({ message: "Failed to switch company" });
+    }
+  });
+
+  app.get("/api/companies", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companies = await storage.getAllCompanies();
+      res.json(companies);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  app.post("/api/companies", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const validatedData = insertCompanySchema.parse(req.body);
+      
+      // Create the company
+      const company = await storage.createCompany(validatedData);
+      
+      // Add the user as the owner of this company
+      await storage.addUserToCompany(userId, company.id, 'owner');
+      
+      // Set as active company if it's the user's first company
+      const userCompanies = await storage.getUserCompanies(userId);
+      if (userCompanies.length === 1) {
+        await storage.setUserActiveCompany(userId, company.id);
+      }
+      
+      res.status(201).json(company);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating company:", error);
+      res.status(500).json({ message: "Failed to create company" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

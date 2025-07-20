@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import CompanySwitcher from "./company-switcher";
 
 const pageNames: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -61,6 +62,9 @@ export default function Header() {
           )}
         </div>
         <div className="flex items-center space-x-4">
+          {/* Company Switcher */}
+          <CompanySwitcher />
+          
           <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
             <Bell size={20} />
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">

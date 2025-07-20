@@ -182,6 +182,7 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   role: text("role").notNull().default("admin"), // admin, manager, employee, accountant
   permissions: text("permissions").array().default([]), // Array of permission strings
+  activeCompanyId: integer("active_company_id"), // Currently active company for this user
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
   failedLoginAttempts: integer("failed_login_attempts").default(0),

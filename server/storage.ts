@@ -33,6 +33,7 @@ import {
   companies,
   industryTemplates,
   companyChartOfAccounts,
+  companyUsers,
   vatTypes,
   vatReports,
   vatTransactions,
@@ -2736,6 +2737,75 @@ export class DatabaseStorage implements IStorage {
       .from(industryTemplates)
       .where(eq(industryTemplates.isActive, true))
       .orderBy(industryTemplates.industryName);
+  }
+
+  // Company Management Methods
+  async getUserCompanies(userId: number): Promise<any[]> {
+    const results = await db
+      .select({
+        id: companyUsers.id,
+        companyId: companyUsers.companyId,
+        userId: companyUsers.userId,
+        role: companyUsers.role,
+        company: {
+          id: companies.id,
+          name: companies.name,
+          displayName: companies.displayName,
+          industry: companies.industry,
+        }
+      })
+      .from(companyUsers)
+      .innerJoin(companies, eq(companyUsers.companyId, companies.id))
+      .where(eq(companyUsers.userId, userId))
+      .orderBy(companies.name);
+    
+    return results;
+  }
+
+  async getUserActiveCompany(userId: number): Promise<Company | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!user || !user.activeCompanyId) {
+      // If no active company set, get the first company the user has access to
+      const userCompanies = await this.getUserCompanies(userId);
+      if (userCompanies.length > 0) {
+        const firstCompany = userCompanies[0].company;
+        await this.setUserActiveCompany(userId, firstCompany.id);
+        return firstCompany;
+      }
+      return undefined;
+    }
+
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, user.activeCompanyId));
+    
+    return company || undefined;
+  }
+
+  async setUserActiveCompany(userId: number, companyId: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ activeCompanyId: companyId })
+      .where(eq(users.id, userId));
+  }
+
+  async addUserToCompany(userId: number, companyId: number, role: string): Promise<void> {
+    await db
+      .insert(companyUsers)
+      .values({
+        userId,
+        companyId,
+        role,
+      })
+      .onConflictDoUpdate({
+        target: [companyUsers.companyId, companyUsers.userId],
+        set: { role },
+      });
   }
 
   // Get active accounts for a company
