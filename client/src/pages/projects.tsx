@@ -312,7 +312,7 @@ export default function ProjectsPage() {
                             step="0.01"
                             placeholder="0.00" 
                             {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => field.onChange(e.target.value || undefined)}
                           />
                         </FormControl>
                         <FormMessage />
