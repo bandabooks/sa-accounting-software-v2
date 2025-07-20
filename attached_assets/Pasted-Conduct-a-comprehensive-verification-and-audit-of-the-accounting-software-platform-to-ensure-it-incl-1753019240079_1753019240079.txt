@@ -1,0 +1,95 @@
+Conduct a comprehensive verification and audit of the accounting software platform to ensure it includes and correctly implements all critical functions required to run, manage, and scale multiple businesses (companies) as a user.
+The goal is to match or exceed the features and usability found in leading platforms like Zoho Books and QuickBooks.
+
+Verification Checklist:
+
+Multi-Company Support:
+
+Users can create, switch between, and manage multiple companies from a single account, with complete data isolation per company.
+
+Role-Based Access Control:
+
+Each user can be assigned to one or more companies with specific roles (super admin, admin, accountant, manager, employee, etc.).
+
+Permissions and data access are correctly restricted by company and role.
+
+Company Creation & Management:
+
+All company details (profile, settings, currency, financial year start, subscription plan, etc.) are editable and context-aware.
+
+Subscription & Billing Management:
+
+Super admin can create/manage subscription plans.
+
+Companies are assigned to a package upon creation.
+
+Regular admins can view/upgrade/downgrade their own plans.
+
+Chart of Accounts & Industry Templates:
+
+Companies start with relevant, industry-based chart of accounts.
+
+Accounts can be activated/deactivated per company.
+
+Core Accounting Modules:
+
+Sales (invoices, estimates, customers)
+
+Purchases (suppliers, purchase orders, expenses)
+
+Products & inventory management
+
+Banking & reconciliation
+
+General ledger, journal entries, chart of accounts
+
+VAT and tax compliance (South Africa-ready)
+
+Reporting:
+
+Financial reports (P&L, Balance Sheet, Cash Flow)
+
+VAT201 and tax reports
+
+Custom business analytics
+
+Advanced Features:
+
+Recurring transactions (invoices, expenses)
+
+Payroll & fixed assets (if implemented)
+
+Document management (attachments)
+
+Notifications & reminders
+
+Multi-currency support (if required)
+
+Client Portal:
+
+Companies can offer their clients secure access to invoices, payments, and documents (if enabled).
+
+UI/UX Standards:
+
+Sidebar/menu is grouped, professional, and collapses as required.
+
+Company switcher and “Create Company” shortcut are present and functional.
+
+All forms are user-friendly, validated, and responsive.
+
+Data Security & Integrity:
+
+No data leaks or accidental sharing between companies.
+
+Audit log available for key actions.
+
+Verification Actions:
+
+Log in as users with different roles (super admin, admin, accountant, etc.) and perform all business operations across multiple companies.
+
+Confirm all features work as described, data is isolated, and the user experience matches (or exceeds) Zoho Books and QuickBooks standards.
+
+List any missing, incomplete, or buggy features for correction.
+
+Goal:
+Certify that the platform is a true multi-business, world-class accounting solution, ready for production and comparable to the best global brands.
