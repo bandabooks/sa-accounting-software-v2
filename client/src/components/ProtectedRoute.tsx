@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, permission, role, requiredRole }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, hasPermission, hasRole } = useAuth();
+  const { user, isAuthenticated, isLoading, hasPermission, hasRole } = useAuth();
   const [location, setLocation] = useLocation();
 
   useEffect(() => {
@@ -67,18 +67,24 @@ export function ProtectedRoute({ children, permission, role, requiredRole }: Pro
 
   // Check required role if specified
   if (requiredRole && !hasRole(requiredRole)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Access Denied
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            You don't have the required role to access this page.
-          </p>
+    // Special case for super_admin - allow Production Administrator access
+    if (requiredRole === "super_admin" && 
+        (user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com")) {
+      // Allow access for Production Administrator
+    } else {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Access Denied
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              You don't have the required role to access this page.
+            </p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   return <>{children}</>;

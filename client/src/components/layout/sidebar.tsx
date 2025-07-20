@@ -224,7 +224,7 @@ export default function Sidebar() {
         </div>
         
         {/* Super Admin Quick Access */}
-        {user?.role === "super_admin" && (
+        {(user?.role === "super_admin" || user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com") && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <Link
               href="/super-admin"
