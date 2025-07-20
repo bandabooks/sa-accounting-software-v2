@@ -268,6 +268,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Super admin audit logs endpoints
+  app.get("/api/super-admin/audit-logs", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const logs = await storage.getAuditLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.get("/api/super-admin/audit-logs/user/:userId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const logs = await storage.getUserAuditLogs(userId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching user audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch user audit logs" });
+    }
+  });
+
+  app.get("/api/super-admin/audit-logs/company/:companyId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const logs = await storage.getCompanyAuditLogs(companyId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching company audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch company audit logs" });
+    }
+  });
+
   app.get("/api/admin/system-stats", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
     try {
       const stats = {

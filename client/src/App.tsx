@@ -45,6 +45,7 @@ import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import SuperAdminCompanyDetail from "@/pages/super-admin-company-detail";
 import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
 import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
+import SuperAdminAuditLogs from "@/pages/super-admin-audit-logs";
 import Subscription from "@/pages/subscription";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -237,6 +238,11 @@ function AuthenticatedApp() {
         <Route path="/super-admin/users/:id">
           <ProtectedRoute requiredRole="super_admin">
             <SuperAdminUserDetail />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/super-admin/companies/:companyId/audit-logs">
+          <ProtectedRoute requiredRole="super_admin">
+            <SuperAdminAuditLogs />
           </ProtectedRoute>
         </Route>
         <Route path="/super-admin/plans/:id">

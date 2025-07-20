@@ -564,10 +564,7 @@ export default function SuperAdminCompanyDetail() {
                         </p>
                       </div>
                       <Button variant="outline" size="sm" onClick={() => {
-                        toast({
-                          title: "Audit Logs",
-                          description: "Detailed audit logs showing all user activities, data changes, and system events for this company.",
-                        });
+                        window.open(`/super-admin/companies/${companyId}/audit-logs`, '_blank');
                       }}>
                         View Logs
                       </Button>

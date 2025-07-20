@@ -187,6 +187,8 @@ export interface IStorage {
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(limit?: number, offset?: number): Promise<AuditLog[]>;
   getAuditLogsByUser(userId: number, limit?: number): Promise<AuditLog[]>;
+  getUserAuditLogs(userId: number, limit?: number): Promise<AuditLog[]>;
+  getCompanyAuditLogs(companyId: number, limit?: number): Promise<AuditLog[]>;
 
   // Customers
   getAllCustomers(): Promise<Customer[]>;
@@ -611,6 +613,43 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(auditLogs)
       .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit);
+  }
+
+  async getUserAuditLogs(userId: number, limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit);
+  }
+
+  async getCompanyAuditLogs(companyId: number, limit: number = 500): Promise<AuditLog[]> {
+    return await db
+      .select({
+        id: auditLogs.id,
+        userId: auditLogs.userId,
+        action: auditLogs.action,
+        resourceType: auditLogs.resourceType,
+        resourceId: auditLogs.resourceId,
+        description: auditLogs.description,
+        details: auditLogs.details,
+        oldValues: auditLogs.oldValues,
+        newValues: auditLogs.newValues,
+        timestamp: auditLogs.timestamp,
+        createdAt: auditLogs.createdAt,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          username: users.username
+        }
+      })
+      .from(auditLogs)
+      .leftJoin(users, eq(auditLogs.userId, users.id))
+      .where(eq(auditLogs.companyId, companyId))
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit);
   }

@@ -10,8 +10,123 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, User, Shield, Activity, Settings } from "lucide-react";
+import { ArrowLeft, User, Shield, Activity, Settings, Clock, Eye, Edit, Trash2, Plus } from "lucide-react";
 import { Link } from "wouter";
+
+// Audit Logs Component
+function UserAuditLogs({ userId }: { userId: number }) {
+  const { data: auditLogs, isLoading } = useQuery({
+    queryKey: ["/api/super-admin/audit-logs/user", userId],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  const getActionIcon = (action: string) => {
+    switch (action.toLowerCase()) {
+      case 'create': return <Plus className="h-4 w-4 text-green-600" />;
+      case 'update': case 'edit': return <Edit className="h-4 w-4 text-blue-600" />;
+      case 'delete': return <Trash2 className="h-4 w-4 text-red-600" />;
+      case 'view': case 'read': return <Eye className="h-4 w-4 text-gray-600" />;
+      default: return <Activity className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getActionColor = (action: string) => {
+    switch (action.toLowerCase()) {
+      case 'create': return 'bg-green-50 border-green-200';
+      case 'update': case 'edit': return 'bg-blue-50 border-blue-200';
+      case 'delete': return 'bg-red-50 border-red-200';
+      case 'view': case 'read': return 'bg-gray-50 border-gray-200';
+      default: return 'bg-gray-50 border-gray-200';
+    }
+  };
+
+  if (!auditLogs || auditLogs.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">No Activity Yet</h3>
+        <p className="text-sm text-muted-foreground">
+          User activity and audit logs will appear here as actions are performed.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Recent Activity</h3>
+        <Badge variant="outline">{auditLogs.length} {auditLogs.length === 1 ? 'entry' : 'entries'}</Badge>
+      </div>
+      
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {auditLogs.map((log: any) => (
+          <div key={log.id} className={`p-4 rounded-lg border ${getActionColor(log.action)}`}>
+            <div className="flex items-start space-x-3">
+              <div className="mt-1">
+                {getActionIcon(log.action)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-xs">
+                      {log.action.toUpperCase()}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {log.resourceType}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {new Date(log.createdAt).toLocaleString()}
+                  </div>
+                </div>
+                
+                <p className="mt-2 text-sm font-medium text-gray-900">
+                  {log.description || `${log.action} ${log.resourceType} ${log.resourceId}`}
+                </p>
+                
+                {log.details && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {log.details}
+                  </p>
+                )}
+                
+                {(log.oldValues || log.newValues) && (
+                  <div className="mt-2 text-xs">
+                    {log.oldValues && (
+                      <div className="mb-1">
+                        <span className="font-medium text-red-600">Before:</span>
+                        <span className="ml-1 text-muted-foreground">
+                          {typeof log.oldValues === 'string' ? log.oldValues : JSON.stringify(log.oldValues)}
+                        </span>
+                      </div>
+                    )}
+                    {log.newValues && (
+                      <div>
+                        <span className="font-medium text-green-600">After:</span>
+                        <span className="ml-1 text-muted-foreground">
+                          {typeof log.newValues === 'string' ? log.newValues : JSON.stringify(log.newValues)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function SuperAdminUserDetail() {
   const [, params] = useRoute("/super-admin/users/:id");
@@ -277,7 +392,7 @@ export default function SuperAdminUserDetail() {
               <CardDescription>Recent user activity and audit logs</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Activity logs coming soon...</p>
+              <UserAuditLogs userId={parseInt(userId!)} />
             </CardContent>
           </Card>
         </TabsContent>
