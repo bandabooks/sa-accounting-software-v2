@@ -40,6 +40,8 @@ const formSchema = insertTimeEntrySchema.omit({ companyId: true, userId: true })
 
 export default function TimeTrackingPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -372,7 +374,13 @@ export default function TimeTrackingPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Project (Optional)</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                              <Select onValueChange={(value) => {
+                                if (value === "create-new") {
+                                  setIsCreateProjectOpen(true);
+                                } else {
+                                  field.onChange(value === "none" ? undefined : parseInt(value));
+                                }
+                              }} value={field.value?.toString() || "none"}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select project" />
@@ -380,6 +388,12 @@ export default function TimeTrackingPage() {
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="none">No Project</SelectItem>
+                                  <SelectItem value="create-new">
+                                    <div className="flex items-center">
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Create New Project
+                                    </div>
+                                  </SelectItem>
                                   {projects.map((project: any) => (
                                     <SelectItem key={project.id} value={project.id.toString()}>
                                       {project.name}
@@ -397,7 +411,13 @@ export default function TimeTrackingPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Task (Optional)</FormLabel>
-                              <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                              <Select onValueChange={(value) => {
+                                if (value === "create-new") {
+                                  setIsCreateTaskOpen(true);
+                                } else {
+                                  field.onChange(value === "none" ? undefined : parseInt(value));
+                                }
+                              }} value={field.value?.toString() || "none"}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select task" />
@@ -405,6 +425,12 @@ export default function TimeTrackingPage() {
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="none">No Task</SelectItem>
+                                  <SelectItem value="create-new">
+                                    <div className="flex items-center">
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Create New Task
+                                    </div>
+                                  </SelectItem>
                                   {tasks.map((task: any) => (
                                     <SelectItem key={task.id} value={task.id.toString()}>
                                       {task.title}
@@ -452,7 +478,7 @@ export default function TimeTrackingPage() {
                                   step="0.01"
                                   placeholder="0.00" 
                                   {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                  onChange={(e) => field.onChange(e.target.value || undefined)}
                                 />
                               </FormControl>
                               <FormMessage />
