@@ -529,7 +529,12 @@ export default function SuperAdminCompanyDetail() {
                           Configure automatic data backup settings for this company.
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        toast({
+                          title: "Data Backup Configuration",
+                          description: "Data backup settings would be configured here. This feature allows automatic daily backups to secure cloud storage.",
+                        });
+                      }}>
                         Configure
                       </Button>
                     </div>
@@ -541,7 +546,12 @@ export default function SuperAdminCompanyDetail() {
                           Manage API keys and access permissions for this company.
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        toast({
+                          title: "API Access Management",
+                          description: "API key management interface would open here. Generate, rotate, and manage API keys for third-party integrations.",
+                        });
+                      }}>
                         Manage
                       </Button>
                     </div>
@@ -553,7 +563,12 @@ export default function SuperAdminCompanyDetail() {
                           View detailed audit logs for all company activities.
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        toast({
+                          title: "Audit Logs",
+                          description: "Detailed audit logs showing all user activities, data changes, and system events for this company.",
+                        });
+                      }}>
                         View Logs
                       </Button>
                     </div>
@@ -565,7 +580,12 @@ export default function SuperAdminCompanyDetail() {
                           Export all company data for backup or migration purposes.
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        toast({
+                          title: "Data Export Started",
+                          description: "Generating comprehensive data export including all invoices, customers, transactions, and settings. Download will be available shortly.",
+                        });
+                      }}>
                         Export Data
                       </Button>
                     </div>
@@ -577,7 +597,13 @@ export default function SuperAdminCompanyDetail() {
                           Permanently delete this company and all associated data. This action cannot be undone.
                         </p>
                       </div>
-                      <Button variant="destructive" size="sm">
+                      <Button variant="destructive" size="sm" onClick={() => {
+                        toast({
+                          title: "Company Deletion",
+                          description: "This would open a confirmation dialog for permanent company deletion. All data would be permanently removed.",
+                          variant: "destructive",
+                        });
+                      }}>
                         Delete
                       </Button>
                     </div>

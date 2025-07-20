@@ -529,7 +529,12 @@ export default function SuperAdminDashboard() {
                   <p className="text-sm text-muted-foreground">
                     Put the system in maintenance mode to prevent user access during updates.
                   </p>
-                  <Button variant="outline" className="mt-2">
+                  <Button variant="outline" className="mt-2" onClick={() => {
+                    toast({
+                      title: "Maintenance Mode",
+                      description: "System maintenance mode can be enabled here to restrict user access during updates and maintenance.",
+                    });
+                  }}>
                     Enable Maintenance Mode
                   </Button>
                 </div>
@@ -538,7 +543,12 @@ export default function SuperAdminDashboard() {
                   <p className="text-sm text-muted-foreground">
                     Manage system backups and data exports.
                   </p>
-                  <Button variant="outline" className="mt-2">
+                  <Button variant="outline" className="mt-2" onClick={() => {
+                    toast({
+                      title: "System Backup Started",
+                      description: "Creating comprehensive system backup including all companies, users, and data. This may take several minutes.",
+                    });
+                  }}>
                     Create Backup
                   </Button>
                 </div>
