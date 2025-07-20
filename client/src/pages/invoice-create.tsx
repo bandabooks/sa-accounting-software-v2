@@ -13,9 +13,10 @@ import { calculateInvoiceTotal, formatCurrency, generateInvoiceNumber } from "@/
 import { useToast } from "@/hooks/use-toast";
 import { CustomerSelect } from "@/components/CustomerSelect";
 import { ProductServiceSelect } from "@/components/ProductServiceSelect";
-import { VatRateSelect, VatFieldWrapper } from "@/components/vat-management/vat-conditional-fields";
+import { VATConditionalWrapper, VATFieldWrapper } from "@/components/vat/VATConditionalWrapper";
 import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
 import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
+import { useVATStatus } from "@/hooks/useVATStatus";
 import type { InsertInvoice, InsertInvoiceItem, Customer, Product } from "@shared/schema";
 
 interface InvoiceItem {
@@ -32,6 +33,7 @@ export default function InvoiceCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { shouldShowVATFields } = useVATStatus();
 
   const [formData, setFormData] = useState<Omit<InsertInvoice, 'invoiceNumber'>>({
     customerId: 0,
@@ -292,23 +294,25 @@ export default function InvoiceCreate() {
                     onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
                   />
                 </div>
-                <div className="col-span-2">
-                  <Label>VAT %</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.vatRate}
-                    onChange={(e) => updateItem(index, 'vatRate', e.target.value)}
-                  />
-                </div>
+                {shouldShowVATFields && (
+                  <div className="col-span-2">
+                    <Label>VAT %</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.vatRate}
+                      onChange={(e) => updateItem(index, 'vatRate', e.target.value)}
+                    />
+                  </div>
+                )}
                 <div className="col-span-1">
                   <Label>Total</Label>
                   <div className="text-sm font-medium py-2">
                     {formatCurrency(
                       parseFloat(item.quantity || "0") * 
                       parseFloat(item.unitPrice || "0") * 
-                      (1 + parseFloat(item.vatRate || "0") / 100)
+                      (shouldShowVATFields ? (1 + parseFloat(item.vatRate || "0") / 100) : 1)
                     )}
                   </div>
                 </div>
@@ -334,10 +338,12 @@ export default function InvoiceCreate() {
                   <span>Subtotal:</span>
                   <span>{formatCurrency(totals.subtotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>VAT:</span>
-                  <span>{formatCurrency(totals.vatAmount)}</span>
-                </div>
+                {shouldShowVATFields && (
+                  <div className="flex justify-between">
+                    <span>VAT:</span>
+                    <span>{formatCurrency(totals.vatAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Total:</span>
                   <span>{formatCurrency(totals.total)}</span>

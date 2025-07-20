@@ -40,7 +40,7 @@ import FixedAssets from "@/pages/fixed-assets";
 import Budgeting from "@/pages/budgeting";
 import CashFlowForecasting from "@/pages/cash-flow-forecasting";
 import BankReconciliation from "@/pages/bank-reconciliation";
-import VatManagement from "@/pages/vat-management";
+
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import SuperAdminCompanyDetail from "@/pages/super-admin-company-detail";
 import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
@@ -231,11 +231,7 @@ function AuthenticatedApp() {
         <Route path="/bank-reconciliation">
           <BankReconciliation />
         </Route>
-        <Route path="/vat-management">
-          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
-            <VatManagement />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/projects">
           <ProtectedRoute permission={PERMISSIONS.PROJECTS_VIEW}>
             <Projects />

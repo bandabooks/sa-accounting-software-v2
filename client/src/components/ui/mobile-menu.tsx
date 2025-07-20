@@ -64,14 +64,7 @@ const navigationGroups = [
       { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANK_RECONCILIATION_VIEW" }
     ]
   },
-  {
-    id: "vat",
-    label: "VAT Management",
-    icon: ReceiptText,
-    items: [
-      { path: "/vat-management", label: "VAT Management", icon: ReceiptText, permission: "VAT_VIEW" }
-    ]
-  },
+
   {
     id: "reports",
     label: "Reports",
