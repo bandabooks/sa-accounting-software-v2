@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -72,8 +73,42 @@ interface User {
 export default function SuperAdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [isCreatePlanDialogOpen, setIsCreatePlanDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+
+  // Navigation functions
+  const navigateToCompany = (companyId: number) => {
+    setLocation(`/super-admin/companies/${companyId}`);
+  };
+
+  const navigateToUser = (userId: number) => {
+    setLocation(`/super-admin/users/${userId}`);
+  };
+
+  const navigateToPlanEdit = (planId: number) => {
+    setLocation(`/super-admin/plans/${planId}`);
+  };
+
+  // Impersonate user function
+  const impersonateUser = async (userId: number) => {
+    try {
+      const result = await apiRequest("POST", `/api/super-admin/impersonate/${userId}`);
+      if (result.token) {
+        // Store the new token and redirect to dashboard
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('sessionToken', result.sessionToken || result.token);
+        // Force page reload to refresh auth context
+        window.location.href = '/dashboard';
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to impersonate user",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch system analytics
   const { data: analytics, isLoading: analyticsLoading } = useQuery<SystemAnalytics>({
@@ -385,7 +420,7 @@ export default function SuperAdminDashboard() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setEditingPlan(plan)}
+                        onClick={() => navigateToPlanEdit(plan.id)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -426,11 +461,19 @@ export default function SuperAdminDashboard() {
                       </div>
                     </div>
                     <div className="flex space-x-2">
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => navigateToCompany(company.id)}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => navigateToCompany(company.id)}
+                      >
                         <Settings className="h-4 w-4 mr-2" />
                         Manage
                       </Button>
@@ -466,13 +509,16 @@ export default function SuperAdminDashboard() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => impersonateMutation.mutate(user.id)}
-                        disabled={impersonateMutation.isPending}
+                        onClick={() => impersonateUser(user.id)}
                       >
                         <UserCheck className="h-4 w-4 mr-2" />
                         Impersonate
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => navigateToUser(user.id)}
+                      >
                         <Settings className="h-4 w-4 mr-2" />
                         Manage
                       </Button>

@@ -42,6 +42,9 @@ import CashFlowForecasting from "@/pages/cash-flow-forecasting";
 import BankReconciliation from "@/pages/bank-reconciliation";
 import VatManagement from "@/pages/vat-management";
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
+import SuperAdminCompanyDetail from "@/pages/super-admin-company-detail";
+import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
+import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
 import Subscription from "@/pages/subscription";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -224,6 +227,21 @@ function AuthenticatedApp() {
         <Route path="/super-admin">
           <ProtectedRoute requiredRole="super_admin">
             <SuperAdminDashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/super-admin/companies/:id">
+          <ProtectedRoute requiredRole="super_admin">
+            <SuperAdminCompanyDetail />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/super-admin/users/:id">
+          <ProtectedRoute requiredRole="super_admin">
+            <SuperAdminUserDetail />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/super-admin/plans/:id">
+          <ProtectedRoute requiredRole="super_admin">
+            <SuperAdminPlanEdit />
           </ProtectedRoute>
         </Route>
         <Route path="/subscription">

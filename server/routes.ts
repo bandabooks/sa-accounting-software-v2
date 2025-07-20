@@ -2414,6 +2414,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Individual Company Details (Super Admin)
+  app.get("/api/super-admin/companies/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const company = await storage.getCompany(companyId);
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      res.json(company);
+    } catch (error) {
+      console.error("Failed to fetch company details:", error);
+      res.status(500).json({ message: "Failed to fetch company details" });
+    }
+  });
+
+  // Update Company (Super Admin)
+  app.put("/api/super-admin/companies/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const updatedCompany = await storage.updateCompany(companyId, req.body);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'company', companyId, 'Updated company details');
+      
+      res.json(updatedCompany);
+    } catch (error) {
+      console.error("Failed to update company:", error);
+      res.status(500).json({ message: "Failed to update company" });
+    }
+  });
+
+  // Individual User Details (Super Admin)
+  app.get("/api/super-admin/users/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove sensitive data
+      const sanitizedUser = {
+        ...user,
+        password: undefined,
+        twoFactorSecret: undefined
+      };
+      
+      res.json(sanitizedUser);
+    } catch (error) {
+      console.error("Failed to fetch user details:", error);
+      res.status(500).json({ message: "Failed to fetch user details" });
+    }
+  });
+
+  // Update User (Super Admin)
+  app.put("/api/super-admin/users/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const updatedUser = await storage.updateUser(userId, req.body);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'user', userId, 'Updated user details');
+      
+      // Remove sensitive data
+      const sanitizedUser = {
+        ...updatedUser,
+        password: undefined,
+        twoFactorSecret: undefined
+      };
+      
+      res.json(sanitizedUser);
+    } catch (error) {
+      console.error("Failed to update user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Individual Subscription Plan Details (Super Admin)
+  app.get("/api/super-admin/subscription-plans/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const plan = await storage.getSubscriptionPlan(planId);
+      
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      res.json(plan);
+    } catch (error) {
+      console.error("Failed to fetch subscription plan details:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plan details" });
+    }
+  });
+
+  // Update Subscription Plan (Super Admin)
+  app.put("/api/super-admin/subscription-plans/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const updatedPlan = await storage.updateSubscriptionPlan(planId, req.body);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'subscription_plan', planId, 'Updated subscription plan');
+      
+      res.json(updatedPlan);
+    } catch (error) {
+      console.error("Failed to update subscription plan:", error);
+      res.status(500).json({ message: "Failed to update subscription plan" });
+    }
+  });
+
   // Public Subscription Plans (for company admins to view)
   app.get("/api/subscription-plans", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
