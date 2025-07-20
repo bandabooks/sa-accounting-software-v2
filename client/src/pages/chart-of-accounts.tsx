@@ -589,8 +589,8 @@ export default function ChartOfAccounts() {
                       <div className="flex items-center gap-3 ml-4">
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger>
-                              <div className="flex items-center gap-2">
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 cursor-pointer">
                                 <Switch
                                   checked={account.isActive}
                                   onCheckedChange={() => handleToggleActivation(account)}

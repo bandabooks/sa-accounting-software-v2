@@ -1687,21 +1687,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Chart of Accounts Routes
   app.get("/api/chart-of-accounts", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2; // Default company for now
-      const userId = (req as AuthenticatedRequest).user?.id;
-      const accounts = await storage.getAllChartOfAccounts(companyId);
+      const user = req as AuthenticatedRequest;
+      const companyId = user.user?.activeCompanyId || user.user?.companyId || 2;
       
-      // Create audit log for Chart of Accounts access (temporarily disabled)
-      // if (userId) {
-      //   await storage.createAuditLog({
-      //     userId,
-      //     companyId,
-      //     action: 'chart_of_accounts_viewed',
-      //     resource: 'chart_of_accounts',
-      //     details: JSON.stringify({ companyId, accountCount: accounts.length }),
-      //     ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-      //   });
-      // }
+      // Get company-specific Chart of Accounts with activation status
+      const accounts = await storage.getCompanyChartOfAccounts(companyId);
       
       res.json(accounts);
     } catch (error) {
@@ -1724,43 +1714,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/chart-of-accounts/:id/toggle", authenticate, async (req, res) => {
     try {
       const accountId = parseInt(req.params.id);
-      const { isActive } = req.body;
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const userId = (req as AuthenticatedRequest).user?.id;
+      const user = req as AuthenticatedRequest;
+      const companyId = user.user?.activeCompanyId || user.user?.companyId || 2;
+      const userId = user.user?.id || 1;
 
       // Check user permissions (admin, accountant)
-      const user = (req as AuthenticatedRequest).user;
-      if (!user || !['admin', 'accountant', 'super_admin'].includes(user.role?.toLowerCase() || '')) {
+      if (!user.user || !['admin', 'accountant', 'super_admin', 'owner'].includes(user.user.role?.toLowerCase() || '')) {
         return res.status(403).json({ error: "Insufficient permissions to manage account activation" });
       }
 
-      const updatedAccount = await storage.toggleAccountActivation(accountId, isActive, companyId);
+      const newActivationState = await storage.toggleAccountActivation(companyId, accountId, userId);
       
-      if (!updatedAccount) {
-        return res.status(404).json({ error: "Account not found" });
-      }
-
-      // Create audit log for account activation change (temporarily disabled)
-      // if (userId) {
-      //   await storage.createAuditLog({
-      //     userId,
-      //     companyId,
-      //     action: isActive ? 'account_activated' : 'account_deactivated',
-      //     resource: 'chart_of_accounts',
-      //     resourceId: accountId,
-      //     details: JSON.stringify({ 
-      //       accountId, 
-      //       accountCode: updatedAccount.accountCode,
-      //       accountName: updatedAccount.accountName,
-      //       previousStatus: !isActive,
-      //       newStatus: isActive,
-      //       companyId 
-      //     }),
-      //     ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-      //   });
-      // }
-
-      res.json(updatedAccount);
+      res.json({ isActivated: newActivationState });
     } catch (error) {
       console.error("Error toggling account activation:", error);
       res.status(500).json({ error: "Failed to toggle account activation" });
@@ -1856,6 +1821,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error seeding chart of accounts:", error);
       res.status(500).json({ error: "Failed to seed chart of accounts" });
+    }
+  });
+
+  // Industry Templates Routes
+  app.get("/api/industry-templates", authenticate, async (req, res) => {
+    try {
+      const templates = await storage.getIndustryTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching industry templates:", error);
+      res.status(500).json({ error: "Failed to fetch industry templates" });
     }
   });
 

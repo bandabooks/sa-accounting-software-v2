@@ -60,6 +60,8 @@ export default function Companies() {
         country: 'South Africa',
         vatNumber: '',
         registrationNumber: '',
+        industry: 'general',
+        industryTemplate: 'general',
       });
     },
     onError: (error) => {
@@ -106,7 +108,23 @@ export default function Companies() {
     country: 'South Africa',
     vatNumber: '',
     registrationNumber: '',
+    industry: 'general',
+    industryTemplate: 'general',
   });
+
+  // Industry options
+  const industryOptions = [
+    { value: 'general', label: 'General Business', description: 'Default template suitable for most businesses' },
+    { value: 'retail', label: 'Retail & Trading', description: 'Businesses focused on buying and selling merchandise' },
+    { value: 'services', label: 'Professional Services', description: 'Service-based businesses including consulting, professional services' },
+    { value: 'manufacturing', label: 'Manufacturing & Production', description: 'Businesses involved in manufacturing and production' },
+    { value: 'construction', label: 'Construction & Contracting', description: 'Construction companies and contractors' },
+    { value: 'technology', label: 'Technology & Software', description: 'Technology companies, software development, IT services' },
+    { value: 'healthcare', label: 'Healthcare & Medical', description: 'Medical practices, healthcare providers' },
+    { value: 'nonprofit', label: 'Non-Profit Organizations', description: 'Charitable organizations, NGOs, foundations' },
+    { value: 'agriculture', label: 'Agriculture & Farming', description: 'Farming, agriculture, livestock businesses' },
+    { value: 'hospitality', label: 'Hospitality & Tourism', description: 'Hotels, restaurants, tourism businesses' },
+  ];
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -292,6 +310,34 @@ export default function Companies() {
                     onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="industry">Industry *</Label>
+                <Select 
+                  value={formData.industry} 
+                  onValueChange={(value) => {
+                    handleInputChange('industry', value);
+                    handleInputChange('industryTemplate', value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your business industry" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {industryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{option.label}</span>
+                          <span className="text-xs text-gray-500">{option.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500 mt-1">
+                  This determines which Chart of Accounts will be activated for your company
+                </p>
               </div>
 
               <div className="flex justify-end gap-3 pt-4">

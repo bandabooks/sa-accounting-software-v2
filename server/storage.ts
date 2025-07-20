@@ -31,6 +31,8 @@ import {
   generalLedger,
   bankReconciliations,
   companies,
+  industryTemplates,
+  companyChartOfAccounts,
   vatTypes,
   vatReports,
   vatTransactions,
@@ -138,6 +140,10 @@ import {
   type InsertAdvancedReport,
   type BankReconciliationItem,
   type InsertBankReconciliationItem,
+  type IndustryTemplate,
+  type InsertIndustryTemplate,
+  type CompanyChartOfAccount,
+  type InsertCompanyChartOfAccount,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -2614,6 +2620,15 @@ export class DatabaseStorage implements IStorage {
       .insert(companies)
       .values(insertCompany)
       .returning();
+
+    // Activate Chart of Accounts based on industry template
+    if (company.industry && company.industry !== 'general') {
+      await this.activateIndustryChartOfAccounts(company.id, company.industry, 1); // Use user ID 1 for now
+    } else {
+      // For general industry, activate basic accounts
+      await this.activateBasicChartOfAccounts(company.id, 1);
+    }
+
     return company;
   }
 
@@ -2625,6 +2640,176 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return company || undefined;
   }
+
+  // Industry-specific Chart of Accounts activation
+  async activateIndustryChartOfAccounts(companyId: number, industryCode: string, userId: number): Promise<void> {
+    // Get the industry template
+    const [template] = await db
+      .select()
+      .from(industryTemplates)
+      .where(eq(industryTemplates.industryCode, industryCode));
+
+    if (!template) {
+      // Fallback to basic accounts if template not found
+      await this.activateBasicChartOfAccounts(companyId, userId);
+      return;
+    }
+
+    // Get account codes from template
+    const accountCodes = template.accountCodes as string[];
+    
+    // Get all Chart of Accounts that match the industry template
+    const accountsToActivate = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(inArray(chartOfAccounts.accountCode, accountCodes));
+
+    // Activate accounts for the company
+    const companyAccounts = accountsToActivate.map(account => ({
+      companyId,
+      accountId: account.id,
+      isActive: true,
+      activatedBy: userId,
+    }));
+
+    if (companyAccounts.length > 0) {
+      await db
+        .insert(companyChartOfAccounts)
+        .values(companyAccounts)
+        .onConflictDoUpdate({
+          target: [companyChartOfAccounts.companyId, companyChartOfAccounts.accountId],
+          set: {
+            isActive: true,
+            activatedAt: sql`now()`,
+            activatedBy: sql.placeholder('activatedBy'),
+            deactivatedAt: null,
+            deactivatedBy: null,
+          },
+        });
+    }
+  }
+
+  async activateBasicChartOfAccounts(companyId: number, userId: number): Promise<void> {
+    // Basic accounts for general business
+    const basicAccountCodes = [
+      '1000', '1100', '1200', // Assets
+      '2000', '2100', '2200', // Liabilities  
+      '3000', '3100', // Equity
+      '4000', '4100', // Revenue
+      '6000', '6100', '6200', '6300', // Expenses
+      '7000', '7100' // Extraordinary Items
+    ];
+
+    const accountsToActivate = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(inArray(chartOfAccounts.accountCode, basicAccountCodes));
+
+    const companyAccounts = accountsToActivate.map(account => ({
+      companyId,
+      accountId: account.id,
+      isActive: true,
+      activatedBy: userId,
+    }));
+
+    if (companyAccounts.length > 0) {
+      await db
+        .insert(companyChartOfAccounts)
+        .values(companyAccounts)
+        .onConflictDoUpdate({
+          target: [companyChartOfAccounts.companyId, companyChartOfAccounts.accountId],
+          set: {
+            isActive: true,
+            activatedAt: sql`now()`,
+            activatedBy: sql.placeholder('activatedBy'),
+            deactivatedAt: null,
+            deactivatedBy: null,
+          },
+        });
+    }
+  }
+
+  // Get industry templates
+  async getIndustryTemplates(): Promise<IndustryTemplate[]> {
+    return await db
+      .select()
+      .from(industryTemplates)
+      .where(eq(industryTemplates.isActive, true))
+      .orderBy(industryTemplates.industryName);
+  }
+
+  // Get active accounts for a company
+  async getCompanyChartOfAccounts(companyId: number): Promise<(ChartOfAccount & { isActivated: boolean })[]> {
+    const activeAccountIds = await db
+      .select({ accountId: companyChartOfAccounts.accountId })
+      .from(companyChartOfAccounts)
+      .where(
+        and(
+          eq(companyChartOfAccounts.companyId, companyId),
+          eq(companyChartOfAccounts.isActive, true)
+        )
+      );
+
+    const activeIds = activeAccountIds.map(row => row.accountId);
+
+    // Get all accounts and mark which ones are activated
+    const allAccounts = await db
+      .select()
+      .from(chartOfAccounts)
+      .orderBy(chartOfAccounts.accountCode);
+
+    return allAccounts.map(account => ({
+      ...account,
+      isActivated: activeIds.includes(account.id),
+    }));
+  }
+
+  // Toggle account activation for a company
+  async toggleAccountActivation(companyId: number, accountId: number, userId: number): Promise<boolean> {
+    // Check if account is currently active
+    const [existing] = await db
+      .select()
+      .from(companyChartOfAccounts)
+      .where(
+        and(
+          eq(companyChartOfAccounts.companyId, companyId),
+          eq(companyChartOfAccounts.accountId, accountId)
+        )
+      );
+
+    if (existing) {
+      // Toggle existing record
+      const newState = !existing.isActive;
+      await db
+        .update(companyChartOfAccounts)
+        .set({
+          isActive: newState,
+          ...(newState 
+            ? { activatedAt: sql`now()`, activatedBy: userId, deactivatedAt: null, deactivatedBy: null }
+            : { deactivatedAt: sql`now()`, deactivatedBy: userId }
+          ),
+        })
+        .where(
+          and(
+            eq(companyChartOfAccounts.companyId, companyId),
+            eq(companyChartOfAccounts.accountId, accountId)
+          )
+        );
+      return newState;
+    } else {
+      // Create new active record
+      await db
+        .insert(companyChartOfAccounts)
+        .values({
+          companyId,
+          accountId,
+          isActive: true,
+          activatedBy: userId,
+        });
+      return true;
+    }
+  }
+
   // Banking Methods
   async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
     const accounts = await db

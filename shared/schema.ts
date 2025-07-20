@@ -28,6 +28,8 @@ export const companies = pgTable("companies", {
   subscriptionPlan: text("subscription_plan").default("basic"), // basic, professional, enterprise
   subscriptionStatus: text("subscription_status").default("active"), // active, suspended, cancelled
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
+  industry: text("industry").default("general"), // retail, services, manufacturing, construction, nonprofit, technology, healthcare, consulting, trading, agriculture
+  industryTemplate: text("industry_template").default("general"), // COA template used
   settings: jsonb("settings").default({}),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1196,6 +1198,7 @@ export const chartOfAccounts = pgTable("chart_of_accounts", {
   taxType: varchar("tax_type", { length: 50 }), // VAT, PAYE, etc.
   level: integer("level").default(1), // Account hierarchy level
   isSystemAccount: boolean("is_system_account").default(false), // Cannot be deleted
+  industryTemplates: jsonb("industry_templates").default([]), // Array of industry codes this account applies to
   balance: decimal("balance", { precision: 15, scale: 2 }).default("0.00"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1204,6 +1207,38 @@ export const chartOfAccounts = pgTable("chart_of_accounts", {
   companyIdx: index("chart_accounts_company_idx").on(table.companyId),
   typeIdx: index("chart_accounts_type_idx").on(table.accountType),
   activeIdx: index("chart_accounts_active_idx").on(table.isActive),
+}));
+
+// Industry Templates for Chart of Accounts
+export const industryTemplates = pgTable("industry_templates", {
+  id: serial("id").primaryKey(),
+  industryCode: varchar("industry_code", { length: 50 }).notNull().unique(),
+  industryName: varchar("industry_name", { length: 100 }).notNull(),
+  description: text("description"),
+  accountCodes: jsonb("account_codes").notNull(), // Array of account codes to activate for this industry
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  codeIdx: index("industry_templates_code_idx").on(table.industryCode),
+  activeIdx: index("industry_templates_active_idx").on(table.isActive),
+}));
+
+// Company Chart of Accounts Activation
+export const companyChartOfAccounts = pgTable("company_chart_of_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  accountId: integer("account_id").notNull().references(() => chartOfAccounts.id),
+  isActive: boolean("is_active").default(true),
+  activatedAt: timestamp("activated_at").defaultNow(),
+  activatedBy: integer("activated_by").references(() => users.id),
+  deactivatedAt: timestamp("deactivated_at"),
+  deactivatedBy: integer("deactivated_by").references(() => users.id),
+}, (table) => ({
+  companyAccountUnique: unique().on(table.companyId, table.accountId),
+  companyIdx: index("company_coa_company_idx").on(table.companyId),
+  accountIdx: index("company_coa_account_idx").on(table.accountId),
+  activeIdx: index("company_coa_active_idx").on(table.isActive),
 }));
 
 // Journal Entries for double-entry bookkeeping
@@ -1303,6 +1338,12 @@ export type ChartOfAccountWithBalance = ChartOfAccount & {
   currentBalance: string;
   children?: ChartOfAccountWithBalance[];
 };
+
+// Industry Template types
+export type IndustryTemplate = typeof industryTemplates.$inferSelect;
+export type InsertIndustryTemplate = typeof industryTemplates.$inferInsert;
+export type CompanyChartOfAccount = typeof companyChartOfAccounts.$inferSelect;
+export type InsertCompanyChartOfAccount = typeof companyChartOfAccounts.$inferInsert;
 
 export type JournalEntryWithLines = JournalEntry & {
   lines: JournalEntryLine[];
