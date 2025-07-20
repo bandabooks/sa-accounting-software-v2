@@ -280,21 +280,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard - protected route
-  app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req, res) => {
+  // Dashboard - protected route with company isolation
+  app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const stats = await storage.getDashboardStats();
+      const companyId = req.user.companyId;
+      const stats = await storage.getDashboardStats(companyId);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
 
-  // Customers with search
-  app.get("/api/customers", async (req, res) => {
+  // Customers with search - Company Isolated
+  app.get("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      const customers = await storage.getAllCustomers();
+      const companyId = req.user.companyId;
+      const customers = await storage.getAllCustomers(companyId);
       
       if (search && typeof search === 'string') {
         const filteredCustomers = customers.filter(customer => 
@@ -312,24 +314,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/customers/:id", async (req, res) => {
+  app.get("/api/customers/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
       const customer = await storage.getCustomer(id);
-      if (!customer) {
+      
+      // Verify customer belongs to user's company
+      if (!customer || customer.companyId !== companyId) {
         return res.status(404).json({ message: "Customer not found" });
       }
+      
       res.json(customer);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch customer" });
     }
   });
 
-  app.post("/api/customers", async (req, res) => {
+  app.post("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = insertCustomerSchema.parse({
         ...req.body,
-        companyId: 2 // Default company ID
+        companyId: req.user.companyId || 1 // Use user's active company ID
       });
       const customer = await storage.createCustomer(validatedData);
       res.status(201).json(customer);
@@ -387,10 +393,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Invoices with search
-  app.get("/api/invoices", async (req, res) => {
+  app.get("/api/invoices", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      const invoices = await storage.getAllInvoices();
+      const companyId = req.user.companyId;
+      const invoices = await storage.getAllInvoices(companyId);
       
       if (search && typeof search === 'string') {
         const filteredInvoices = invoices.filter(invoice => 
@@ -407,13 +414,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/invoices/:id", async (req, res) => {
+  app.get("/api/invoices/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
       const invoice = await storage.getInvoice(id);
-      if (!invoice) {
+      
+      // Verify invoice belongs to user's company
+      if (!invoice || invoice.companyId !== companyId) {
         return res.status(404).json({ message: "Invoice not found" });
       }
+      
       res.json(invoice);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch invoice" });
@@ -443,13 +454,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     items: z.array(createInvoiceItemSchema)
   });
 
-  app.post("/api/invoices", async (req, res) => {
+  app.post("/api/invoices", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = createInvoiceSchema.parse(req.body);
-      // Ensure companyId is set
+      // Use user's active company ID
       const invoiceData = {
         ...validatedData.invoice,
-        companyId: 2 // Default company ID
+        companyId: req.user.companyId || 1 // Fallback to company 1 if no active company
       };
       const invoice = await storage.createInvoice(invoiceData, validatedData.items);
       res.status(201).json(invoice);
@@ -512,10 +523,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Estimates with search
-  app.get("/api/estimates", async (req, res) => {
+  app.get("/api/estimates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      const estimates = await storage.getAllEstimates();
+      const companyId = req.user.companyId;
+      const estimates = await storage.getAllEstimates(companyId);
       
       if (search && typeof search === 'string') {
         const filteredEstimates = estimates.filter(estimate => 
@@ -532,13 +544,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/estimates/:id", async (req, res) => {
+  app.get("/api/estimates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
       const estimate = await storage.getEstimate(id);
-      if (!estimate) {
+      
+      // Verify estimate belongs to user's company
+      if (!estimate || estimate.companyId !== companyId) {
         return res.status(404).json({ message: "Estimate not found" });
       }
+      
       res.json(estimate);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch estimate" });
@@ -558,13 +574,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     items: z.array(createEstimateItemSchema)
   });
 
-  app.post("/api/estimates", async (req, res) => {
+  app.post("/api/estimates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = createEstimateSchema.parse(req.body);
-      // Ensure companyId is set
+      // Use user's active company ID
       const estimateData = {
         ...validatedData.estimate,
-        companyId: 2 // Default company ID
+        companyId: req.user.companyId || 1 // Fallback to company 1 if no active company
       };
       const estimate = await storage.createEstimate(estimateData, validatedData.items);
       res.status(201).json(estimate);

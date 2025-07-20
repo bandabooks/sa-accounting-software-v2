@@ -150,6 +150,7 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     permissions: string[];
+    companyId?: number;
   };
   session?: {
     id: number;
@@ -240,7 +241,10 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
       return res.status(423).json({ message: 'Account temporarily locked due to failed login attempts' });
     }
 
-    // Set user data on request
+    // Get user's active company
+    const activeCompany = await storage.getUserActiveCompany(user.id);
+    
+    // Set user data on request including active company
     req.user = {
       id: user.id,
       username: user.username,
@@ -248,6 +252,7 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
       email: user.email,
       role: user.role,
       permissions: user.permissions || [],
+      companyId: activeCompany?.id,
     };
 
     if (session) {

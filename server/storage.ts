@@ -608,8 +608,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Customers
-  async getAllCustomers(): Promise<Customer[]> {
-    const result = await db.select().from(customers).orderBy(desc(customers.id));
+  async getAllCustomers(companyId?: number): Promise<Customer[]> {
+    let query = db.select().from(customers);
+    
+    // Apply company filtering if companyId is provided
+    if (companyId) {
+      query = query.where(eq(customers.companyId, companyId));
+    }
+    
+    const result = await query.orderBy(desc(customers.id));
     return result;
   }
 
@@ -699,15 +706,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoices
-  async getAllInvoices(): Promise<InvoiceWithCustomer[]> {
-    const result = await db
+  async getAllInvoices(companyId?: number): Promise<InvoiceWithCustomer[]> {
+    let query = db
       .select({
         invoice: invoices,
         customer: customers
       })
       .from(invoices)
-      .leftJoin(customers, eq(invoices.customerId, customers.id))
-      .orderBy(desc(invoices.id));
+      .leftJoin(customers, eq(invoices.customerId, customers.id));
+
+    // Apply company filtering if companyId is provided
+    if (companyId) {
+      query = query.where(eq(invoices.companyId, companyId));
+    }
+
+    const result = await query.orderBy(desc(invoices.id));
     
     return result.map(row => ({
       ...row.invoice,
@@ -810,15 +823,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Estimates
-  async getAllEstimates(): Promise<EstimateWithCustomer[]> {
-    const result = await db
+  async getAllEstimates(companyId?: number): Promise<EstimateWithCustomer[]> {
+    let query = db
       .select({
         estimate: estimates,
         customer: customers
       })
       .from(estimates)
-      .leftJoin(customers, eq(estimates.customerId, customers.id))
-      .orderBy(desc(estimates.id));
+      .leftJoin(customers, eq(estimates.customerId, customers.id));
+
+    // Apply company filtering if companyId is provided
+    if (companyId) {
+      query = query.where(eq(estimates.companyId, companyId));
+    }
+
+    const result = await query.orderBy(desc(estimates.id));
     
     return result.map(row => ({
       ...row.estimate,
@@ -909,8 +928,8 @@ export class DatabaseStorage implements IStorage {
     return this.createInvoice(invoiceData, invoiceItems);
   }
 
-  // Dashboard stats
-  async getDashboardStats(): Promise<{
+  // Dashboard stats - Company Isolated
+  async getDashboardStats(companyId?: number): Promise<{
     totalRevenue: string;
     outstandingInvoices: string;
     totalCustomers: number;
@@ -920,8 +939,22 @@ export class DatabaseStorage implements IStorage {
     outstandingInvoiceCount: number;
     paidInvoiceCount: number;
   }> {
-    // Get all invoices for calculations
-    const allInvoices = await db.select().from(invoices);
+    // If no companyId provided, return zero stats for safety
+    if (!companyId) {
+      return {
+        totalRevenue: "0.00",
+        outstandingInvoices: "0.00",
+        totalCustomers: 0,
+        vatDue: "0.00",
+        recentInvoices: [],
+        revenueByMonth: [],
+        outstandingInvoiceCount: 0,
+        paidInvoiceCount: 0
+      };
+    }
+
+    // Get only invoices for this company
+    const allInvoices = await db.select().from(invoices).where(eq(invoices.companyId, companyId));
     
     // Calculate totals
     const paidInvoices = allInvoices.filter(inv => inv.status === "paid");
@@ -931,12 +964,12 @@ export class DatabaseStorage implements IStorage {
     const outstandingInvoices = outstandingInvoiceList.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
     const vatDue = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.vatAmount), 0);
 
-    // Get customer count
-    const customerCount = await db.select({ count: count() }).from(customers);
+    // Get customer count for this company only
+    const customerCount = await db.select({ count: count() }).from(customers).where(eq(customers.companyId, companyId));
     const totalCustomers = customerCount[0]?.count || 0;
 
-    // Get recent invoices with customer info
-    const recentInvoices = await this.getAllInvoices();
+    // Get recent invoices with customer info for this company only
+    const recentInvoices = await this.getAllInvoices(companyId);
 
     // Calculate real revenue by month from actual invoices
     const revenueByMonth = this.calculateRevenueByMonth(paidInvoices);
