@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 interface SubscriptionPlan {
   id: number;
@@ -52,6 +53,7 @@ interface CompanySubscription {
 export default function Subscription() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>("monthly");
@@ -335,16 +337,37 @@ export default function Subscription() {
                     )}
 
                     {!isCurrentPlan && (
-                      <Button 
-                        className="w-full" 
-                        variant={plan.name === 'enterprise' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setSelectedPlan(plan.id);
-                          setIsUpgradeDialogOpen(true);
-                        }}
-                      >
-                        {plan.name === 'enterprise' ? 'Contact Sales' : 'Request Plan'}
-                      </Button>
+                      <div className="space-y-2">
+                        {plan.name === 'enterprise' ? (
+                          <Button 
+                            className="w-full" 
+                            variant="default"
+                            onClick={() => {
+                              setSelectedPlan(plan.id);
+                              setIsUpgradeDialogOpen(true);
+                            }}
+                          >
+                            Contact Sales
+                          </Button>
+                        ) : (
+                          <>
+                            <Button 
+                              className="w-full" 
+                              variant="outline"
+                              onClick={() => navigate(`/subscription/payment/${plan.id}/monthly`)}
+                            >
+                              Choose Monthly - {formatPrice(plan.monthlyPrice)}
+                            </Button>
+                            <Button 
+                              className="w-full" 
+                              variant="default"
+                              onClick={() => navigate(`/subscription/payment/${plan.id}/annual`)}
+                            >
+                              Choose Annual - {formatPrice(plan.annualPrice)} (Save 17%)
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 </CardContent>

@@ -47,6 +47,9 @@ import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
 import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
 import SuperAdminAuditLogs from "@/pages/super-admin-audit-logs";
 import Subscription from "@/pages/subscription";
+import SubscriptionPayment from "@/pages/subscription-payment";
+import PaymentSuccess from "@/pages/payment-success";
+import PaymentCancel from "@/pages/payment-cancel";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -253,6 +256,21 @@ function AuthenticatedApp() {
         <Route path="/subscription">
           <ProtectedRoute>
             <Subscription />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/subscription/payment/:planId/:period">
+          <ProtectedRoute>
+            <SubscriptionPayment />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/subscription/success">
+          <ProtectedRoute>
+            <PaymentSuccess />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/subscription/cancel">
+          <ProtectedRoute>
+            <PaymentCancel />
           </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />

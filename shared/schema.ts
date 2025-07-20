@@ -252,6 +252,29 @@ export const companySubscriptions = pgTable("company_subscriptions", {
   planIdx: index("company_subscriptions_plan_idx").on(table.planId),
 }));
 
+// Subscription Payments Table for tracking payment transactions
+export const subscriptionPayments = pgTable("subscription_payments", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  planId: integer("plan_id").notNull().references(() => subscriptionPlans.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  billingPeriod: text("billing_period").notNull(), // monthly, annual
+  status: text("status").notNull().default("pending"), // pending, completed, failed, cancelled
+  paymentMethod: text("payment_method").notNull().default("payfast"),
+  paymentReference: text("payment_reference"), // PayFast payment ID
+  description: text("description"),
+  paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("subscription_payments_company_idx").on(table.companyId),
+  planIdx: index("subscription_payments_plan_idx").on(table.planId),
+  statusIdx: index("subscription_payments_status_idx").on(table.status),
+  referenceIdx: index("subscription_payments_reference_idx").on(table.paymentReference),
+}));
+
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id"), // Nullable for system-level actions
@@ -668,6 +691,8 @@ export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
 export type CompanySubscription = typeof companySubscriptions.$inferSelect;
 export type InsertCompanySubscription = typeof companySubscriptions.$inferInsert;
+export type SubscriptionPayment = typeof subscriptionPayments.$inferSelect;
+export type InsertSubscriptionPayment = z.infer<typeof insertSubscriptionPaymentSchema>;
 
 // Multi-Company Schemas
 export const insertCompanySchema = createInsertSchema(companies).omit({
@@ -689,6 +714,12 @@ export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans
 });
 
 export const insertCompanySubscriptionSchema = createInsertSchema(companySubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSubscriptionPaymentSchema = createInsertSchema(subscriptionPayments).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

@@ -2629,6 +2629,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/subscription-plans/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const plan = await storage.getSubscriptionPlan(planId);
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      console.error("Failed to fetch subscription plan:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plan" });
+    }
+  });
+
   // Company Subscription Management
   app.get("/api/company/subscription", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
@@ -2654,14 +2668,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { planId, billingPeriod } = req.body;
       
-      // This would typically create a subscription request/order
-      // For now, we'll log the request
-      await logAudit(req.user!.id, 'REQUEST', 'subscription_change', planId, `Requested subscription change to plan ${planId} for company ${companyId}`);
+      // Get the subscription plan details
+      const plan = await storage.getSubscriptionPlan(planId);
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
       
-      res.json({ message: "Subscription change request submitted successfully" });
+      // Get company details for payment
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      // Calculate amount based on billing period
+      const amount = billingPeriod === 'annual' ? parseFloat(plan.annualPrice) : parseFloat(plan.monthlyPrice);
+      
+      // Create payment record
+      const paymentData = {
+        companyId,
+        planId,
+        amount: amount.toFixed(2),
+        billingPeriod,
+        status: 'pending',
+        paymentMethod: 'payfast',
+        createdBy: req.user.id,
+        description: `${plan.displayName} - ${billingPeriod} subscription`
+      };
+      
+      const payment = await storage.createSubscriptionPayment(paymentData);
+      
+      // Generate PayFast payment data
+      const paymentReference = `SUB-${companyId}-${payment.id}-${Date.now()}`;
+      const payFastData = payFastService.createPaymentData({
+        amount: amount.toFixed(2),
+        item_name: `${plan.displayName} Subscription`,
+        item_description: `${billingPeriod} subscription for ${company.name}`,
+        return_url: `${process.env.BASE_URL || 'http://localhost:5000'}/subscription/success`,
+        cancel_url: `${process.env.BASE_URL || 'http://localhost:5000'}/subscription/cancel`,
+        notify_url: `${process.env.BASE_URL || 'http://localhost:5000'}/api/payfast/notify`,
+        m_payment_id: paymentReference,
+        email_address: company.email || req.user.email
+      });
+      
+      await logAudit(req.user!.id, 'CREATE', 'subscription_payment', payment.id, `Created payment request for plan ${planId} for company ${companyId}`);
+      
+      res.json({ 
+        paymentId: payment.id,
+        paymentUrl: payFastService.getPaymentUrl(),
+        paymentData: payFastData,
+        message: "Payment request created successfully" 
+      });
     } catch (error) {
-      console.error("Failed to request subscription change:", error);
-      res.status(500).json({ message: "Failed to request subscription change" });
+      console.error("Failed to create subscription payment:", error);
+      res.status(500).json({ message: "Failed to create subscription payment request" });
+    }
+  });
+
+  // PayFast Payment Notification Handler
+  app.post("/api/payfast/notify", async (req, res) => {
+    try {
+      console.log("PayFast ITN received:", req.body);
+      
+      // Verify the payment notification from PayFast
+      const isValid = payFastService.verifyITN(req.body);
+      if (!isValid) {
+        console.error("Invalid PayFast ITN signature");
+        return res.status(400).send("Invalid signature");
+      }
+      
+      const { m_payment_id, payment_status, amount_gross, pf_payment_id } = req.body;
+      
+      // Extract payment information from reference
+      const [, companyId, paymentId] = m_payment_id.split('-');
+      
+      // Update payment status
+      await storage.updateSubscriptionPaymentStatus(parseInt(paymentId), {
+        status: payment_status === 'COMPLETE' ? 'completed' : 'failed',
+        paymentReference: pf_payment_id,
+        paidAmount: payment_status === 'COMPLETE' ? amount_gross : null,
+        completedAt: payment_status === 'COMPLETE' ? new Date() : null
+      });
+      
+      // If payment successful, activate/update subscription
+      if (payment_status === 'COMPLETE') {
+        const payment = await storage.getSubscriptionPayment(parseInt(paymentId));
+        if (payment) {
+          const startDate = new Date();
+          const endDate = new Date();
+          
+          if (payment.billingPeriod === 'annual') {
+            endDate.setFullYear(endDate.getFullYear() + 1);
+          } else {
+            endDate.setMonth(endDate.getMonth() + 1);
+          }
+          
+          // Create or update company subscription
+          const subscriptionData = {
+            companyId: parseInt(companyId),
+            planId: payment.planId,
+            status: 'active',
+            billingPeriod: payment.billingPeriod,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            autoRenew: true,
+            amount: payment.amount,
+            paymentMethod: 'payfast',
+            lastPaymentDate: startDate.toISOString(),
+            nextBillingDate: endDate.toISOString()
+          };
+          
+          await storage.createCompanySubscription(subscriptionData);
+          
+          console.log(`Subscription activated for company ${companyId}, plan ${payment.planId}`);
+        }
+      }
+      
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("PayFast notification processing error:", error);
+      res.status(500).send("Server error");
+    }
+  });
+
+  // Subscription Payment Status Check
+  app.get("/api/company/subscription/payment/:paymentId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { paymentId } = req.params;
+      const payment = await storage.getSubscriptionPayment(parseInt(paymentId));
+      
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
+      // Verify user has access to this payment
+      if (payment.companyId !== req.user.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(payment);
+    } catch (error) {
+      console.error("Failed to fetch payment status:", error);
+      res.status(500).json({ message: "Failed to fetch payment status" });
     }
   });
 

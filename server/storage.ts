@@ -36,6 +36,7 @@ import {
   companyUsers,
   subscriptionPlans,
   companySubscriptions,
+  subscriptionPayments,
   vatTypes,
   vatReports,
   vatTransactions,
@@ -127,6 +128,8 @@ import {
   type InsertSubscriptionPlan,
   type CompanySubscription,
   type InsertCompanySubscription,
+  type SubscriptionPayment,
+  type InsertSubscriptionPayment,
   type VatType,
   type InsertVatType,
   type VatReport,
@@ -1863,6 +1866,45 @@ export class DatabaseStorage implements IStorage {
       .where(eq(companySubscriptions.companyId, companyId))
       .returning();
     return subscription;
+  }
+
+  // Subscription Payment Management
+  async createSubscriptionPayment(paymentData: InsertSubscriptionPayment): Promise<SubscriptionPayment> {
+    const [payment] = await db
+      .insert(subscriptionPayments)
+      .values(paymentData)
+      .returning();
+    return payment;
+  }
+
+  async getSubscriptionPayment(paymentId: number): Promise<SubscriptionPayment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(subscriptionPayments)
+      .where(eq(subscriptionPayments.id, paymentId));
+    return payment;
+  }
+
+  async getSubscriptionPaymentsByCompany(companyId: number): Promise<SubscriptionPayment[]> {
+    return await db
+      .select()
+      .from(subscriptionPayments)
+      .where(eq(subscriptionPayments.companyId, companyId))
+      .orderBy(desc(subscriptionPayments.createdAt));
+  }
+
+  async updateSubscriptionPaymentStatus(paymentId: number, statusData: {
+    status: string;
+    paymentReference?: string;
+    paidAmount?: string;
+    completedAt?: Date | null;
+  }): Promise<SubscriptionPayment | undefined> {
+    const [payment] = await db
+      .update(subscriptionPayments)
+      .set({ ...statusData, updatedAt: new Date() })
+      .where(eq(subscriptionPayments.id, paymentId))
+      .returning();
+    return payment;
   }
 
   // Super Admin Analytics
