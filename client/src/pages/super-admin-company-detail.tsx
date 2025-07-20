@@ -56,6 +56,7 @@ export default function SuperAdminCompanyDetail() {
       });
       setEditMode(false);
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/companies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/companies", companyId] });
     },
     onError: (error: any) => {
       toast({
@@ -218,7 +219,11 @@ export default function SuperAdminCompanyDetail() {
               </CardHeader>
               <CardContent>
                 {editMode ? (
-                  <form action={handleUpdateCompany} className="space-y-4">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleUpdateCompany(formData);
+                  }} className="space-y-4">
                     <div>
                       <Label htmlFor="name">Company Name</Label>
                       <Input id="name" name="name" defaultValue={company.name} />
@@ -330,7 +335,11 @@ export default function SuperAdminCompanyDetail() {
               <CardDescription>Manage the company's subscription plan</CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={handleUpdateCompany} className="space-y-4">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                handleUpdateCompany(formData);
+              }} className="space-y-4">
                 <div>
                   <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
                   <Select name="subscriptionPlan" defaultValue={company.subscriptionPlan}>
@@ -376,7 +385,11 @@ export default function SuperAdminCompanyDetail() {
                         Select a user and assign their role in the company
                       </DialogDescription>
                     </DialogHeader>
-                    <form action={handleAddUser} className="space-y-4">
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      handleAddUser(formData);
+                    }} className="space-y-4">
                       <div>
                         <Label htmlFor="userId">Select User</Label>
                         <Select name="userId" required>
@@ -505,7 +518,72 @@ export default function SuperAdminCompanyDetail() {
               <CardDescription>Advanced company configuration</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Advanced settings coming soon...</p>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Company Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">Data Backup</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Configure automatic data backup settings for this company.
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Configure
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">API Access</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Manage API keys and access permissions for this company.
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Manage
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">Audit Logs</h4>
+                        <p className="text-sm text-muted-foreground">
+                          View detailed audit logs for all company activities.
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        View Logs
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">Data Export</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Export all company data for backup or migration purposes.
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Export Data
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 border rounded-lg border-red-200">
+                      <div>
+                        <h4 className="font-medium text-red-700">Delete Company</h4>
+                        <p className="text-sm text-red-600">
+                          Permanently delete this company and all associated data. This action cannot be undone.
+                        </p>
+                      </div>
+                      <Button variant="destructive" size="sm">
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

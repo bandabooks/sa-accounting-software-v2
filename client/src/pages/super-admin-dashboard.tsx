@@ -195,24 +195,7 @@ export default function SuperAdminDashboard() {
     },
   });
 
-  // Impersonate user mutation
-  const impersonateMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      return await apiRequest("POST", `/api/super-admin/impersonate/${userId}`);
-    },
-    onSuccess: (response: any) => {
-      // Store impersonation token and redirect
-      localStorage.setItem('authToken', response.token);
-      window.location.href = '/';
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to impersonate user",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const handleCreatePlan = (formData: FormData) => {
     const planData = {
@@ -509,7 +492,10 @@ export default function SuperAdminDashboard() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => impersonateUser(user.id)}
+                        onClick={() => {
+                          console.log("Impersonating user:", user.id);
+                          impersonateUser(user.id);
+                        }}
                       >
                         <UserCheck className="h-4 w-4 mr-2" />
                         Impersonate
