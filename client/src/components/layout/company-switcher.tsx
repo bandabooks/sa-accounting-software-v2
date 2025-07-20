@@ -123,7 +123,8 @@ export default function CompanySwitcher() {
   // Create company mutation
   const createCompanyMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCompanySchema>) => {
-      return await apiRequest("POST", "/api/companies", data);
+      const response = await apiRequest("POST", "/api/companies", data);
+      return response.json();
     },
     onSuccess: (newCompany) => {
       toast({
@@ -134,7 +135,7 @@ export default function CompanySwitcher() {
       // Invalidate companies query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
       
-      // Switch to the new company immediately
+      // Switch to the new company immediately - pass companyId object
       switchCompanyMutation.mutate(newCompany.id);
       
       // Reset form and close dialogs
