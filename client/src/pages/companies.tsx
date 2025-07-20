@@ -19,6 +19,11 @@ export default function Companies() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
+  // Fetch current user
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/me"],
+  });
+
   // Fetch user's companies
   const { data: userCompanies, isLoading } = useQuery({
     queryKey: ["/api/companies/my"],
