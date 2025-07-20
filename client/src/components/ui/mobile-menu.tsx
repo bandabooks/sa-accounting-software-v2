@@ -7,7 +7,7 @@ import {
   Calculator, ChartLine, FileText, Users, BarChart3, Receipt, 
   Settings, TrendingUp, Package, Building, Archive, Building2, 
   BookOpen, Landmark, BookOpenCheck, ReceiptText, DollarSign, 
-  CreditCard, Box, Truck
+  CreditCard, Box, Truck, PieChart, CheckCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -57,7 +57,11 @@ const navigationGroups = [
       { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW" },
       { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW" },
       { path: "/banking", label: "Banking", icon: Landmark, permission: "BANKING_VIEW" },
-      { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW" }
+      { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW" },
+      { path: "/fixed-assets", label: "Fixed Assets", icon: Building2, permission: "FIXED_ASSETS_VIEW" },
+      { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW" },
+      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW" },
+      { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANK_RECONCILIATION_VIEW" }
     ]
   },
   {
