@@ -157,21 +157,42 @@ export class CompanyStorage implements ICompanyStorage {
 
   // Company utilities
   async getUserActiveCompany(userId: number): Promise<Company | undefined> {
-    // Get user's first active company or most recently joined
-    const userCompanies = await this.getCompaniesByUser(userId);
-    if (userCompanies.length === 0) return undefined;
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
     
-    // Return the company from the first entry (most recent)
-    return userCompanies[0].company as Company;
+    if (!user || !user.activeCompanyId) {
+      // If no active company set, get the first company the user has access to
+      const userCompanies = await this.getCompaniesByUser(userId);
+      if (userCompanies.length > 0) {
+        const firstCompany = userCompanies[0].company;
+        await this.setUserActiveCompany(userId, firstCompany.id);
+        return firstCompany;
+      }
+      return undefined;
+    }
+
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, user.activeCompanyId));
+    
+    return company || undefined;
   }
 
   async setUserActiveCompany(userId: number, companyId: number): Promise<void> {
-    // For now, we'll use join order to determine active company
-    // In future, we could add a user_preferences table to store this
+    // Verify user has access to this company
     const userRole = await this.getUserRole(companyId, userId);
     if (!userRole) {
       throw new Error("User is not a member of this company");
     }
+    
+    // Update user's active company in database
+    await db
+      .update(users)
+      .set({ activeCompanyId: companyId })
+      .where(eq(users.id, userId));
   }
 
   async checkUserAccess(userId: number, companyId: number): Promise<boolean> {
