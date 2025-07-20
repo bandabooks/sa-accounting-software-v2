@@ -58,13 +58,20 @@ const navigationGroups = [
     ]
   },
   {
+    id: "vat",
+    label: "VAT Management",
+    icon: ReceiptText,
+    items: [
+      { path: "/vat-management", label: "VAT Management", icon: ReceiptText, permission: "VAT_VIEW" }
+    ]
+  },
+  {
     id: "reports",
     label: "Reports",
     icon: BarChart3,
     items: [
       { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW" },
-      { path: "/reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW" },
-      { path: "/vat-management", label: "VAT Management", icon: ReceiptText, permission: "VAT_VIEW" }
+      { path: "/reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW" }
     ]
   },
   {
@@ -164,6 +171,7 @@ export default function Sidebar() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     sales: true,
     accounting: true,
+    vat: true,
     reports: true
   });
 
