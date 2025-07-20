@@ -47,7 +47,7 @@ export default function Companies() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
       setIsCreateDialogOpen(false);
-      // Reset form
+      // Reset form and manual edit tracking
       setFormData({
         name: '',
         displayName: '',
@@ -63,6 +63,11 @@ export default function Companies() {
         industry: 'general',
         industryTemplate: 'general',
       });
+      setManuallyEdited({
+        displayName: false,
+        slug: false,
+      });
+      setSlugValidation({ isValid: true, message: '' });
     },
     onError: (error) => {
       toast({
@@ -112,6 +117,33 @@ export default function Companies() {
     industryTemplate: 'general',
   });
 
+  // Track manual edits to prevent overwriting user changes
+  const [manuallyEdited, setManuallyEdited] = useState({
+    displayName: false,
+    slug: false,
+  });
+
+  // Generate URL slug from text
+  const generateSlug = (text: string): string => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+      .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  };
+
+  // Check if slug already exists (basic validation)
+  const [slugValidation, setSlugValidation] = useState({ isValid: true, message: '' });
+
+  // Basic duplicate slug check (can be enhanced with API call later)
+  const checkSlugDuplicate = (slug: string): boolean => {
+    if (!userCompanies || !slug) return false;
+    return userCompanies.some((company: any) => 
+      company.slug && company.slug.toLowerCase() === slug.toLowerCase()
+    );
+  };
+
   // Industry options
   const industryOptions = [
     { value: 'general', label: 'General Business', description: 'Default template suitable for most businesses' },
@@ -132,10 +164,62 @@ export default function Companies() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+
+      // Auto-fill logic when company name changes
+      if (field === 'name') {
+        // Auto-fill Display Name if not manually edited
+        if (!manuallyEdited.displayName) {
+          newData.displayName = value;
+        }
+
+        // Auto-generate URL Slug if not manually edited
+        if (!manuallyEdited.slug) {
+          newData.slug = generateSlug(value);
+        }
+      }
+
+      return newData;
+    });
+
+    // Mark fields as manually edited when user directly modifies them
+    if (field === 'displayName') {
+      setManuallyEdited(prev => ({ ...prev, displayName: true }));
+      
+      // Reset flag if user clears the field
+      if (value === '') {
+        setManuallyEdited(prev => ({ ...prev, displayName: false }));
+      }
+    }
+
+    if (field === 'slug') {
+      setManuallyEdited(prev => ({ ...prev, slug: true }));
+      
+      // Reset flag if user clears the field
+      if (value === '') {
+        setManuallyEdited(prev => ({ ...prev, slug: false }));
+      }
+
+      // Validate slug format and duplicates
+      const isValidFormat = /^[a-z0-9-]*$/.test(value) && !value.startsWith('-') && !value.endsWith('-');
+      const isDuplicate = checkSlugDuplicate(value);
+      
+      let message = '';
+      let isValid = true;
+      
+      if (value === '') {
+        isValid = true;
+      } else if (!isValidFormat) {
+        isValid = false;
+        message = 'Only lowercase letters, numbers, and hyphens allowed. Cannot start or end with hyphens.';
+      } else if (isDuplicate) {
+        isValid = false;
+        message = 'This URL slug is already in use. Please choose a different one.';
+      }
+      
+      setSlugValidation({ isValid, message });
+    }
   };
 
   const getRoleIcon = (role: string) => {
@@ -210,27 +294,51 @@ export default function Companies() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="displayName">Display Name *</Label>
+                  <Label htmlFor="displayName" className="flex items-center gap-2">
+                    Display Name *
+                    {!manuallyEdited.displayName && formData.name && (
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Auto-filled</span>
+                    )}
+                  </Label>
                   <Input 
                     id="displayName" 
                     value={formData.displayName}
                     onChange={(e) => handleInputChange('displayName', e.target.value)}
                     required 
                     className="w-full"
+                    placeholder="Company display name"
                   />
+                  {!manuallyEdited.displayName && (
+                    <p className="text-xs text-gray-500 mt-1">Automatically matches company name • Edit to customize</p>
+                  )}
                 </div>
               </div>
               
               <div>
-                <Label htmlFor="slug">URL Slug *</Label>
+                <Label htmlFor="slug" className="flex items-center gap-2">
+                  URL Slug *
+                  {!manuallyEdited.slug && formData.name && (
+                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Auto-generated</span>
+                  )}
+                </Label>
                 <Input 
                   id="slug" 
                   value={formData.slug}
                   onChange={(e) => handleInputChange('slug', e.target.value)}
                   placeholder="my-company" 
                   required 
+                  className={`w-full ${!slugValidation.isValid ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
-                <p className="text-sm text-gray-500 mt-1">Used in URLs (lowercase, no spaces)</p>
+                <div className="mt-1 space-y-1">
+                  {!slugValidation.isValid && (
+                    <p className="text-xs text-red-600">{slugValidation.message}</p>
+                  )}
+                  {!manuallyEdited.slug ? (
+                    <p className="text-xs text-gray-500">Auto-generated from company name • Edit to customize</p>
+                  ) : (
+                    <p className="text-xs text-gray-500">Used in URLs (lowercase, no spaces)</p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -356,7 +464,11 @@ export default function Companies() {
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="min-w-[100px]">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createCompanyMutation.isPending} className="min-w-[140px]">
+                <Button 
+                  type="submit" 
+                  disabled={createCompanyMutation.isPending || !slugValidation.isValid || !formData.name || !formData.displayName || !formData.slug || !formData.email} 
+                  className="min-w-[140px]"
+                >
                   {createCompanyMutation.isPending ? "Creating..." : "Create Company"}
                 </Button>
               </div>
