@@ -4,7 +4,7 @@ import {
   Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, 
   Settings, TrendingUp, Package, Building, Archive, Building2, BookOpen, 
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
-  DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle
+  DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -222,6 +222,19 @@ export default function Sidebar() {
             <p className="text-sm text-gray-500">Accounting</p>
           </div>
         </div>
+        
+        {/* Super Admin Quick Access */}
+        {user?.role === "super_admin" && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <Link
+              href="/super-admin"
+              className="flex items-center space-x-3 px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <Shield size={16} />
+              <span>Super Admin Panel</span>
+            </Link>
+          </div>
+        )}
       </div>
       
       <nav className="flex-1 overflow-y-auto overflow-x-hidden mt-6 px-3 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
