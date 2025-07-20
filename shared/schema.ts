@@ -404,6 +404,8 @@ export const products = pgTable("products", {
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }).default("0.00"),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  incomeAccountId: integer("income_account_id").references(() => chartOfAccounts.id), // Account for revenue recording
+  expenseAccountId: integer("expense_account_id").references(() => chartOfAccounts.id), // Account for COGS/expense recording
   stockQuantity: integer("stock_quantity").default(0),
   minStockLevel: integer("min_stock_level").default(0),
   maxStockLevel: integer("max_stock_level").default(0),

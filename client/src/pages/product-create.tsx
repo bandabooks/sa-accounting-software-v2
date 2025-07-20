@@ -19,6 +19,7 @@ import { useVATStatus } from "@/hooks/useVATStatus";
 import { VATFieldWrapper } from "@/components/vat/VATConditionalWrapper";
 import type { ProductCategory } from "@shared/schema";
 import CategorySelect from "@/components/CategorySelect";
+import { AccountSelect } from "@/components/AccountSelect";
 
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -28,6 +29,8 @@ const productSchema = z.object({
   unitPrice: z.string().min(1, "Price is required"),
   costPrice: z.string().optional(),
   vatRate: z.string().optional(),
+  incomeAccountId: z.string().min(1, "Income account is required"),
+  expenseAccountId: z.string().optional(),
   stockQuantity: z.number().optional(),
   minStockLevel: z.number().optional(),
   isService: z.boolean().default(false),
@@ -54,6 +57,8 @@ export default function ProductCreate() {
       unitPrice: "0.00",
       costPrice: "0.00",
       vatRate: "15.00",
+      incomeAccountId: "",
+      expenseAccountId: "",
       stockQuantity: 0,
       minStockLevel: 0,
       isService: false,
@@ -254,6 +259,65 @@ export default function ProductCreate() {
                     </FormItem>
                   )}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Account Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Settings</CardTitle>
+              <CardDescription>
+                Choose the accounts for recording income{!isService ? " and expenses" : ""} from this {isService ? "service" : "product"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="incomeAccountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Income Account *</FormLabel>
+                      <FormControl>
+                        <AccountSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select income account"
+                          accountType="revenue"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Account where {isService ? "service" : "sales"} revenue will be recorded
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {!isService && (
+                  <FormField
+                    control={form.control}
+                    name="expenseAccountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expense Account</FormLabel>
+                        <FormControl>
+                          <AccountSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Select expense account"
+                            accountType="expense"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Account for cost of goods sold (COGS)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>

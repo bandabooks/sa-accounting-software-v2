@@ -1420,7 +1420,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/products", authenticate, async (req, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const productData = insertProductSchema.parse({ ...req.body, companyId });
+      
+      // Convert string account IDs to integers if present
+      const processedData = {
+        ...req.body,
+        companyId,
+        incomeAccountId: req.body.incomeAccountId ? parseInt(req.body.incomeAccountId) : undefined,
+        expenseAccountId: req.body.expenseAccountId ? parseInt(req.body.expenseAccountId) : undefined,
+      };
+      
+      const productData = insertProductSchema.parse(processedData);
       const product = await storage.createProduct(productData);
       await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product', product?.id || 0);
       res.status(201).json(product);
