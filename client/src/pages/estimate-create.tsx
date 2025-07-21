@@ -27,6 +27,7 @@ import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { insertEstimateSchema, insertEstimateItemSchema } from "@shared/schema";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useGlobalNotification } from "@/contexts/NotificationContext";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
 import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
@@ -41,6 +42,7 @@ type EstimateFormData = z.infer<typeof estimateFormSchema>;
 export default function EstimateCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { showSuccess } = useGlobalNotification();
   const queryClient = useQueryClient();
 
   const form = useForm<EstimateFormData>({
@@ -76,11 +78,6 @@ export default function EstimateCreate() {
 
   const { data: customers } = useQuery({
     queryKey: ["/api/customers"],
-    queryFn: async () => {
-      const response = await fetch("/api/customers");
-      if (!response.ok) throw new Error("Failed to fetch customers");
-      return response.json();
-    },
   });
 
   const createEstimateMutation = useMutation({
@@ -103,10 +100,10 @@ export default function EstimateCreate() {
     },
     onSuccess: (estimate) => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
-      toast({
-        title: "Success",
-        description: "Estimate created successfully",
-      });
+      showSuccess(
+        "Estimate Created Successfully!",
+        `Estimate ${estimate.estimateNumber} has been created and saved.`
+      );
       setLocation(`/estimates/${estimate.id}`);
     },
     onError: (error) => {
@@ -165,6 +162,8 @@ export default function EstimateCreate() {
       quantity: "1",
       unitPrice: "0.00",
       vatRate: "15",
+      vatInclusive: false,
+      vatAmount: "0.00",
       total: "0.00",
     });
   };

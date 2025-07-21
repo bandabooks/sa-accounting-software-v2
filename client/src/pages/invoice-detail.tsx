@@ -7,13 +7,13 @@ import { Printer, Mail, Edit, Download, Repeat, CreditCard } from "lucide-react"
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
+import { useGlobalNotification } from "@/contexts/NotificationContext";
 import PaymentModal from "@/components/payment/payment-modal";
 import PaymentHistory from "@/components/payment/payment-history";
 import PaymentStatusSummary from "@/components/payment/payment-status-summary";
 import { generateInvoicePDF } from "@/components/invoice/pdf-generator";
 import EmailInvoice from "@/components/invoice/email-invoice";
 import RecurringInvoice from "@/components/invoice/recurring-invoice";
-import SuccessNotification from "@/components/ui/success-notification";
 import { useState, useRef } from "react";
 
 // Payment Modal Wrapper that calculates remaining amount
@@ -72,12 +72,11 @@ export default function InvoiceDetail() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { showSuccess } = useGlobalNotification();
   const queryClient = useQueryClient();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
-  const [lastPaymentAmount, setLastPaymentAmount] = useState("");
   const paymentHistoryRef = useRef<HTMLDivElement>(null);
   
   const invoiceId = parseInt(params.id || "0");
@@ -380,29 +379,25 @@ export default function InvoiceDetail() {
           queryClient.invalidateQueries({ queryKey: ["/api/invoices", invoiceId] });
           queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
           
-          // Set payment amount and show success notification
-          setLastPaymentAmount(paymentAmount || "");
-          setShowPaymentSuccess(true);
-        }}
-      />
-
-      {/* Success Notification */}
-      <SuccessNotification
-        isVisible={showPaymentSuccess}
-        title="Payment Recorded Successfully!"
-        description={lastPaymentAmount ? `Payment of ${formatCurrency(lastPaymentAmount)} has been processed and added to the invoice.` : "Your payment has been successfully recorded and applied to this invoice."}
-        onClose={() => {
-          setShowPaymentSuccess(false);
-          // Scroll to payment history after notification closes
+          // Show global success notification
+          showSuccess(
+            "Payment Recorded Successfully!",
+            paymentAmount ? 
+              `Payment of ${formatCurrency(paymentAmount)} has been processed and added to the invoice.` :
+              "Your payment has been successfully recorded and applied to this invoice."
+          );
+          
+          // Scroll to payment history after notification shows
           setTimeout(() => {
             paymentHistoryRef.current?.scrollIntoView({ 
               behavior: 'smooth', 
               block: 'center' 
             });
-          }, 300);
+          }, 500);
         }}
-        duration={3500}
       />
+
+
     </div>
   );
 
@@ -413,10 +408,10 @@ export default function InvoiceDetail() {
     try {
       const pdf = await generateInvoicePDF(invoice);
       pdf.save(`invoice-${invoice.invoiceNumber}.pdf`);
-      toast({
-        title: "PDF Generated",
-        description: "Invoice PDF has been downloaded successfully.",
-      });
+      showSuccess(
+        "PDF Generated Successfully",
+        "Invoice PDF has been downloaded to your computer."
+      );
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast({
@@ -428,16 +423,16 @@ export default function InvoiceDetail() {
   }
 
   function handleEmailSent() {
-    toast({
-      title: "Invoice Emailed",
-      description: "Invoice has been sent successfully.",
-    });
+    showSuccess(
+      "Invoice Sent Successfully",
+      "Your invoice has been emailed to the customer successfully."
+    );
   }
 
   function handleRecurringSetup() {
-    toast({
-      title: "Recurring Invoice Setup",
-      description: "Invoice will now be generated automatically.",
-    });
+    showSuccess(
+      "Recurring Invoice Setup Complete",
+      "Invoice will now be generated automatically based on your schedule."
+    );
   }
 }

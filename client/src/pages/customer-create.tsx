@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { customersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useGlobalNotification } from "@/contexts/NotificationContext";
 import type { InsertCustomer } from "@shared/schema";
 
 export default function CustomerCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { showSuccess } = useGlobalNotification();
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<InsertCustomer>({
@@ -26,12 +28,12 @@ export default function CustomerCreate() {
 
   const createMutation = useMutation({
     mutationFn: customersApi.create,
-    onSuccess: () => {
+    onSuccess: (customer) => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({
-        title: "Customer created",
-        description: "Customer has been added successfully.",
-      });
+      showSuccess(
+        "Customer Created Successfully",
+        `${customer.name} has been added to your customer database.`
+      );
       setLocation("/customers");
     },
     onError: () => {

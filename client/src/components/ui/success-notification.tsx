@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { CheckCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SuccessNotificationProps {
   isVisible: boolean;
   title: string;
-  description?: string;
+  description: string;
   onClose: () => void;
-  duration?: number; // Duration in milliseconds, default 4000ms
-  className?: string;
+  duration?: number;
 }
 
 export default function SuccessNotification({
@@ -16,102 +15,64 @@ export default function SuccessNotification({
   title,
   description,
   onClose,
-  duration = 4000,
-  className
+  duration = 3500,
 }: SuccessNotificationProps) {
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
-
   useEffect(() => {
-    if (isVisible) {
-      setShouldRender(true);
-      // Small delay to trigger entrance animation
-      setTimeout(() => setIsAnimating(true), 10);
-      
-      // Auto-dismiss after duration
+    if (isVisible && duration > 0) {
       const timer = setTimeout(() => {
-        handleClose();
+        onClose();
       }, duration);
 
       return () => clearTimeout(timer);
     }
-  }, [isVisible, duration]);
+  }, [isVisible, duration, onClose]);
 
-  const handleClose = () => {
-    setIsAnimating(false);
-    // Wait for exit animation to complete before removing from DOM
-    setTimeout(() => {
-      setShouldRender(false);
-      onClose();
-    }, 300);
-  };
-
-  if (!shouldRender) return null;
+  if (!isVisible) return null;
 
   return (
-    <div 
-      className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300",
-        isAnimating ? "opacity-100" : "opacity-0",
-        className
-      )}
-      onClick={handleClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       <div 
         className={cn(
-          "relative bg-white rounded-2xl shadow-2xl border border-green-200 p-8 max-w-md w-full mx-4 transform transition-all duration-300",
-          isAnimating 
-            ? "scale-100 translate-y-0" 
-            : "scale-95 translate-y-4"
+          "bg-white border border-gray-200 rounded-lg shadow-lg p-6 w-96 max-w-sm pointer-events-auto",
+          "transform transition-all duration-300 ease-out",
+          isVisible ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-4"
         )}
-        onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          <X className="w-5 h-5 text-gray-400" />
-        </button>
-
-        {/* Success content */}
-        <div className="text-center">
-          {/* Success icon */}
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+        <div className="flex items-start gap-3">
+          <CheckCircle className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-600 mt-1">{description}</p>
           </div>
-
-          {/* Title */}
-          <h3 className="text-2xl font-bold text-green-700 mb-3">
-            {title}
-          </h3>
-
-          {/* Description */}
-          {description && (
-            <p className="text-gray-600 text-lg mb-6">
-              {description}
-            </p>
-          )}
-
-          {/* Auto-dismiss indicator */}
-          <div className="w-full bg-gray-200 rounded-full h-1 mb-4">
-            <div 
-              className="bg-green-500 h-1 rounded-full transition-all ease-linear"
-              style={{
-                width: isAnimating ? '0%' : '100%',
-                transitionDuration: `${duration}ms`
-              }}
-            />
-          </div>
-
-          {/* Action button */}
           <button
-            onClick={handleClose}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+            aria-label="Close notification"
           >
-            Continue
+            <X className="w-4 h-4" />
           </button>
         </div>
+        
+        {/* Progress bar */}
+        <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
+          <div
+            className="bg-green-500 h-1 rounded-full"
+            style={{
+              animation: `progress-bar ${duration}ms linear`,
+            }}
+          />
+        </div>
+        
+        <style>{`
+          @keyframes progress-bar {
+            from {
+              width: 100%;
+            }
+            to {
+              width: 0%;
+            }
+          }
+        `}</style>
       </div>
     </div>
   );

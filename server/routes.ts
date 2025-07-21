@@ -498,10 +498,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/invoices", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = createInvoiceSchema.parse(req.body);
+      
+      // Auto-generate invoice number if not provided
+      const companyId = req.user.companyId || 1;
+      let invoiceNumber = validatedData.invoice.invoiceNumber;
+      if (!invoiceNumber || invoiceNumber.trim() === '') {
+        invoiceNumber = await storage.getNextDocumentNumber(companyId, 'invoice');
+      }
+      
       // Use user's active company ID
       const invoiceData = {
         ...validatedData.invoice,
-        companyId: req.user.companyId || 1 // Fallback to company 1 if no active company
+        invoiceNumber,
+        companyId
       };
       const invoice = await storage.createInvoice(invoiceData, validatedData.items);
       res.status(201).json(invoice);
@@ -618,10 +627,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/estimates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = createEstimateSchema.parse(req.body);
+      
+      // Auto-generate estimate number if not provided
+      const companyId = req.user.companyId || 1;
+      let estimateNumber = validatedData.estimate.estimateNumber;
+      if (!estimateNumber || estimateNumber.trim() === '') {
+        estimateNumber = await storage.getNextDocumentNumber(companyId, 'estimate');
+      }
+      
       // Use user's active company ID
       const estimateData = {
         ...validatedData.estimate,
-        companyId: req.user.companyId || 1 // Fallback to company 1 if no active company
+        estimateNumber,
+        companyId
       };
       const estimate = await storage.createEstimate(estimateData, validatedData.items);
       res.status(201).json(estimate);

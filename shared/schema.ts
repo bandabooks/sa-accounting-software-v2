@@ -151,6 +151,22 @@ export const estimateItems = pgTable("estimate_items", {
   companyIdx: index("estimate_items_company_idx").on(table.companyId),
 }));
 
+// Auto-numbering sequence table
+export const numberSequences = pgTable("number_sequences", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  documentType: text("document_type").notNull(), // invoice, estimate, purchase_order, etc.
+  prefix: text("prefix").notNull().default(""), // INV-, EST-, PO-, etc.
+  nextNumber: integer("next_number").notNull().default(1),
+  format: text("format").notNull().default("prefix-year-number"), // prefix-year-number, prefix-number, number
+  yearReset: boolean("year_reset").default(true), // Reset numbering each year
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyDocumentUnique: unique().on(table.companyId, table.documentType),
+  companyIdx: index("number_sequences_company_idx").on(table.companyId),
+}));
+
 // Financial reporting tables
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
@@ -2059,6 +2075,8 @@ export type InsertProjectFile = z.infer<typeof insertProjectFileSchema>;
 
 export type ProjectTemplate = typeof projectTemplates.$inferSelect;
 export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
+export type NumberSequence = typeof numberSequences.$inferSelect;
+export type InsertNumberSequence = typeof numberSequences.$inferInsert;
 
 // Extended types for API responses
 export type ProjectWithDetails = Project & {

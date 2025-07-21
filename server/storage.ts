@@ -19,6 +19,7 @@ import {
   products,
   payfastPayments,
   companySettings,
+  numberSequences,
   inventoryTransactions,
   emailReminders,
   currencyRates,
@@ -177,6 +178,8 @@ import {
   type InsertProjectFile,
   type ProjectTemplate,
   type InsertProjectTemplate,
+  type NumberSequence,
+  type InsertNumberSequence,
   type ProjectWithDetails,
   type TaskWithDetails,
   type TimeEntryWithDetails,
@@ -712,6 +715,100 @@ export class DatabaseStorage implements IStorage {
       .where(eq(auditLogs.companyId, companyId))
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit);
+  }
+
+  // Auto-numbering sequences
+  async getNextDocumentNumber(companyId: number, documentType: string): Promise<string> {
+    // Get or create sequence for this document type
+    let [sequence] = await db
+      .select()
+      .from(numberSequences)
+      .where(
+        and(
+          eq(numberSequences.companyId, companyId),
+          eq(numberSequences.documentType, documentType)
+        )
+      );
+
+    if (!sequence) {
+      // Create default sequence for this document type
+      const defaultPrefix = documentType.toUpperCase().substring(0, 3) + "-";
+      sequence = await this.createDefaultSequence(companyId, documentType, defaultPrefix);
+    }
+
+    // Generate the document number
+    const currentYear = new Date().getFullYear();
+    const formatParts = sequence.format.split('-');
+    let documentNumber = '';
+
+    // Reset numbering if it's a new year and yearReset is true
+    if (sequence.yearReset) {
+      const sequenceYear = sequence.updatedAt ? sequence.updatedAt.getFullYear() : currentYear;
+      if (sequenceYear < currentYear) {
+        await db
+          .update(numberSequences)
+          .set({ nextNumber: 1, updatedAt: new Date() })
+          .where(eq(numberSequences.id, sequence.id));
+        sequence.nextNumber = 1;
+      }
+    }
+
+    // Build document number according to format
+    for (const part of formatParts) {
+      switch (part) {
+        case 'prefix':
+          documentNumber += sequence.prefix;
+          break;
+        case 'year':
+          documentNumber += currentYear.toString() + '-';
+          break;
+        case 'number':
+          documentNumber += sequence.nextNumber.toString().padStart(3, '0');
+          break;
+        default:
+          documentNumber += part;
+      }
+    }
+
+    // Update the next number
+    await db
+      .update(numberSequences)
+      .set({ 
+        nextNumber: sequence.nextNumber + 1,
+        updatedAt: new Date()
+      })
+      .where(eq(numberSequences.id, sequence.id));
+
+    return documentNumber;
+  }
+
+  private async createDefaultSequence(companyId: number, documentType: string, prefix: string): Promise<NumberSequence> {
+    const [sequence] = await db
+      .insert(numberSequences)
+      .values({
+        companyId,
+        documentType,
+        prefix,
+        nextNumber: 1,
+        format: 'prefix-year-number',
+        yearReset: true,
+      })
+      .returning();
+    return sequence;
+  }
+
+  async updateNumberSequence(companyId: number, documentType: string, sequenceData: Partial<InsertNumberSequence>): Promise<NumberSequence | undefined> {
+    const [updatedSequence] = await db
+      .update(numberSequences)
+      .set({ ...sequenceData, updatedAt: new Date() })
+      .where(
+        and(
+          eq(numberSequences.companyId, companyId),
+          eq(numberSequences.documentType, documentType)
+        )
+      )
+      .returning();
+    return updatedSequence;
   }
 
   // Customers
