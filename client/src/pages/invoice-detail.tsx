@@ -3,21 +3,23 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Mail, Edit, Download, Repeat } from "lucide-react";
+import { Printer, Mail, Edit, Download, Repeat, CreditCard } from "lucide-react";
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
-import PaymentForm from "@/components/payment/payment-form";
+import PaymentModal from "@/components/payment/payment-modal";
 import PaymentHistory from "@/components/payment/payment-history";
 import { generateInvoicePDF } from "@/components/invoice/pdf-generator";
 import EmailInvoice from "@/components/invoice/email-invoice";
 import RecurringInvoice from "@/components/invoice/recurring-invoice";
 import { useState } from "react";
 
-// Payment Form Wrapper that calculates remaining amount
-function PaymentFormWrapper({ invoiceId, invoiceTotal, onPaymentAdded }: {
+// Payment Modal Wrapper that calculates remaining amount
+function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPaymentAdded }: {
   invoiceId: number;
   invoiceTotal: string;
+  isOpen: boolean;
+  onClose: () => void;
   onPaymentAdded: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -53,7 +55,9 @@ function PaymentFormWrapper({ invoiceId, invoiceTotal, onPaymentAdded }: {
   };
 
   return (
-    <PaymentForm
+    <PaymentModal
+      isOpen={isOpen}
+      onClose={onClose}
       invoiceId={invoiceId}
       invoiceTotal={invoiceTotal}
       remainingAmount={remainingAmount}
@@ -69,6 +73,7 @@ export default function InvoiceDetail() {
   const queryClient = useQueryClient();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   
   const invoiceId = parseInt(params.id || "0");
 
@@ -313,21 +318,28 @@ export default function InvoiceDetail() {
           {/* Payment History */}
           <PaymentHistory invoiceId={invoiceId} />
 
-          {/* Payment Form */}
+          {/* Record Payment Button */}
           {invoice.status !== "paid" && (
-            <PaymentFormWrapper
-              invoiceId={invoiceId}
-              invoiceTotal={invoice.total}
-              onPaymentAdded={() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/invoices", invoiceId] });
-                queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
-                toast({
-                  title: "Payment recorded",
-                  description: "Payment has been recorded successfully.",
-                });
-              }}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Record Payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">
+                  Click the button below to record a payment for this invoice.
+                </p>
+                <Button 
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-lg font-semibold"
+                >
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  Record Payment
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -345,6 +357,23 @@ export default function InvoiceDetail() {
         isOpen={isRecurringModalOpen}
         onClose={() => setIsRecurringModalOpen(false)}
         onSetup={handleRecurringSetup}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModalWrapper
+        invoiceId={invoiceId}
+        invoiceTotal={invoice.total}
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onPaymentAdded={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/invoices", invoiceId] });
+          queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
+          toast({
+            title: "Payment recorded",
+            description: "Payment has been recorded successfully.",
+          });
+        }}
       />
     </div>
   );
