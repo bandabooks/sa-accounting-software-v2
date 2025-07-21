@@ -1,24 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, FileText, Send, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { useState } from "react";
+import { MiniDashboard } from "@/components/MiniDashboard";
+import { DashboardCard } from "@/components/DashboardCard";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["/api/invoices"],
     queryFn: invoicesApi.getAll
   });
 
-  const filteredInvoices = invoices?.filter(invoice =>
-    invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const { data: stats } = useQuery({
+    queryKey: ["/api/invoices/stats"],
+    queryFn: () => apiRequest("/api/invoices/stats")
+  });
+
+  const filteredInvoices = invoices?.filter(invoice => {
+    const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = !statusFilter || invoice.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  }) || [];
 
   if (isLoading) {
     return (
@@ -35,14 +46,65 @@ export default function Invoices() {
 
   return (
     <div className="space-y-6">
+      {/* Mini Dashboard */}
+      {stats && (
+        <MiniDashboard title="Invoices Overview">
+          <DashboardCard
+            title="Total Invoices"
+            value={stats.total}
+            icon={FileText}
+            color="blue"
+            onClick={() => setStatusFilter("")}
+          />
+          <DashboardCard
+            title="Draft"
+            value={stats.draft}
+            icon={Edit}
+            color="gray"
+            onClick={() => setStatusFilter("draft")}
+          />
+          <DashboardCard
+            title="Sent"
+            value={stats.sent}
+            icon={Send}
+            color="blue"
+            onClick={() => setStatusFilter("sent")}
+          />
+          <DashboardCard
+            title="Paid"
+            value={stats.paid}
+            icon={CheckCircle}
+            color="green"
+            onClick={() => setStatusFilter("paid")}
+          />
+          <DashboardCard
+            title="Overdue"
+            value={stats.overdue}
+            icon={AlertCircle}
+            color="red"
+            onClick={() => setStatusFilter("overdue")}
+          />
+        </MiniDashboard>
+      )}
+
       {/* Header Actions */}
       <div className="flex justify-between items-center">
-        <div className="flex-1 max-w-md">
+        <div className="flex gap-4 flex-1 max-w-2xl">
           <Input
             placeholder="Search invoices..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
           />
+          {statusFilter && (
+            <Button
+              variant="outline"
+              onClick={() => setStatusFilter("")}
+              className="whitespace-nowrap"
+            >
+              Clear Filter
+            </Button>
+          )}
         </div>
         <Button asChild className="bg-primary hover:bg-blue-800">
           <Link href="/invoices/new">

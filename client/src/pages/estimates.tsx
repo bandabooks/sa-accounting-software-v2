@@ -1,24 +1,117 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Eye, FileText } from "lucide-react";
+import { Plus, Eye, FileText, Send, Check, X, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { estimatesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { useState } from "react";
+import { MiniDashboard } from "@/components/MiniDashboard";
+import { DashboardCard } from "@/components/DashboardCard";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Estimates() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const { data: estimates, isLoading } = useQuery({
     queryKey: ["/api/estimates"],
     queryFn: estimatesApi.getAll
   });
 
-  const filteredEstimates = estimates?.filter(estimate =>
-    estimate.estimateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    estimate.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const { data: stats } = useQuery({
+    queryKey: ["/api/estimates/stats"],
+    queryFn: () => apiRequest("/api/estimates/stats")
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status, notes }: { id: number; status: string; notes?: string }) => {
+      return apiRequest(`/api/estimates/${id}/status`, {
+        method: "PUT",
+        body: { status, notes }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/stats"] });
+      toast({
+        title: "Status Updated",
+        description: "Estimate status has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update estimate status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendEstimateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest(`/api/estimates/${id}/send`, {
+        method: "POST"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/stats"] });
+      toast({
+        title: "Estimate Sent",
+        description: "Estimate has been sent successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send estimate.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const filteredEstimates = estimates?.filter(estimate => {
+    const matchesSearch = estimate.estimateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      estimate.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = !statusFilter || estimate.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  }) || [];
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "sent": return Send;
+      case "viewed": return Eye;
+      case "accepted": return Check;
+      case "rejected": return X;
+      case "expired": return AlertCircle;
+      default: return FileText;
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "draft": return "gray";
+      case "sent": return "blue";
+      case "viewed": return "orange";
+      case "accepted": return "green";
+      case "rejected": return "red";
+      case "expired": return "red";
+      default: return "gray";
+    }
+  };
+
+  const handleStatusUpdate = (id: number, status: string) => {
+    updateStatusMutation.mutate({ id, status });
+  };
+
+  const handleSendEstimate = (id: number) => {
+    sendEstimateMutation.mutate(id);
+  };
 
   if (isLoading) {
     return (
@@ -35,14 +128,65 @@ export default function Estimates() {
 
   return (
     <div className="space-y-6">
+      {/* Mini Dashboard */}
+      {stats && (
+        <MiniDashboard title="Estimates Overview">
+          <DashboardCard
+            title="Total Estimates"
+            value={stats.total}
+            icon={FileText}
+            color="blue"
+            onClick={() => setStatusFilter("")}
+          />
+          <DashboardCard
+            title="Draft"
+            value={stats.draft}
+            icon={FileText}
+            color="gray"
+            onClick={() => setStatusFilter("draft")}
+          />
+          <DashboardCard
+            title="Sent"
+            value={stats.sent}
+            icon={Send}
+            color="blue"
+            onClick={() => setStatusFilter("sent")}
+          />
+          <DashboardCard
+            title="Accepted"
+            value={stats.accepted}
+            icon={Check}
+            color="green"
+            onClick={() => setStatusFilter("accepted")}
+          />
+          <DashboardCard
+            title="Rejected"
+            value={stats.rejected}
+            icon={X}
+            color="red"
+            onClick={() => setStatusFilter("rejected")}
+          />
+        </MiniDashboard>
+      )}
+
       {/* Header Actions */}
       <div className="flex justify-between items-center">
-        <div className="flex-1 max-w-md">
+        <div className="flex gap-4 flex-1 max-w-2xl">
           <Input
             placeholder="Search estimates..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
           />
+          {statusFilter && (
+            <Button
+              variant="outline"
+              onClick={() => setStatusFilter("")}
+              className="whitespace-nowrap"
+            >
+              Clear Filter
+            </Button>
+          )}
         </div>
         <Link href="/estimates/new">
           <Button className="bg-secondary hover:bg-teal-800 text-white">
@@ -105,19 +249,61 @@ export default function Estimates() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(estimate.status)}`}>
+                    <Badge 
+                      variant={getStatusBadgeColor(estimate.status) as any}
+                      className="flex items-center gap-1 w-fit"
+                    >
+                      {(() => {
+                        const Icon = getStatusIcon(estimate.status);
+                        return <Icon size={12} />;
+                      })()}
                       {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
-                    </span>
+                    </Badge>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <Link href={`/estimates/${estimate.id}`}>
-                      <Button variant="ghost" size="sm">
-                        <Eye size={16} />
-                      </Button>
-                    </Link>
-                    <Button variant="ghost" size="sm">
-                      <FileText size={16} />
-                    </Button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex space-x-2">
+                      <Link href={`/estimates/${estimate.id}`}>
+                        <Button variant="outline" size="sm">
+                          <Eye size={16} className="mr-1" />
+                          View
+                        </Button>
+                      </Link>
+                      {estimate.status === "draft" && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleSendEstimate(estimate.id)}
+                          disabled={sendEstimateMutation.isPending}
+                        >
+                          <Send size={16} className="mr-1" />
+                          Send
+                        </Button>
+                      )}
+                      {(estimate.status === "sent" || estimate.status === "viewed") && (
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleStatusUpdate(estimate.id, "accepted")}
+                            disabled={updateStatusMutation.isPending}
+                            className="text-green-600 border-green-600 hover:bg-green-50"
+                          >
+                            <Check size={16} className="mr-1" />
+                            Accept
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleStatusUpdate(estimate.id, "rejected")}
+                            disabled={updateStatusMutation.isPending}
+                            className="text-red-600 border-red-600 hover:bg-red-50"
+                          >
+                            <X size={16} className="mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

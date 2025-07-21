@@ -1105,13 +1105,17 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async convertEstimateToInvoice(estimateId: number): Promise<InvoiceWithItems> {
+  async convertEstimateToInvoice(estimateId: number, userId?: number): Promise<InvoiceWithItems> {
     const estimate = await this.getEstimate(estimateId);
     if (!estimate) throw new Error("Estimate not found");
 
+    // Mark estimate as accepted if converting
+    await this.updateEstimateStatus(estimateId, "accepted", userId, "Converted to invoice");
+
     const invoiceData: InsertInvoice = {
+      companyId: estimate.companyId,
       customerId: estimate.customerId,
-      invoiceNumber: `INV-${Date.now()}`,
+      invoiceNumber: await this.getNextDocumentNumber(estimate.companyId, 'invoice'),
       issueDate: new Date(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       subtotal: estimate.subtotal,
@@ -1122,14 +1126,208 @@ export class DatabaseStorage implements IStorage {
     };
 
     const invoiceItems = estimate.items.map(item => ({
+      companyId: estimate.companyId,
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       vatRate: item.vatRate,
+      vatInclusive: item.vatInclusive,
+      vatAmount: item.vatAmount,
       total: item.total
     }));
 
     return this.createInvoice(invoiceData, invoiceItems);
+  }
+
+  // Estimate Workflow Methods
+  async updateEstimateStatus(
+    estimateId: number, 
+    status: "draft" | "sent" | "viewed" | "accepted" | "rejected" | "expired",
+    userId?: number,
+    notes?: string
+  ): Promise<Estimate | undefined> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+
+    // Set appropriate timestamp and user fields based on status
+    switch (status) {
+      case "sent":
+        updateData.sentAt = new Date();
+        updateData.sentBy = userId;
+        break;
+      case "viewed":
+        updateData.viewedAt = new Date();
+        break;
+      case "accepted":
+        updateData.acceptedAt = new Date();
+        updateData.acceptedBy = userId;
+        updateData.acceptanceNotes = notes;
+        break;
+      case "rejected":
+        updateData.rejectedAt = new Date();
+        updateData.rejectedBy = userId;
+        updateData.rejectionReason = notes;
+        break;
+      case "expired":
+        updateData.expiredAt = new Date();
+        break;
+    }
+
+    const [estimate] = await db
+      .update(estimates)
+      .set(updateData)
+      .where(eq(estimates.id, estimateId))
+      .returning();
+    
+    return estimate || undefined;
+  }
+
+  async sendEstimate(estimateId: number, userId?: number): Promise<Estimate | undefined> {
+    return this.updateEstimateStatus(estimateId, "sent", userId);
+  }
+
+  async markEstimateAsViewed(estimateId: number): Promise<Estimate | undefined> {
+    // Only update if current status is 'sent' to avoid overriding later statuses
+    const currentEstimate = await this.getEstimate(estimateId);
+    if (currentEstimate?.status === "sent") {
+      return this.updateEstimateStatus(estimateId, "viewed");
+    }
+    return currentEstimate;
+  }
+
+  async acceptEstimate(estimateId: number, userId?: number, notes?: string): Promise<Estimate | undefined> {
+    return this.updateEstimateStatus(estimateId, "accepted", userId, notes);
+  }
+
+  async rejectEstimate(estimateId: number, userId?: number, reason?: string): Promise<Estimate | undefined> {
+    return this.updateEstimateStatus(estimateId, "rejected", userId, reason);
+  }
+
+  async checkExpiredEstimates(): Promise<void> {
+    // Find estimates that are sent/viewed and past expiry date
+    const expiredEstimates = await db
+      .select()
+      .from(estimates)
+      .where(
+        and(
+          or(
+            eq(estimates.status, "sent"),
+            eq(estimates.status, "viewed")
+          ),
+          lt(estimates.expiryDate, new Date())
+        )
+      );
+
+    // Mark them as expired
+    for (const estimate of expiredEstimates) {
+      await this.updateEstimateStatus(estimate.id, "expired");
+    }
+  }
+
+  async getEstimateStats(companyId: number): Promise<{
+    total: number;
+    draft: number;
+    sent: number;
+    viewed: number;
+    accepted: number;
+    rejected: number;
+    expired: number;
+  }> {
+    const allEstimates = await db
+      .select()
+      .from(estimates)
+      .where(eq(estimates.companyId, companyId));
+
+    const stats = {
+      total: allEstimates.length,
+      draft: 0,
+      sent: 0,
+      viewed: 0,
+      accepted: 0,
+      rejected: 0,
+      expired: 0
+    };
+
+    allEstimates.forEach(estimate => {
+      if (estimate.status in stats) {
+        (stats as any)[estimate.status]++;
+      }
+    });
+
+    return stats;
+  }
+
+  // Enhanced Dashboard Stats for List Pages
+  async getCustomerStats(companyId: number): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+    withPortalAccess: number;
+  }> {
+    const allCustomers = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.companyId, companyId));
+
+    return {
+      total: allCustomers.length,
+      active: allCustomers.filter(c => c.isActive !== false).length,
+      inactive: allCustomers.filter(c => c.isActive === false).length,
+      withPortalAccess: allCustomers.filter(c => c.portalAccess === true).length
+    };
+  }
+
+  async getInvoiceStats(companyId: number): Promise<{
+    total: number;
+    draft: number;
+    sent: number;
+    paid: number;
+    overdue: number;
+    partiallyPaid: number;
+  }> {
+    const allInvoices = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.companyId, companyId));
+
+    const today = new Date();
+    
+    return {
+      total: allInvoices.length,
+      draft: allInvoices.filter(i => i.status === "draft").length,
+      sent: allInvoices.filter(i => i.status === "sent").length,
+      paid: allInvoices.filter(i => i.status === "paid").length,
+      overdue: allInvoices.filter(i => 
+        (i.status === "sent" || i.status === "partially_paid") && 
+        new Date(i.dueDate) < today
+      ).length,
+      partiallyPaid: allInvoices.filter(i => i.status === "partially_paid").length
+    };
+  }
+
+  async getProductStats(companyId: number): Promise<{
+    total: number;
+    active: number;
+    services: number;
+    lowStock: number;
+  }> {
+    const allProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.companyId, companyId));
+
+    return {
+      total: allProducts.length,
+      active: allProducts.filter(p => p.isActive !== false).length,
+      services: allProducts.filter(p => p.type === "service").length,
+      lowStock: allProducts.filter(p => 
+        p.type === "product" && 
+        p.stockQuantity !== null && 
+        p.stockQuantity <= (p.lowStockThreshold || 10)
+      ).length
+    };
   }
 
   // Dashboard stats - Company Isolated

@@ -652,13 +652,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/estimates/:id/convert-to-invoice", async (req, res) => {
+  app.post("/api/estimates/:id/convert-to-invoice", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const invoice = await storage.convertEstimateToInvoice(id);
+      const userId = req.user.id;
+      const invoice = await storage.convertEstimateToInvoice(id, userId);
       res.json(invoice);
     } catch (error) {
       res.status(500).json({ message: "Failed to convert estimate to invoice" });
+    }
+  });
+
+  // Estimate Workflow Routes
+  app.put("/api/estimates/:id/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, notes } = req.body;
+      const userId = req.user.id;
+      
+      if (!["draft", "sent", "viewed", "accepted", "rejected", "expired"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const estimate = await storage.updateEstimateStatus(id, status, userId, notes);
+      if (!estimate) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      res.json(estimate);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update estimate status" });
+    }
+  });
+
+  app.post("/api/estimates/:id/send", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.id;
+      const estimate = await storage.sendEstimate(id, userId);
+      if (!estimate) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      res.json(estimate);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to send estimate" });
+    }
+  });
+
+  app.post("/api/estimates/:id/viewed", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const estimate = await storage.markEstimateAsViewed(id);
+      if (!estimate) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      res.json(estimate);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark estimate as viewed" });
+    }
+  });
+
+  app.post("/api/estimates/:id/accept", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { notes } = req.body;
+      const userId = req.user.id;
+      const estimate = await storage.acceptEstimate(id, userId, notes);
+      if (!estimate) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      res.json(estimate);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to accept estimate" });
+    }
+  });
+
+  app.post("/api/estimates/:id/reject", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reason } = req.body;
+      const userId = req.user.id;
+      const estimate = await storage.rejectEstimate(id, userId, reason);
+      if (!estimate) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      res.json(estimate);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reject estimate" });
+    }
+  });
+
+  app.get("/api/estimates/stats", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const stats = await storage.getEstimateStats(companyId);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch estimate stats" });
+    }
+  });
+
+  // Dashboard Stats Routes for List Pages
+  app.get("/api/customers/stats", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const stats = await storage.getCustomerStats(companyId);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch customer stats" });
+    }
+  });
+
+  app.get("/api/invoices/stats", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const stats = await storage.getInvoiceStats(companyId);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invoice stats" });
+    }
+  });
+
+  app.get("/api/products/stats", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const stats = await storage.getProductStats(companyId);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch product stats" });
     }
   });
 

@@ -1,23 +1,37 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, Users, UserCheck, UserX, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { customersApi } from "@/lib/api";
 import { useState } from "react";
+import { MiniDashboard } from "@/components/MiniDashboard";
+import { DashboardCard } from "@/components/DashboardCard";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   
   const { data: customers, isLoading } = useQuery({
     queryKey: ["/api/customers"],
     queryFn: customersApi.getAll
   });
 
-  const filteredCustomers = customers?.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
-  ) || [];
+  const { data: stats } = useQuery({
+    queryKey: ["/api/customers/stats"],
+    queryFn: () => apiRequest("/api/customers/stats")
+  });
+
+  const filteredCustomers = customers?.filter(customer => {
+    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+    const matchesStatus = !statusFilter || 
+      (statusFilter === "active" && customer.isActive !== false) ||
+      (statusFilter === "inactive" && customer.isActive === false) ||
+      (statusFilter === "portal" && customer.portalAccess === true);
+    return matchesSearch && matchesStatus;
+  }) || [];
 
   if (isLoading) {
     return (
@@ -34,14 +48,58 @@ export default function Customers() {
 
   return (
     <div className="space-y-6">
+      {/* Mini Dashboard */}
+      {stats && (
+        <MiniDashboard title="Customers Overview">
+          <DashboardCard
+            title="Total Customers"
+            value={stats.total}
+            icon={Users}
+            color="blue"
+            onClick={() => setStatusFilter("")}
+          />
+          <DashboardCard
+            title="Active"
+            value={stats.active}
+            icon={UserCheck}
+            color="green"
+            onClick={() => setStatusFilter("active")}
+          />
+          <DashboardCard
+            title="Inactive"
+            value={stats.inactive}
+            icon={UserX}
+            color="red"
+            onClick={() => setStatusFilter("inactive")}
+          />
+          <DashboardCard
+            title="Portal Access"
+            value={stats.withPortalAccess}
+            icon={Shield}
+            color="purple"
+            onClick={() => setStatusFilter("portal")}
+          />
+        </MiniDashboard>
+      )}
+
       {/* Header Actions */}
       <div className="flex justify-between items-center">
-        <div className="flex-1 max-w-md">
+        <div className="flex gap-4 flex-1 max-w-2xl">
           <Input
             placeholder="Search customers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
           />
+          {statusFilter && (
+            <Button
+              variant="outline"
+              onClick={() => setStatusFilter("")}
+              className="whitespace-nowrap"
+            >
+              Clear Filter
+            </Button>
+          )}
         </div>
         <Button asChild className="bg-primary hover:bg-blue-800">
           <Link href="/customers/new">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, Package, Tag, DollarSign, Boxes } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Tag, DollarSign, Boxes, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
+import { MiniDashboard } from "@/components/MiniDashboard";
+import { DashboardCard } from "@/components/DashboardCard";
 import type { Product, ProductCategory } from "@shared/schema";
 
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -22,6 +25,11 @@ export default function Products() {
 
   const { data: categories = [] } = useQuery<ProductCategory[]>({
     queryKey: ["/api/product-categories"],
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["/api/products/stats"],
+    queryFn: () => apiRequest("/api/products/stats")
   });
 
   const deleteProductMutation = useMutation({
@@ -44,12 +52,19 @@ export default function Products() {
     },
   });
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = !statusFilter || 
+      (statusFilter === "active" && product.isActive !== false) ||
+      (statusFilter === "services" && product.type === "service") ||
+      (statusFilter === "lowStock" && product.type === "product" && 
+       product.stockQuantity !== null && product.stockQuantity <= (product.lowStockThreshold || 10));
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const handleDeleteProduct = (id: number) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
@@ -76,6 +91,40 @@ export default function Products() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Mini Dashboard */}
+      {stats && (
+        <MiniDashboard title="Products Overview">
+          <DashboardCard
+            title="Total Products"
+            value={stats.total}
+            icon={Package}
+            color="blue"
+            onClick={() => setStatusFilter("")}
+          />
+          <DashboardCard
+            title="Active"
+            value={stats.active}
+            icon={CheckCircle}
+            color="green"
+            onClick={() => setStatusFilter("active")}
+          />
+          <DashboardCard
+            title="Services"
+            value={stats.services}
+            icon={Tag}
+            color="purple"
+            onClick={() => setStatusFilter("services")}
+          />
+          <DashboardCard
+            title="Low Stock"
+            value={stats.lowStock}
+            icon={AlertTriangle}
+            color="orange"
+            onClick={() => setStatusFilter("lowStock")}
+          />
+        </MiniDashboard>
+      )}
+
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Products & Services</h1>
@@ -97,50 +146,27 @@ export default function Products() {
         </div>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Product Overview</CardTitle>
-          <CardDescription>Quick statistics about your inventory</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3">
-              <Package className="w-8 h-8 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Products</p>
-                <p className="text-2xl font-bold">{products.filter(p => !p.isService).length}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Boxes className="w-8 h-8 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">Total Services</p>
-                <p className="text-2xl font-bold">{products.filter(p => p.isService).length}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <DollarSign className="w-8 h-8 text-purple-600" />
-              <div>
-                <p className="text-sm text-gray-600">Avg. Price</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(
-                    products.length > 0 
-                      ? products.reduce((sum, p) => sum + parseFloat(p.unitPrice || '0'), 0) / products.length
-                      : 0
-                  )}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Tag className="w-8 h-8 text-orange-600" />
-              <div>
-                <p className="text-sm text-gray-600">Categories</p>
-                <p className="text-2xl font-bold">{categories.length}</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search */}
+      <div className="flex items-center space-x-2 mb-6">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        {statusFilter && (
+          <Button
+            variant="outline"
+            onClick={() => setStatusFilter("")}
+            className="whitespace-nowrap"
+          >
+            Clear Filter
+          </Button>
+        )}
+      </div>
 
       <Card>
         <CardHeader>

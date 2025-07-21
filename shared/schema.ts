@@ -122,16 +122,32 @@ export const estimates = pgTable("estimates", {
   customerId: integer("customer_id").notNull(),
   issueDate: timestamp("issue_date").notNull(),
   expiryDate: timestamp("expiry_date").notNull(),
-  status: text("status").notNull().default("draft"), // draft, sent, approved, rejected, expired
+  status: text("status").notNull().default("draft"), // draft, sent, viewed, accepted, rejected, expired
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
+  // Status tracking timestamps
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  acceptedAt: timestamp("accepted_at"),
+  rejectedAt: timestamp("rejected_at"),
+  expiredAt: timestamp("expired_at"),
+  // Action tracking
+  sentBy: integer("sent_by").references(() => users.id),
+  acceptedBy: integer("accepted_by").references(() => users.id),
+  rejectedBy: integer("rejected_by").references(() => users.id),
+  rejectionReason: text("rejection_reason"),
+  acceptanceNotes: text("acceptance_notes"),
+  // Created/updated fields
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyEstimateUnique: unique().on(table.companyId, table.estimateNumber),
   companyIdx: index("estimates_company_idx").on(table.companyId),
   customerIdx: index("estimates_customer_idx").on(table.customerId),
+  statusIdx: index("estimates_status_idx").on(table.status),
+  expiryIdx: index("estimates_expiry_idx").on(table.expiryDate),
 }));
 
 export const estimateItems = pgTable("estimate_items", {

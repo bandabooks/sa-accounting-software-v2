@@ -1,0 +1,58 @@
+Enhance every major list page in the software (Customers, Invoices, Estimates, Products, etc.) by adding a simple, modern “mini dashboard” at the top.
+
+Requirements:
+
+At the top of each list page (e.g., Customers, Invoices, Estimates, Products), add a row of summary cards styled as powerful, modern UI cards.
+
+Each card should show a key metric relevant to the page:
+
+Customers Page: Total Customers, Active, Inactive (if tracked)
+
+Invoices Page: Total Invoices, Paid, Sent, Draft, Overdue
+
+Estimates Page: Total Estimates, Approved, Pending, Rejected, Draft
+
+Products Page: Total Products, In Stock, Low Stock, Out of Stock (if tracked), etc.
+
+Others: Tailor to page’s key stats (e.g., Projects = Total Projects, Ongoing, Completed)
+
+Cards should be visually distinct with icons, bold numbers, and clear labels. Use uplifting modern color accents for each type (e.g., green for Paid, blue for Draft, orange for Pending, etc.).
+
+Make cards responsive (look great on mobile and desktop) and arrange them in a single row or grid.
+
+Fetch and display the metrics live based on the current data—auto-update when records change.
+
+Keep the cards simple and not overloaded: ideally 3–5 key stats per page.
+
+Place the mini dashboard above the main data table/list for quick at-a-glance info.
+
+Bonus:
+
+Make each card clickable (optional) to filter the table below by that status/type.
+
+Add subtle animations (fade-in or grow on load) for a modern feel.
+
+Deliver:
+
+Update each relevant page to include the mini dashboard at the top.
+
+Use clean, modern styling consistent with the app’s theme.
+
+End of prompt.
+
+Just copy and paste this prompt into Replit AI or your developer’s workflow.
+
+Sample Card Design (for Clarity)
+Invoices Page Example:
+
+Total Invoices (icon: 📄, number: 25)
+
+Paid (icon: ✅, green, number: 10)
+
+Sent (icon: ✉️, blue, number: 8)
+
+Draft (icon: 📝, gray, number: 5)
+
+Overdue (icon: ⏰, red, number: 2)
+
+This approach is standard for all professional SaaS and will instantly level up your app’s UX and executive appeal.
