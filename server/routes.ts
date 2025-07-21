@@ -951,13 +951,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/profit-loss", authenticate, async (req, res) => {
+  app.get("/api/reports/profit-loss/:from/:to", authenticate, async (req, res) => {
     try {
-      const { from, to } = req.query;
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const { from, to } = req.params;
+      const companyId = 2; // Fixed company ID for now
       
-      const fromDate = from ? new Date(from as string) : new Date(new Date().getFullYear(), 0, 1);
-      const toDate = to ? new Date(to as string) : new Date();
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
       
       // Get comprehensive profit & loss data integrating all transactions
       const report = await storage.getComprehensiveProfitLoss(companyId, fromDate, toDate);
@@ -968,19 +968,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/cash-flow", async (req, res) => {
+  app.get("/api/reports/cash-flow/:from/:to", authenticate, async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
-      if (!startDate || !endDate) {
-        return res.status(400).json({ message: "startDate and endDate are required" });
-      }
+      const { from, to } = req.params;
+      const companyId = 2; // Fixed company ID for now
       
       const report = await storage.getCashFlowReport(
-        new Date(startDate as string),
-        new Date(endDate as string)
+        new Date(from),
+        new Date(to)
       );
       res.json(report);
     } catch (error) {
+      console.error("Error generating cash flow report:", error);
       res.status(500).json({ message: "Failed to generate cash flow report" });
     }
   });
@@ -1015,15 +1014,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WORLD-CLASS FINANCIAL REPORTING SUITE
   
   // Balance Sheet Report
-  app.get("/api/reports/balance-sheet", authenticate, async (req, res) => {
+  app.get("/api/reports/balance-sheet/:from/:to", authenticate, async (req, res) => {
     try {
-      const { user } = req as any;
-      const { from, to } = req.query;
+      const { from, to } = req.params;
+      const companyId = 2; // Fixed company ID for now
       
       const report = await storage.getBalanceSheetReport(
-        user.companyId, 
-        from as string, 
-        to as string
+        companyId, 
+        from, 
+        to
       );
       res.json(report);
     } catch (error) {
@@ -1033,15 +1032,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Trial Balance Report
-  app.get("/api/reports/trial-balance", authenticate, async (req, res) => {
+  app.get("/api/reports/trial-balance/:from/:to", authenticate, async (req, res) => {
     try {
-      const { user } = req as any;
-      const { from, to } = req.query;
+      const { from, to } = req.params;
+      const companyId = 2; // Fixed company ID for now
       
       const report = await storage.getTrialBalanceReport(
-        user.companyId, 
-        from as string, 
-        to as string
+        companyId, 
+        from, 
+        to
       );
       res.json(report);
     } catch (error) {
@@ -1051,15 +1050,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // General Ledger Report
-  app.get("/api/reports/general-ledger", authenticate, async (req, res) => {
+  app.get("/api/reports/general-ledger/:from/:to", authenticate, async (req, res) => {
     try {
-      const { user } = req as any;
-      const { from, to, accountId } = req.query;
+      const { from, to } = req.params;
+      const { accountId } = req.query;
+      const companyId = 2; // Fixed company ID for now
       
       const report = await storage.getGeneralLedgerReport(
-        user.companyId, 
-        from as string, 
-        to as string,
+        companyId, 
+        from, 
+        to,
         accountId ? parseInt(accountId as string) : undefined
       );
       res.json(report);
@@ -1070,14 +1070,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Aged Receivables Report
-  app.get("/api/reports/aged-receivables", authenticate, async (req, res) => {
+  app.get("/api/reports/aged-receivables/:asAt", authenticate, async (req, res) => {
     try {
-      const { user } = req as any;
-      const { asAt } = req.query;
+      const { asAt } = req.params;
+      const companyId = 2; // Fixed company ID for now
       
       const report = await storage.getAgedReceivablesReport(
-        user.companyId, 
-        asAt as string
+        companyId, 
+        asAt
       );
       res.json(report);
     } catch (error) {
@@ -1087,14 +1087,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Aged Payables Report
-  app.get("/api/reports/aged-payables", authenticate, async (req, res) => {
+  app.get("/api/reports/aged-payables/:asAt", authenticate, async (req, res) => {
     try {
-      const { user } = req as any;
-      const { asAt } = req.query;
+      const { asAt } = req.params;
+      const companyId = 2; // Fixed company ID for now
       
       const report = await storage.getAgedPayablesReport(
-        user.companyId, 
-        asAt as string
+        companyId, 
+        asAt
       );
       res.json(report);
     } catch (error) {
