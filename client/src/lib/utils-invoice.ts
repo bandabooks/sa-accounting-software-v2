@@ -31,6 +31,11 @@ export function calculateInvoiceTotal(items: Array<{
     const price = typeof item.unitPrice === 'string' ? parseFloat(item.unitPrice) : item.unitPrice;
     const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 15);
 
+    // Handle NaN values to prevent RNaN display
+    if (isNaN(qty) || isNaN(price) || isNaN(vatRate)) {
+      return; // Skip invalid items
+    }
+
     const itemSubtotal = qty * price;
     const itemVat = itemSubtotal * (vatRate / 100);
 
@@ -39,14 +44,22 @@ export function calculateInvoiceTotal(items: Array<{
   });
 
   return {
-    subtotal,
-    vatAmount,
-    total: subtotal + vatAmount
+    subtotal: isNaN(subtotal) ? 0 : subtotal,
+    vatAmount: isNaN(vatAmount) ? 0 : vatAmount,
+    total: isNaN(subtotal + vatAmount) ? 0 : subtotal + vatAmount
   };
 }
 
 export function formatCurrency(amount: number | string): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  // Handle NaN, null, undefined, or invalid values
+  if (isNaN(num) || num == null) {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 2,
+    }).format(0);
+  }
   return new Intl.NumberFormat('en-ZA', {
     style: 'currency',
     currency: 'ZAR',

@@ -47,7 +47,7 @@ export default function InvoiceCreate() {
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
-    { productId: undefined, description: "", quantity: "1", unitPrice: "0", vatRate: "15", vatInclusive: false, vatAmount: "0.00" }
+    { productId: undefined, description: "", quantity: "1", unitPrice: "0.00", vatRate: "15.00", vatInclusive: false, vatAmount: "0.00" }
   ]);
 
   const { data: customers } = useQuery({
@@ -81,7 +81,7 @@ export default function InvoiceCreate() {
   });
 
   const addItem = () => {
-    setItems([...items, { productId: undefined, description: "", quantity: "1", unitPrice: "0", vatRate: "15" }]);
+    setItems([...items, { productId: undefined, description: "", quantity: "1", unitPrice: "0.00", vatRate: "15.00", vatInclusive: false, vatAmount: "0.00" }]);
   };
 
   const removeItem = (index: number) => {
@@ -111,7 +111,7 @@ export default function InvoiceCreate() {
       ...newItems[index],
       productId: product.id,
       description: product.description || product.name,
-      unitPrice: product.price,
+      unitPrice: product.unitPrice,
       vatRate: product.vatRate || "15"
     };
     setItems(newItems);
@@ -161,10 +161,13 @@ export default function InvoiceCreate() {
     };
 
     const itemsData: Omit<InsertInvoiceItem, 'invoiceId'>[] = validItems.map(item => ({
+      companyId: 2, // Using default company for now
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       vatRate: item.vatRate,
+      vatAmount: (parseFloat(item.quantity) * parseFloat(item.unitPrice) * (parseFloat(item.vatRate) / 100)).toFixed(2),
+      vatInclusive: item.vatInclusive || false,
       total: (parseFloat(item.quantity) * parseFloat(item.unitPrice) * (1 + parseFloat(item.vatRate) / 100)).toFixed(2)
     }));
 
