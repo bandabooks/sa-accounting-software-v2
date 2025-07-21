@@ -31,6 +31,8 @@ import { useGlobalNotification } from "@/contexts/NotificationContext";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
 import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
+import { ProductServiceSelect } from "@/components/ProductServiceSelect";
+import type { Product } from "@shared/schema";
 
 // Create form schema combining estimate and items
 const estimateFormSchema = insertEstimateSchema.extend({
@@ -76,11 +78,11 @@ export default function EstimateCreate() {
     name: "items",
   });
 
-  const { data: customers } = useQuery({
+  const { data: customers = [] } = useQuery({
     queryKey: ["/api/customers"],
   });
 
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ["/api/products"],
   });
 
@@ -162,6 +164,7 @@ export default function EstimateCreate() {
 
   const addItem = () => {
     append({
+      companyId: 0, // Will be set by server
       description: "",
       quantity: "1",
       unitPrice: "0.00",
@@ -217,7 +220,7 @@ export default function EstimateCreate() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {customers?.map((customer: any) => (
+                              {(customers as any[]).map((customer: any) => (
                                 <SelectItem key={customer.id} value={customer.id.toString()}>
                                   {customer.name}
                                 </SelectItem>
@@ -323,44 +326,21 @@ export default function EstimateCreate() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           <div className="md:col-span-2 lg:col-span-2">
-                            <FormField
-                              control={form.control}
-                              name={`items.${index}.productId`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Product/Service</FormLabel>
-                                  <Select
-                                    onValueChange={(value) => {
-                                      const productId = parseInt(value);
-                                      field.onChange(productId);
-                                      
-                                      // Auto-fill product details
-                                      const product = products?.find((p: any) => p.id === productId);
-                                      if (product) {
-                                        form.setValue(`items.${index}.description`, product.description || product.name);
-                                        form.setValue(`items.${index}.unitPrice`, parseFloat(product.unitPrice || "0.00"));
-                                        form.setValue(`items.${index}.vatRate`, parseFloat(product.vatRate || "15"));
-                                      }
-                                    }}
-                                    value={field.value?.toString()}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select product/service" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {products?.map((product: any) => (
-                                        <SelectItem key={product.id} value={product.id.toString()}>
-                                          {product.name} - {formatCurrency(parseFloat(product.unitPrice || "0"))}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Product/Service</label>
+                              <ProductServiceSelect
+                                value={watchedItems[index]?.productId}
+                                onValueChange={(productId) => {
+                                  form.setValue(`items.${index}.productId`, productId);
+                                }}
+                                onProductSelect={(product: Product) => {
+                                  form.setValue(`items.${index}.description`, product.description || product.name);
+                                  form.setValue(`items.${index}.unitPrice`, product.unitPrice || "0.00");
+                                  form.setValue(`items.${index}.vatRate`, product.vatRate || "15");
+                                }}
+                                placeholder="Select or create product/service..."
+                              />
+                            </div>
                             
                             <FormField
                               control={form.control}

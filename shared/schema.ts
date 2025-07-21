@@ -1302,7 +1302,7 @@ export type BankReconciliationItem = typeof bankReconciliationItems.$inferSelect
 export type InsertBankReconciliationItem = z.infer<typeof insertBankReconciliationItemSchema>;
 
 // Chart of Accounts - South African Business Accounting Standards
-export const chartOfAccounts = pgTable("chart_of_accounts", {
+export const chartOfAccounts: any = pgTable("chart_of_accounts", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id),
   accountCode: varchar("account_code", { length: 20 }).notNull(),
@@ -1360,7 +1360,7 @@ export const companyChartOfAccounts = pgTable("company_chart_of_accounts", {
 }));
 
 // Journal Entries for double-entry bookkeeping
-export const journalEntries = pgTable("journal_entries", {
+export const journalEntries: any = pgTable("journal_entries", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id),
   entryNumber: varchar("entry_number", { length: 50 }).notNull(),
@@ -1908,7 +1908,7 @@ export const projects = pgTable("projects", {
   customerIdx: index("projects_customer_idx").on(table.customerId),
 }));
 
-export const tasks = pgTable("tasks", {
+export const tasks: any = pgTable("tasks", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   projectId: integer("project_id").references(() => projects.id), // nullable for standalone tasks
