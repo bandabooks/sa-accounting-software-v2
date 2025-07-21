@@ -54,6 +54,7 @@ import PaymentCancel from "@/pages/payment-cancel";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import TimeTracking from "@/pages/time-tracking";
+import VatManagement from "@/pages/vat-management";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -246,6 +247,11 @@ function AuthenticatedApp() {
         <Route path="/time-tracking">
           <ProtectedRoute permission={PERMISSIONS.TIME_TRACKING_VIEW}>
             <TimeTracking />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-management">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VatManagement />
           </ProtectedRoute>
         </Route>
         <Route path="/super-admin">

@@ -72,7 +72,16 @@ const navigationGroups = [
       { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW" }
     ]
   },
-
+  {
+    id: "vat",
+    label: "VAT Management",
+    icon: Receipt,
+    items: [
+      { path: "/vat-management", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW" },
+      { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW" },
+      { path: "/vat-reports", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW" }
+    ]
+  },
   {
     id: "reports",
     label: "Reports",
