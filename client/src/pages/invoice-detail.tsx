@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice"
 import { useToast } from "@/hooks/use-toast";
 import PaymentModal from "@/components/payment/payment-modal";
 import PaymentHistory from "@/components/payment/payment-history";
+import PaymentStatusSummary from "@/components/payment/payment-status-summary";
 import { generateInvoicePDF } from "@/components/invoice/pdf-generator";
 import EmailInvoice from "@/components/invoice/email-invoice";
 import RecurringInvoice from "@/components/invoice/recurring-invoice";
@@ -318,6 +319,9 @@ export default function InvoiceDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Payment Status Summary */}
+          <PaymentStatusSummary invoiceId={invoiceId} invoiceTotal={invoice.total} />
 
           {/* Payment History */}
           <div ref={paymentHistoryRef}>

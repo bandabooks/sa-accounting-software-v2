@@ -1194,12 +1194,14 @@ export class DatabaseStorage implements IStorage {
     
     const invoiceTotal = parseFloat(invoice.total);
     
-    let newStatus: "draft" | "sent" | "paid" | "overdue" = invoice.status as "draft" | "sent" | "paid" | "overdue";
+    let newStatus: "draft" | "sent" | "paid" | "overdue" | "partially_paid" = invoice.status as "draft" | "sent" | "paid" | "overdue" | "partially_paid";
     
     if (totalPaid >= invoiceTotal) {
       newStatus = "paid";
-    } else if (totalPaid > 0) {
-      newStatus = "sent"; // Partially paid
+    } else if (totalPaid > 0 && totalPaid < invoiceTotal) {
+      newStatus = "partially_paid";
+    } else if (totalPaid === 0 && invoice.status !== "draft") {
+      newStatus = "sent";
     }
     
     if (newStatus !== invoice.status) {

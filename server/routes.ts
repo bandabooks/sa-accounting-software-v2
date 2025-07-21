@@ -536,7 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { status } = req.body;
       
-      if (!["draft", "sent", "paid", "overdue"].includes(status)) {
+      if (!["draft", "sent", "paid", "overdue", "partially_paid"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
 

@@ -86,7 +86,7 @@ export const invoices = pgTable("invoices", {
   customerId: integer("customer_id").notNull(),
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
-  status: text("status").notNull().default("draft"), // draft, sent, paid, overdue
+  status: text("status").notNull().default("draft"), // draft, sent, paid, overdue, partially_paid
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
