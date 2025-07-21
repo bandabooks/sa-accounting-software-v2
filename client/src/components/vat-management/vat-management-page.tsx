@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { VatStatusToggle } from "./vat-status-toggle";
 import { VatComplianceGuide } from "./vat-conditional-fields";
-import { FileText, Settings, BarChart3, Calendar, Shield, AlertTriangle, CheckCircle, Eye, EyeOff } from "lucide-react";
+import AIComplianceTips from "./ai-compliance-tips";
+import { FileText, Settings, BarChart3, Calendar, Shield, AlertTriangle, CheckCircle, Eye, EyeOff, Brain } from "lucide-react";
 
 interface VatManagementPageProps {
   companyId: number;
@@ -78,10 +79,14 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
       </div>
 
       <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="settings">VAT Settings</TabsTrigger>
           <TabsTrigger value="types">VAT Types</TabsTrigger>
           <TabsTrigger value="returns" disabled={!vatSettings?.isVatRegistered}>VAT Returns</TabsTrigger>
+          <TabsTrigger value="ai-tips">
+            <Brain className="h-4 w-4 mr-1" />
+            AI Tips
+          </TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
@@ -239,6 +244,18 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-tips" className="space-y-6">
+          <AIComplianceTips 
+            companyId={companyId} 
+            vatSettings={vatSettings}
+            transactionData={{
+              hasRecentTransactions: true,
+              totalInvoices: 0, // This could be populated from actual data
+              totalExpenses: 0   // This could be populated from actual data
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="compliance" className="space-y-6">

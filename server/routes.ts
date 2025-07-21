@@ -3850,9 +3850,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import VAT routes
-  const { registerVATRoutes } = await import("./vat-api");
-  registerVATRoutes(app);
+  // AI-powered VAT Compliance Tips API endpoint
+  app.post("/api/vat/ai-compliance-tips", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { companyId, transactionData, vatSettings } = req.body;
+      
+      // Get company VAT data for context
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Get recent VAT transactions for analysis
+      const recentInvoices = await storage.getInvoicesForCompany(companyId);
+      const recentExpenses = await storage.getExpensesForCompany(companyId);
+      
+      // Prepare context for AI analysis
+      const vatContext = {
+        isVatRegistered: company.isVatRegistered,
+        vatRegistrationNumber: company.vatRegistrationNumber,
+        defaultVatRate: company.defaultVatRate,
+        vatInclusivePricing: company.vatInclusivePricing,
+        recentTransactionCount: recentInvoices.length + recentExpenses.length,
+        transactionData: transactionData || {},
+        vatSettings: vatSettings || {}
+      };
+
+      // Use Anthropic AI to generate contextual VAT compliance tips
+      const Anthropic = (await import('@anthropic-ai/sdk')).default;
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+
+      const prompt = `You are a South African VAT compliance expert. Analyze the following business context and provide 3-5 specific, actionable VAT compliance tips:
+
+Business Context:
+- VAT Registered: ${vatContext.isVatRegistered ? 'Yes' : 'No'}
+- VAT Number: ${vatContext.vatRegistrationNumber || 'Not provided'}
+- Default VAT Rate: ${vatContext.defaultVatRate || '15'}%
+- VAT Inclusive Pricing: ${vatContext.vatInclusivePricing ? 'Yes' : 'No'}
+- Recent Transaction Count: ${vatContext.recentTransactionCount}
+
+Current Transaction/Setting Context: ${JSON.stringify(vatContext.transactionData, null, 2)}
+
+Please provide specific South African VAT compliance tips that are relevant to this business context. Focus on:
+1. Compliance requirements they should be aware of
+2. Potential risks or issues to avoid
+3. Optimization opportunities
+4. Best practices for their current setup
+
+Format your response as a JSON array of tip objects with "title", "description", "priority" (high/medium/low), and "category" (compliance/optimization/risk) fields.`;
+
+      const message = await anthropic.messages.create({
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }],
+        model: 'claude-sonnet-4-20250514',
+      });
+
+      let tips = [];
+      try {
+        // Extract JSON from the response
+        const responseText = message.content[0].text;
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          tips = JSON.parse(jsonMatch[0]);
+        } else {
+          // Fallback: create structured tips from text
+          tips = [{
+            title: "AI Analysis Available",
+            description: responseText.substring(0, 200) + "...",
+            priority: "medium",
+            category: "compliance"
+          }];
+        }
+      } catch (parseError) {
+        console.error("Error parsing AI response:", parseError);
+        tips = [{
+          title: "VAT Compliance Review Needed",
+          description: "Our AI analysis suggests reviewing your current VAT setup for compliance optimization opportunities.",
+          priority: "medium", 
+          category: "compliance"
+        }];
+      }
+
+      res.json({ tips });
+    } catch (error) {
+      console.error("Error generating AI VAT tips:", error);
+      res.status(500).json({ 
+        message: "Failed to generate VAT compliance tips",
+        tips: [{
+          title: "Manual VAT Review Required",
+          description: "Please consult with a VAT specialist to ensure compliance with South African tax regulations.",
+          priority: "high",
+          category: "compliance"
+        }]
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
