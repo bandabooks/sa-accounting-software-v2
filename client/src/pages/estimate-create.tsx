@@ -337,9 +337,9 @@ export default function EstimateCreate() {
                                       // Auto-fill product details
                                       const product = products?.find((p: any) => p.id === productId);
                                       if (product) {
-                                        form.setValue(`items.${index}.description`, product.name);
-                                        form.setValue(`items.${index}.unitPrice`, product.price || 0);
-                                        form.setValue(`items.${index}.vatRate`, product.vatRate || 15);
+                                        form.setValue(`items.${index}.description`, product.description || product.name);
+                                        form.setValue(`items.${index}.unitPrice`, parseFloat(product.unitPrice || "0.00"));
+                                        form.setValue(`items.${index}.vatRate`, parseFloat(product.vatRate || "15"));
                                       }
                                     }}
                                     value={field.value?.toString()}
@@ -352,7 +352,7 @@ export default function EstimateCreate() {
                                     <SelectContent>
                                       {products?.map((product: any) => (
                                         <SelectItem key={product.id} value={product.id.toString()}>
-                                          {product.name} - {formatCurrency(product.price || 0)}
+                                          {product.name} - {formatCurrency(parseFloat(product.unitPrice || "0"))}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
