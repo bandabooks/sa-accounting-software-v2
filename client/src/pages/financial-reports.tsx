@@ -576,12 +576,12 @@ export default function FinancialReports() {
                   <div>
                     <h3 className="text-lg font-semibold mb-3">CASH FLOWS FROM OPERATING ACTIVITIES</h3>
                     <div className="space-y-1">
-                      {cashFlow.operatingActivities.map((item, index) => (
+                      {cashFlow.operatingActivities?.map((item, index) => (
                         <div key={index} className="flex justify-between py-1">
                           <span className="text-sm">{item.item}</span>
                           <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
                         </div>
-                      ))}
+                      )) || <div className="text-sm text-gray-500">No operating activities data available</div>}
                     </div>
                   </div>
 
@@ -589,12 +589,12 @@ export default function FinancialReports() {
                   <div>
                     <h3 className="text-lg font-semibold mb-3">CASH FLOWS FROM INVESTING ACTIVITIES</h3>
                     <div className="space-y-1">
-                      {cashFlow.investingActivities.map((item, index) => (
+                      {cashFlow.investingActivities?.map((item, index) => (
                         <div key={index} className="flex justify-between py-1">
                           <span className="text-sm">{item.item}</span>
                           <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
                         </div>
-                      ))}
+                      )) || <div className="text-sm text-gray-500">No investing activities data available</div>}
                     </div>
                   </div>
 
@@ -602,12 +602,12 @@ export default function FinancialReports() {
                   <div>
                     <h3 className="text-lg font-semibold mb-3">CASH FLOWS FROM FINANCING ACTIVITIES</h3>
                     <div className="space-y-1">
-                      {cashFlow.financingActivities.map((item, index) => (
+                      {cashFlow.financingActivities?.map((item, index) => (
                         <div key={index} className="flex justify-between py-1">
                           <span className="text-sm">{item.item}</span>
                           <span className="font-mono text-sm">{formatCurrency(parseFloat(item.amount))}</span>
                         </div>
-                      ))}
+                      )) || <div className="text-sm text-gray-500">No financing activities data available</div>}
                     </div>
                   </div>
 
