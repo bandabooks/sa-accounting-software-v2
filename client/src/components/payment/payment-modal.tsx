@@ -50,7 +50,7 @@ interface PaymentModalProps {
   invoiceId: number;
   invoiceTotal: string;
   remainingAmount: string;
-  onPaymentAdded: () => void;
+  onPaymentAdded: (paymentAmount?: string) => void;
 }
 
 export default function PaymentModal({ 
@@ -112,9 +112,10 @@ export default function PaymentModal({
         throw new Error("Failed to record payment");
       }
 
-      // Reset form and notify parent
+      // Reset form and notify parent with payment amount
+      const paymentAmount = data.amount;
       form.reset();
-      onPaymentAdded();
+      onPaymentAdded(paymentAmount);
       onClose();
     } catch (error) {
       console.error("Error recording payment:", error);

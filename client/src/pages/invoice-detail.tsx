@@ -12,7 +12,8 @@ import PaymentHistory from "@/components/payment/payment-history";
 import { generateInvoicePDF } from "@/components/invoice/pdf-generator";
 import EmailInvoice from "@/components/invoice/email-invoice";
 import RecurringInvoice from "@/components/invoice/recurring-invoice";
-import { useState } from "react";
+import SuccessNotification from "@/components/ui/success-notification";
+import { useState, useRef } from "react";
 
 // Payment Modal Wrapper that calculates remaining amount
 function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPaymentAdded }: {
@@ -20,7 +21,7 @@ function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPayme
   invoiceTotal: string;
   isOpen: boolean;
   onClose: () => void;
-  onPaymentAdded: () => void;
+  onPaymentAdded: (paymentAmount?: string) => void;
 }) {
   const queryClient = useQueryClient();
   
@@ -47,11 +48,11 @@ function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPayme
     payments: payments?.map(p => ({ amount: p.amount, status: p.status }))
   });
 
-  const handlePaymentAdded = () => {
+  const handlePaymentAdded = (paymentAmount?: string) => {
     // Invalidate payment queries first
     queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
     // Then call the parent callback
-    onPaymentAdded();
+    onPaymentAdded(paymentAmount);
   };
 
   return (
@@ -74,6 +75,9 @@ export default function InvoiceDetail() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [lastPaymentAmount, setLastPaymentAmount] = useState("");
+  const paymentHistoryRef = useRef<HTMLDivElement>(null);
   
   const invoiceId = parseInt(params.id || "0");
 
@@ -316,7 +320,9 @@ export default function InvoiceDetail() {
           </Card>
 
           {/* Payment History */}
-          <PaymentHistory invoiceId={invoiceId} />
+          <div ref={paymentHistoryRef}>
+            <PaymentHistory invoiceId={invoiceId} />
+          </div>
 
           {/* Record Payment Button */}
           {invoice.status !== "paid" && (
@@ -365,15 +371,33 @@ export default function InvoiceDetail() {
         invoiceTotal={invoice.total}
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        onPaymentAdded={() => {
+        onPaymentAdded={(paymentAmount?: string) => {
           queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
           queryClient.invalidateQueries({ queryKey: ["/api/invoices", invoiceId] });
           queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
-          toast({
-            title: "Payment recorded",
-            description: "Payment has been recorded successfully.",
-          });
+          
+          // Set payment amount and show success notification
+          setLastPaymentAmount(paymentAmount || "");
+          setShowPaymentSuccess(true);
         }}
+      />
+
+      {/* Success Notification */}
+      <SuccessNotification
+        isVisible={showPaymentSuccess}
+        title="Payment Recorded Successfully!"
+        description={lastPaymentAmount ? `Payment of ${formatCurrency(lastPaymentAmount)} has been processed and added to the invoice.` : "Your payment has been successfully recorded and applied to this invoice."}
+        onClose={() => {
+          setShowPaymentSuccess(false);
+          // Scroll to payment history after notification closes
+          setTimeout(() => {
+            paymentHistoryRef.current?.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            });
+          }, 300);
+        }}
+        duration={3500}
       />
     </div>
   );
