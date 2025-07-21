@@ -55,6 +55,9 @@ import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
 import TimeTracking from "@/pages/time-tracking";
 import VatManagement from "@/pages/vat-management";
+import VATSettings from "@/pages/vat-settings";
+import VATTypes from "@/pages/vat-types";
+import VATReturns from "@/pages/vat-returns";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -252,6 +255,21 @@ function AuthenticatedApp() {
         <Route path="/vat-management">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <VatManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-settings">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VATSettings />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-types">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VATTypes />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-returns">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VATReturns />
           </ProtectedRoute>
         </Route>
         <Route path="/super-admin">
