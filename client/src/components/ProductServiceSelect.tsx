@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -40,116 +42,11 @@ export function ProductServiceSelect({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ["/api/product-categories"],
-  });
-
-  const { data: vatTypes = [] } = useQuery({
-    queryKey: ["/api/vat-types"],
-  });
-
-  const createProductMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/products", data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create product");
-      }
-      return response.json();
-    },
-    onSuccess: (newProduct: Product) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      onValueChange(newProduct.id);
-      if (onProductSelect) {
-        onProductSelect(newProduct);
-      }
-      setQuickCreateOpen(false);
-      setQuickCreateData({
-        name: "",
-        description: "",
-        price: "0.00",
-        categoryId: "",
-        sku: "",
-        vatRate: "15.00",
-      });
-      toast({
-        title: "Success",
-        description: "Product created successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createCategoryMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
-      const response = await apiRequest("POST", "/api/product-categories", data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create category");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
-      toast({
-        title: "Success",
-        description: "Category created successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const selectedProduct = products.find((p: Product) => p.id === value);
-
-  const handleQuickCreate = () => {
-    if (!quickCreateData.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Product name is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    createProductMutation.mutate({
-      name: quickCreateData.name.trim(),
-      description: quickCreateData.description.trim() || null,
-      price: quickCreateData.price,
-      categoryId: quickCreateData.categoryId ? parseInt(quickCreateData.categoryId) : null,
-      sku: quickCreateData.sku.trim() || null,
-      vatRate: quickCreateData.vatRate,
-      stockQuantity: 0,
-      reorderLevel: 0,
-      companyId: 2, // Fixed company ID
-    });
-  };
-
-  const generateSKU = () => {
-    const name = quickCreateData.name.trim();
-    if (name) {
-      const sku = name
-        .split(' ')
-        .map(word => word.substring(0, 3).toUpperCase())
-        .join('') + Date.now().toString().slice(-4);
-      setQuickCreateData(prev => ({ ...prev, sku }));
-    }
-  };
 
   return (
     <>
@@ -199,7 +96,7 @@ export function ProductServiceSelect({
                   <Plus className="h-4 w-4 mr-2" />
                   Create New Product/Service
                 </CommandItem>
-                {products.map((product: Product) => (
+                {(products as Product[]).map((product: Product) => (
                   <CommandItem
                     key={product.id}
                     onSelect={() => {
@@ -224,7 +121,7 @@ export function ProductServiceSelect({
                         </div>
                       )}
                       <div className="text-sm font-medium text-green-600">
-                        {formatCurrency(product.price || 0)}
+                        {formatCurrency(parseFloat(product.unitPrice || "0"))}
                       </div>
                     </div>
                   </CommandItem>
