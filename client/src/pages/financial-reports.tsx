@@ -6,9 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Download, TrendingUp, Calculator, BarChart3, PieChart, Activity, DollarSign, Building, FileBarChart } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FileText, Download, TrendingUp, Calculator, BarChart3, PieChart, Activity, DollarSign, Building, FileBarChart, RefreshCw, CalendarIcon, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface BalanceSheetData {
   assets: {
@@ -114,6 +116,7 @@ export default function FinancialReports() {
   const [dateFrom, setDateFrom] = useState(format(new Date(new Date().getFullYear(), 0, 1), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [activeTab, setActiveTab] = useState("balance-sheet");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Balance Sheet Query
   const { data: balanceSheet, isLoading: balanceSheetLoading } = useQuery<BalanceSheetData>({

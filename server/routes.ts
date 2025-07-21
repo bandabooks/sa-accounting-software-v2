@@ -951,20 +951,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/profit-loss", async (req, res) => {
+  app.get("/api/reports/profit-loss", authenticate, async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
-      if (!startDate || !endDate) {
-        return res.status(400).json({ message: "startDate and endDate are required" });
-      }
+      const { from, to } = req.query;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
       
-      const report = await storage.getProfitAndLoss(
-        new Date(startDate as string),
-        new Date(endDate as string)
-      );
+      const fromDate = from ? new Date(from as string) : new Date(new Date().getFullYear(), 0, 1);
+      const toDate = to ? new Date(to as string) : new Date();
+      
+      // Get comprehensive profit & loss data integrating all transactions
+      const report = await storage.getComprehensiveProfitLoss(companyId, fromDate, toDate);
       res.json(report);
     } catch (error) {
-      res.status(500).json({ message: "Failed to generate profit & loss report" });
+      console.error("Error generating profit & loss report:", error);
+      res.status(500).json({ error: "Failed to generate profit & loss report" });
     }
   });
 

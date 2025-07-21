@@ -80,6 +80,10 @@ export default function EstimateCreate() {
     queryKey: ["/api/customers"],
   });
 
+  const { data: products } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
   const createEstimateMutation = useMutation({
     mutationFn: async (data: EstimateFormData) => {
       const { items, ...estimate } = data;
@@ -321,12 +325,51 @@ export default function EstimateCreate() {
                           <div className="md:col-span-2 lg:col-span-2">
                             <FormField
                               control={form.control}
+                              name={`items.${index}.productId`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Product/Service</FormLabel>
+                                  <Select
+                                    onValueChange={(value) => {
+                                      const productId = parseInt(value);
+                                      field.onChange(productId);
+                                      
+                                      // Auto-fill product details
+                                      const product = products?.find((p: any) => p.id === productId);
+                                      if (product) {
+                                        form.setValue(`items.${index}.description`, product.name);
+                                        form.setValue(`items.${index}.unitPrice`, product.price || 0);
+                                        form.setValue(`items.${index}.vatRate`, product.vatRate || 15);
+                                      }
+                                    }}
+                                    value={field.value?.toString()}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select product/service" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {products?.map((product: any) => (
+                                        <SelectItem key={product.id} value={product.id.toString()}>
+                                          {product.name} - {formatCurrency(product.price || 0)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={form.control}
                               name={`items.${index}.description`}
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Description</FormLabel>
+                                  <FormLabel>Description (Optional Override)</FormLabel>
                                   <FormControl>
-                                    <Input placeholder="Item description" {...field} />
+                                    <Input placeholder="Custom description" {...field} />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>

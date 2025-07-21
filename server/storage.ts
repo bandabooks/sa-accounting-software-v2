@@ -5239,6 +5239,201 @@ export class DatabaseStorage implements IStorage {
       .from(projectMembers)
       .where(eq(projectMembers.projectId, projectId));
   }
+  // Comprehensive Financial Reporting Methods - Integrate all transaction data
+  async getComprehensiveProfitLoss(companyId: number, startDate: Date, endDate: Date) {
+    try {
+      // Get all revenue sources: invoice totals
+      const invoiceRevenue = await db
+        .select({
+          category: sql<string>`'Sales Revenue'`,
+          amount: sql<string>`COALESCE(SUM(${invoices.total}), '0.00')`,
+        })
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.companyId, companyId),
+            gte(invoices.invoiceDate, startDate),
+            lte(invoices.invoiceDate, endDate),
+            ne(invoices.status, "draft")
+          )
+        );
+
+      // Get all expenses by category
+      const expenseData = await db
+        .select({
+          category: expenseCategories.name,
+          amount: sql<string>`COALESCE(SUM(${expenses.amount}), '0.00')`,
+        })
+        .from(expenses)
+        .leftJoin(expenseCategories, eq(expenses.categoryId, expenseCategories.id))
+        .where(
+          and(
+            eq(expenses.companyId, companyId),
+            gte(expenses.expenseDate, startDate),
+            lte(expenses.expenseDate, endDate)
+          )
+        )
+        .groupBy(expenseCategories.name);
+
+      // Get journal entry data for other income/expenses
+      const journalData = await db
+        .select({
+          accountName: chartOfAccounts.name,
+          accountType: chartOfAccounts.accountType,
+          debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), '0.00')`,
+          creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), '0.00')`,
+        })
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+        .innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .where(
+          and(
+            eq(journalEntries.companyId, companyId),
+            gte(journalEntries.transactionDate, startDate),
+            lte(journalEntries.transactionDate, endDate),
+            eq(journalEntries.status, "posted"),
+            inArray(chartOfAccounts.accountType, ['revenue', 'expense'])
+          )
+        )
+        .groupBy(chartOfAccounts.name, chartOfAccounts.accountType);
+
+      // Calculate totals
+      const totalRevenue = (parseFloat(invoiceRevenue[0]?.amount || "0") +
+        journalData
+          .filter(item => item.accountType === 'revenue')
+          .reduce((sum, item) => sum + parseFloat(item.creditTotal) - parseFloat(item.debitTotal), 0)
+      ).toFixed(2);
+
+      const totalExpenses = (expenseData
+        .reduce((sum, item) => sum + parseFloat(item.amount), 0) +
+        journalData
+          .filter(item => item.accountType === 'expense')
+          .reduce((sum, item) => sum + parseFloat(item.debitTotal) - parseFloat(item.creditTotal), 0)
+      ).toFixed(2);
+
+      const netProfit = (parseFloat(totalRevenue) - parseFloat(totalExpenses)).toFixed(2);
+
+      return {
+        revenue: [
+          { category: "Sales Revenue", amount: invoiceRevenue[0]?.amount || "0.00" },
+          ...journalData
+            .filter(item => item.accountType === 'revenue')
+            .map(item => ({
+              category: item.accountName,
+              amount: (parseFloat(item.creditTotal) - parseFloat(item.debitTotal)).toFixed(2)
+            }))
+        ],
+        expenses: [
+          ...expenseData,
+          ...journalData
+            .filter(item => item.accountType === 'expense')
+            .map(item => ({
+              category: item.accountName,
+              amount: (parseFloat(item.debitTotal) - parseFloat(item.creditTotal)).toFixed(2)
+            }))
+        ],
+        totalRevenue,
+        totalExpenses,
+        grossProfit: totalRevenue,
+        netProfit,
+      };
+    } catch (error) {
+      console.error("Error generating comprehensive profit & loss:", error);
+      throw error;
+    }
+  }
+
+  async getComprehensiveBalanceSheet(companyId: number, asOfDate: Date) {
+    try {
+      // Get all account balances from journal entries
+      const accountBalances = await db
+        .select({
+          accountId: chartOfAccounts.id,
+          accountName: chartOfAccounts.name,
+          accountType: chartOfAccounts.accountType,
+          accountCode: chartOfAccounts.accountCode,
+          debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), '0.00')`,
+          creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), '0.00')`,
+        })
+        .from(chartOfAccounts)
+        .leftJoin(journalEntryLines, eq(chartOfAccounts.id, journalEntryLines.accountId))
+        .leftJoin(journalEntries, and(
+          eq(journalEntryLines.journalEntryId, journalEntries.id),
+          lte(journalEntries.transactionDate, asOfDate),
+          eq(journalEntries.status, "posted")
+        ))
+        .where(eq(chartOfAccounts.companyId, companyId))
+        .groupBy(chartOfAccounts.id, chartOfAccounts.name, chartOfAccounts.accountType, chartOfAccounts.accountCode)
+        .orderBy(chartOfAccounts.accountCode);
+
+      // Calculate balances based on account type (normal balance)
+      const processedBalances = accountBalances.map(account => {
+        const debit = parseFloat(account.debitTotal);
+        const credit = parseFloat(account.creditTotal);
+        
+        let balance;
+        if (['asset', 'expense'].includes(account.accountType)) {
+          balance = debit - credit; // Normal debit balance
+        } else {
+          balance = credit - debit; // Normal credit balance (liability, equity, revenue)
+        }
+        
+        return {
+          account: account.accountName,
+          amount: balance.toFixed(2),
+          type: account.accountType,
+          code: account.accountCode,
+        };
+      });
+
+      // Group by balance sheet categories
+      const assets = {
+        currentAssets: processedBalances
+          .filter(item => item.type === 'asset' && parseFloat(item.amount) !== 0)
+          .filter(item => item.code.startsWith('1100') || item.code.startsWith('1200')), // Current assets
+        nonCurrentAssets: processedBalances
+          .filter(item => item.type === 'asset' && parseFloat(item.amount) !== 0)
+          .filter(item => item.code.startsWith('1300') || item.code.startsWith('1400')), // Non-current assets
+        totalAssets: processedBalances
+          .filter(item => item.type === 'asset')
+          .reduce((sum, item) => sum + parseFloat(item.amount), 0).toFixed(2),
+      };
+
+      const liabilities = {
+        currentLiabilities: processedBalances
+          .filter(item => item.type === 'liability' && parseFloat(item.amount) !== 0)
+          .filter(item => item.code.startsWith('2100')), // Current liabilities
+        nonCurrentLiabilities: processedBalances
+          .filter(item => item.type === 'liability' && parseFloat(item.amount) !== 0)
+          .filter(item => item.code.startsWith('2200') || item.code.startsWith('2300')), // Non-current liabilities
+        totalLiabilities: processedBalances
+          .filter(item => item.type === 'liability')
+          .reduce((sum, item) => sum + parseFloat(item.amount), 0).toFixed(2),
+      };
+
+      const equity = {
+        items: processedBalances
+          .filter(item => item.type === 'equity' && parseFloat(item.amount) !== 0),
+        totalEquity: processedBalances
+          .filter(item => item.type === 'equity')
+          .reduce((sum, item) => sum + parseFloat(item.amount), 0).toFixed(2),
+      };
+
+      const totalLiabilitiesAndEquity = (
+        parseFloat(liabilities.totalLiabilities) + parseFloat(equity.totalEquity)
+      ).toFixed(2);
+
+      return {
+        assets,
+        liabilities,
+        equity,
+        totalLiabilitiesAndEquity,
+      };
+    } catch (error) {
+      console.error("Error generating comprehensive balance sheet:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
