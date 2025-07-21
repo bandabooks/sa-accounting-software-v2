@@ -63,6 +63,17 @@ const navigationGroups = [
     ]
   },
   {
+    id: "vat",
+    label: "VAT Management",
+    icon: PieChart,
+    items: [
+      { path: "/vat-management", label: "VAT Settings", icon: Settings, permission: "VAT_VIEW" },
+      { path: "/vat-management?tab=types", label: "VAT Types", icon: CheckCircle, permission: "VAT_VIEW" },
+      { path: "/vat-management?tab=returns", label: "VAT Returns", icon: FileText, permission: "VAT_VIEW" },
+      { path: "/vat-management?tab=compliance", label: "VAT Compliance", icon: Shield, permission: "VAT_VIEW" }
+    ]
+  },
+  {
     id: "projects",
     label: "Project Management",
     icon: Briefcase,
