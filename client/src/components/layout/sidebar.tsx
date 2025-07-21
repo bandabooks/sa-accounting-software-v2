@@ -77,9 +77,9 @@ const navigationGroups = [
     label: "VAT Management",
     icon: Receipt,
     items: [
-      { path: "/vat-management", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW" },
+      { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW" },
       { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW" },
-      { path: "/vat-reports", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW" }
+      { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW" }
     ]
   },
   {
