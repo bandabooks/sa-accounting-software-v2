@@ -308,163 +308,146 @@ export default function JournalEntries() {
                     </Button>
                   </div>
 
-                  <div className="space-y-4">
+                  {/* Simplified Table Layout */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-sm font-medium text-gray-700">
+                      <div className="col-span-4">Account</div>
+                      <div className="col-span-2">Description</div>
+                      <div className="col-span-2">Reference</div>
+                      <div className="col-span-2">Debit</div>
+                      <div className="col-span-2">Credit</div>
+                    </div>
+                    
                     {fields.map((field, index) => (
-                      <Card key={field.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-4">
-                            <div className="flex-1 grid grid-cols-2 gap-4">
-                              <div className="col-span-2">
-                                <FormField
-                                  control={form.control}
-                                  name={`lines.${index}.accountId`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Account</FormLabel>
-                                      <Select
-                                        onValueChange={(value) => field.onChange(parseInt(value))}
-                                        value={field.value?.toString()}
-                                      >
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Select account" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {accounts.map((account: any) => (
-                                            <SelectItem key={account.id} value={account.id.toString()}>
-                                              {account.accountCode} - {account.accountName}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-
-                              <FormField
-                                control={form.control}
-                                name={`lines.${index}.description`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                      <Input placeholder="Line description" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name={`lines.${index}.reference`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Reference</FormLabel>
-                                    <FormControl>
-                                      <Input placeholder="Line reference" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name={`lines.${index}.debitAmount`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Debit Amount</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="0.00"
-                                        {...field}
-                                        onChange={(e) => {
-                                          field.onChange(e.target.value);
-                                          // Clear credit amount when debit is entered
-                                          if (parseFloat(e.target.value) > 0) {
-                                            form.setValue(`lines.${index}.creditAmount`, "0.00");
-                                          }
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name={`lines.${index}.creditAmount`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Credit Amount</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="0.00"
-                                        {...field}
-                                        onChange={(e) => {
-                                          field.onChange(e.target.value);
-                                          // Clear debit amount when credit is entered
-                                          if (parseFloat(e.target.value) > 0) {
-                                            form.setValue(`lines.${index}.debitAmount`, "0.00");
-                                          }
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-
-                            {fields.length > 2 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeLine(index)}
-                                className="text-red-600 hover:text-red-700"
+                      <div key={field.id} className="border-t px-4 py-3 grid grid-cols-12 gap-2 items-center hover:bg-gray-50">
+                        <div className="col-span-4">
+                          <FormField
+                            control={form.control}
+                            name={`lines.${index}.accountId`}
+                            render={({ field }) => (
+                              <Select
+                                onValueChange={(value) => field.onChange(parseInt(value))}
+                                value={field.value?.toString()}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Select account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {accounts.map((account: any) => (
+                                    <SelectItem key={account.id} value={account.id.toString()}>
+                                      {account.accountCode} - {account.accountName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`lines.${index}.description`}
+                            render={({ field }) => (
+                              <Input placeholder="Description" {...field} className="h-9" />
+                            )}
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`lines.${index}.reference`}
+                            render={({ field }) => (
+                              <Input placeholder="Reference" {...field} className="h-9" />
+                            )}
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`lines.${index}.debitAmount`}
+                            render={({ field }) => (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                {...field}
+                                className="h-9"
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  // Clear credit amount when debit is entered
+                                  if (parseFloat(e.target.value) > 0) {
+                                    form.setValue(`lines.${index}.creditAmount`, "0.00");
+                                  }
+                                }}
+                              />
+                            )}
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`lines.${index}.creditAmount`}
+                            render={({ field }) => (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                {...field}
+                                className="h-9"
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  // Clear debit amount when credit is entered
+                                  if (parseFloat(e.target.value) > 0) {
+                                    form.setValue(`lines.${index}.debitAmount`, "0.00");
+                                  }
+                                }}
+                              />
+                            )}
+                          />
+                        </div>
+
+                        {fields.length > 2 && (
+                          <div className="flex justify-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeLine(index)}
+                              className="text-red-600 hover:text-red-700 h-9 w-9 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                        </CardContent>
-                      </Card>
+                        )}
+                      </div>
                     ))}
                   </div>
 
-                  {/* Totals */}
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Total Debits</div>
-                          <div className="text-lg font-medium">{formatCurrency(totalDebits.toFixed(2))}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Total Credits</div>
-                          <div className="text-lg font-medium">{formatCurrency(totalCredits.toFixed(2))}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Difference</div>
-                          <div className={`text-lg font-medium ${Math.abs(totalDebits - totalCredits) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(Math.abs(totalDebits - totalCredits).toFixed(2))}
-                          </div>
+                  {/* Totals Summary */}
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-sm text-gray-600">Total Debits</div>
+                        <div className="text-lg font-semibold text-blue-600">{formatCurrency(totalDebits.toFixed(2))}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Total Credits</div>
+                        <div className="text-lg font-semibold text-green-600">{formatCurrency(totalCredits.toFixed(2))}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Balance</div>
+                        <div className={`text-lg font-semibold ${Math.abs(totalDebits - totalCredits) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
+                          {Math.abs(totalDebits - totalCredits) < 0.01 ? '✓ Balanced' : `${formatCurrency(Math.abs(totalDebits - totalCredits).toFixed(2))} Difference`}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </div>
 
                 <DialogFooter>
