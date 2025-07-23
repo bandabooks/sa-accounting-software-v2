@@ -25,7 +25,10 @@ const journalEntryFormSchema = insertJournalEntrySchema.omit({
 });
 
 const journalLineSchema = z.object({
-  accountId: z.number().min(1, "Account is required"),
+  accountId: z.union([z.string(), z.number()]).refine(val => {
+    const num = typeof val === 'string' ? parseInt(val) : val;
+    return !isNaN(num) && num > 0;
+  }, "Account is required"),
   description: z.string().min(1, "Description is required"),
   debitAmount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Invalid debit amount"),
   creditAmount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Invalid credit amount"),
@@ -139,8 +142,8 @@ export default function JournalEntries() {
         sourceId: null,
       },
       lines: [
-        { accountId: 0, description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" },
-        { accountId: 0, description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" },
+        { accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" },
+        { accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" },
       ],
     },
   });
@@ -170,12 +173,18 @@ export default function JournalEntries() {
         totalDebit: totalDebits.toFixed(2),
         totalCredit: totalCredits.toFixed(2),
       },
+      lines: data.lines.map(line => ({
+        ...line,
+        accountId: parseInt(line.accountId.toString()),
+        debitAmount: parseFloat(line.debitAmount || "0").toFixed(2),
+        creditAmount: parseFloat(line.creditAmount || "0").toFixed(2),
+      })),
     };
     createMutation.mutate(entryData);
   };
 
   const addLine = () => {
-    append({ accountId: 0, description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" });
+    append({ accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" });
   };
 
   const removeLine = (index: number) => {
