@@ -98,7 +98,8 @@ const navigationGroups = [
     items: [
       { path: "/companies", label: "Companies", icon: Building2, permission: "COMPANY_VIEW" },
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null },
-      { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW" }
+      { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW" },
+      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW" }
     ]
   },
   {

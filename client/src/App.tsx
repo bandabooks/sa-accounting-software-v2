@@ -58,6 +58,7 @@ import VatManagement from "@/pages/vat-management";
 import VATSettings from "@/pages/vat-settings";
 import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
+import EnterpriseSettings from "@/pages/enterprise-settings";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -270,6 +271,11 @@ function AuthenticatedApp() {
         <Route path="/vat-returns">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <VATReturns />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/enterprise-settings">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <EnterpriseSettings />
           </ProtectedRoute>
         </Route>
         <Route path="/super-admin">

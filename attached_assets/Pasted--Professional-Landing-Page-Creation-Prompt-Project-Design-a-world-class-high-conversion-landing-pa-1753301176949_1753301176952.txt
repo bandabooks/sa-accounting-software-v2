@@ -1,0 +1,108 @@
+ Professional Landing Page Creation Prompt
+Project: Design a world-class, high-conversion landing page for a new cloud accounting software for accountants and tax practitioners in South Africa.
+
+Goals:
+
+Instill trust and credibility.
+
+Clearly communicate modern features and South African tax/VAT compliance.
+
+Drive sign-ups and demo bookings.
+
+Match or surpass QuickBooks, Zoho Books, and Xero in design and user experience.
+
+Page Structure & Content Requirements
+1. Hero Section
+Bold headline (e.g. “Modern Accounting. Built for South African Professionals.”)
+
+Subheading with main benefits (e.g. “Automate your accounting, VAT, and compliance in one secure, easy-to-use cloud platform.”)
+
+Powerful call-to-action (“Try Free”, “Start Your Free Trial”, “Book a Demo”)
+
+Professional dashboard screenshot or animation
+
+Optional: Customer testimonial or trust badge
+
+2. Features Highlights
+Visually distinct feature blocks (icons or illustrations for each):
+
+Effortless Invoicing & Billing
+
+VAT-Ready for South Africa (auto VAT types, VAT201)
+
+Professional Reports: P&L, Balance Sheet, Cash Flow
+
+Bank Integration & Secure Feeds
+
+Built-in SARS/CIPC Compliance
+
+Multi-user & Team Access
+
+2–3 columns or scrolling carousel for easy viewing
+
+3. Trust & Social Proof
+“Trusted by Accountants and Tax Practitioners”
+
+Real user testimonials with names/photos
+
+Logos of supported banks/partners or security badges
+
+4. Comparison Table
+Show how your software compares to QuickBooks, Zoho, and Sage:
+
+Features, local support, VAT/SARS integration, pricing
+
+Highlight unique selling points for South African market
+
+5. Pricing Preview
+Clear cards/sections for Starter, Pro, and Premium plans
+
+List key features and price for each
+
+“See Full Pricing” or “Get Started” buttons
+
+6. Easy Onboarding
+Simple 3-step “How It Works” section (e.g. Sign Up → Import Data → Start Accounting)
+
+Quick explainer video or interactive product tour (optional)
+
+7. Call-to-Action (CTA) Section
+Reiterate main CTA (“Start Free Trial”, “Book Demo”)
+
+Simple signup form (name, email, company)
+
+Or, “Contact Us” button
+
+8. Footer
+Contact info, support links, privacy, terms
+
+Social media icons
+
+9. Design & UX
+Clean, modern fonts and plenty of whitespace
+
+Professional color scheme (green, blue, or brand colors)
+
+Fully responsive (mobile/tablet/desktop)
+
+Fast loading and SEO optimized
+
+Focus on easy navigation and immediate trust
+
+Inspiration/References:
+QuickBooks South Africa
+
+Zoho Books
+
+Xero
+
+Deliverables
+Complete landing page design (preferably Figma, HTML/CSS/React, or as per your stack)
+
+All content and sections as described above
+
+Ready to deploy and test for conversions
+
+Extra (if using AI/Page Builder):
+“Please follow the above structure and write clean, conversion-optimized copy for each section. Use South African context, local business examples, and tax practitioner language. Ensure the design is on par with the top global accounting brands.”
+

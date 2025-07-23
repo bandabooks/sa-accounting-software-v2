@@ -232,8 +232,24 @@ export const users = pgTable("users", {
   failedLoginAttempts: integer("failed_login_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
   passwordChangedAt: timestamp("password_changed_at").defaultNow(),
+  // Enhanced 2FA and Security
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: text("two_factor_secret"),
+  twoFactorBackupCodes: jsonb("two_factor_backup_codes").default([]),
+  phoneNumber: text("phone_number"),
+  phoneVerified: boolean("phone_verified").default(false),
+  smsNotifications: boolean("sms_notifications").default(false),
+  // OAuth Integration
+  googleId: text("google_id"),
+  microsoftId: text("microsoft_id"),
+  oauthProviders: jsonb("oauth_providers").default([]),
+  // Notification Preferences
+  emailNotifications: boolean("email_notifications").default(true),
+  notificationPreferences: jsonb("notification_preferences").default({}),  // Detailed notification settings
+  // Localization
+  language: text("language").default("en"), // en, af, zu, xh
+  timezone: text("timezone").default("Africa/Johannesburg"),
+  theme: text("theme").default("light"), // light, dark, system
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2121,3 +2137,246 @@ export type TimeEntryWithDetails = TimeEntry & {
   user?: User;
   customer?: Customer;
 };
+
+// Email and SMS Services
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id"),
+  name: text("name").notNull(),
+  subject: text("subject").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text").notNull(),
+  templateType: text("template_type").notNull(), // invoice, payment_reminder, welcome, etc.
+  variables: jsonb("variables").default([]), // Available template variables
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailQueue = pgTable("email_queue", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id"),
+  userId: integer("user_id"),
+  to: text("to").notNull(),
+  cc: text("cc"),
+  bcc: text("bcc"),
+  subject: text("subject").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text").notNull(),
+  templateId: integer("template_id"),
+  priority: integer("priority").default(5), // 1=high, 5=normal, 10=low
+  status: text("status").default("pending"), // pending, sending, sent, failed
+  attempts: integer("attempts").default(0),
+  errorMessage: text("error_message"),
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const smsQueue = pgTable("sms_queue", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id"),
+  userId: integer("user_id"),
+  phoneNumber: text("phone_number").notNull(),
+  message: text("message").notNull(),
+  smsType: text("sms_type").notNull(), // security, alert, reminder, marketing
+  priority: integer("priority").default(5),
+  status: text("status").default("pending"), // pending, sending, sent, failed
+  attempts: integer("attempts").default(0),
+  errorMessage: text("error_message"),
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Workflow Automation System
+export const workflowRules = pgTable("workflow_rules", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  triggerType: text("trigger_type").notNull(), // invoice_created, payment_received, etc.
+  triggerConditions: jsonb("trigger_conditions").default({}),
+  actions: jsonb("actions").default([]), // Array of actions to perform
+  isActive: boolean("is_active").default(true),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: serial("id").primaryKey(),
+  ruleId: integer("rule_id").notNull(),
+  triggerData: jsonb("trigger_data").default({}),
+  status: text("status").default("pending"), // pending, running, completed, failed
+  errorMessage: text("error_message"),
+  executedAt: timestamp("executed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// AI Assistant Integration
+export const aiConversations = pgTable("ai_conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  companyId: integer("company_id").notNull(),
+  title: text("title"),
+  context: text("context"), // invoice, customer, report, etc.
+  contextId: integer("context_id"), // ID of the related record
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const aiMessages = pgTable("ai_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull(),
+  role: text("role").notNull(), // user, assistant, system
+  message: text("message").notNull(),
+  metadata: jsonb("metadata").default({}), // Additional context, tokens used, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Help Center System
+export const helpArticles = pgTable("help_articles", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  category: text("category").notNull(),
+  tags: jsonb("tags").default([]),
+  language: text("language").default("en"),
+  isPublished: boolean("is_published").default(false),
+  viewCount: integer("view_count").default(0),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const helpSearchQueries = pgTable("help_search_queries", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  query: text("query").notNull(),
+  resultsCount: integer("results_count").default(0),
+  wasHelpful: boolean("was_helpful"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// System Monitoring and Security
+export const apiRequestLogs = pgTable("api_request_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  companyId: integer("company_id"),
+  endpoint: text("endpoint").notNull(),
+  method: text("method").notNull(),
+  statusCode: integer("status_code").notNull(),
+  responseTime: integer("response_time"), // milliseconds
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  requestBody: jsonb("request_body"),
+  responseBody: jsonb("response_body"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const securityEvents = pgTable("security_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  eventType: text("event_type").notNull(), // login_failed, password_changed, 2fa_enabled, etc.
+  severity: text("severity").default("low"), // low, medium, high, critical
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Language Support
+export const translations = pgTable("translations", {
+  id: serial("id").primaryKey(),
+  language: text("language").notNull(), // en, af, zu, xh
+  namespace: text("namespace").notNull(), // common, dashboard, invoices, etc.
+  key: text("key").notNull(),
+  value: text("value").notNull(),
+  isSystemTranslation: boolean("is_system_translation").default(true),
+  updatedBy: integer("updated_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  translationUnique: unique().on(table.language, table.namespace, table.key),
+}));
+
+// Enterprise Feature Insert Schemas
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmailQueueSchema = createInsertSchema(emailQueue).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSMSQueueSchema = createInsertSchema(smsQueue).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkflowRuleSchema = createInsertSchema(workflowRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAIConversationSchema = createInsertSchema(aiConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAIMessageSchema = createInsertSchema(aiMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertHelpArticleSchema = createInsertSchema(helpArticles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTranslationSchema = createInsertSchema(translations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Enterprise Feature Types
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+export type EmailQueue = typeof emailQueue.$inferSelect;
+export type InsertEmailQueue = z.infer<typeof insertEmailQueueSchema>;
+export type SMSQueue = typeof smsQueue.$inferSelect;
+export type InsertSMSQueue = z.infer<typeof insertSMSQueueSchema>;
+
+export type WorkflowRule = typeof workflowRules.$inferSelect;
+export type InsertWorkflowRule = z.infer<typeof insertWorkflowRuleSchema>;
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+export type InsertWorkflowExecution = z.infer<typeof insertWorkflowExecutionSchema>;
+
+export type AIConversation = typeof aiConversations.$inferSelect;
+export type InsertAIConversation = z.infer<typeof insertAIConversationSchema>;
+export type AIMessage = typeof aiMessages.$inferSelect;
+export type InsertAIMessage = z.infer<typeof insertAIMessageSchema>;
+
+export type HelpArticle = typeof helpArticles.$inferSelect;
+export type InsertHelpArticle = z.infer<typeof insertHelpArticleSchema>;
+
+export type APIRequestLog = typeof apiRequestLogs.$inferSelect;
+export type SecurityEvent = typeof securityEvents.$inferSelect;
+
+export type Translation = typeof translations.$inferSelect;
+export type InsertTranslation = z.infer<typeof insertTranslationSchema>;

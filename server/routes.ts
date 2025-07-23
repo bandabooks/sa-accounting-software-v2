@@ -18,6 +18,7 @@ import {
   type AuthenticatedRequest 
 } from "./auth";
 import { registerCompanyRoutes } from "./companyRoutes";
+import { registerEnterpriseRoutes } from "./enterpriseRoutes";
 import { 
   insertCustomerSchema, 
   insertInvoiceSchema, 
@@ -64,6 +65,8 @@ import { createPayFastService } from "./payfast";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register multi-company routes
   registerCompanyRoutes(app);
+  // Register enterprise feature routes
+  registerEnterpriseRoutes(app);
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
