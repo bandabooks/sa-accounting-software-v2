@@ -44,7 +44,7 @@ export function useCollaborationIndicators() {
   const { user } = useAuth();
   const [collaborationState, setCollaborationState] = useState<CollaborationState>({
     activeUsers: [],
-    currentActivity: '',
+    currentActivity: 'Viewing shift details',
     shiftLocked: false
   });
   
@@ -65,14 +65,16 @@ export function useCollaborationIndicators() {
       console.log('Collaboration WebSocket connected');
       
       // Send initial presence
-      wsRef.current?.send(JSON.stringify({
-        type: 'join',
-        userId: user.id,
-        name: user.name || user.username,
-        color: userColorRef.current,
-        activity: ACTIVITY_TYPES.VIEWING_SHIFT,
-        location: 'shift-management'
-      }));
+      if (user?.id) {
+        wsRef.current?.send(JSON.stringify({
+          type: 'join',
+          userId: user.id.toString(),
+          name: user.name || user.username,
+          color: userColorRef.current,
+          activity: ACTIVITY_TYPES.VIEWING_SHIFT,
+          location: 'shift-management'
+        }));
+      }
 
       // Start heartbeat
       heartbeatRef.current = setInterval(() => {
@@ -93,10 +95,15 @@ export function useCollaborationIndicators() {
           case 'user_joined':
           case 'user_activity':
           case 'users_update':
-            setCollaborationState(prev => ({
-              ...prev,
-              activeUsers: message.users || []
-            }));
+            if (message.users && Array.isArray(message.users)) {
+              setCollaborationState(prev => ({
+                ...prev,
+                activeUsers: message.users.map((u: any) => ({
+                  ...u,
+                  lastSeen: new Date(u.lastSeen)
+                }))
+              }));
+            }
             break;
             
           case 'shift_locked':
@@ -143,10 +150,10 @@ export function useCollaborationIndicators() {
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
       }
-      if (wsRef.current) {
+      if (wsRef.current && user?.id) {
         wsRef.current.send(JSON.stringify({
           type: 'leave',
-          userId: user.id
+          userId: user.id.toString()
         }));
         wsRef.current.close();
       }
@@ -155,10 +162,10 @@ export function useCollaborationIndicators() {
 
   // Update user activity
   const updateActivity = (activity: keyof typeof ACTIVITY_TYPES, location?: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && user?.id) {
       wsRef.current.send(JSON.stringify({
         type: 'activity_update',
-        userId: user?.id,
+        userId: user.id.toString(),
         activity: ACTIVITY_TYPES[activity],
         location: location || 'shift-management',
         timestamp: new Date().toISOString()
@@ -173,10 +180,10 @@ export function useCollaborationIndicators() {
 
   // Request shift lock for critical operations
   const requestShiftLock = (operation: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && user?.id) {
       wsRef.current.send(JSON.stringify({
         type: 'request_lock',
-        userId: user?.id,
+        userId: user.id.toString(),
         operation,
         timestamp: new Date().toISOString()
       }));
@@ -185,10 +192,10 @@ export function useCollaborationIndicators() {
 
   // Release shift lock
   const releaseShiftLock = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && user?.id) {
       wsRef.current.send(JSON.stringify({
         type: 'release_lock',
-        userId: user?.id,
+        userId: user.id.toString(),
         timestamp: new Date().toISOString()
       }));
     }

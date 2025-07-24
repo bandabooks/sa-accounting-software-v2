@@ -14,7 +14,7 @@ export function ActivityTracker({ children, activity, location }: ActivityTracke
 
   useEffect(() => {
     updateActivity(activity, location);
-  }, [activity, location, updateActivity]);
+  }, [activity, location]); // Remove updateActivity from dependencies
 
   return <>{children}</>;
 }

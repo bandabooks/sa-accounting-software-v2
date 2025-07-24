@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useCollaborationIndicators } from "@/hooks/useCollaborationIndicators";
 import { CollaborationIndicators } from "@/components/collaboration/CollaborationIndicators";
+import { CollaborationFallback } from "@/components/collaboration/CollaborationFallback";
 import { ActivityTracker } from "@/components/collaboration/ActivityTracker";
 
 export default function POSShiftsPage() {
@@ -24,23 +25,31 @@ export default function POSShiftsPage() {
   const { collaborationState, updateActivity, requestShiftLock, releaseShiftLock } = useCollaborationIndicators();
 
   const handleCriticalOperation = (operation: string, activityKey: any) => {
-    updateActivity(activityKey);
-    requestShiftLock(operation);
-    // In a real implementation, you would perform the operation here
-    // and then release the lock when done
+    try {
+      updateActivity(activityKey);
+      requestShiftLock(operation);
+      // In a real implementation, you would perform the operation here
+      // and then release the lock when done
+    } catch (error) {
+      console.error('Error in critical operation:', error);
+    }
   };
 
   return (
     <ActivityTracker activity="VIEWING_SHIFT" location="shift-management">
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Collaboration Indicators */}
-        <CollaborationIndicators
-          activeUsers={collaborationState.activeUsers}
-          shiftLocked={collaborationState.shiftLocked}
-          lockOwner={collaborationState.lockOwner}
-          currentActivity={collaborationState.currentActivity}
-          onActivityUpdate={(activity) => updateActivity(activity as any)}
-        />
+        {collaborationState.activeUsers.length > 0 ? (
+          <CollaborationIndicators
+            activeUsers={collaborationState.activeUsers}
+            shiftLocked={collaborationState.shiftLocked}
+            lockOwner={collaborationState.lockOwner}
+            currentActivity={collaborationState.currentActivity}
+            onActivityUpdate={(activity) => updateActivity(activity as any)}
+          />
+        ) : (
+          <CollaborationFallback />
+        )}
 
         {/* Header */}
         <div className="flex items-center justify-between">
