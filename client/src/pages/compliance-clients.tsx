@@ -205,7 +205,7 @@ export default function ComplianceClients() {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.registrationNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBusinessType = !selectedBusinessType || client.businessType === selectedBusinessType;
+    const matchesBusinessType = !selectedBusinessType || selectedBusinessType === "all" || client.businessType === selectedBusinessType;
     return matchesSearch && matchesBusinessType;
   }) || [];
 
@@ -263,7 +263,7 @@ export default function ComplianceClients() {
                 <SelectValue placeholder="Business Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 {businessTypes.map((type) => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
