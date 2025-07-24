@@ -4,6 +4,7 @@ import {
   AlertTriangle, Calendar, Award, Lock, Users, Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function ComplianceFeatures() {
   const complianceAreas = [
@@ -70,7 +71,7 @@ export default function ComplianceFeatures() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <MarketingLayout>
       {/* Header */}
       <header className="bg-gradient-to-r from-red-600 to-orange-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -262,6 +263,6 @@ export default function ComplianceFeatures() {
           <p className="text-red-200 mt-4 text-sm">Free compliance audit • No obligations</p>
         </div>
       </section>
-    </div>
+    </MarketingLayout>
   );
 }

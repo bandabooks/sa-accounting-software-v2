@@ -4,6 +4,7 @@ import {
   CheckCircle, ArrowRight, Users, Shield, Award
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -85,7 +86,8 @@ export default function Contact() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <MarketingLayout>
+        <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="max-w-md mx-auto text-center p-8">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="text-green-600" size={32} />
@@ -98,12 +100,13 @@ export default function Contact() {
             Send Another Message
           </Button>
         </div>
-      </div>
+        </div>
+      </MarketingLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <MarketingLayout>
       {/* Header */}
       <header className="bg-gradient-to-r from-teal-600 to-blue-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -366,6 +369,6 @@ export default function Contact() {
           </div>
         </div>
       </section>
-    </div>
+    </MarketingLayout>
   );
 }

@@ -4,10 +4,11 @@ import {
   ShoppingCart, CreditCard, Smartphone, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function RetailSolutions() {
   return (
-    <div className="min-h-screen bg-white">
+    <MarketingLayout>
       <header className="bg-gradient-to-r from-green-600 to-teal-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -92,6 +93,6 @@ export default function RetailSolutions() {
           </div>
         </div>
       </section>
-    </div>
+    </MarketingLayout>
   );
 }

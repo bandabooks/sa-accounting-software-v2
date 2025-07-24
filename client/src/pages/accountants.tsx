@@ -4,6 +4,7 @@ import {
   FileText, Building, Clock, TrendingUp, Briefcase, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function Accountants() {
   const accountantTypes = [
@@ -61,7 +62,7 @@ export default function Accountants() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <MarketingLayout>
       {/* Header */}
       <header className="bg-gradient-to-r from-indigo-600 to-blue-700 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -252,6 +253,6 @@ export default function Accountants() {
           <p className="text-indigo-200 mt-4 text-sm">30-day free trial • No setup fees • Cancel anytime</p>
         </div>
       </section>
-    </div>
+    </MarketingLayout>
   );
 }

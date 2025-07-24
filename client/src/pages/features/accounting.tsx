@@ -4,6 +4,7 @@ import {
   DollarSign, BarChart3, Receipt, PieChart, Clock, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function AccountingFeatures() {
   const accountingFeatures = [
@@ -58,7 +59,7 @@ export default function AccountingFeatures() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <MarketingLayout>
       {/* Header */}
       <header className="bg-gradient-to-r from-green-600 to-blue-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -236,6 +237,6 @@ export default function AccountingFeatures() {
           <p className="text-green-200 mt-4 text-sm">No credit card required • 14-day free trial</p>
         </div>
       </section>
-    </div>
+    </MarketingLayout>
   );
 }

@@ -4,6 +4,7 @@ import {
   Calculator, Shield, Clock, TrendingUp, Smartphone, Award
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function SmallBusiness() {
   const industries = [
@@ -61,7 +62,7 @@ export default function SmallBusiness() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <MarketingLayout>
       {/* Header */}
       <header className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -284,6 +285,6 @@ export default function SmallBusiness() {
           <p className="text-purple-200 mt-4 text-sm">No credit card required • 14-day free trial • Cancel anytime</p>
         </div>
       </section>
-    </div>
+    </MarketingLayout>
   );
 }
