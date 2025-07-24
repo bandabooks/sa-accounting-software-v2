@@ -1,15 +1,24 @@
+import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import { db } from '../db';
 import { emailQueue, emailTemplates } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 export interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
+  provider: 'sendgrid' | 'smtp';
+  sendgrid?: {
+    apiKey: string;
+    fromEmail: string;
+    fromName: string;
+  };
+  smtp?: {
+    host: string;
+    port: number;
+    secure: boolean;
+    auth: {
+      user: string;
+      pass: string;
+    };
   };
 }
 
@@ -18,23 +27,39 @@ export class EmailService {
   private config: EmailConfig | null = null;
 
   constructor() {
-    this.initializeTransporter();
+    this.initializeService();
   }
 
-  private initializeTransporter() {
-    const config: EmailConfig = {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || '',
-      },
-    };
+  private initializeService() {
+    // Try SendGrid first (preferred for production)
+    if (process.env.SENDGRID_API_KEY) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      this.config = {
+        provider: 'sendgrid',
+        sendgrid: {
+          apiKey: process.env.SENDGRID_API_KEY,
+          fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@taxnify.co.za',
+          fromName: process.env.SENDGRID_FROM_NAME || 'Taxnify',
+        },
+      };
+    } 
+    // Fallback to SMTP if SendGrid not configured
+    else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const smtpConfig = {
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      };
 
-    if (config.auth.user && config.auth.pass) {
-      this.config = config;
-      this.transporter = nodemailer.createTransporter(config);
+      this.config = {
+        provider: 'smtp',
+        smtp: smtpConfig,
+      };
+      this.transporter = nodemailer.createTransporter(smtpConfig);
     }
   }
 
@@ -50,23 +75,47 @@ export class EmailService {
     templateId?: number;
     priority?: number;
   }) {
-    if (!this.transporter) {
-      throw new Error('Email service not configured. Please set SMTP environment variables.');
+    if (!this.config) {
+      throw new Error('Email service not configured. Please set SENDGRID_API_KEY or SMTP environment variables.');
     }
 
     try {
-      const info = await this.transporter.sendMail({
-        from: this.config?.auth.user,
-        to: emailData.to,
-        cc: emailData.cc,
-        bcc: emailData.bcc,
-        subject: emailData.subject,
-        html: emailData.bodyHtml,
-        text: emailData.bodyText,
-      });
+      if (this.config.provider === 'sendgrid' && this.config.sendgrid) {
+        // Use SendGrid
+        const msg = {
+          to: emailData.to,
+          cc: emailData.cc,
+          bcc: emailData.bcc,
+          from: {
+            email: this.config.sendgrid.fromEmail,
+            name: this.config.sendgrid.fromName,
+          },
+          subject: emailData.subject,
+          html: emailData.bodyHtml,
+          text: emailData.bodyText,
+        };
 
-      console.log('Email sent:', info.messageId);
-      return { success: true, messageId: info.messageId };
+        const [response] = await sgMail.send(msg);
+        console.log('Email sent via SendGrid:', response.statusCode);
+        return { success: true, messageId: response.headers['x-message-id'] };
+      } 
+      else if (this.config.provider === 'smtp' && this.transporter) {
+        // Use SMTP
+        const info = await this.transporter.sendMail({
+          from: this.config.smtp?.auth.user,
+          to: emailData.to,
+          cc: emailData.cc,
+          bcc: emailData.bcc,
+          subject: emailData.subject,
+          html: emailData.bodyHtml,
+          text: emailData.bodyText,
+        });
+
+        console.log('Email sent via SMTP:', info.messageId);
+        return { success: true, messageId: info.messageId };
+      } else {
+        throw new Error('Email service configuration error');
+      }
     } catch (error) {
       console.error('Failed to send email:', error);
       throw error;
@@ -104,7 +153,7 @@ export class EmailService {
   }
 
   async processEmailQueue() {
-    if (!this.transporter) {
+    if (!this.config) {
       console.log('Email service not configured, skipping queue processing');
       return;
     }
@@ -180,6 +229,109 @@ export class EmailService {
     return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
       return variables[key] || match;
     });
+  }
+
+  // Helper method to send trial welcome email
+  async sendTrialWelcomeEmail(userEmail: string, userName: string, companyName: string, trialExpiresAt: Date) {
+    const trialDays = Math.ceil((trialExpiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    
+    const subject = `Welcome to Taxnify! Your ${trialDays}-day free trial has started`;
+    const bodyHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin: 0;">Welcome to Taxnify!</h1>
+          <p style="color: #6b7280; font-size: 18px;">Unified Business, Accounting, Compliance Platform</p>
+        </div>
+        
+        <h2 style="color: #1f2937;">Hi ${userName},</h2>
+        
+        <p style="color: #4b5563; line-height: 1.6;">
+          Thank you for starting your free trial with Taxnify! We're excited to help <strong>${companyName}</strong> 
+          streamline your accounting, compliance, and business management processes.
+        </p>
+        
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1f2937; margin: 0 0 10px 0;">Your Trial Details:</h3>
+          <ul style="color: #4b5563; margin: 0; padding-left: 20px;">
+            <li><strong>Trial Duration:</strong> ${trialDays} days remaining</li>
+            <li><strong>Expires:</strong> ${trialExpiresAt.toLocaleDateString()}</li>
+            <li><strong>Full Access:</strong> All professional features included</li>
+          </ul>
+        </div>
+        
+        <h3 style="color: #1f2937;">What's Next?</h3>
+        <ol style="color: #4b5563; line-height: 1.6;">
+          <li>Complete your company setup and onboarding</li>
+          <li>Import your existing customer and supplier data</li>
+          <li>Create your first invoice or estimate</li>
+          <li>Explore our South African VAT compliance features</li>
+        </ol>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://your-domain.repl.co/onboarding?trial=true" 
+             style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Complete Setup →
+          </a>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+          Need help? Reply to this email or contact our support team.<br>
+          <strong>Taxnify Team</strong><br>
+          Unified Business, Accounting, Compliance Platform
+        </p>
+      </div>
+    `;
+    
+    const bodyText = `
+      Welcome to Taxnify, ${userName}!
+      
+      Thank you for starting your free trial! We're excited to help ${companyName} streamline your business processes.
+      
+      Your Trial Details:
+      - Trial Duration: ${trialDays} days remaining
+      - Expires: ${trialExpiresAt.toLocaleDateString()}
+      - Full Access: All professional features included
+      
+      What's Next?
+      1. Complete your company setup and onboarding
+      2. Import your existing customer and supplier data  
+      3. Create your first invoice or estimate
+      4. Explore our South African VAT compliance features
+      
+      Visit your dashboard to get started: https://your-domain.repl.co/onboarding?trial=true
+      
+      Need help? Contact our support team.
+      
+      Taxnify Team
+      Unified Business, Accounting, Compliance Platform
+    `;
+
+    return this.queueEmail({
+      to: userEmail,
+      subject,
+      bodyHtml,
+      bodyText,
+      priority: 1, // High priority for welcome emails
+    });
+  }
+
+  // Helper method to check service status
+  getServiceStatus(): { configured: boolean; provider: string | null; details: string } {
+    if (!this.config) {
+      return {
+        configured: false,
+        provider: null,
+        details: 'No email service configured. Set SENDGRID_API_KEY or SMTP credentials.'
+      };
+    }
+
+    return {
+      configured: true,
+      provider: this.config.provider,
+      details: this.config.provider === 'sendgrid' 
+        ? `SendGrid configured with from: ${this.config.sendgrid?.fromEmail}`
+        : `SMTP configured with host: ${this.config.smtp?.host}`
+    };
   }
 
   async sendTemplateEmail(templateId: number, to: string, variables: Record<string, any>, options?: {

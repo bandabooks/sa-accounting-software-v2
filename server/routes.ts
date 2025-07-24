@@ -71,6 +71,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { createPayFastService } from "./payfast";
+import { emailService } from "./services/emailService";
 
 // Validation middleware
 function validateRequest(schema: { body?: z.ZodSchema }) {
@@ -289,6 +290,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companySize: signupData.companySize
       }, req);
       
+      // Send welcome email (async, don't wait for completion)
+      emailService.sendTrialWelcomeEmail(
+        user.email,
+        user.name,
+        company.name,
+        company.subscriptionExpiresAt!
+      ).catch(error => {
+        console.error('Failed to send welcome email:', error);
+        // Log email failure but don't block signup
+      });
+      
       res.json({
         token,
         sessionToken,
@@ -486,16 +498,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/system-stats", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
     try {
+      const emailStatus = emailService.getServiceStatus();
       const stats = {
         totalUsers: 4,
         activeUsers: 3,
         systemHealth: "Healthy",
-        securityLevel: "High"
+        securityLevel: "High",
+        emailService: emailStatus
       };
       res.json(stats);
     } catch (error) {
       console.error("Error fetching system stats:", error);
       res.status(500).json({ message: "Failed to fetch system stats" });
+    }
+  });
+
+  // Email service status endpoint
+  app.get("/api/admin/email-status", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const status = emailService.getServiceStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching email service status:", error);
+      res.status(500).json({ message: "Failed to fetch email service status" });
     }
   });
 
