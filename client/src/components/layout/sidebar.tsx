@@ -78,14 +78,14 @@ const navigationGroups = [
     label: "Compliance Management",
     icon: Shield,
     items: [
-      { path: "/compliance", label: "Dashboard", icon: BarChart3, permission: null },
-      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: null },
-      { path: "/compliance/sars", label: "SARS Compliance", icon: Building2, permission: null },
-      { path: "/compliance/cipc", label: "CIPC Compliance", icon: FileText, permission: null },
-      { path: "/compliance/labour", label: "Labour Compliance", icon: Briefcase, permission: null },
-      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: null },
-      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: null },
-      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: null }
+      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/sars", label: "SARS Compliance", icon: FileText, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW" }
     ]
   },
   {
@@ -224,7 +224,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const [expandedGroup, setExpandedGroup] = useState<string | null>("sales");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>("compliance");
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
   const userPermissions = user?.permissions || [
@@ -232,7 +232,7 @@ export default function Sidebar() {
     "PURCHASE_ORDER_VIEW", "EXPENSE_VIEW", "PRODUCT_VIEW", "INVENTORY_VIEW",
     "CHART_OF_ACCOUNTS_VIEW", "JOURNAL_ENTRY_VIEW", "BANKING_VIEW", 
     "GENERAL_LEDGER_VIEW", "FINANCIAL_VIEW", "REPORT_VIEW", "VAT_VIEW",
-    "COMPANY_VIEW", "SETTINGS_VIEW"
+    "COMPANY_VIEW", "SETTINGS_VIEW", "COMPLIANCE_VIEW"
   ];
 
   const toggleGroup = (groupId: string) => {

@@ -64,6 +64,12 @@ import Onboarding from "@/pages/onboarding";
 import SpendingWizard from "@/pages/spending-wizard";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
 import ComplianceClients from "@/pages/compliance-clients";
+import SARSCompliance from "@/pages/sars-compliance";
+import CIPCCompliance from "@/pages/cipc-compliance";
+import LabourCompliance from "@/pages/labour-compliance";
+import ComplianceTasks from "@/pages/compliance-tasks";
+import ComplianceCalendar from "@/pages/compliance-calendar";
+import ComplianceDocuments from "@/pages/compliance-documents";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -338,11 +344,45 @@ function AuthenticatedApp() {
         </Route>
 
         {/* Compliance Management Routes */}
-        <Route path="/compliance">
-          <ComplianceDashboard />
+        <Route path="/compliance/dashboard">
+          <ProtectedRoute>
+            <ComplianceDashboard />
+          </ProtectedRoute>
         </Route>
         <Route path="/compliance/clients">
-          <ComplianceClients />
+          <ProtectedRoute>
+            <ComplianceClients />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/sars">
+          <ProtectedRoute>
+            <SARSCompliance />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/cipc">
+          <ProtectedRoute>
+            <CIPCCompliance />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/labour">
+          <ProtectedRoute>
+            <LabourCompliance />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/tasks">
+          <ProtectedRoute>
+            <ComplianceTasks />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/calendar">
+          <ProtectedRoute>
+            <ComplianceCalendar />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/documents">
+          <ProtectedRoute>
+            <ComplianceDocuments />
+          </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />
