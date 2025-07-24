@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { ErrorBoundary, POSErrorFallback } from "@/components/ErrorBoundary";
 import { 
   Tablet, Scan, CreditCard, Receipt, Plus, Minus, 
   ShoppingCart, Calculator, Trash2, DollarSign
@@ -78,7 +79,8 @@ export default function POSTerminalPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <ErrorBoundary fallback={POSErrorFallback}>
+      <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -249,6 +251,7 @@ export default function POSTerminalPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

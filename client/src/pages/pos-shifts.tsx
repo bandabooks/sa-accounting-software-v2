@@ -10,6 +10,7 @@ import { useCollaborationIndicators } from "@/hooks/useCollaborationIndicators";
 import { CollaborationIndicators } from "@/components/collaboration/CollaborationIndicators";
 import { CollaborationFallback } from "@/components/collaboration/CollaborationFallback";
 import { ActivityTracker } from "@/components/collaboration/ActivityTracker";
+import { ErrorBoundary, POSErrorFallback } from "@/components/ErrorBoundary";
 
 export default function POSShiftsPage() {
   const [currentShift, setCurrentShift] = useState({
@@ -36,8 +37,9 @@ export default function POSShiftsPage() {
   };
 
   return (
-    <ActivityTracker activity="VIEWING_SHIFT" location="shift-management">
-      <div className="container mx-auto px-4 py-6 space-y-6">
+    <ErrorBoundary fallback={POSErrorFallback}>
+      <ActivityTracker activity="VIEWING_SHIFT" location="shift-management">
+        <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Collaboration Indicators */}
         {collaborationState.activeUsers.length > 0 ? (
           <CollaborationIndicators
@@ -300,7 +302,8 @@ export default function POSShiftsPage() {
           </div>
         </CardContent>
       </Card>
-      </div>
-    </ActivityTracker>
+        </div>
+      </ActivityTracker>
+    </ErrorBoundary>
   );
 }

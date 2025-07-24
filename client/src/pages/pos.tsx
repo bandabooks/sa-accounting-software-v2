@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorBoundary, POSErrorFallback } from "@/components/ErrorBoundary";
 import { 
   Tablet, Users, Package, CreditCard, Receipt, BarChart3, 
   Settings, Plus, ShoppingCart, Calculator, Clock
@@ -17,7 +18,8 @@ export default function POSPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <ErrorBoundary fallback={POSErrorFallback}>
+      <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -94,14 +96,14 @@ export default function POSPage() {
             { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
           ].map((tab) => (
             <Link key={tab.id} href={tab.path}>
-              <a className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
+              <span className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                 location === tab.path
                   ? "border-primary text-primary"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}>
                 <tab.icon className="h-4 w-4" />
                 <span>{tab.label}</span>
-              </a>
+              </span>
             </Link>
           ))}
         </nav>
@@ -219,6 +221,7 @@ export default function POSPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

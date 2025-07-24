@@ -64,16 +64,24 @@ export function useCollaborationIndicators() {
     wsRef.current.onopen = () => {
       console.log('Collaboration WebSocket connected');
       
-      // Send initial presence
+      // Send initial presence with delay to ensure connection is ready
       if (user?.id) {
-        wsRef.current?.send(JSON.stringify({
-          type: 'join',
-          userId: user.id.toString(),
-          name: user.name || user.username,
-          color: userColorRef.current,
-          activity: ACTIVITY_TYPES.VIEWING_SHIFT,
-          location: 'shift-management'
-        }));
+        setTimeout(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            try {
+              wsRef.current.send(JSON.stringify({
+                type: 'join',
+                userId: user.id.toString(),
+                name: user.name || user.username,
+                color: userColorRef.current,
+                activity: ACTIVITY_TYPES.VIEWING_SHIFT,
+                location: 'shift-management'
+              }));
+            } catch (error) {
+              console.warn('Failed to send initial presence:', error);
+            }
+          }
+        }, 100);
       }
 
       // Start heartbeat
@@ -151,11 +159,18 @@ export function useCollaborationIndicators() {
         clearInterval(heartbeatRef.current);
       }
       if (wsRef.current && user?.id) {
-        wsRef.current.send(JSON.stringify({
-          type: 'leave',
-          userId: user.id.toString()
-        }));
-        wsRef.current.close();
+        try {
+          if (wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+              type: 'leave',
+              userId: user.id.toString()
+            }));
+          }
+        } catch (error) {
+          console.warn('Failed to send leave message:', error);
+        } finally {
+          wsRef.current.close();
+        }
       }
     };
   }, [user]);
@@ -163,41 +178,53 @@ export function useCollaborationIndicators() {
   // Update user activity
   const updateActivity = (activity: keyof typeof ACTIVITY_TYPES, location?: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN && user?.id) {
-      wsRef.current.send(JSON.stringify({
-        type: 'activity_update',
-        userId: user.id.toString(),
-        activity: ACTIVITY_TYPES[activity],
-        location: location || 'shift-management',
-        timestamp: new Date().toISOString()
-      }));
-      
-      setCollaborationState(prev => ({
-        ...prev,
-        currentActivity: ACTIVITY_TYPES[activity]
-      }));
+      try {
+        wsRef.current.send(JSON.stringify({
+          type: 'activity_update',
+          userId: user.id.toString(),
+          activity: ACTIVITY_TYPES[activity],
+          location: location || 'shift-management',
+          timestamp: new Date().toISOString()
+        }));
+        
+        setCollaborationState(prev => ({
+          ...prev,
+          currentActivity: ACTIVITY_TYPES[activity]
+        }));
+      } catch (error) {
+        console.warn('Failed to send activity update:', error);
+      }
     }
   };
 
   // Request shift lock for critical operations
   const requestShiftLock = (operation: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN && user?.id) {
-      wsRef.current.send(JSON.stringify({
-        type: 'request_lock',
-        userId: user.id.toString(),
-        operation,
-        timestamp: new Date().toISOString()
-      }));
+      try {
+        wsRef.current.send(JSON.stringify({
+          type: 'request_lock',
+          userId: user.id.toString(),
+          operation,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (error) {
+        console.warn('Failed to request shift lock:', error);
+      }
     }
   };
 
   // Release shift lock
   const releaseShiftLock = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN && user?.id) {
-      wsRef.current.send(JSON.stringify({
-        type: 'release_lock',
-        userId: user.id.toString(),
-        timestamp: new Date().toISOString()
-      }));
+      try {
+        wsRef.current.send(JSON.stringify({
+          type: 'release_lock',
+          userId: user.id.toString(),
+          timestamp: new Date().toISOString()
+        }));
+      } catch (error) {
+        console.warn('Failed to release shift lock:', error);
+      }
     }
   };
 
