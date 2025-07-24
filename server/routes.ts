@@ -38,6 +38,7 @@ import {
   insertProductCategorySchema,
   insertPayfastPaymentSchema,
   loginSchema,
+  trialSignupSchema,
   changePasswordSchema,
   insertUserRoleSchema,
   insertChartOfAccountSchema,
@@ -65,6 +66,7 @@ import {
   insertApprovalRequestSchema,
   insertBankIntegrationSchema,
   type LoginRequest,
+  type TrialSignupRequest,
   type ChangePasswordRequest
 } from "@shared/schema";
 import { z } from "zod";
@@ -178,6 +180,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Trial signup route
+  app.post("/api/auth/trial-signup", async (req, res) => {
+    try {
+      const signupData = trialSignupSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(signupData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "An account with this email already exists" });
+      }
+      
+      // Generate unique username from email
+      const baseUsername = signupData.email.split('@')[0];
+      let username = baseUsername;
+      let counter = 1;
+      
+      while (await storage.getUserByUsername(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+      
+      // Create company first
+      const companySlug = signupData.companyName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      
+      let finalSlug = companySlug;
+      let slugCounter = 1;
+      
+      while (await storage.getCompanyBySlug(finalSlug)) {
+        finalSlug = `${companySlug}-${slugCounter}`;
+        slugCounter++;
+      }
+      
+      // Map plan IDs to subscription plans
+      const planMapping = {
+        'starter': 'starter',
+        'professional': 'professional', 
+        'enterprise': 'enterprise'
+      };
+      
+      const subscriptionPlan = planMapping[signupData.planId as keyof typeof planMapping] || 'professional';
+      
+      // Create company
+      const company = await storage.createCompany({
+        name: signupData.companyName,
+        displayName: signupData.companyName,
+        slug: finalSlug,
+        email: signupData.email,
+        industry: signupData.industry,
+        subscriptionPlan,
+        subscriptionStatus: 'trial',
+        subscriptionExpiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+        isActive: true,
+        settings: {
+          companySize: signupData.companySize,
+          subscribeToUpdates: signupData.subscribeToUpdates || false,
+          trialStarted: new Date().toISOString(),
+          onboardingCompleted: false
+        }
+      });
+      
+      // Hash password
+      const hashedPassword = await hashPassword(signupData.password);
+      
+      // Create user
+      const user = await storage.createUser({
+        username,
+        name: `${signupData.firstName} ${signupData.lastName}`,
+        firstName: signupData.firstName,
+        lastName: signupData.lastName,
+        email: signupData.email,
+        passwordHash: hashedPassword,
+        role: 'super_admin', // First user of company gets super admin
+        permissions: ['*'], // All permissions
+        isActive: true,
+        emailVerified: true, // Auto-verify for trials
+        twoFactorEnabled: false
+      });
+      
+      // Add user to company as owner
+      await storage.addUserToCompany({
+        companyId: company.id,
+        userId: user.id,
+        role: 'owner',
+        permissions: ['*'],
+        isActive: true
+      });
+      
+      // Create session for immediate login
+      const sessionToken = generateSessionToken();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      
+      await storage.createSession({
+        userId: user.id,
+        sessionToken,
+        expiresAt,
+        ipAddress: req.ip || req.connection?.remoteAddress || null,
+        userAgent: req.headers['user-agent'] || null,
+        isActive: true,
+      });
+      
+      // Generate JWT
+      const token = generateJWT({ userId: user.id, username: user.username });
+      
+      // Log audit
+      await logAudit(user.id, 'trial_signup', 'users', user.id, {
+        plan: signupData.planId,
+        companyName: signupData.companyName,
+        industry: signupData.industry,
+        companySize: signupData.companySize
+      }, req);
+      
+      res.json({
+        token,
+        sessionToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          permissions: user.permissions,
+        },
+        company: {
+          id: company.id,
+          name: company.name,
+          slug: company.slug,
+          subscriptionPlan: company.subscriptionPlan,
+          subscriptionStatus: company.subscriptionStatus,
+          subscriptionExpiresAt: company.subscriptionExpiresAt
+        },
+        trial: {
+          daysRemaining: 14,
+          expiresAt: company.subscriptionExpiresAt
+        }
+      });
+    } catch (error) {
+      console.error("Trial signup error:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
+        });
+      }
+      
+      res.status(500).json({ message: "Signup failed. Please try again." });
     }
   });
 

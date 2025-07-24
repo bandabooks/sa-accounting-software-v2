@@ -143,7 +143,7 @@ export default function MarketingHeader() {
                 Sign In
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="/trial-signup">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                 Start Free Trial
               </Button>
@@ -261,7 +261,7 @@ export default function MarketingHeader() {
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/login" onClick={closeMobileMenu}>
+                <Link href="/trial-signup" onClick={closeMobileMenu}>
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                     Start Free Trial
                   </Button>

@@ -188,13 +188,15 @@ export default function Pricing() {
                     ))}
                   </ul>
                   
-                  <Button 
-                    className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-900 hover:bg-gray-800'} text-white`}
-                    size="lg"
-                  >
-                    {plan.cta}
-                    {plan.cta === "Start Free Trial" && <ArrowRight className="ml-2" size={16} />}
-                  </Button>
+                  <Link href={plan.cta === "Start Free Trial" ? "/trial-signup" : "/contact"}>
+                    <Button 
+                      className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-900 hover:bg-gray-800'} text-white`}
+                      size="lg"
+                    >
+                      {plan.cta}
+                      {plan.cta === "Start Free Trial" && <ArrowRight className="ml-2" size={16} />}
+                    </Button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -267,14 +269,18 @@ export default function Pricing() {
             Start your 14-day free trial today. No credit card required, cancel anytime.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
-              Start Free Trial
-              <ArrowRight className="ml-2" size={20} />
-            </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-              <Phone className="mr-2" size={20} />
-              Call Sales: +27 11 123 4567
-            </Button>
+            <Link href="/trial-signup">
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+                Start Free Trial
+                <ArrowRight className="ml-2" size={20} />
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                <Phone className="mr-2" size={20} />
+                Call Sales: +27 11 123 4567
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
