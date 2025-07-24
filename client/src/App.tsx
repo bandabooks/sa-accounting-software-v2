@@ -59,6 +59,7 @@ import VATSettings from "@/pages/vat-settings";
 import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
 import EnterpriseSettings from "@/pages/enterprise-settings";
+import Landing from "@/pages/landing";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -342,14 +343,15 @@ function Router() {
     );
   }
 
-  // Show login page if not authenticated
+  // Show landing page if not authenticated
   if (!isAuthenticated) {
     return (
       <Switch>
+        <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
         <Route path="/portal" component={CustomerPortal} />
         <Route>
-          <Login />
+          <Landing />
         </Route>
       </Switch>
     );
