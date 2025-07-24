@@ -5956,5 +5956,13 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // Initialize collaboration WebSocket server
+  try {
+    const { collaborationManager } = await import("./collaboration");
+    collaborationManager.initialize(httpServer);
+  } catch (error) {
+    console.warn("Failed to initialize collaboration system:", error);
+  }
+  
   return httpServer;
 }

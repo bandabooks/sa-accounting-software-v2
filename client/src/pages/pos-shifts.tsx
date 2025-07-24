@@ -6,6 +6,9 @@ import {
   Clock, Plus, DollarSign, AlertTriangle, CheckCircle, 
   Users, Calculator, CreditCard, Package, TrendingUp
 } from "lucide-react";
+import { useCollaborationIndicators } from "@/hooks/useCollaborationIndicators";
+import { CollaborationIndicators } from "@/components/collaboration/CollaborationIndicators";
+import { ActivityTracker } from "@/components/collaboration/ActivityTracker";
 
 export default function POSShiftsPage() {
   const [currentShift, setCurrentShift] = useState({
@@ -18,11 +21,30 @@ export default function POSShiftsPage() {
     status: "active"
   });
 
+  const { collaborationState, updateActivity, requestShiftLock, releaseShiftLock } = useCollaborationIndicators();
+
+  const handleCriticalOperation = (operation: string, activityKey: any) => {
+    updateActivity(activityKey);
+    requestShiftLock(operation);
+    // In a real implementation, you would perform the operation here
+    // and then release the lock when done
+  };
+
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+    <ActivityTracker activity="VIEWING_SHIFT" location="shift-management">
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Collaboration Indicators */}
+        <CollaborationIndicators
+          activeUsers={collaborationState.activeUsers}
+          shiftLocked={collaborationState.shiftLocked}
+          lockOwner={collaborationState.lockOwner}
+          currentActivity={collaborationState.currentActivity}
+          onActivityUpdate={(activity) => updateActivity(activity as any)}
+        />
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
           <h1 className="text-3xl font-bold text-gray-900">Shift Management</h1>
           <p className="text-gray-600 mt-1">Manage POS shifts and cash drawer operations</p>
         </div>
@@ -170,15 +192,30 @@ export default function POSShiftsPage() {
               </div>
 
               <div className="space-y-3">
-                <Button className="w-full" variant="outline">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handleCriticalOperation("Cash Drop", "CASH_DROP")}
+                  disabled={collaborationState.shiftLocked}
+                >
                   <DollarSign className="h-4 w-4 mr-2" />
                   Cash Drop
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handleCriticalOperation("Count Drawer", "COUNTING_DRAWER")}
+                  disabled={collaborationState.shiftLocked}
+                >
                   <Package className="h-4 w-4 mr-2" />
                   Count Drawer
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handleCriticalOperation("Float Adjustment", "FLOAT_ADJUSTMENT")}
+                  disabled={collaborationState.shiftLocked}
+                >
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Float Adjustment
                 </Button>
@@ -194,15 +231,29 @@ export default function POSShiftsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => updateActivity("TAKING_BREAK")}
+              >
                 <Clock className="h-4 w-4 mr-2" />
                 Take Break
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => handleCriticalOperation("Switch Cashier", "SWITCH_CASHIER")}
+                disabled={collaborationState.shiftLocked}
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Switch Cashier
               </Button>
-              <Button className="w-full" variant="destructive">
+              <Button 
+                className="w-full" 
+                variant="destructive"
+                onClick={() => handleCriticalOperation("Close Shift", "CLOSING_SHIFT")}
+                disabled={collaborationState.shiftLocked}
+              >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Close Shift
               </Button>
@@ -240,6 +291,7 @@ export default function POSShiftsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </ActivityTracker>
   );
 }
