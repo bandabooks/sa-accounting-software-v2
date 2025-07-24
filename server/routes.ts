@@ -4641,6 +4641,184 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // ========================================
+  // Smart Spending Wizard Routes
+  // ========================================
+
+  // Wizard Profile Routes
+  app.get("/api/wizard/profile", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const profile = await storage.getWizardProfile(companyId, userId);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching wizard profile:", error);
+      res.status(500).json({ message: "Failed to fetch wizard profile" });
+    }
+  });
+
+  app.post("/api/wizard/profile", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const profileData = { ...req.body, companyId, userId };
+      const profile = await storage.createWizardProfile(profileData);
+      await logAudit(userId, 'CREATE', 'wizard_profile', profile.id, null, profileData);
+      res.status(201).json(profile);
+    } catch (error) {
+      console.error("Error creating wizard profile:", error);
+      res.status(500).json({ message: "Failed to create wizard profile" });
+    }
+  });
+
+  app.put("/api/wizard/profile", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const updatedProfile = await storage.updateWizardProfile(companyId, userId, req.body);
+      if (!updatedProfile) {
+        return res.status(404).json({ message: "Wizard profile not found" });
+      }
+      await logAudit(userId, 'UPDATE', 'wizard_profile', updatedProfile.id, null, req.body);
+      res.json(updatedProfile);
+    } catch (error) {
+      console.error("Error updating wizard profile:", error);
+      res.status(500).json({ message: "Failed to update wizard profile" });
+    }
+  });
+
+  // Conversation Routes
+  app.get("/api/wizard/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const conversations = await storage.getWizardConversations(companyId, userId);
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching wizard conversations:", error);
+      res.status(500).json({ message: "Failed to fetch wizard conversations" });
+    }
+  });
+
+  app.post("/api/wizard/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const conversationData = { ...req.body, companyId, userId, sessionId };
+      const conversation = await storage.createWizardConversation(conversationData);
+      await logAudit(userId, 'CREATE', 'wizard_conversation', conversation.id, null, conversationData);
+      res.status(201).json(conversation);
+    } catch (error) {
+      console.error("Error creating wizard conversation:", error);
+      res.status(500).json({ message: "Failed to create wizard conversation" });
+    }
+  });
+
+  app.put("/api/wizard/conversations/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const updatedConversation = await storage.updateWizardConversation(conversationId, req.body);
+      if (!updatedConversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      res.json(updatedConversation);
+    } catch (error) {
+      console.error("Error updating wizard conversation:", error);
+      res.status(500).json({ message: "Failed to update wizard conversation" });
+    }
+  });
+
+  // Message Routes
+  app.get("/api/wizard/conversations/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const messages = await storage.getWizardMessages(conversationId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching wizard messages:", error);
+      res.status(500).json({ message: "Failed to fetch wizard messages" });
+    }
+  });
+
+  app.post("/api/wizard/conversations/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const messageData = { ...req.body, conversationId };
+      const message = await storage.createWizardMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating wizard message:", error);
+      res.status(500).json({ message: "Failed to create wizard message" });
+    }
+  });
+
+  // Insights Routes
+  app.get("/api/wizard/insights", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const { status } = req.query;
+      const insights = await storage.getWizardInsights(companyId, userId, status as string);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching wizard insights:", error);
+      res.status(500).json({ message: "Failed to fetch wizard insights" });
+    }
+  });
+
+  app.post("/api/wizard/insights/generate", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const insights = await storage.generateFinancialInsights(companyId, userId);
+      await logAudit(userId, 'CREATE', 'wizard_insights_generated', null, null, { insightCount: insights.length });
+      res.json(insights);
+    } catch (error) {
+      console.error("Error generating wizard insights:", error);
+      res.status(500).json({ message: "Failed to generate wizard insights" });
+    }
+  });
+
+  app.put("/api/wizard/insights/:id/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const insightId = parseInt(req.params.id);
+      const { status } = req.body;
+      const updatedInsight = await storage.updateWizardInsightStatus(insightId, status);
+      if (!updatedInsight) {
+        return res.status(404).json({ message: "Insight not found" });
+      }
+      res.json(updatedInsight);
+    } catch (error) {
+      console.error("Error updating wizard insight status:", error);
+      res.status(500).json({ message: "Failed to update wizard insight status" });
+    }
+  });
+
+  // Tips Routes
+  app.get("/api/wizard/tips", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { category, businessType } = req.query;
+      const tips = await storage.getWizardTips(category as string, businessType as string);
+      res.json(tips);
+    } catch (error) {
+      console.error("Error fetching wizard tips:", error);
+      res.status(500).json({ message: "Failed to fetch wizard tips" });
+    }
+  });
+
+  app.post("/api/wizard/tips", authenticate, requireRole("admin"), async (req: AuthenticatedRequest, res) => {
+    try {
+      const tip = await storage.createWizardTip(req.body);
+      await logAudit(req.user.id, 'CREATE', 'wizard_tip', tip.id, null, req.body);
+      res.status(201).json(tip);
+    } catch (error) {
+      console.error("Error creating wizard tip:", error);
+      res.status(500).json({ message: "Failed to create wizard tip" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

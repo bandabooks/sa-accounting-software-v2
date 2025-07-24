@@ -5,7 +5,7 @@ import {
   Settings, TrendingUp, Package, Building, Archive, Building2, BookOpen, 
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
-  Briefcase, FolderOpen, CheckSquare, Clock
+  Briefcase, FolderOpen, CheckSquare, Clock, Brain
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -15,7 +15,8 @@ const navigationGroups = [
     id: "overview",
     label: "Dashboard",
     items: [
-      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null }
+      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null },
+      { path: "/spending-wizard", label: "Smart Spending Wizard", icon: Brain, permission: null }
     ]
   },
   {

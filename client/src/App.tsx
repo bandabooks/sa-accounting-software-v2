@@ -61,6 +61,7 @@ import VATReturns from "@/pages/vat-returns";
 import EnterpriseSettings from "@/pages/enterprise-settings";
 import Landing from "@/pages/landing";
 import Onboarding from "@/pages/onboarding";
+import SpendingWizard from "@/pages/spending-wizard";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -327,6 +328,11 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/onboarding">
           <Onboarding />
+        </Route>
+        <Route path="/spending-wizard">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <SpendingWizard />
+          </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />

@@ -2563,6 +2563,111 @@ export const insertBankIntegrationSchema = createInsertSchema(bankIntegrations).
   updatedAt: true,
 });
 
+// Smart Spending Wizard - AI-powered financial advice system
+export const spendingWizardProfiles = pgTable("spending_wizard_profiles", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  businessType: varchar("business_type", { length: 100 }).notNull(), // retail, services, manufacturing, etc.
+  monthlyRevenue: decimal("monthly_revenue", { precision: 12, scale: 2 }),
+  monthlyExpenses: decimal("monthly_expenses", { precision: 12, scale: 2 }),
+  financialGoals: jsonb("financial_goals").default("[]"), // Array of financial goals
+  riskTolerance: varchar("risk_tolerance", { length: 50 }).default("moderate"), // conservative, moderate, aggressive
+  preferences: jsonb("preferences").default("{}"), // User preferences for advice types
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const spendingWizardConversations = pgTable("spending_wizard_conversations", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(), // cash_flow, expenses, investments, tax_planning, etc.
+  status: varchar("status", { length: 50 }).default("active"), // active, completed, archived
+  lastMessage: text("last_message"),
+  messageCount: integer("message_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const spendingWizardMessages = pgTable("spending_wizard_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => spendingWizardConversations.id, { onDelete: "cascade" }).notNull(),
+  messageType: varchar("message_type", { length: 50 }).notNull(), // user, wizard, system
+  content: text("content").notNull(),
+  adviceType: varchar("advice_type", { length: 100 }), // tip, warning, recommendation, insight
+  illustration: varchar("illustration", { length: 255 }), // SVG or emoji for visual appeal
+  actionable: boolean("actionable").default(false), // Whether this message includes actionable advice
+  actionData: jsonb("action_data").default("{}"), // Data for implementing suggested actions
+  metadata: jsonb("metadata").default("{}"), // Additional context data
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const spendingWizardInsights = pgTable("spending_wizard_insights", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  insightType: varchar("insight_type", { length: 100 }).notNull(), // spending_pattern, cash_flow_forecast, cost_optimization
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  priority: varchar("priority", { length: 50 }).default("medium"), // low, medium, high, urgent
+  category: varchar("category", { length: 100 }).notNull(),
+  dataPoints: jsonb("data_points").notNull(), // Supporting data for the insight
+  recommendations: jsonb("recommendations").default("[]"), // Specific action recommendations
+  estimatedImpact: decimal("estimated_impact", { precision: 12, scale: 2 }), // Potential financial impact
+  implementationEffort: varchar("implementation_effort", { length: 50 }).default("medium"), // low, medium, high
+  status: varchar("status", { length: 50 }).default("new"), // new, viewed, dismissed, implemented
+  illustration: varchar("illustration", { length: 255 }),
+  expiresAt: timestamp("expires_at"), // Some insights may be time-sensitive
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const spendingWizardTips = pgTable("spending_wizard_tips", {
+  id: serial("id").primaryKey(),
+  category: varchar("category", { length: 100 }).notNull(),
+  businessType: varchar("business_type", { length: 100 }).default("general"),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  illustration: varchar("illustration", { length: 255 }), // SVG or emoji
+  priority: integer("priority").default(5), // 1-10 priority for display order
+  isActive: boolean("is_active").default(true),
+  seasonality: varchar("seasonality", { length: 100 }), // When tip is most relevant
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+// Insert schemas for Smart Spending Wizard
+export const insertSpendingWizardProfileSchema = createInsertSchema(spendingWizardProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSpendingWizardConversationSchema = createInsertSchema(spendingWizardConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSpendingWizardMessageSchema = createInsertSchema(spendingWizardMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSpendingWizardInsightSchema = createInsertSchema(spendingWizardInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSpendingWizardTipSchema = createInsertSchema(spendingWizardTips).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for new critical features
 export type CreditNote = typeof creditNotes.$inferSelect;
 export type InsertCreditNote = z.infer<typeof insertCreditNoteSchema>;
@@ -2583,3 +2688,19 @@ export type InsertApprovalRequest = z.infer<typeof insertApprovalRequestSchema>;
 
 export type BankIntegration = typeof bankIntegrations.$inferSelect;
 export type InsertBankIntegration = z.infer<typeof insertBankIntegrationSchema>;
+
+// Smart Spending Wizard types
+export type SpendingWizardProfile = typeof spendingWizardProfiles.$inferSelect;
+export type InsertSpendingWizardProfile = z.infer<typeof insertSpendingWizardProfileSchema>;
+
+export type SpendingWizardConversation = typeof spendingWizardConversations.$inferSelect;
+export type InsertSpendingWizardConversation = z.infer<typeof insertSpendingWizardConversationSchema>;
+
+export type SpendingWizardMessage = typeof spendingWizardMessages.$inferSelect;
+export type InsertSpendingWizardMessage = z.infer<typeof insertSpendingWizardMessageSchema>;
+
+export type SpendingWizardInsight = typeof spendingWizardInsights.$inferSelect;
+export type InsertSpendingWizardInsight = z.infer<typeof insertSpendingWizardInsightSchema>;
+
+export type SpendingWizardTip = typeof spendingWizardTips.$inferSelect;
+export type InsertSpendingWizardTip = z.infer<typeof insertSpendingWizardTipSchema>;

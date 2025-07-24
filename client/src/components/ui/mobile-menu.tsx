@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu, ChevronDown, ChevronRight } from "lucide-react";
+import { Menu, ChevronDown, ChevronRight, Brain } from "lucide-react";
 import { Button } from "./button";
 import { Sheet, SheetContent, SheetTrigger } from "./sheet";
 import { Link, useLocation } from "wouter";
@@ -17,7 +17,8 @@ const navigationGroups = [
     id: "overview",
     label: "Dashboard",
     items: [
-      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null }
+      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null },
+      { path: "/spending-wizard", label: "Smart Spending Wizard", icon: Brain, permission: null }
     ]
   },
   {

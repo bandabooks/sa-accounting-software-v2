@@ -65,6 +65,11 @@ import {
   approvalWorkflows,
   approvalRequests,
   bankIntegrations,
+  spendingWizardProfiles,
+  spendingWizardConversations,
+  spendingWizardMessages,
+  spendingWizardInsights,
+  spendingWizardTips,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -204,6 +209,16 @@ import {
   type InsertApprovalRequest,
   type BankIntegration,
   type InsertBankIntegration,
+  type SpendingWizardProfile,
+  type InsertSpendingWizardProfile,
+  type SpendingWizardConversation,
+  type InsertSpendingWizardConversation,
+  type SpendingWizardMessage,
+  type InsertSpendingWizardMessage,
+  type SpendingWizardInsight,
+  type InsertSpendingWizardInsight,
+  type SpendingWizardTip,
+  type InsertSpendingWizardTip,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -3108,6 +3123,226 @@ export class DatabaseStorage implements IStorage {
   async updateAccountBalances(companyId: number, periodStart: Date, periodEnd: Date): Promise<void> {
     // This would typically be run as a scheduled job
     // Implementation would calculate and store period balances for performance
+  }
+
+  // ========================================
+  // Smart Spending Wizard Methods
+  // ========================================
+
+  // Wizard Profile Management
+  async getWizardProfile(companyId: number, userId: number): Promise<SpendingWizardProfile | undefined> {
+    const [profile] = await db.select()
+      .from(spendingWizardProfiles)
+      .where(and(
+        eq(spendingWizardProfiles.companyId, companyId),
+        eq(spendingWizardProfiles.userId, userId)
+      ));
+    return profile;
+  }
+
+  async createWizardProfile(profile: InsertSpendingWizardProfile): Promise<SpendingWizardProfile> {
+    const [newProfile] = await db.insert(spendingWizardProfiles)
+      .values(profile)
+      .returning();
+    return newProfile;
+  }
+
+  async updateWizardProfile(companyId: number, userId: number, profile: Partial<InsertSpendingWizardProfile>): Promise<SpendingWizardProfile | undefined> {
+    const [updated] = await db.update(spendingWizardProfiles)
+      .set({ ...profile, updatedAt: new Date() })
+      .where(and(
+        eq(spendingWizardProfiles.companyId, companyId),
+        eq(spendingWizardProfiles.userId, userId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  // Conversation Management
+  async getWizardConversations(companyId: number, userId: number): Promise<SpendingWizardConversation[]> {
+    return await db.select()
+      .from(spendingWizardConversations)
+      .where(and(
+        eq(spendingWizardConversations.companyId, companyId),
+        eq(spendingWizardConversations.userId, userId)
+      ))
+      .orderBy(desc(spendingWizardConversations.updatedAt));
+  }
+
+  async createWizardConversation(conversation: InsertSpendingWizardConversation): Promise<SpendingWizardConversation> {
+    const [newConversation] = await db.insert(spendingWizardConversations)
+      .values(conversation)
+      .returning();
+    return newConversation;
+  }
+
+  async updateWizardConversation(conversationId: number, updates: Partial<InsertSpendingWizardConversation>): Promise<SpendingWizardConversation | undefined> {
+    const [updated] = await db.update(spendingWizardConversations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(spendingWizardConversations.id, conversationId))
+      .returning();
+    return updated;
+  }
+
+  // Message Management
+  async getWizardMessages(conversationId: number): Promise<SpendingWizardMessage[]> {
+    return await db.select()
+      .from(spendingWizardMessages)
+      .where(eq(spendingWizardMessages.conversationId, conversationId))
+      .orderBy(spendingWizardMessages.createdAt);
+  }
+
+  async createWizardMessage(message: InsertSpendingWizardMessage): Promise<SpendingWizardMessage> {
+    const [newMessage] = await db.insert(spendingWizardMessages)
+      .values(message)
+      .returning();
+
+    // Update conversation message count and last message
+    await db.update(spendingWizardConversations)
+      .set({
+        messageCount: sql`${spendingWizardConversations.messageCount} + 1`,
+        lastMessage: message.content,
+        updatedAt: new Date()
+      })
+      .where(eq(spendingWizardConversations.id, message.conversationId));
+
+    return newMessage;
+  }
+
+  // Insights Management
+  async getWizardInsights(companyId: number, userId: number, status?: string): Promise<SpendingWizardInsight[]> {
+    let query = db.select()
+      .from(spendingWizardInsights)
+      .where(and(
+        eq(spendingWizardInsights.companyId, companyId),
+        eq(spendingWizardInsights.userId, userId)
+      ));
+
+    if (status) {
+      query = query.where(eq(spendingWizardInsights.status, status));
+    }
+
+    return await query.orderBy(desc(spendingWizardInsights.createdAt));
+  }
+
+  async createWizardInsight(insight: InsertSpendingWizardInsight): Promise<SpendingWizardInsight> {
+    const [newInsight] = await db.insert(spendingWizardInsights)
+      .values(insight)
+      .returning();
+    return newInsight;
+  }
+
+  async updateWizardInsightStatus(insightId: number, status: string): Promise<SpendingWizardInsight | undefined> {
+    const [updated] = await db.update(spendingWizardInsights)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(spendingWizardInsights.id, insightId))
+      .returning();
+    return updated;
+  }
+
+  // Tips Management
+  async getWizardTips(category?: string, businessType?: string): Promise<SpendingWizardTip[]> {
+    let query = db.select()
+      .from(spendingWizardTips)
+      .where(eq(spendingWizardTips.isActive, true));
+
+    if (category) {
+      query = query.where(eq(spendingWizardTips.category, category));
+    }
+
+    if (businessType) {
+      query = query.where(or(
+        eq(spendingWizardTips.businessType, businessType),
+        eq(spendingWizardTips.businessType, 'general')
+      ));
+    }
+
+    return await query.orderBy(spendingWizardTips.priority, spendingWizardTips.createdAt);
+  }
+
+  async createWizardTip(tip: InsertSpendingWizardTip): Promise<SpendingWizardTip> {
+    const [newTip] = await db.insert(spendingWizardTips)
+      .values(tip)
+      .returning();
+    return newTip;
+  }
+
+  // AI-Powered Financial Analysis
+  async generateFinancialInsights(companyId: number, userId: number): Promise<SpendingWizardInsight[]> {
+    // Get company's financial data for analysis
+    const recentExpenses = await db.select()
+      .from(expenses)
+      .where(and(
+        eq(expenses.companyId, companyId),
+        gte(expenses.expenseDate, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) // Last 90 days
+      ))
+      .orderBy(desc(expenses.expenseDate));
+
+    const recentInvoices = await db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.companyId, companyId),
+        gte(invoices.issueDate, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) // Last 90 days
+      ))
+      .orderBy(desc(invoices.issueDate));
+
+    const insights: InsertSpendingWizardInsight[] = [];
+
+    // Analyze spending patterns
+    if (recentExpenses.length > 0) {
+      const totalExpenses = recentExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+      const avgExpense = totalExpenses / recentExpenses.length;
+
+      // High expense alert
+      const highExpenses = recentExpenses.filter(exp => parseFloat(exp.amount) > avgExpense * 2);
+      if (highExpenses.length > 0) {
+        insights.push({
+          companyId,
+          userId,
+          insightType: 'spending_pattern',
+          title: 'Unusual High Expenses Detected',
+          description: `You've had ${highExpenses.length} expenses significantly above your average in the last 90 days.`,
+          priority: 'high',
+          category: 'expense_management',
+          dataPoints: { highExpenses: highExpenses.length, averageExpense: avgExpense },
+          recommendations: ['Review high-value expenses for optimization opportunities', 'Consider implementing expense approval workflows'],
+          estimatedImpact: (totalExpenses * 0.1).toFixed(2), // Potential 10% savings
+          illustration: '💰'
+        });
+      }
+    }
+
+    // Analyze cash flow
+    if (recentInvoices.length > 0 && recentExpenses.length > 0) {
+      const totalRevenue = recentInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+      const totalExpenses = recentExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+      const profitMargin = ((totalRevenue - totalExpenses) / totalRevenue) * 100;
+
+      if (profitMargin < 20) {
+        insights.push({
+          companyId,
+          userId,
+          insightType: 'cash_flow_forecast',
+          title: 'Low Profit Margin Alert',
+          description: `Your profit margin is ${profitMargin.toFixed(1)}%, which is below the recommended 20% for healthy businesses.`,
+          priority: 'high',
+          category: 'profitability',
+          dataPoints: { profitMargin, totalRevenue, totalExpenses },
+          recommendations: ['Review pricing strategy', 'Analyze cost structure for optimization', 'Focus on high-margin services/products'],
+          estimatedImpact: (totalRevenue * 0.05).toFixed(2), // Potential 5% revenue increase
+          illustration: '📊'
+        });
+      }
+    }
+
+    // Save insights to database
+    const savedInsights = [];
+    for (const insight of insights) {
+      const saved = await this.createWizardInsight(insight);
+      savedInsights.push(saved);
+    }
+
+    return savedInsights;
   }
 
   async getTrialBalance(companyId: number, asOfDate: Date): Promise<AccountBalanceReport[]> {
