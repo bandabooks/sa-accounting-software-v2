@@ -112,16 +112,16 @@ export function useOnboardingWizard() {
     completeOnboarding();
   };
 
-  // Start onboarding for new users
+  // Start onboarding for new users - DISABLED AUTOMATIC POPUP
+  // Users can manually start tour using the help button
   useEffect(() => {
-    if (isAuthenticated && user && !hasCompletedOnboarding()) {
-      // Delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        setIsWizardVisible(true);
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
+    // Automatic onboarding disabled - tour only shows when manually requested
+    // if (isAuthenticated && user && !hasCompletedOnboarding()) {
+    //   const timer = setTimeout(() => {
+    //     setIsWizardVisible(true);
+    //   }, 1000);
+    //   return () => clearTimeout(timer);
+    // }
   }, [isAuthenticated, user]);
 
   // Reset onboarding (for testing or user request)

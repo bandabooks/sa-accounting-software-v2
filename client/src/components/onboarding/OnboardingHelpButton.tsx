@@ -12,9 +12,10 @@ import { useOnboardingWizard } from '@/hooks/useOnboardingWizard';
 export function OnboardingHelpButton() {
   const { resetOnboarding, hasCompletedOnboarding } = useOnboardingWizard();
 
-  if (!hasCompletedOnboarding) {
-    return null; // Don't show help button during initial onboarding
-  }
+  // Always show help button so users can manually start tour
+  // if (!hasCompletedOnboarding) {
+  //   return null; // Don't show help button during initial onboarding
+  // }
 
   return (
     <TooltipProvider>
