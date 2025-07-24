@@ -44,7 +44,17 @@ export default function Dashboard() {
   }
 
   if (!stats) {
-    return <div>Error loading dashboard data</div>;
+    return (
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard data...</p>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+          <p className="text-yellow-800">Dashboard data is loading. Please wait...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
