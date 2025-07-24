@@ -188,7 +188,7 @@ export const generateSessionToken = (): string => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-export const generateJWT = (payload: any, expiresIn: string = '24h'): string => {
+export const generateJWT = (payload: any, expiresIn: string = '7d'): string => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions);
 };
 
