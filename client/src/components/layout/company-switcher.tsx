@@ -94,7 +94,7 @@ export default function CompanySwitcher() {
   // Switch company mutation
   const switchCompanyMutation = useMutation({
     mutationFn: async (companyId: number) => {
-      const response = await apiRequest("POST", "/api/companies/switch", { companyId });
+      const response = await apiRequest("/api/companies/switch", "POST", { companyId });
       return response.json();
     },
     onSuccess: (data) => {
@@ -123,7 +123,7 @@ export default function CompanySwitcher() {
   // Create company mutation
   const createCompanyMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCompanySchema>) => {
-      const response = await apiRequest("POST", "/api/companies", data);
+      const response = await apiRequest("/api/companies", "POST", data);
       return response.json();
     },
     onSuccess: (newCompany) => {
