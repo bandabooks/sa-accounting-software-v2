@@ -49,7 +49,7 @@ export default function SubscriptionPayment() {
     mutationFn: async () => {
       if (!planId || !billingPeriod) throw new Error("Missing plan or billing period");
       
-      return await apiRequest("POST", "/api/company/subscription/request", {
+      return await apiRequest("/api/company/subscription/request", "POST", {
         planId,
         billingPeriod
       });

@@ -72,7 +72,7 @@ export default function JournalEntries() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: JournalEntryFormData) => apiRequest("POST", "/api/journal-entries", data),
+    mutationFn: (data: JournalEntryFormData) => apiRequest("/api/journal-entries", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
       setIsCreateDialogOpen(false);
@@ -92,7 +92,7 @@ export default function JournalEntries() {
   });
 
   const postMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("PUT", `/api/journal-entries/${id}/post`),
+    mutationFn: (id: number) => apiRequest(`/api/journal-entries/${id}/post`, "PUT"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
       toast({
@@ -111,7 +111,7 @@ export default function JournalEntries() {
 
   const reverseMutation = useMutation({
     mutationFn: ({ id, description }: { id: number; description: string }) =>
-      apiRequest("POST", `/api/journal-entries/${id}/reverse`, { description }),
+      apiRequest(`/api/journal-entries/${id}/reverse`, "POST", { description }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
       toast({

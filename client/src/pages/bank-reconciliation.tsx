@@ -68,7 +68,7 @@ export default function BankReconciliation() {
   // Auto-match transactions mutation
   const matchTransactionsMutation = useMutation({
     mutationFn: (reconciliationId: number) => 
-      apiRequest("POST", `/api/bank-reconciliations/${reconciliationId}/match`),
+      apiRequest(`/api/bank-reconciliations/${reconciliationId}/match`, "POST"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bank-reconciliations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });

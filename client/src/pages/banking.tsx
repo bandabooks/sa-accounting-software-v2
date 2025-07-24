@@ -63,7 +63,7 @@ export default function Banking() {
   });
 
   const createAccountMutation = useMutation({
-    mutationFn: (data: BankAccountForm) => apiRequest("POST", "/api/bank-accounts", data),
+    mutationFn: (data: BankAccountForm) => apiRequest("/api/bank-accounts", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       setShowAccountDialog(false);
@@ -75,7 +75,7 @@ export default function Banking() {
   });
 
   const createTransactionMutation = useMutation({
-    mutationFn: (data: TransactionForm) => apiRequest("POST", "/api/bank-transactions", data),
+    mutationFn: (data: TransactionForm) => apiRequest("/api/bank-transactions", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       setShowTransactionDialog(false);

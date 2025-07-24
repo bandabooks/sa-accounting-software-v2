@@ -29,12 +29,12 @@ export default function Products() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/products/stats"],
-    queryFn: () => apiRequest("/api/products/stats")
+    queryFn: () => apiRequest("/api/products/stats", "GET")
   });
 
   const deleteProductMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/products/${id}`);
+      await apiRequest(`/api/products/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });

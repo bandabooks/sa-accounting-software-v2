@@ -28,7 +28,7 @@ export default function GeneralLedger() {
     queryKey: ["/api/general-ledger", queryParams.toString()],
     queryFn: async () => {
       const url = `/api/general-ledger${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-      return apiRequest("GET", url);
+      return apiRequest(url, "GET");
     },
   });
 
@@ -37,7 +37,7 @@ export default function GeneralLedger() {
   });
 
   const syncLedgerMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/general-ledger/sync", {}),
+    mutationFn: () => apiRequest("/api/general-ledger/sync", "POST", {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/general-ledger"] });
       toast({ title: "Success", description: "General ledger synchronized successfully" });

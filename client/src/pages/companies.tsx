@@ -43,7 +43,7 @@ export default function Companies() {
   // Create company mutation
   const createCompanyMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCompanySchema>) => {
-      return await apiRequest("POST", "/api/companies", data);
+      return await apiRequest("/api/companies", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -86,7 +86,7 @@ export default function Companies() {
   // Set active company mutation
   const setActiveCompanyMutation = useMutation({
     mutationFn: async (companyId: number) => {
-      return await apiRequest("POST", `/api/companies/${companyId}/set-active`);
+      return await apiRequest(`/api/companies/${companyId}/set-active`, "POST");
     },
     onSuccess: () => {
       toast({

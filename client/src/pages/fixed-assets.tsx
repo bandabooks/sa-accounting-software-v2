@@ -50,7 +50,7 @@ export default function FixedAssets() {
 
   // Delete asset mutation
   const deleteAssetMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/fixed-assets/${id}`),
+    mutationFn: (id: number) => apiRequest(`/api/fixed-assets/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-assets"] });
       toast({ title: "Success", description: "Fixed asset deleted successfully" });

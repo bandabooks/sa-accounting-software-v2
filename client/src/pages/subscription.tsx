@@ -71,7 +71,7 @@ export default function Subscription() {
   // Request subscription change mutation
   const requestChangeMutation = useMutation({
     mutationFn: async ({ planId, billingPeriod }: { planId: number; billingPeriod: string }) => {
-      return await apiRequest("POST", "/api/company/subscription/request", { planId, billingPeriod });
+      return await apiRequest("/api/company/subscription/request", "POST", { planId, billingPeriod });
     },
     onSuccess: () => {
       toast({

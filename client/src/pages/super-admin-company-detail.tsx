@@ -47,7 +47,7 @@ export default function SuperAdminCompanyDetail() {
   // Update company mutation
   const updateCompanyMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("PUT", `/api/super-admin/companies/${companyId}`, data);
+      return apiRequest(`/api/super-admin/companies/${companyId}`, "PUT", data);
     },
     onSuccess: () => {
       toast({
@@ -83,7 +83,7 @@ export default function SuperAdminCompanyDetail() {
   // Add user to company mutation
   const addUserMutation = useMutation({
     mutationFn: async (data: { userId: number; role: string }) => {
-      return apiRequest("POST", `/api/super-admin/companies/${companyId}/users`, data);
+      return apiRequest(`/api/super-admin/companies/${companyId}/users`, "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -105,7 +105,7 @@ export default function SuperAdminCompanyDetail() {
   // Remove user from company mutation
   const removeUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      return apiRequest("DELETE", `/api/super-admin/companies/${companyId}/users/${userId}`);
+      return apiRequest(`/api/super-admin/companies/${companyId}/users/${userId}`, "DELETE");
     },
     onSuccess: () => {
       toast({
@@ -126,7 +126,7 @@ export default function SuperAdminCompanyDetail() {
   // Update user role mutation
   const updateUserRoleMutation = useMutation({
     mutationFn: async (data: { userId: number; role: string }) => {
-      return apiRequest("PUT", `/api/super-admin/companies/${companyId}/users/${data.userId}`, { role: data.role });
+      return apiRequest(`/api/super-admin/companies/${companyId}/users/${data.userId}`, "PUT", { role: data.role });
     },
     onSuccess: () => {
       toast({

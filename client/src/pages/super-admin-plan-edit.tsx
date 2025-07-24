@@ -26,7 +26,7 @@ export default function SuperAdminPlanEdit() {
   // Update plan mutation
   const updatePlanMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("PUT", `/api/super-admin/subscription-plans/${planId}`, data);
+      return apiRequest(`/api/super-admin/subscription-plans/${planId}`, "PUT", data);
     },
     onSuccess: () => {
       toast({

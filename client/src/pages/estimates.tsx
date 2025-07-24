@@ -25,7 +25,7 @@ export default function Estimates() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/estimates/stats"],
-    queryFn: () => apiRequest("/api/estimates/stats")
+    queryFn: () => apiRequest("/api/estimates/stats", "GET")
   });
 
   const updateStatusMutation = useMutation({

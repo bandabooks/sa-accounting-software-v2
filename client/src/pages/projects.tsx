@@ -59,10 +59,7 @@ export default function ProjectsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest("/api/projects", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("/api/projects", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });

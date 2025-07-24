@@ -21,7 +21,7 @@ export default function Invoices() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/invoices/stats"],
-    queryFn: () => apiRequest("GET", "/api/invoices/stats").then(res => res.json())
+    queryFn: () => apiRequest("/api/invoices/stats", "GET").then(res => res.json())
   });
 
   const filteredInvoices = invoices?.filter(invoice => {

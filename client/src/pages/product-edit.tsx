@@ -99,7 +99,7 @@ export default function ProductEdit() {
 
   const updateProductMutation = useMutation({
     mutationFn: async (data: ProductForm) => {
-      await apiRequest("PUT", `/api/products/${productId}`, data);
+      await apiRequest(`/api/products/${productId}`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });

@@ -93,7 +93,7 @@ export default function SuperAdminDashboard() {
   // Impersonate user function
   const impersonateUser = async (userId: number) => {
     try {
-      const result = await apiRequest("POST", `/api/super-admin/impersonate/${userId}`);
+      const result = await apiRequest(`/api/super-admin/impersonate/${userId}`, "POST");
       if (result.token) {
         // Store the new token and redirect to dashboard
         localStorage.setItem('authToken', result.token);
@@ -133,7 +133,7 @@ export default function SuperAdminDashboard() {
   // Create plan mutation
   const createPlanMutation = useMutation({
     mutationFn: async (planData: any) => {
-      return await apiRequest("POST", "/api/super-admin/subscription-plans", planData);
+      return await apiRequest("/api/super-admin/subscription-plans", "POST", planData);
     },
     onSuccess: () => {
       toast({
@@ -155,7 +155,7 @@ export default function SuperAdminDashboard() {
   // Update plan mutation
   const updatePlanMutation = useMutation({
     mutationFn: async ({ id, ...planData }: any) => {
-      return await apiRequest("PUT", `/api/super-admin/subscription-plans/${id}`, planData);
+      return await apiRequest(`/api/super-admin/subscription-plans/${id}`, "PUT", planData);
     },
     onSuccess: () => {
       toast({
@@ -177,7 +177,7 @@ export default function SuperAdminDashboard() {
   // Delete plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (planId: number) => {
-      return await apiRequest("DELETE", `/api/super-admin/subscription-plans/${planId}`);
+      return await apiRequest(`/api/super-admin/subscription-plans/${planId}`, "DELETE");
     },
     onSuccess: () => {
       toast({

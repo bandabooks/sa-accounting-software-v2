@@ -143,7 +143,7 @@ export default function SuperAdminUserDetail() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("PUT", `/api/super-admin/users/${userId}`, data);
+      return apiRequest(`/api/super-admin/users/${userId}`, "PUT", data);
     },
     onSuccess: () => {
       toast({

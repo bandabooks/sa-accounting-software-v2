@@ -98,7 +98,7 @@ export default function Settings() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: CompanySettingsFormData) => {
-      await apiRequest("PUT", "/api/settings/company", data);
+      await apiRequest("/api/settings/company", "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings/company"] });

@@ -66,7 +66,7 @@ export default function Inventory() {
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: InventoryTransactionFormData) => {
-      await apiRequest("POST", "/api/inventory/transactions", data);
+      await apiRequest("/api/inventory/transactions", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/products"] });

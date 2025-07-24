@@ -83,7 +83,7 @@ export default function AdminPanel() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: typeof newUserData) => {
-      return await apiRequest("POST", "/api/admin/users", userData);
+      return await apiRequest("/api/admin/users", "POST", userData);
     },
     onSuccess: () => {
       toast({
@@ -112,7 +112,7 @@ export default function AdminPanel() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number; data: Partial<User> }) => {
-      return await apiRequest("PATCH", `/api/admin/users/${userId}`, data);
+      return await apiRequest(`/api/admin/users/${userId}`, "PATCH", data);
     },
     onSuccess: () => {
       toast({

@@ -52,7 +52,7 @@ const VATTypes: React.FC = () => {
 
   const seedVatTypesMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/vat-types/seed", {
+      return await apiRequest("/api/vat-types/seed", "POST", {
         method: 'POST',
         body: JSON.stringify({}),
       });

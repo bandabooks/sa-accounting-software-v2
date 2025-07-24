@@ -90,7 +90,7 @@ export default function ChartOfAccounts() {
   });
 
   const seedMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/chart-of-accounts/seed-sa"),
+    mutationFn: () => apiRequest("/api/chart-of-accounts/seed-sa", "POST"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       toast({
@@ -108,7 +108,7 @@ export default function ChartOfAccounts() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: AccountFormData) => apiRequest("POST", "/api/chart-of-accounts", data),
+    mutationFn: (data: AccountFormData) => apiRequest("/api/chart-of-accounts", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       setIsCreateDialogOpen(false);
@@ -128,7 +128,7 @@ export default function ChartOfAccounts() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, ...data }: { id: number } & Partial<AccountFormData>) =>
-      apiRequest("PUT", `/api/chart-of-accounts/${id}`, data),
+      apiRequest(`/api/chart-of-accounts/${id}`, "PUT", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       setEditingAccount(null);
@@ -147,7 +147,7 @@ export default function ChartOfAccounts() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/chart-of-accounts/${id}`),
+    mutationFn: (id: number) => apiRequest(`/api/chart-of-accounts/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       toast({
@@ -166,7 +166,7 @@ export default function ChartOfAccounts() {
 
   const toggleActivationMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
-      apiRequest("PATCH", `/api/chart-of-accounts/${id}/toggle`, { isActive }),
+      apiRequest(`/api/chart-of-accounts/${id}/toggle`, "PATCH", { isActive }),
     onSuccess: (_, { isActive }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       toast({

@@ -67,10 +67,7 @@ export default function TasksPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest("/api/tasks", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("/api/tasks", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -91,15 +88,12 @@ export default function TasksPage() {
 
   const startTimeMutation = useMutation({
     mutationFn: async ({ taskId, description }: { taskId: number; description?: string }) => {
-      return await apiRequest("/api/time-entries", {
-        method: "POST",
-        body: JSON.stringify({
-          taskId,
-          description: description || "Time tracking",
-          startTime: new Date(),
-          isRunning: true,
-          isBillable: true,
-        }),
+      return await apiRequest("/api/time-entries", "POST", {
+        taskId,
+        description: description || "Time tracking",
+        startTime: new Date(),
+        isRunning: true,
+        isBillable: true,
       });
     },
     onSuccess: () => {
@@ -120,9 +114,7 @@ export default function TasksPage() {
 
   const stopTimeMutation = useMutation({
     mutationFn: async (timeEntryId: number) => {
-      return await apiRequest(`/api/time-entries/${timeEntryId}/stop`, {
-        method: "PUT",
-      });
+      return await apiRequest(`/api/time-entries/${timeEntryId}/stop`, "PUT");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
@@ -143,12 +135,9 @@ export default function TasksPage() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: number; status: string }) => {
-      return await apiRequest(`/api/tasks/${taskId}`, {
-        method: "PUT",
-        body: JSON.stringify({ 
-          status,
-          completedDate: status === 'completed' ? new Date() : null
-        }),
+      return await apiRequest(`/api/tasks/${taskId}`, "PUT", { 
+        status,
+        completedDate: status === 'completed' ? new Date() : null
       });
     },
     onSuccess: () => {

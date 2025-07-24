@@ -72,13 +72,10 @@ export default function TimeTrackingPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return await apiRequest("/api/time-entries", {
-        method: "POST",
-        body: JSON.stringify({
-          ...data,
-          startTime: new Date(),
-          isRunning: true,
-        }),
+      return await apiRequest("/api/time-entries", "POST", {
+        ...data,
+        startTime: new Date(),
+        isRunning: true,
       });
     },
     onSuccess: () => {

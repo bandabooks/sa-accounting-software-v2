@@ -20,7 +20,7 @@ export default function Customers() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/customers/stats"],
-    queryFn: () => apiRequest("/api/customers/stats")
+    queryFn: () => apiRequest("/api/customers/stats", "GET")
   });
 
   const filteredCustomers = customers?.filter(customer => {

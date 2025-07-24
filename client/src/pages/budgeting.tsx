@@ -48,7 +48,7 @@ export default function Budgeting() {
 
   // Delete budget mutation
   const deleteBudgetMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/budgets/${id}`),
+    mutationFn: (id: number) => apiRequest(`/api/budgets/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
       toast({ title: "Success", description: "Budget deleted successfully" });

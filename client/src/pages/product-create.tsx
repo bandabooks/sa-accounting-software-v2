@@ -67,7 +67,7 @@ export default function ProductCreate() {
 
   const createProductMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
-      await apiRequest("POST", "/api/products", data);
+      await apiRequest("/api/products", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
