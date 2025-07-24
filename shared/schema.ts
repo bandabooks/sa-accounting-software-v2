@@ -2380,3 +2380,206 @@ export type SecurityEvent = typeof securityEvents.$inferSelect;
 
 export type Translation = typeof translations.$inferSelect;
 export type InsertTranslation = z.infer<typeof insertTranslationSchema>;
+
+// === CRITICAL MISSING FEATURES SCHEMA ===
+
+// Credit Notes table - Critical missing feature
+export const creditNotes = pgTable("credit_notes", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  customerId: integer("customer_id").references(() => customers.id, { onDelete: "cascade" }).notNull(),
+  originalInvoiceId: integer("original_invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+  creditNoteNumber: varchar("credit_note_number", { length: 255 }).notNull(),
+  issueDate: date("issue_date").notNull(),
+  reason: varchar("reason", { length: 255 }).notNull(), // return, discount, error_correction, cancellation
+  reasonDescription: text("reason_description"),
+  status: varchar("status", { length: 50 }).default("draft").notNull(), // draft, issued, applied, cancelled
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  appliedAmount: decimal("applied_amount", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  remainingAmount: decimal("remaining_amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("ZAR").notNull(),
+  notes: text("notes"),
+  isVatInclusive: boolean("is_vat_inclusive").default(false).notNull(),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// Credit Note Items table
+export const creditNoteItems = pgTable("credit_note_items", {
+  id: serial("id").primaryKey(),
+  creditNoteId: integer("credit_note_id").references(() => creditNotes.id, { onDelete: "cascade" }).notNull(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  originalInvoiceItemId: integer("original_invoice_item_id").references(() => invoiceItems.id, { onDelete: "set null" }),
+  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1.00").notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  netAmount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(),
+  vatTypeId: integer("vat_type_id").references(() => vatTypes.id, { onDelete: "set null" }),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).default("0.00").notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  lineTotal: decimal("line_total", { precision: 10, scale: 2 }).notNull(),
+  isVatInclusive: boolean("is_vat_inclusive").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull()
+});
+
+// Automated Invoice Reminders table - Critical missing feature
+export const invoiceReminders = pgTable("invoice_reminders", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  invoiceId: integer("invoice_id").references(() => invoices.id, { onDelete: "cascade" }).notNull(),
+  customerId: integer("customer_id").references(() => customers.id, { onDelete: "cascade" }).notNull(),
+  reminderType: varchar("reminder_type", { length: 50 }).notNull(), // overdue, payment_due, follow_up
+  daysFromDue: integer("days_from_due").notNull(), // negative for before due, positive for after
+  reminderNumber: integer("reminder_number").default(1).notNull(), // 1st, 2nd, 3rd reminder
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, sent, failed, cancelled
+  sentDate: timestamp("sent_date"),
+  sentMethod: varchar("sent_method", { length: 50 }), // email, sms, both
+  emailSubject: varchar("email_subject", { length: 255 }),
+  emailBody: text("email_body"),
+  smsMessage: text("sms_message"),
+  sentToEmail: varchar("sent_to_email", { length: 255 }),
+  sentToPhone: varchar("sent_to_phone", { length: 50 }),
+  responseReceived: boolean("response_received").default(false),
+  responseDate: timestamp("response_date"),
+  responseNotes: text("response_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// Invoice Aging Reports table - Critical missing feature
+export const invoiceAgingReports = pgTable("invoice_aging_reports", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  reportDate: date("report_date").notNull(),
+  reportName: varchar("report_name", { length: 255 }).notNull(),
+  agingPeriods: jsonb("aging_periods").notNull(), // [30, 60, 90, 120+]
+  totalOutstanding: decimal("total_outstanding", { precision: 12, scale: 2 }).notNull(),
+  currentAmount: decimal("current_amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  period1Amount: decimal("period1_amount", { precision: 12, scale: 2 }).default("0.00").notNull(), // 1-30 days
+  period2Amount: decimal("period2_amount", { precision: 12, scale: 2 }).default("0.00").notNull(), // 31-60 days
+  period3Amount: decimal("period3_amount", { precision: 12, scale: 2 }).default("0.00").notNull(), // 61-90 days
+  period4Amount: decimal("period4_amount", { precision: 12, scale: 2 }).default("0.00").notNull(), // 90+ days
+  customerCount: integer("customer_count").notNull(),
+  invoiceCount: integer("invoice_count").notNull(),
+  reportData: jsonb("report_data").notNull(), // detailed customer aging data
+  generatedBy: integer("generated_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+// Approval Workflows table - Critical missing feature
+export const approvalWorkflows = pgTable("approval_workflows", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  workflowName: varchar("workflow_name", { length: 255 }).notNull(),
+  entityType: varchar("entity_type", { length: 100 }).notNull(), // invoice, expense, purchase_order, journal_entry
+  triggerConditions: jsonb("trigger_conditions").notNull(), // amount thresholds, departments, etc.
+  approvalSteps: jsonb("approval_steps").notNull(), // ordered list of approval steps
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// Approval Requests table
+export const approvalRequests = pgTable("approval_requests", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  workflowId: integer("workflow_id").references(() => approvalWorkflows.id, { onDelete: "cascade" }).notNull(),
+  entityType: varchar("entity_type", { length: 100 }).notNull(),
+  entityId: integer("entity_id").notNull(), // ID of the entity being approved
+  requestedBy: integer("requested_by").references(() => users.id, { onDelete: "set null" }).notNull(),
+  currentStepIndex: integer("current_step_index").default(0).notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, approved, rejected, cancelled
+  requestData: jsonb("request_data").notNull(), // snapshot of entity data at request time
+  approvalHistory: jsonb("approval_history").default("[]").notNull(), // array of approval actions
+  priority: varchar("priority", { length: 20 }).default("normal").notNull(), // low, normal, high, urgent
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// Bank Integration table - Critical missing feature
+export const bankIntegrations = pgTable("bank_integrations", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }).notNull(),
+  bankAccountId: integer("bank_account_id").references(() => bankAccounts.id, { onDelete: "cascade" }).notNull(),
+  bankName: varchar("bank_name", { length: 255 }).notNull(),
+  accountNumber: varchar("account_number", { length: 255 }).notNull(),
+  accountType: varchar("account_type", { length: 50 }).notNull(), // checking, savings, credit_card
+  integrationProvider: varchar("integration_provider", { length: 100 }).notNull(), // yodlee, saltedge, custom
+  accessToken: text("access_token"), // encrypted
+  refreshToken: text("refresh_token"), // encrypted
+  lastSyncDate: timestamp("last_sync_date"),
+  syncFrequency: varchar("sync_frequency", { length: 50 }).default("daily").notNull(), // daily, weekly, manual
+  isActive: boolean("is_active").default(true).notNull(),
+  syncStatus: varchar("sync_status", { length: 50 }).default("pending").notNull(), // pending, syncing, completed, error
+  lastSyncError: text("last_sync_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// Insert schemas for new critical features
+export const insertCreditNoteSchema = createInsertSchema(creditNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCreditNoteItemSchema = createInsertSchema(creditNoteItems).omit({
+  id: true,
+});
+
+export const insertInvoiceReminderSchema = createInsertSchema(invoiceReminders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceAgingReportSchema = createInsertSchema(invoiceAgingReports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertApprovalWorkflowSchema = createInsertSchema(approvalWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertApprovalRequestSchema = createInsertSchema(approvalRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankIntegrationSchema = createInsertSchema(bankIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for new critical features
+export type CreditNote = typeof creditNotes.$inferSelect;
+export type InsertCreditNote = z.infer<typeof insertCreditNoteSchema>;
+export type CreditNoteItem = typeof creditNoteItems.$inferSelect;
+export type InsertCreditNoteItem = z.infer<typeof insertCreditNoteItemSchema>;
+
+export type InvoiceReminder = typeof invoiceReminders.$inferSelect;
+export type InsertInvoiceReminder = z.infer<typeof insertInvoiceReminderSchema>;
+
+export type InvoiceAgingReport = typeof invoiceAgingReports.$inferSelect;
+export type InsertInvoiceAgingReport = z.infer<typeof insertInvoiceAgingReportSchema>;
+
+export type ApprovalWorkflow = typeof approvalWorkflows.$inferSelect;
+export type InsertApprovalWorkflow = z.infer<typeof insertApprovalWorkflowSchema>;
+
+export type ApprovalRequest = typeof approvalRequests.$inferSelect;
+export type InsertApprovalRequest = z.infer<typeof insertApprovalRequestSchema>;
+
+export type BankIntegration = typeof bankIntegrations.$inferSelect;
+export type InsertBankIntegration = z.infer<typeof insertBankIntegrationSchema>;

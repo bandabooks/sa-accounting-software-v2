@@ -60,6 +60,7 @@ import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
 import EnterpriseSettings from "@/pages/enterprise-settings";
 import Landing from "@/pages/landing";
+import Onboarding from "@/pages/onboarding";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -324,6 +325,9 @@ function AuthenticatedApp() {
             <PaymentCancel />
           </ProtectedRoute>
         </Route>
+        <Route path="/onboarding">
+          <Onboarding />
+        </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />
       </Switch>
@@ -349,6 +353,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
+        <Route path="/onboarding" component={Onboarding} />
         <Route path="/portal" component={CustomerPortal} />
         <Route>
           <Landing />

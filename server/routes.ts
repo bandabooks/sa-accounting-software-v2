@@ -19,6 +19,7 @@ import {
 } from "./auth";
 import { registerCompanyRoutes } from "./companyRoutes";
 import { registerEnterpriseRoutes } from "./routes/enterpriseRoutes";
+import { registerOnboardingRoutes } from "./routes/onboardingRoutes";
 import { 
   insertCustomerSchema, 
   insertInvoiceSchema, 
@@ -56,6 +57,13 @@ import {
   insertTimeEntrySchema,
   insertProjectMemberSchema,
   insertTaskCommentSchema,
+  insertCreditNoteSchema,
+  insertCreditNoteItemSchema,
+  insertInvoiceReminderSchema,
+  insertInvoiceAgingReportSchema,
+  insertApprovalWorkflowSchema,
+  insertApprovalRequestSchema,
+  insertBankIntegrationSchema,
   type LoginRequest,
   type ChangePasswordRequest
 } from "@shared/schema";
@@ -67,6 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCompanyRoutes(app);
   // Register enterprise feature routes
   registerEnterpriseRoutes(app);
+  registerOnboardingRoutes(app);
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -4247,6 +4256,388 @@ Format your response as a JSON array of tip objects with "title", "description",
           category: "compliance"
         }]
       });
+    }
+  });
+
+  // === CRITICAL MISSING FEATURES API ROUTES ===
+
+  // Credit Notes Routes - Critical missing feature
+  app.get("/api/credit-notes", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const creditNotes = await storage.getCreditNotes(companyId);
+      res.json(creditNotes);
+    } catch (error) {
+      console.error("Failed to fetch credit notes:", error);
+      res.status(500).json({ message: "Failed to fetch credit notes" });
+    }
+  });
+
+  app.get("/api/credit-notes/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const creditNote = await storage.getCreditNote(parseInt(id));
+      if (!creditNote) {
+        return res.status(404).json({ message: "Credit note not found" });
+      }
+      const items = await storage.getCreditNoteItems(parseInt(id));
+      res.json({ ...creditNote, items });
+    } catch (error) {
+      console.error("Failed to fetch credit note:", error);
+      res.status(500).json({ message: "Failed to fetch credit note" });
+    }
+  });
+
+  app.post("/api/credit-notes", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertCreditNoteSchema.parse(req.body);
+      const creditNote = await storage.createCreditNote({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'credit_note', creditNote.id, null, creditNote);
+      res.json(creditNote);
+    } catch (error) {
+      console.error("Failed to create credit note:", error);
+      res.status(500).json({ message: "Failed to create credit note" });
+    }
+  });
+
+  app.put("/api/credit-notes/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldCreditNote = await storage.getCreditNote(parseInt(id));
+      const data = insertCreditNoteSchema.partial().parse(req.body);
+      const creditNote = await storage.updateCreditNote(parseInt(id), data);
+      if (!creditNote) {
+        return res.status(404).json({ message: "Credit note not found" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'credit_note', creditNote.id, oldCreditNote, creditNote);
+      res.json(creditNote);
+    } catch (error) {
+      console.error("Failed to update credit note:", error);
+      res.status(500).json({ message: "Failed to update credit note" });
+    }
+  });
+
+  app.delete("/api/credit-notes/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldCreditNote = await storage.getCreditNote(parseInt(id));
+      const success = await storage.deleteCreditNote(parseInt(id));
+      if (!success) {
+        return res.status(404).json({ message: "Credit note not found" });
+      }
+      await logAudit(req.user.id, 'DELETE', 'credit_note', parseInt(id), oldCreditNote, null);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete credit note:", error);
+      res.status(500).json({ message: "Failed to delete credit note" });
+    }
+  });
+
+  app.post("/api/credit-notes/:id/apply/:invoiceId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id, invoiceId } = req.params;
+      const { amount } = req.body;
+      const success = await storage.applyCreditNoteToInvoice(parseInt(id), parseInt(invoiceId), parseFloat(amount));
+      if (!success) {
+        return res.status(400).json({ message: "Failed to apply credit note to invoice" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'credit_note_application', parseInt(id), null, { invoiceId: parseInt(invoiceId), amount });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to apply credit note:", error);
+      res.status(500).json({ message: "Failed to apply credit note" });
+    }
+  });
+
+  // Invoice Reminders Routes - Critical missing feature
+  app.get("/api/invoice-reminders", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const reminders = await storage.getInvoiceReminders(companyId);
+      res.json(reminders);
+    } catch (error) {
+      console.error("Failed to fetch invoice reminders:", error);
+      res.status(500).json({ message: "Failed to fetch invoice reminders" });
+    }
+  });
+
+  app.post("/api/invoice-reminders", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertInvoiceReminderSchema.parse(req.body);
+      const reminder = await storage.createInvoiceReminder({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'invoice_reminder', reminder.id, null, reminder);
+      res.json(reminder);
+    } catch (error) {
+      console.error("Failed to create invoice reminder:", error);
+      res.status(500).json({ message: "Failed to create invoice reminder" });
+    }
+  });
+
+  app.put("/api/invoice-reminders/:id/mark-sent", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { method } = req.body;
+      const success = await storage.markReminderSent(parseInt(id), new Date(), method);
+      if (!success) {
+        return res.status(404).json({ message: "Reminder not found" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'invoice_reminder', parseInt(id), null, { status: 'sent', method });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to mark reminder as sent:", error);
+      res.status(500).json({ message: "Failed to mark reminder as sent" });
+    }
+  });
+
+  app.get("/api/invoice-reminders/overdue", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const overdueInvoices = await storage.getOverdueInvoicesForReminders(companyId);
+      res.json(overdueInvoices);
+    } catch (error) {
+      console.error("Failed to fetch overdue invoices:", error);
+      res.status(500).json({ message: "Failed to fetch overdue invoices" });
+    }
+  });
+
+  app.post("/api/invoice-reminders/process-automatic", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const processedCount = await storage.processAutomaticReminders(companyId);
+      await logAudit(req.user.id, 'CREATE', 'automatic_reminders', 0, null, { processedCount });
+      res.json({ processedCount });
+    } catch (error) {
+      console.error("Failed to process automatic reminders:", error);
+      res.status(500).json({ message: "Failed to process automatic reminders" });
+    }
+  });
+
+  // Invoice Aging Reports Routes - Critical missing feature
+  app.get("/api/invoice-aging-reports", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const reports = await storage.getInvoiceAgingReports(companyId);
+      res.json(reports);
+    } catch (error) {
+      console.error("Failed to fetch aging reports:", error);
+      res.status(500).json({ message: "Failed to fetch aging reports" });
+    }
+  });
+
+  app.post("/api/invoice-aging-reports/generate", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const { reportName, agingPeriods = [30, 60, 90, 120] } = req.body;
+      const report = await storage.generateInvoiceAgingReport(companyId, reportName || 'Monthly Aging Report', agingPeriods);
+      await logAudit(req.user.id, 'CREATE', 'aging_report', report.id, null, report);
+      res.json(report);
+    } catch (error) {
+      console.error("Failed to generate aging report:", error);
+      res.status(500).json({ message: "Failed to generate aging report" });
+    }
+  });
+
+  app.get("/api/invoice-aging-reports/latest", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const report = await storage.getLatestAgingReport(companyId);
+      if (!report) {
+        return res.status(404).json({ message: "No aging reports found" });
+      }
+      res.json(report);
+    } catch (error) {
+      console.error("Failed to fetch latest aging report:", error);
+      res.status(500).json({ message: "Failed to fetch latest aging report" });
+    }
+  });
+
+  // Approval Workflows Routes - Critical missing feature
+  app.get("/api/approval-workflows", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const workflows = await storage.getApprovalWorkflows(companyId);
+      res.json(workflows);
+    } catch (error) {
+      console.error("Failed to fetch approval workflows:", error);
+      res.status(500).json({ message: "Failed to fetch approval workflows" });
+    }
+  });
+
+  app.get("/api/approval-workflows/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const workflow = await storage.getApprovalWorkflow(parseInt(id));
+      if (!workflow) {
+        return res.status(404).json({ message: "Approval workflow not found" });
+      }
+      res.json(workflow);
+    } catch (error) {
+      console.error("Failed to fetch approval workflow:", error);
+      res.status(500).json({ message: "Failed to fetch approval workflow" });
+    }
+  });
+
+  app.post("/api/approval-workflows", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertApprovalWorkflowSchema.parse(req.body);
+      const workflow = await storage.createApprovalWorkflow({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'approval_workflow', workflow.id, null, workflow);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Failed to create approval workflow:", error);
+      res.status(500).json({ message: "Failed to create approval workflow" });
+    }
+  });
+
+  app.put("/api/approval-workflows/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldWorkflow = await storage.getApprovalWorkflow(parseInt(id));
+      const data = insertApprovalWorkflowSchema.partial().parse(req.body);
+      const workflow = await storage.updateApprovalWorkflow(parseInt(id), data);
+      if (!workflow) {
+        return res.status(404).json({ message: "Approval workflow not found" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'approval_workflow', workflow.id, oldWorkflow, workflow);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Failed to update approval workflow:", error);
+      res.status(500).json({ message: "Failed to update approval workflow" });
+    }
+  });
+
+  app.delete("/api/approval-workflows/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldWorkflow = await storage.getApprovalWorkflow(parseInt(id));
+      const success = await storage.deleteApprovalWorkflow(parseInt(id));
+      if (!success) {
+        return res.status(404).json({ message: "Approval workflow not found" });
+      }
+      await logAudit(req.user.id, 'DELETE', 'approval_workflow', parseInt(id), oldWorkflow, null);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete approval workflow:", error);
+      res.status(500).json({ message: "Failed to delete approval workflow" });
+    }
+  });
+
+  // Approval Requests Routes
+  app.get("/api/approval-requests", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const { userId } = req.query;
+      const requests = await storage.getApprovalRequests(companyId, userId ? parseInt(userId as string) : undefined);
+      res.json(requests);
+    } catch (error) {
+      console.error("Failed to fetch approval requests:", error);
+      res.status(500).json({ message: "Failed to fetch approval requests" });
+    }
+  });
+
+  app.post("/api/approval-requests", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertApprovalRequestSchema.parse(req.body);
+      const request = await storage.createApprovalRequest({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'approval_request', request.id, null, request);
+      res.json(request);
+    } catch (error) {
+      console.error("Failed to create approval request:", error);
+      res.status(500).json({ message: "Failed to create approval request" });
+    }
+  });
+
+  app.post("/api/approval-requests/:id/action", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { action, comments } = req.body;
+      
+      if (!['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ message: "Invalid action. Must be 'approve' or 'reject'" });
+      }
+
+      const success = await storage.processApprovalAction(parseInt(id), req.user.id, action, comments);
+      if (!success) {
+        return res.status(404).json({ message: "Approval request not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'approval_request', parseInt(id), null, { action, comments });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to process approval action:", error);
+      res.status(500).json({ message: "Failed to process approval action" });
+    }
+  });
+
+  // Bank Integrations Routes - Critical missing feature
+  app.get("/api/bank-integrations", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const integrations = await storage.getBankIntegrations(companyId);
+      res.json(integrations);
+    } catch (error) {
+      console.error("Failed to fetch bank integrations:", error);
+      res.status(500).json({ message: "Failed to fetch bank integrations" });
+    }
+  });
+
+  app.post("/api/bank-integrations", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertBankIntegrationSchema.parse(req.body);
+      const integration = await storage.createBankIntegration({ ...data, companyId: req.user.companyId });
+      await logAudit(req.user.id, 'CREATE', 'bank_integration', integration.id, null, integration);
+      res.json(integration);
+    } catch (error) {
+      console.error("Failed to create bank integration:", error);
+      res.status(500).json({ message: "Failed to create bank integration" });
+    }
+  });
+
+  app.put("/api/bank-integrations/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldIntegration = await storage.getBankIntegrations(req.user.companyId);
+      const data = insertBankIntegrationSchema.partial().parse(req.body);
+      const integration = await storage.updateBankIntegration(parseInt(id), data);
+      if (!integration) {
+        return res.status(404).json({ message: "Bank integration not found" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'bank_integration', integration.id, oldIntegration, integration);
+      res.json(integration);
+    } catch (error) {
+      console.error("Failed to update bank integration:", error);
+      res.status(500).json({ message: "Failed to update bank integration" });
+    }
+  });
+
+  app.delete("/api/bank-integrations/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const oldIntegration = await storage.getBankIntegrations(req.user.companyId);
+      const success = await storage.deleteBankIntegration(parseInt(id));
+      if (!success) {
+        return res.status(404).json({ message: "Bank integration not found" });
+      }
+      await logAudit(req.user.id, 'DELETE', 'bank_integration', parseInt(id), oldIntegration, null);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete bank integration:", error);
+      res.status(500).json({ message: "Failed to delete bank integration" });
+    }
+  });
+
+  app.post("/api/bank-integrations/:id/sync", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.syncBankTransactions(parseInt(id));
+      if (!success) {
+        return res.status(400).json({ message: "Failed to sync bank transactions" });
+      }
+      await logAudit(req.user.id, 'UPDATE', 'bank_sync', parseInt(id), null, { status: 'completed' });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to sync bank transactions:", error);
+      res.status(500).json({ message: "Failed to sync bank transactions" });
     }
   });
 

@@ -1,0 +1,74 @@
+Ultimate Pre-Launch Onboarding & Workflow Implementation Prompt
+Prompt:
+
+Conduct a comprehensive review and verification of the entire onboarding process and end-to-end accounting workflow within the platform.
+
+Requirements:
+
+Onboarding Process
+
+Confirm the presence of a complete, seamless onboarding workflow for new companies and users—including company creation, industry selection, chart of accounts setup, VAT configuration, subscription package selection, and user assignment.
+
+Ensure onboarding steps are clear, error-free, and fully integrated, with all required fields and initial setup actions.
+
+No demo or placeholder data should exist; system must be ready to accept live data.
+
+Core Accounting Modules
+
+Validate the implementation and integration of all essential modules: Invoicing, Clients/Customers, Products & Services, Purchases, Suppliers, Expenses, Banking, VAT, Chart of Accounts, and General Ledger.
+
+For each module, verify that all standard features found in Sage, QuickBooks, and Zoho are present and working:
+
+Invoice Module: Recurring invoices, credit notes, payment tracking, invoice aging, automated reminders, PDF/email delivery, partial payments, VAT integration, and reporting to sales accounts.
+
+Purchase Module: Supplier management, purchase orders, bills, expense categorization, payment tracking, approval workflows, and VAT capture.
+
+Clients/Customers: Aging reports, statements, credit limits, transaction history.
+
+Products & Services: Inventory management, service tracking, automatic stock updates on sales/purchases, price lists.
+
+Banking: Bank feed integration (for South Africa: Yoco, Stitch, Nedbank, FNB, ABSA, Standard Bank, etc.), reconciliation, and automatic transaction matching.
+
+VAT Module: Registration toggle, default VAT types, VAT fields in all relevant modules, correct VAT reporting, and VAT201 ready for SARS compliance.
+
+Chart of Accounts & GL: Default accounts per industry, customizable, account activation/deactivation, automated posting from all modules.
+
+Workflow Integration
+
+Confirm that all modules are fully integrated:
+
+Invoices and purchases update bank balances and respective GL accounts automatically.
+
+VAT is calculated and posted correctly based on company registration status.
+
+Payments received, expenses paid, and other transactions are instantly reflected in balances and reports.
+
+Reporting
+
+Ensure all core reports are present and accurate: Balance Sheet, Profit & Loss, Cash Flow, VAT201, Customer & Supplier Aging, General Ledger, and Trial Balance.
+
+Reports must pull from live data and update in real time as transactions occur.
+
+Bank Integration
+
+Verify live integration with major South African bank APIs and/or upload features for bank statements.
+
+Test auto-reconciliation and transaction matching for accuracy.
+
+Final System Readiness
+
+The system must be ready for production with no demo, mock-up, or placeholder data.
+
+All modules must support role-based access and secure, isolated multi-company operation.
+
+All forms, flows, and modules must be responsive, professional, and production-ready—immediately able to serve accountants, business owners, and their teams.
+
+Feature Checklist and Gap Resolution
+
+For each workflow and module, list all implemented features.
+
+If any required feature is missing, incomplete, or not fully integrated, proceed to implement it now to ensure 100% functional parity with Sage, QuickBooks, and Zoho.
+
+Goal:
+Deliver a 100% complete, fully integrated, and production-ready accounting SaaS system with professional onboarding and A–Z accounting workflows—ready for live business use and client onboarding.
+

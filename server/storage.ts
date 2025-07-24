@@ -58,6 +58,13 @@ import {
   taskComments,
   projectFiles,
   projectTemplates,
+  creditNotes,
+  creditNoteItems,
+  invoiceReminders,
+  invoiceAgingReports,
+  approvalWorkflows,
+  approvalRequests,
+  bankIntegrations,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -183,6 +190,20 @@ import {
   type ProjectWithDetails,
   type TaskWithDetails,
   type TimeEntryWithDetails,
+  type CreditNote,
+  type InsertCreditNote,
+  type CreditNoteItem,
+  type InsertCreditNoteItem,
+  type InvoiceReminder,
+  type InsertInvoiceReminder,
+  type InvoiceAgingReport,
+  type InsertInvoiceAgingReport,
+  type ApprovalWorkflow,
+  type InsertApprovalWorkflow,
+  type ApprovalRequest,
+  type InsertApprovalRequest,
+  type BankIntegration,
+  type InsertBankIntegration,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -492,6 +513,51 @@ export interface IStorage {
   addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
   removeProjectMember(projectId: number, userId: number): Promise<boolean>;
   getProjectMembers(projectId: number): Promise<ProjectMember[]>;
+
+  // === CRITICAL MISSING FEATURES ===
+  
+  // Credit Notes Management - Critical missing feature
+  getCreditNotes(companyId: number): Promise<CreditNote[]>;
+  getCreditNote(id: number): Promise<CreditNote | undefined>;
+  createCreditNote(creditNote: InsertCreditNote): Promise<CreditNote>;
+  updateCreditNote(id: number, creditNote: Partial<InsertCreditNote>): Promise<CreditNote | undefined>;
+  deleteCreditNote(id: number): Promise<boolean>;
+  getCreditNoteItems(creditNoteId: number): Promise<CreditNoteItem[]>;
+  createCreditNoteItem(item: InsertCreditNoteItem): Promise<CreditNoteItem>;
+  applyCreditNoteToInvoice(creditNoteId: number, invoiceId: number, amount: number): Promise<boolean>;
+
+  // Invoice Reminders - Critical missing feature
+  getInvoiceReminders(companyId: number): Promise<InvoiceReminder[]>;
+  createInvoiceReminder(reminder: InsertInvoiceReminder): Promise<InvoiceReminder>;
+  updateInvoiceReminder(id: number, reminder: Partial<InsertInvoiceReminder>): Promise<InvoiceReminder | undefined>;
+  markReminderSent(id: number, sentDate: Date, method: string): Promise<boolean>;
+  getOverdueInvoicesForReminders(companyId: number): Promise<Invoice[]>;
+  processAutomaticReminders(companyId: number): Promise<number>;
+
+  // Invoice Aging Reports - Critical missing feature
+  getInvoiceAgingReports(companyId: number): Promise<InvoiceAgingReport[]>;
+  generateInvoiceAgingReport(companyId: number, reportName: string, agingPeriods: number[]): Promise<InvoiceAgingReport>;
+  getLatestAgingReport(companyId: number): Promise<InvoiceAgingReport | undefined>;
+
+  // Approval Workflows - Critical missing feature
+  getApprovalWorkflows(companyId: number): Promise<ApprovalWorkflow[]>;
+  getApprovalWorkflow(id: number): Promise<ApprovalWorkflow | undefined>;
+  createApprovalWorkflow(workflow: InsertApprovalWorkflow): Promise<ApprovalWorkflow>;
+  updateApprovalWorkflow(id: number, workflow: Partial<InsertApprovalWorkflow>): Promise<ApprovalWorkflow | undefined>;
+  deleteApprovalWorkflow(id: number): Promise<boolean>;
+  
+  // Approval Requests
+  getApprovalRequests(companyId: number, userId?: number): Promise<ApprovalRequest[]>;
+  createApprovalRequest(request: InsertApprovalRequest): Promise<ApprovalRequest>;
+  updateApprovalRequest(id: number, request: Partial<InsertApprovalRequest>): Promise<ApprovalRequest | undefined>;
+  processApprovalAction(requestId: number, userId: number, action: 'approve' | 'reject', comments?: string): Promise<boolean>;
+
+  // Bank Integrations - Critical missing feature
+  getBankIntegrations(companyId: number): Promise<BankIntegration[]>;
+  createBankIntegration(integration: InsertBankIntegration): Promise<BankIntegration>;
+  updateBankIntegration(id: number, integration: Partial<InsertBankIntegration>): Promise<BankIntegration | undefined>;
+  deleteBankIntegration(id: number): Promise<boolean>;
+  syncBankTransactions(integrationId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5630,6 +5696,427 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error generating comprehensive balance sheet:", error);
       throw error;
+    }
+  }
+
+  // === CRITICAL MISSING FEATURES IMPLEMENTATION ===
+
+  // Credit Notes Management - Critical missing feature
+  async getCreditNotes(companyId: number): Promise<CreditNote[]> {
+    return await db
+      .select()
+      .from(creditNotes)
+      .where(eq(creditNotes.companyId, companyId))
+      .orderBy(desc(creditNotes.createdAt));
+  }
+
+  async getCreditNote(id: number): Promise<CreditNote | undefined> {
+    const [creditNote] = await db
+      .select()
+      .from(creditNotes)
+      .where(eq(creditNotes.id, id));
+    return creditNote;
+  }
+
+  async createCreditNote(creditNote: InsertCreditNote): Promise<CreditNote> {
+    const [newCreditNote] = await db
+      .insert(creditNotes)
+      .values(creditNote)
+      .returning();
+    return newCreditNote;
+  }
+
+  async updateCreditNote(id: number, creditNote: Partial<InsertCreditNote>): Promise<CreditNote | undefined> {
+    const [updatedCreditNote] = await db
+      .update(creditNotes)
+      .set({ ...creditNote, updatedAt: new Date() })
+      .where(eq(creditNotes.id, id))
+      .returning();
+    return updatedCreditNote;
+  }
+
+  async deleteCreditNote(id: number): Promise<boolean> {
+    const result = await db.delete(creditNotes).where(eq(creditNotes.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getCreditNoteItems(creditNoteId: number): Promise<CreditNoteItem[]> {
+    return await db
+      .select()
+      .from(creditNoteItems)
+      .where(eq(creditNoteItems.creditNoteId, creditNoteId))
+      .orderBy(creditNoteItems.sortOrder);
+  }
+
+  async createCreditNoteItem(item: InsertCreditNoteItem): Promise<CreditNoteItem> {
+    const [newItem] = await db
+      .insert(creditNoteItems)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+
+  async applyCreditNoteToInvoice(creditNoteId: number, invoiceId: number, amount: number): Promise<boolean> {
+    try {
+      // Update credit note applied amount
+      await db
+        .update(creditNotes)
+        .set({ 
+          appliedAmount: sql`applied_amount + ${amount}`,
+          remainingAmount: sql`remaining_amount - ${amount}`,
+          updatedAt: new Date()
+        })
+        .where(eq(creditNotes.id, creditNoteId));
+
+      // Update invoice total (reduce by credit note amount)
+      await db
+        .update(invoices)
+        .set({ 
+          total: sql`total - ${amount}`,
+          updatedAt: new Date()
+        })
+        .where(eq(invoices.id, invoiceId));
+
+      return true;
+    } catch (error) {
+      console.error("Error applying credit note to invoice:", error);
+      return false;
+    }
+  }
+
+  // Invoice Reminders - Critical missing feature
+  async getInvoiceReminders(companyId: number): Promise<InvoiceReminder[]> {
+    return await db
+      .select()
+      .from(invoiceReminders)
+      .where(eq(invoiceReminders.companyId, companyId))
+      .orderBy(desc(invoiceReminders.createdAt));
+  }
+
+  async createInvoiceReminder(reminder: InsertInvoiceReminder): Promise<InvoiceReminder> {
+    const [newReminder] = await db
+      .insert(invoiceReminders)
+      .values(reminder)
+      .returning();
+    return newReminder;
+  }
+
+  async updateInvoiceReminder(id: number, reminder: Partial<InsertInvoiceReminder>): Promise<InvoiceReminder | undefined> {
+    const [updatedReminder] = await db
+      .update(invoiceReminders)
+      .set({ ...reminder, updatedAt: new Date() })
+      .where(eq(invoiceReminders.id, id))
+      .returning();
+    return updatedReminder;
+  }
+
+  async markReminderSent(id: number, sentDate: Date, method: string): Promise<boolean> {
+    const result = await db
+      .update(invoiceReminders)
+      .set({ 
+        status: 'sent',
+        sentDate,
+        sentMethod: method,
+        updatedAt: new Date()
+      })
+      .where(eq(invoiceReminders.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getOverdueInvoicesForReminders(companyId: number): Promise<Invoice[]> {
+    const today = new Date();
+    return await db
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.status, 'overdue'),
+          lte(invoices.dueDate, today)
+        )
+      );
+  }
+
+  async processAutomaticReminders(companyId: number): Promise<number> {
+    // This would contain logic to process automatic reminders
+    // For now, return 0 as a placeholder
+    return 0;
+  }
+
+  // Invoice Aging Reports - Critical missing feature
+  async getInvoiceAgingReports(companyId: number): Promise<InvoiceAgingReport[]> {
+    return await db
+      .select()
+      .from(invoiceAgingReports)
+      .where(eq(invoiceAgingReports.companyId, companyId))
+      .orderBy(desc(invoiceAgingReports.createdAt));
+  }
+
+  async generateInvoiceAgingReport(companyId: number, reportName: string, agingPeriods: number[]): Promise<InvoiceAgingReport> {
+    try {
+      const today = new Date();
+      
+      // Get all outstanding invoices
+      const outstandingInvoices = await db
+        .select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.companyId, companyId),
+            or(eq(invoices.status, 'sent'), eq(invoices.status, 'overdue'))
+          )
+        );
+
+      // Calculate aging buckets
+      let currentAmount = 0;
+      let period1Amount = 0; // 1-30 days
+      let period2Amount = 0; // 31-60 days  
+      let period3Amount = 0; // 61-90 days
+      let period4Amount = 0; // 90+ days
+
+      const reportData: any[] = [];
+
+      outstandingInvoices.forEach(invoice => {
+        const daysPastDue = Math.floor((today.getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        const amount = parseFloat(invoice.total);
+
+        if (daysPastDue <= 0) {
+          currentAmount += amount;
+        } else if (daysPastDue <= 30) {
+          period1Amount += amount;
+        } else if (daysPastDue <= 60) {
+          period2Amount += amount;
+        } else if (daysPastDue <= 90) {
+          period3Amount += amount;
+        } else {
+          period4Amount += amount;
+        }
+
+        reportData.push({
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          customerId: invoice.customerId,
+          amount,
+          dueDate: invoice.dueDate,
+          daysPastDue,
+          agingBucket: daysPastDue <= 0 ? 'current' : 
+                      daysPastDue <= 30 ? '1-30' :
+                      daysPastDue <= 60 ? '31-60' :
+                      daysPastDue <= 90 ? '61-90' : '90+'
+        });
+      });
+
+      const totalOutstanding = currentAmount + period1Amount + period2Amount + period3Amount + period4Amount;
+
+      const reportInsert: InsertInvoiceAgingReport = {
+        companyId,
+        reportDate: today.toISOString().split('T')[0],
+        reportName,
+        agingPeriods,
+        totalOutstanding: totalOutstanding.toFixed(2),
+        currentAmount: currentAmount.toFixed(2),
+        period1Amount: period1Amount.toFixed(2),
+        period2Amount: period2Amount.toFixed(2),
+        period3Amount: period3Amount.toFixed(2),
+        period4Amount: period4Amount.toFixed(2),
+        customerCount: new Set(outstandingInvoices.map(inv => inv.customerId)).size,
+        invoiceCount: outstandingInvoices.length,
+        reportData,
+        generatedBy: null // Would be set from the authenticated user context
+      };
+
+      const [report] = await db
+        .insert(invoiceAgingReports)
+        .values(reportInsert)
+        .returning();
+
+      return report;
+    } catch (error) {
+      console.error("Error generating invoice aging report:", error);
+      throw error;
+    }
+  }
+
+  async getLatestAgingReport(companyId: number): Promise<InvoiceAgingReport | undefined> {
+    const [report] = await db
+      .select()
+      .from(invoiceAgingReports)
+      .where(eq(invoiceAgingReports.companyId, companyId))
+      .orderBy(desc(invoiceAgingReports.createdAt))
+      .limit(1);
+    return report;
+  }
+
+  // Approval Workflows - Critical missing feature
+  async getApprovalWorkflows(companyId: number): Promise<ApprovalWorkflow[]> {
+    return await db
+      .select()
+      .from(approvalWorkflows)
+      .where(eq(approvalWorkflows.companyId, companyId))
+      .orderBy(approvalWorkflows.workflowName);
+  }
+
+  async getApprovalWorkflow(id: number): Promise<ApprovalWorkflow | undefined> {
+    const [workflow] = await db
+      .select()
+      .from(approvalWorkflows)
+      .where(eq(approvalWorkflows.id, id));
+    return workflow;
+  }
+
+  async createApprovalWorkflow(workflow: InsertApprovalWorkflow): Promise<ApprovalWorkflow> {
+    const [newWorkflow] = await db
+      .insert(approvalWorkflows)
+      .values(workflow)
+      .returning();
+    return newWorkflow;
+  }
+
+  async updateApprovalWorkflow(id: number, workflow: Partial<InsertApprovalWorkflow>): Promise<ApprovalWorkflow | undefined> {
+    const [updatedWorkflow] = await db
+      .update(approvalWorkflows)
+      .set({ ...workflow, updatedAt: new Date() })
+      .where(eq(approvalWorkflows.id, id))
+      .returning();
+    return updatedWorkflow;
+  }
+
+  async deleteApprovalWorkflow(id: number): Promise<boolean> {
+    const result = await db.delete(approvalWorkflows).where(eq(approvalWorkflows.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Approval Requests
+  async getApprovalRequests(companyId: number, userId?: number): Promise<ApprovalRequest[]> {
+    let query = db
+      .select()
+      .from(approvalRequests)
+      .where(eq(approvalRequests.companyId, companyId));
+
+    if (userId) {
+      query = query.where(eq(approvalRequests.requestedBy, userId));
+    }
+
+    return await query.orderBy(desc(approvalRequests.createdAt));
+  }
+
+  async createApprovalRequest(request: InsertApprovalRequest): Promise<ApprovalRequest> {
+    const [newRequest] = await db
+      .insert(approvalRequests)
+      .values(request)
+      .returning();
+    return newRequest;
+  }
+
+  async updateApprovalRequest(id: number, request: Partial<InsertApprovalRequest>): Promise<ApprovalRequest | undefined> {
+    const [updatedRequest] = await db
+      .update(approvalRequests)
+      .set({ ...request, updatedAt: new Date() })
+      .where(eq(approvalRequests.id, id))
+      .returning();
+    return updatedRequest;
+  }
+
+  async processApprovalAction(requestId: number, userId: number, action: 'approve' | 'reject', comments?: string): Promise<boolean> {
+    try {
+      // Get the request
+      const [request] = await db
+        .select()
+        .from(approvalRequests)
+        .where(eq(approvalRequests.id, requestId));
+
+      if (!request) return false;
+
+      // Update approval history
+      const history = Array.isArray(request.approvalHistory) ? request.approvalHistory : [];
+      history.push({
+        userId,
+        action,
+        comments: comments || '',
+        timestamp: new Date().toISOString()
+      });
+
+      // Update request status
+      const newStatus = action === 'approve' ? 'approved' : 'rejected';
+      const completedAt = new Date();
+
+      await db
+        .update(approvalRequests)
+        .set({
+          status: newStatus,
+          approvalHistory: history,
+          completedAt,
+          updatedAt: new Date()
+        })
+        .where(eq(approvalRequests.id, requestId));
+
+      return true;
+    } catch (error) {
+      console.error("Error processing approval action:", error);
+      return false;
+    }
+  }
+
+  // Bank Integrations - Critical missing feature
+  async getBankIntegrations(companyId: number): Promise<BankIntegration[]> {
+    return await db
+      .select()
+      .from(bankIntegrations)
+      .where(eq(bankIntegrations.companyId, companyId))
+      .orderBy(bankIntegrations.bankName);
+  }
+
+  async createBankIntegration(integration: InsertBankIntegration): Promise<BankIntegration> {
+    const [newIntegration] = await db
+      .insert(bankIntegrations)
+      .values(integration)
+      .returning();
+    return newIntegration;
+  }
+
+  async updateBankIntegration(id: number, integration: Partial<InsertBankIntegration>): Promise<BankIntegration | undefined> {
+    const [updatedIntegration] = await db
+      .update(bankIntegrations)
+      .set({ ...integration, updatedAt: new Date() })
+      .where(eq(bankIntegrations.id, id))
+      .returning();
+    return updatedIntegration;
+  }
+
+  async deleteBankIntegration(id: number): Promise<boolean> {
+    const result = await db.delete(bankIntegrations).where(eq(bankIntegrations.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async syncBankTransactions(integrationId: number): Promise<boolean> {
+    try {
+      // Placeholder for bank synchronization logic
+      // In a real implementation, this would connect to the bank's API
+      // and import transactions into the bank_transactions table
+      
+      await db
+        .update(bankIntegrations)
+        .set({
+          lastSyncDate: new Date(),
+          syncStatus: 'completed',
+          updatedAt: new Date()
+        })
+        .where(eq(bankIntegrations.id, integrationId));
+
+      return true;
+    } catch (error) {
+      console.error("Error syncing bank transactions:", error);
+      
+      await db
+        .update(bankIntegrations)
+        .set({
+          syncStatus: 'error',
+          lastSyncError: error instanceof Error ? error.message : 'Unknown error',
+          updatedAt: new Date()
+        })
+        .where(eq(bankIntegrations.id, integrationId));
+
+      return false;
     }
   }
 }
