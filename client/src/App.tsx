@@ -59,6 +59,7 @@ import VatManagement from "@/pages/vat-management";
 import VATSettings from "@/pages/vat-settings";
 import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
+import POS from "@/pages/pos";
 import EnterpriseSettings from "@/pages/enterprise-settings";
 import Landing from "@/pages/landing";
 import Features from "@/pages/features";
@@ -113,6 +114,12 @@ const PERMISSIONS = {
   TASKS_VIEW: 'tasks:view',
   TASKS_CREATE: 'tasks:create',
   TIME_TRACKING_VIEW: 'time_tracking:view',
+  // POS permissions
+  POS_VIEW: 'pos:view',
+  POS_MANAGE: 'pos:manage',
+  POS_PROCESS_SALES: 'pos:process_sales',
+  POS_MANAGE_SHIFTS: 'pos:manage_shifts',
+  POS_VIEW_REPORTS: 'pos:view_reports',
 } as const;
 
 function AuthenticatedApp() {
@@ -221,6 +228,11 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/inventory">
           <Inventory />
+        </Route>
+        <Route path="/pos">
+          <ProtectedRoute permission={PERMISSIONS.POS_VIEW}>
+            <POS />
+          </ProtectedRoute>
         </Route>
         <Route path="/companies">
           <Companies />
