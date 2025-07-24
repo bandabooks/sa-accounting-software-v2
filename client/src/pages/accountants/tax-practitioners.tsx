@@ -1,0 +1,97 @@
+import { Link } from "wouter";
+import { 
+  Calculator, FileText, Shield, Clock, CheckCircle, ArrowRight,
+  Users, Building, Award, TrendingUp
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+export default function TaxPractitioners() {
+  return (
+    <div className="min-h-screen bg-white">
+      <header className="bg-gradient-to-r from-green-600 to-emerald-600 text-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold mb-6">
+              Tax Practitioner Solutions
+              <span className="block text-green-200">Streamline Tax Compliance for All Clients</span>
+            </h1>
+            <p className="text-xl text-green-100 max-w-3xl mx-auto mb-8">
+              Comprehensive tax management tools designed specifically for South African tax practitioners. 
+              Manage multiple clients, automate SARS submissions, and ensure 100% compliance.
+            </p>
+            <Button size="lg" className="bg-white text-green-600 hover:bg-gray-100">
+              Start Professional Trial
+              <ArrowRight className="ml-2" size={20} />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
+              <Calculator className="text-green-600 mb-4" size={32} />
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Multi-Client Tax Management</h3>
+              <p className="text-gray-600 mb-4">Manage tax affairs for unlimited clients from a single dashboard</p>
+              <ul className="space-y-2">
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Client portfolio overview</span>
+                </li>
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Tax return preparation</span>
+                </li>
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Deadline tracking</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="bg-white p-8 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
+              <FileText className="text-green-600 mb-4" size={32} />
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">SARS Integration</h3>
+              <p className="text-gray-600 mb-4">Direct electronic filing and real-time SARS communication</p>
+              <ul className="space-y-2">
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Electronic submissions</span>
+                </li>
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Status tracking</span>
+                </li>
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Audit support</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
+              <Shield className="text-green-600 mb-4" size={32} />
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Compliance Automation</h3>
+              <p className="text-gray-600 mb-4">Automated compliance checking and deadline management</p>
+              <ul className="space-y-2">
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Compliance monitoring</span>
+                </li>
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Penalty prevention</span>
+                </li>
+                <li className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="text-green-500" size={16} />
+                  <span>Automated reminders</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

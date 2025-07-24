@@ -60,6 +60,20 @@ import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
 import EnterpriseSettings from "@/pages/enterprise-settings";
 import Landing from "@/pages/landing";
+import Features from "@/pages/features";
+import AccountingFeatures from "@/pages/features/accounting";
+import ComplianceFeatures from "@/pages/features/compliance";
+import SmallBusiness from "@/pages/small-business";
+import RetailSolutions from "@/pages/small-business/retail";
+import RestaurantSolutions from "@/pages/small-business/restaurants";
+import ConsultantSolutions from "@/pages/small-business/consultants";
+import NGOSolutions from "@/pages/small-business/ngos";
+import Pricing from "@/pages/pricing";
+import Contact from "@/pages/contact";
+import Resources from "@/pages/resources";
+import Accountants from "@/pages/accountants";
+import TaxPractitioners from "@/pages/accountants/tax-practitioners";
+import Auditors from "@/pages/accountants/auditors";
 import Onboarding from "@/pages/onboarding";
 import SpendingWizard from "@/pages/spending-wizard";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
@@ -408,6 +422,20 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/features" component={Features} />
+        <Route path="/features/accounting" component={AccountingFeatures} />
+        <Route path="/features/compliance" component={ComplianceFeatures} />
+        <Route path="/small-business" component={SmallBusiness} />
+        <Route path="/small-business/retail" component={RetailSolutions} />
+        <Route path="/small-business/restaurants" component={RestaurantSolutions} />
+        <Route path="/small-business/consultants" component={ConsultantSolutions} />
+        <Route path="/small-business/ngos" component={NGOSolutions} />
+        <Route path="/pricing" component={Pricing} />
+        <Route path="/contact" component={Contact} />
+        <Route path="/resources" component={Resources} />
+        <Route path="/accountants" component={Accountants} />
+        <Route path="/accountants/tax-practitioners" component={TaxPractitioners} />
+        <Route path="/accountants/auditors" component={Auditors} />
         <Route path="/login" component={Login} />
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/portal" component={CustomerPortal} />
