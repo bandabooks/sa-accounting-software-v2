@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,12 @@ import {
 } from "lucide-react";
 
 export default function POSPage() {
-  const [activeTab, setActiveTab] = useState("terminal");
+  const [location] = useLocation();
+  const [newSaleOpen, setNewSaleOpen] = useState(false);
+
+  const handleNewSale = () => {
+    window.location.href = "/pos/terminal";
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -23,7 +29,7 @@ export default function POSPage() {
             <Clock className="h-3 w-3 mr-1" />
             Shift Active
           </Badge>
-          <Button>
+          <Button onClick={handleNewSale}>
             <Plus className="h-4 w-4 mr-2" />
             New Sale
           </Button>
@@ -81,24 +87,22 @@ export default function POSPage() {
       <div className="border-b">
         <nav className="flex space-x-8">
           {[
-            { id: "terminal", label: "POS Terminal", icon: Tablet },
-            { id: "products", label: "Product Catalog", icon: Package },
-            { id: "customers", label: "Customers", icon: Users },
-            { id: "reports", label: "Reports", icon: BarChart3 },
-            { id: "settings", label: "Settings", icon: Settings }
+            { id: "terminal", label: "POS Terminal", icon: Tablet, path: "/pos/terminal" },
+            { id: "products", label: "Product Catalog", icon: Package, path: "/products" },
+            { id: "customers", label: "Customers", icon: Users, path: "/customers" },
+            { id: "reports", label: "Reports", icon: BarChart3, path: "/pos/reports" },
+            { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
           ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
+            <Link key={tab.id} href={tab.path}>
+              <a className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                location === tab.path
                   ? "border-primary text-primary"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              <span>{tab.label}</span>
-            </button>
+              }`}>
+                <tab.icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </a>
+            </Link>
           ))}
         </nav>
       </div>
@@ -127,6 +131,16 @@ export default function POSPage() {
                 <div className="space-y-4">
                   <p className="text-sm text-gray-500">
                     <strong>Backend Infrastructure:</strong> ✅ Complete (100%)
+                </p>
+                <Button 
+                  onClick={handleNewSale} 
+                  className="mb-4"
+                  size="lg"
+                >
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Open POS Terminal
+                </Button>
+                <p className="text-sm text-gray-500">
                   </p>
                   <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                     <div>✅ Sales Processing</div>
