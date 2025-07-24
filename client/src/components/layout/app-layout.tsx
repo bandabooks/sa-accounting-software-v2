@@ -12,7 +12,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar />
       <MobileHeader />
-      <main className="flex-1 lg:ml-64">
+      <main className="flex-1 lg:ml-72">
         <Header />
         <div className="p-6 lg:pt-6 pt-20">
           {children}

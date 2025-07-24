@@ -7,7 +7,8 @@ import {
   Calculator, ChartLine, FileText, Users, BarChart3, Receipt, 
   Settings, TrendingUp, Package, Building, Archive, Building2, 
   BookOpen, Landmark, BookOpenCheck, ReceiptText, DollarSign, 
-  CreditCard, Box, Truck, PieChart, CheckCircle, Shield
+  CreditCard, Box, Truck, PieChart, CheckCircle, Shield, Briefcase,
+  FolderOpen, CheckSquare, Clock
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -63,6 +64,41 @@ const navigationGroups = [
       { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW" },
       { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW" },
       { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANK_RECONCILIATION_VIEW" }
+    ]
+  },
+  {
+    id: "projects",
+    label: "Project Management",
+    icon: Briefcase,
+    items: [
+      { path: "/projects", label: "Projects", icon: FolderOpen, permission: "PROJECTS_VIEW" },
+      { path: "/tasks", label: "Tasks", icon: CheckSquare, permission: "TASKS_VIEW" },
+      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW" }
+    ]
+  },
+  {
+    id: "compliance",
+    label: "Compliance Management",
+    icon: Shield,
+    items: [
+      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/sars", label: "SARS Compliance", icon: FileText, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: "COMPLIANCE_VIEW" },
+      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW" }
+    ]
+  },
+  {
+    id: "vat",
+    label: "VAT Management",
+    icon: Receipt,
+    items: [
+      { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW" },
+      { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW" },
+      { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW" }
     ]
   },
   {
@@ -183,7 +219,7 @@ export default function MobileMenu() {
     "PURCHASE_ORDER_VIEW", "EXPENSE_VIEW", "PRODUCT_VIEW", "INVENTORY_VIEW",
     "CHART_OF_ACCOUNTS_VIEW", "JOURNAL_ENTRY_VIEW", "BANKING_VIEW", 
     "GENERAL_LEDGER_VIEW", "FINANCIAL_VIEW", "REPORT_VIEW", "VAT_VIEW",
-    "COMPANY_VIEW", "SETTINGS_VIEW"
+    "COMPANY_VIEW", "SETTINGS_VIEW", "COMPLIANCE_VIEW"
   ];
 
   const toggleGroup = (groupId: string) => {

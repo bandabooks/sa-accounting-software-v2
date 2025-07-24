@@ -146,7 +146,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
 
   // Filter items based on permissions and role requirements
   const visibleItems = group.items.filter(item => {
-    if (item.requiredRole && userRole !== item.requiredRole) {
+    if ('requiredRole' in item && item.requiredRole && userRole !== item.requiredRole) {
       return false;
     }
     // Temporarily show all items - permissions will be handled later
@@ -183,7 +183,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
     <div className="mb-2">
       <button
         onClick={onToggle}
-        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
           hasActiveItem 
             ? "bg-primary/10 text-primary" 
             : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
@@ -241,7 +241,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 hidden lg:flex lg:flex-col">
+    <aside className="w-72 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 hidden lg:flex lg:flex-col">
       <div className="p-6 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
