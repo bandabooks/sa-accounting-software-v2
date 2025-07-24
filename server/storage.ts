@@ -235,7 +235,7 @@ import {
   type InsertSpendingWizardTip,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sum, count, sql, and, gte, lte, or, isNull } from "drizzle-orm";
+import { eq, desc, sum, count, sql, and, gte, lte, or, isNull, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -4137,7 +4137,7 @@ export class DatabaseStorage implements IStorage {
           set: {
             isActive: true,
             activatedAt: sql`now()`,
-            activatedBy: sql.placeholder('activatedBy'),
+            activatedBy: userId,
             deactivatedAt: null,
             deactivatedBy: null,
           },
@@ -4177,7 +4177,7 @@ export class DatabaseStorage implements IStorage {
           set: {
             isActive: true,
             activatedAt: sql`now()`,
-            activatedBy: sql.placeholder('activatedBy'),
+            activatedBy: userId,
             deactivatedAt: null,
             deactivatedBy: null,
           },

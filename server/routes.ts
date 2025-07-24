@@ -254,25 +254,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser({
         username,
         name: `${signupData.firstName} ${signupData.lastName}`,
-        firstName: signupData.firstName,
-        lastName: signupData.lastName,
         email: signupData.email,
-        passwordHash: hashedPassword,
+        password: hashedPassword,
         role: 'super_admin', // First user of company gets super admin
         permissions: ['*'], // All permissions
         isActive: true,
-        emailVerified: true, // Auto-verify for trials
         twoFactorEnabled: false
       });
       
       // Add user to company as owner
-      await storage.addUserToCompany({
-        companyId: company.id,
-        userId: user.id,
-        role: 'owner',
-        permissions: ['*'],
-        isActive: true
-      });
+      await storage.addUserToCompany(user.id, company.id, 'owner');
       
       // Create session for immediate login
       const sessionToken = generateSessionToken();
