@@ -206,6 +206,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
               <Link
                 key={item.path}
                 href={item.path}
+                data-onboarding={`nav-${item.path.split('/')[1]}`}
                 className={`flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors ${
                   isActive ? "bg-primary/10 text-primary font-medium" : ""
                 }`}
@@ -267,7 +268,7 @@ export default function Sidebar() {
         )}
       </div>
       
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden mt-6 px-3 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+      <nav data-onboarding="main-nav" className="flex-1 overflow-y-auto overflow-x-hidden mt-6 px-3 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
         <div className="space-y-2">
           {navigationGroups.map((group) => (
             <NavigationGroup

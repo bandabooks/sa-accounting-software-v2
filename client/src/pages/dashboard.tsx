@@ -8,12 +8,21 @@ import ActivityFeed from "@/components/dashboard/activity-feed";
 import { dashboardApi } from "@/lib/api";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from "@/lib/utils-invoice";
+import { TooltipWizard } from "@/components/onboarding/TooltipWizard";
+import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     queryFn: dashboardApi.getStats
   });
+
+  const {
+    isWizardVisible,
+    onboardingSteps,
+    completeOnboarding,
+    skipOnboarding,
+  } = useOnboardingWizard();
 
   if (isLoading) {
     return (
@@ -40,8 +49,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Dashboard Header */}
+      <div data-onboarding="dashboard-header" className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-400">Welcome to your business overview</p>
+      </div>
+
       {/* Quick Actions */}
-      <div className="flex flex-wrap gap-4">
+      <div data-onboarding="quick-actions" className="flex flex-wrap gap-4">
         <Button asChild className="bg-primary hover:bg-blue-800">
           <Link href="/invoices/new">
             <Plus size={16} className="mr-2" />
@@ -63,7 +78,9 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <StatsGrid stats={stats} />
+      <div data-onboarding="dashboard-stats">
+        <StatsGrid stats={stats} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Invoices */}
@@ -118,6 +135,14 @@ export default function Dashboard() {
 
       {/* Activity Feed */}
       <ActivityFeed />
+
+      {/* Onboarding Tooltip Wizard */}
+      <TooltipWizard
+        steps={onboardingSteps}
+        isVisible={isWizardVisible}
+        onComplete={completeOnboarding}
+        onSkip={skipOnboarding}
+      />
     </div>
   );
 }

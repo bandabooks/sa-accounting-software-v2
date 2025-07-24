@@ -2,6 +2,7 @@ import { Bell, User, LogOut, Settings, Shield } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { OnboardingHelpButton } from "@/components/onboarding/OnboardingHelpButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +66,9 @@ export default function Header() {
           {/* Company Switcher */}
           <CompanySwitcher />
           
+          {/* Onboarding Help Button */}
+          <OnboardingHelpButton />
+          
           <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
             <Bell size={20} />
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -75,7 +79,7 @@ export default function Header() {
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-3 hover:bg-gray-50">
+                <Button data-onboarding="user-profile" variant="ghost" className="flex items-center space-x-3 hover:bg-gray-50">
                   <div className="text-right">
                     <div className="text-sm font-medium text-gray-900">{user.name}</div>
                     <div className="text-sm text-gray-500">{getRoleDisplayName(user.role)}</div>
