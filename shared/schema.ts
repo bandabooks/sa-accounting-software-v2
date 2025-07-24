@@ -2704,3 +2704,556 @@ export type InsertSpendingWizardInsight = z.infer<typeof insertSpendingWizardIns
 
 export type SpendingWizardTip = typeof spendingWizardTips.$inferSelect;
 export type InsertSpendingWizardTip = z.infer<typeof insertSpendingWizardTipSchema>;
+
+// ===========================
+// COMPLIANCE MANAGEMENT SYSTEM
+// ===========================
+
+// Client Management and Onboarding
+export const clients = pgTable("clients", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  tradingName: text("trading_name"),
+  registrationNumber: text("registration_number"),
+  taxNumber: text("tax_number"),
+  vatNumber: text("vat_number"),
+  industryCode: text("industry_code"),
+  businessType: text("business_type").notNull(), // pty, cc, sole_proprietor, trust, partnership, npc
+  status: text("status").default("active"), // active, inactive, pending
+  
+  // Contact Information
+  primaryContact: text("primary_contact"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  province: text("province"),
+  postalCode: text("postal_code"),
+  
+  // Compliance Settings
+  isVatRegistered: boolean("is_vat_registered").default(false),
+  payeNumber: text("paye_number"),
+  uifNumber: text("uif_number"),
+  coida_number: text("coida_number"),
+  
+  // Service Settings
+  servicePackage: text("service_package").default("basic"), // basic, standard, premium, enterprise
+  monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Onboarding Status
+  onboardingStatus: text("onboarding_status").default("pending"), // pending, in_progress, completed
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  
+  // Metadata
+  notes: text("notes"),
+  tags: text("tags").array(),
+  assignedTo: integer("assigned_to"), // User ID of assigned accountant
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("clients_company_idx").on(table.companyId),
+  statusIdx: index("clients_status_idx").on(table.status),
+  assignedIdx: index("clients_assigned_idx").on(table.assignedTo),
+}));
+
+// Client Onboarding Workflows
+export const onboardingWorkflows = pgTable("onboarding_workflows", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  stepNumber: integer("step_number").notNull(),
+  stepName: text("step_name").notNull(),
+  description: text("description"),
+  status: text("status").default("pending"), // pending, in_progress, completed, skipped
+  requiredDocuments: text("required_documents").array(),
+  submittedDocuments: text("submitted_documents").array(),
+  assignedTo: integer("assigned_to"),
+  dueDate: date("due_date"),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("onboarding_workflows_client_idx").on(table.clientId),
+  statusIdx: index("onboarding_workflows_status_idx").on(table.status),
+}));
+
+// Engagement Letters and Contracts
+export const engagementLetters = pgTable("engagement_letters", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  templateId: integer("template_id"),
+  type: text("type").notNull(), // audit, review, compilation, bookkeeping, tax_prep, payroll
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  
+  // Contract Terms
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  renewalTerms: text("renewal_terms"),
+  fees: jsonb("fees"), // { monthly: 0, annual: 0, hourly: 0, fixed: 0 }
+  paymentTerms: text("payment_terms").default("Net 30"),
+  
+  // Workflow Status
+  status: text("status").default("draft"), // draft, sent, signed, active, expired, terminated
+  sentAt: timestamp("sent_at"),
+  signedAt: timestamp("signed_at"),
+  signedBy: text("signed_by"),
+  documentUrl: text("document_url"),
+  eSignatureId: text("e_signature_id"),
+  
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("engagement_letters_client_idx").on(table.clientId),
+  statusIdx: index("engagement_letters_status_idx").on(table.status),
+}));
+
+// SARS Compliance Module
+export const sarsCompliance = pgTable("sars_compliance", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  complianceType: text("compliance_type").notNull(), // income_tax, vat, paye, provisional_tax, customs
+  period: text("period").notNull(), // YYYY-MM or YYYY
+  dueDate: date("due_date").notNull(),
+  
+  // Status and Workflow
+  status: text("status").default("pending"), // pending, in_progress, filed, late, penalty
+  filedDate: date("filed_date"),
+  paymentDueDate: date("payment_due_date"),
+  paymentAmount: decimal("payment_amount", { precision: 12, scale: 2 }),
+  paymentStatus: text("payment_status").default("pending"), // pending, paid, overdue
+  
+  // E-Filing Integration
+  efilingReference: text("efiling_reference"),
+  efilingStatus: text("efiling_status"), // submitted, accepted, rejected
+  efilingResponse: jsonb("efiling_response"),
+  
+  // Documents
+  documents: text("documents").array(),
+  workpapers: text("workpapers").array(),
+  
+  // Compliance Details
+  assessmentAmount: decimal("assessment_amount", { precision: 12, scale: 2 }),
+  penaltyAmount: decimal("penalty_amount", { precision: 12, scale: 2 }),
+  interestAmount: decimal("interest_amount", { precision: 12, scale: 2 }),
+  
+  assignedTo: integer("assigned_to"),
+  reviewedBy: integer("reviewed_by"),
+  approvedBy: integer("approved_by"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("sars_compliance_client_idx").on(table.clientId),
+  typeIdx: index("sars_compliance_type_idx").on(table.complianceType),
+  statusIdx: index("sars_compliance_status_idx").on(table.status),
+  dueDateIdx: index("sars_compliance_due_date_idx").on(table.dueDate),
+}));
+
+// CIPC Compliance Module
+export const cipcCompliance = pgTable("cipc_compliance", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  complianceType: text("compliance_type").notNull(), // annual_return, change_of_directors, registered_office, name_change, shares
+  period: text("period"), // YYYY for annual returns
+  dueDate: date("due_date").notNull(),
+  
+  // Status and Workflow
+  status: text("status").default("pending"), // pending, in_progress, filed, late, penalty
+  filedDate: date("filed_date"),
+  cipcReference: text("cipc_reference"),
+  
+  // Filing Details
+  filingFee: decimal("filing_fee", { precision: 10, scale: 2 }),
+  penaltyAmount: decimal("penalty_amount", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
+  paymentStatus: text("payment_status").default("pending"),
+  
+  // Documents and Forms
+  forms: text("forms").array(), // CoR forms used
+  documents: text("documents").array(),
+  certificates: text("certificates").array(),
+  
+  // Change Details (for amendments)
+  changeDetails: jsonb("change_details"),
+  effectiveDate: date("effective_date"),
+  
+  assignedTo: integer("assigned_to"),
+  reviewedBy: integer("reviewed_by"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("cipc_compliance_client_idx").on(table.clientId),
+  typeIdx: index("cipc_compliance_type_idx").on(table.complianceType),
+  statusIdx: index("cipc_compliance_status_idx").on(table.status),
+  dueDateIdx: index("cipc_compliance_due_date_idx").on(table.dueDate),
+}));
+
+// Labour Compliance Module
+export const labourCompliance = pgTable("labour_compliance", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  complianceType: text("compliance_type").notNull(), // uif, sdl, coida, equity_reports, skills_development
+  period: text("period").notNull(), // YYYY-MM
+  dueDate: date("due_date").notNull(),
+  
+  // Status and Workflow
+  status: text("status").default("pending"), // pending, in_progress, filed, late, penalty
+  filedDate: date("filed_date"),
+  referenceNumber: text("reference_number"),
+  
+  // Financial Details
+  contributionAmount: decimal("contribution_amount", { precision: 12, scale: 2 }),
+  penaltyAmount: decimal("penalty_amount", { precision: 12, scale: 2 }),
+  interestAmount: decimal("interest_amount", { precision: 12, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
+  paymentStatus: text("payment_status").default("pending"),
+  
+  // Compliance Details
+  employeeCount: integer("employee_count"),
+  payrollAmount: decimal("payroll_amount", { precision: 12, scale: 2 }),
+  
+  // Documents
+  documents: text("documents").array(),
+  returns: text("returns").array(),
+  
+  assignedTo: integer("assigned_to"),
+  reviewedBy: integer("reviewed_by"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("labour_compliance_client_idx").on(table.clientId),
+  typeIdx: index("labour_compliance_type_idx").on(table.complianceType),
+  statusIdx: index("labour_compliance_status_idx").on(table.status),
+  dueDateIdx: index("labour_compliance_due_date_idx").on(table.dueDate),
+}));
+
+// Document Management
+export const complianceDocuments = pgTable("compliance_documents", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  companyId: integer("company_id").notNull(),
+  
+  // Document Classification
+  category: text("category").notNull(), // sars, cipc, labour, general, contracts
+  subcategory: text("subcategory"), // income_tax, vat, annual_return, uif, etc.
+  documentType: text("document_type").notNull(), // return, certificate, correspondence, working_paper
+  
+  // Document Details
+  title: text("title").notNull(),
+  description: text("description"),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  filePath: text("file_path").notNull(),
+  
+  // Metadata
+  tags: text("tags").array(),
+  period: text("period"), // Financial period this document relates to
+  version: integer("version").default(1),
+  isLatestVersion: boolean("is_latest_version").default(true),
+  
+  // Access Control
+  accessLevel: text("access_level").default("internal"), // public, client, internal, confidential
+  sharedWith: integer("shared_with").array(), // User IDs
+  
+  // Workflow
+  status: text("status").default("active"), // active, archived, deleted
+  expiryDate: date("expiry_date"),
+  retentionPeriod: integer("retention_period"), // Years to retain
+  
+  uploadedBy: integer("uploaded_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("compliance_documents_client_idx").on(table.clientId),
+  categoryIdx: index("compliance_documents_category_idx").on(table.category),
+  statusIdx: index("compliance_documents_status_idx").on(table.status),
+  uploadedIdx: index("compliance_documents_uploaded_idx").on(table.uploadedBy),
+}));
+
+// Task Management and Workflows
+export const complianceTasks = pgTable("compliance_tasks", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id"),
+  companyId: integer("company_id").notNull(),
+  
+  // Task Details
+  title: text("title").notNull(),
+  description: text("description"),
+  taskType: text("task_type").notNull(), // compliance, review, follow_up, document_request
+  priority: text("priority").default("medium"), // low, medium, high, urgent
+  
+  // Compliance Reference
+  complianceType: text("compliance_type"), // sars, cipc, labour
+  complianceId: integer("compliance_id"), // Reference to specific compliance record
+  
+  // Workflow
+  status: text("status").default("pending"), // pending, in_progress, completed, cancelled, on_hold
+  assignedTo: integer("assigned_to"),
+  delegatedTo: integer("delegated_to"),
+  reviewedBy: integer("reviewed_by"),
+  
+  // Timeline
+  startDate: date("start_date"),
+  dueDate: date("due_date"),
+  completedAt: timestamp("completed_at"),
+  estimatedHours: decimal("estimated_hours", { precision: 5, scale: 2 }),
+  actualHours: decimal("actual_hours", { precision: 5, scale: 2 }),
+  
+  // Dependencies
+  dependsOn: integer("depends_on").array(), // Task IDs this task depends on
+  blockedBy: integer("blocked_by").array(), // Task IDs blocking this task
+  
+  // Reminders
+  reminderSettings: jsonb("reminder_settings"),
+  lastReminderSent: timestamp("last_reminder_sent"),
+  
+  // Attachments and Notes
+  attachments: text("attachments").array(),
+  notes: text("notes"),
+  workLog: jsonb("work_log"), // Array of work entries with timestamps
+  
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("compliance_tasks_client_idx").on(table.clientId),
+  assignedIdx: index("compliance_tasks_assigned_idx").on(table.assignedTo),
+  statusIdx: index("compliance_tasks_status_idx").on(table.status),
+  dueDateIdx: index("compliance_tasks_due_date_idx").on(table.dueDate),
+  typeIdx: index("compliance_tasks_type_idx").on(table.taskType),
+}));
+
+// Compliance Calendar and Deadlines
+export const complianceCalendar = pgTable("compliance_calendar", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id"),
+  companyId: integer("company_id").notNull(),
+  
+  // Calendar Entry Details
+  title: text("title").notNull(),
+  description: text("description"),
+  eventType: text("event_type").notNull(), // deadline, reminder, meeting, filing
+  complianceType: text("compliance_type"), // sars, cipc, labour
+  
+  // Timing
+  eventDate: date("event_date").notNull(),
+  reminderDates: date("reminder_dates").array(),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: text("recurrence_pattern"), // monthly, quarterly, annually
+  
+  // Status
+  status: text("status").default("scheduled"), // scheduled, completed, overdue, cancelled
+  completedAt: timestamp("completed_at"),
+  
+  // Assignment
+  assignedTo: integer("assigned_to"),
+  createdBy: integer("created_by").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  eventDateIdx: index("compliance_calendar_event_date_idx").on(table.eventDate),
+  clientIdx: index("compliance_calendar_client_idx").on(table.clientId),
+  typeIdx: index("compliance_calendar_type_idx").on(table.eventType),
+  assignedIdx: index("compliance_calendar_assigned_idx").on(table.assignedTo),
+}));
+
+// Correspondence Tracker
+export const correspondenceTracker = pgTable("correspondence_tracker", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  companyId: integer("company_id").notNull(),
+  
+  // Correspondence Details
+  subject: text("subject").notNull(),
+  direction: text("direction").notNull(), // inbound, outbound
+  correspondenceType: text("correspondence_type").notNull(), // email, letter, phone, meeting, sms
+  authority: text("authority"), // sars, cipc, dol, other
+  
+  // Content
+  content: text("content"),
+  summary: text("summary"),
+  
+  // Contact Information
+  fromName: text("from_name"),
+  fromEmail: text("from_email"),
+  toName: text("to_name"),
+  toEmail: text("to_email"),
+  
+  // Reference and Tracking
+  referenceNumber: text("reference_number"),
+  relatedCompliance: integer("related_compliance"), // Link to compliance record
+  
+  // Status and Follow-up
+  status: text("status").default("open"), // open, in_progress, closed, follow_up_required
+  priority: text("priority").default("medium"), // low, medium, high, urgent
+  followUpDate: date("follow_up_date"),
+  followUpAction: text("follow_up_action"),
+  
+  // Attachments
+  attachments: text("attachments").array(),
+  
+  // Tracking
+  receivedDate: timestamp("received_date"),
+  responseDate: timestamp("response_date"),
+  responseRequired: boolean("response_required").default(false),
+  respondedBy: integer("responded_by"),
+  
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("correspondence_tracker_client_idx").on(table.clientId),
+  statusIdx: index("correspondence_tracker_status_idx").on(table.status),
+  authorityIdx: index("correspondence_tracker_authority_idx").on(table.authority),
+  receivedIdx: index("correspondence_tracker_received_idx").on(table.receivedDate),
+}));
+
+// Billing and Point of Sale Integration
+export const recurringBilling = pgTable("recurring_billing", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull(),
+  companyId: integer("company_id").notNull(),
+  
+  // Billing Details
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  billingFrequency: text("billing_frequency").notNull(), // monthly, quarterly, annually
+  
+  // Timing
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"),
+  nextBillingDate: date("next_billing_date").notNull(),
+  lastBilledDate: date("last_billed_date"),
+  
+  // Status
+  status: text("status").default("active"), // active, paused, cancelled, completed
+  
+  // Payment
+  paymentMethod: text("payment_method"), // credit_card, debit_order, eft, cash
+  paymentReference: text("payment_reference"),
+  
+  // Integration
+  invoiceTemplate: text("invoice_template"),
+  autoSend: boolean("auto_send").default(true),
+  
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("recurring_billing_client_idx").on(table.clientId),
+  statusIdx: index("recurring_billing_status_idx").on(table.status),
+  nextBillingIdx: index("recurring_billing_next_billing_idx").on(table.nextBillingDate),
+}));
+
+// AI Assistant Conversations
+export const aiAssistantConversations = pgTable("ai_assistant_conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  clientId: integer("client_id"),
+  companyId: integer("company_id").notNull(),
+  
+  // Conversation Details
+  title: text("title"),
+  category: text("category").notNull(), // compliance, tax_advice, general, workflow
+  context: jsonb("context"), // Additional context for AI
+  
+  // Metadata
+  messageCount: integer("message_count").default(0),
+  lastMessage: text("last_message"),
+  
+  status: text("status").default("active"), // active, archived, deleted
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("ai_assistant_conversations_user_idx").on(table.userId),
+  clientIdx: index("ai_assistant_conversations_client_idx").on(table.clientId),
+  categoryIdx: index("ai_assistant_conversations_category_idx").on(table.category),
+}));
+
+export const aiAssistantMessages = pgTable("ai_assistant_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull(),
+  
+  // Message Details
+  role: text("role").notNull(), // user, assistant, system
+  content: text("content").notNull(),
+  messageType: text("message_type").default("text"), // text, suggestion, document, workflow
+  
+  // AI Context
+  intent: text("intent"), // Detected user intent
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // AI confidence score
+  suggestions: jsonb("suggestions"), // Follow-up suggestions
+  
+  // Metadata
+  tokens: integer("tokens"), // Token usage for billing
+  responseTime: integer("response_time"), // Response time in ms
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  conversationIdx: index("ai_assistant_messages_conversation_idx").on(table.conversationId),
+  roleIdx: index("ai_assistant_messages_role_idx").on(table.role),
+}));
+
+// Schema Creation and Validation for all new tables
+export const insertClientSchema = createInsertSchema(clients);
+export const insertOnboardingWorkflowSchema = createInsertSchema(onboardingWorkflows);
+export const insertEngagementLetterSchema = createInsertSchema(engagementLetters);
+export const insertSarsComplianceSchema = createInsertSchema(sarsCompliance);
+export const insertCipcComplianceSchema = createInsertSchema(cipcCompliance);
+export const insertLabourComplianceSchema = createInsertSchema(labourCompliance);
+export const insertComplianceDocumentSchema = createInsertSchema(complianceDocuments);
+export const insertComplianceTaskSchema = createInsertSchema(complianceTasks);
+export const insertComplianceCalendarSchema = createInsertSchema(complianceCalendar);
+export const insertCorrespondenceTrackerSchema = createInsertSchema(correspondenceTracker);
+export const insertRecurringBillingSchema = createInsertSchema(recurringBilling);
+export const insertAiAssistantConversationSchema = createInsertSchema(aiAssistantConversations);
+export const insertAiAssistantMessageSchema = createInsertSchema(aiAssistantMessages);
+
+// Type exports for all new tables
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = z.infer<typeof insertClientSchema>;
+
+export type OnboardingWorkflow = typeof onboardingWorkflows.$inferSelect;
+export type InsertOnboardingWorkflow = z.infer<typeof insertOnboardingWorkflowSchema>;
+
+export type EngagementLetter = typeof engagementLetters.$inferSelect;
+export type InsertEngagementLetter = z.infer<typeof insertEngagementLetterSchema>;
+
+export type SarsCompliance = typeof sarsCompliance.$inferSelect;
+export type InsertSarsCompliance = z.infer<typeof insertSarsComplianceSchema>;
+
+export type CipcCompliance = typeof cipcCompliance.$inferSelect;
+export type InsertCipcCompliance = z.infer<typeof insertCipcComplianceSchema>;
+
+export type LabourCompliance = typeof labourCompliance.$inferSelect;
+export type InsertLabourCompliance = z.infer<typeof insertLabourComplianceSchema>;
+
+export type ComplianceDocument = typeof complianceDocuments.$inferSelect;
+export type InsertComplianceDocument = z.infer<typeof insertComplianceDocumentSchema>;
+
+export type ComplianceTask = typeof complianceTasks.$inferSelect;
+export type InsertComplianceTask = z.infer<typeof insertComplianceTaskSchema>;
+
+export type ComplianceCalendar = typeof complianceCalendar.$inferSelect;
+export type InsertComplianceCalendar = z.infer<typeof insertComplianceCalendarSchema>;
+
+export type CorrespondenceTracker = typeof correspondenceTracker.$inferSelect;
+export type InsertCorrespondenceTracker = z.infer<typeof insertCorrespondenceTrackerSchema>;
+
+export type RecurringBilling = typeof recurringBilling.$inferSelect;
+export type InsertRecurringBilling = z.infer<typeof insertRecurringBillingSchema>;
+
+export type AiAssistantConversation = typeof aiAssistantConversations.$inferSelect;
+export type InsertAiAssistantConversation = z.infer<typeof insertAiAssistantConversationSchema>;
+
+export type AiAssistantMessage = typeof aiAssistantMessages.$inferSelect;
+export type InsertAiAssistantMessage = z.infer<typeof insertAiAssistantMessageSchema>;

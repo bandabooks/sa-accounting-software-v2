@@ -62,6 +62,8 @@ import EnterpriseSettings from "@/pages/enterprise-settings";
 import Landing from "@/pages/landing";
 import Onboarding from "@/pages/onboarding";
 import SpendingWizard from "@/pages/spending-wizard";
+import ComplianceDashboard from "@/pages/compliance-dashboard";
+import ComplianceClients from "@/pages/compliance-clients";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -333,6 +335,14 @@ function AuthenticatedApp() {
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <SpendingWizard />
           </ProtectedRoute>
+        </Route>
+
+        {/* Compliance Management Routes */}
+        <Route path="/compliance">
+          <ComplianceDashboard />
+        </Route>
+        <Route path="/compliance/clients">
+          <ComplianceClients />
         </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />

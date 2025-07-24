@@ -74,6 +74,21 @@ const navigationGroups = [
     ]
   },
   {
+    id: "compliance",
+    label: "Compliance Management",
+    icon: Shield,
+    items: [
+      { path: "/compliance", label: "Dashboard", icon: BarChart3, permission: null },
+      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: null },
+      { path: "/compliance/sars", label: "SARS Compliance", icon: Building2, permission: null },
+      { path: "/compliance/cipc", label: "CIPC Compliance", icon: FileText, permission: null },
+      { path: "/compliance/labour", label: "Labour Compliance", icon: Briefcase, permission: null },
+      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: null },
+      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: null },
+      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: null }
+    ]
+  },
+  {
     id: "vat",
     label: "VAT Management",
     icon: Receipt,

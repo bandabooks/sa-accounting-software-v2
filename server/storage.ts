@@ -70,6 +70,20 @@ import {
   spendingWizardMessages,
   spendingWizardInsights,
   spendingWizardTips,
+  // Compliance Management imports
+  clients,
+  onboardingWorkflows,
+  engagementLetters,
+  sarsCompliance,
+  cipcCompliance,
+  labourCompliance,
+  complianceDocuments,
+  complianceTasks,
+  complianceCalendar,
+  correspondenceTracker,
+  recurringBilling,
+  aiAssistantConversations,
+  aiAssistantMessages,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -3268,6 +3282,422 @@ export class DatabaseStorage implements IStorage {
   }
 
   // AI-Powered Financial Analysis
+  // ===========================
+  // COMPLIANCE MANAGEMENT METHODS
+  // ===========================
+
+  // Client Management
+  async getAllClients(companyId: number): Promise<Client[]> {
+    return await db.select().from(clients)
+      .where(eq(clients.companyId, companyId))
+      .orderBy(clients.name);
+  }
+
+  async getClient(id: number): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client || undefined;
+  }
+
+  async createClient(data: InsertClient): Promise<Client> {
+    const [client] = await db.insert(clients).values(data).returning();
+    
+    // Create audit log
+    await this.createAuditLog({
+      companyId: data.companyId,
+      userId: data.assignedTo || 1,
+      action: "CREATE",
+      resource: "client",
+      resourceId: client.id.toString(),
+      oldValues: {},
+      newValues: data,
+      metadata: { module: "compliance_management" }
+    });
+    
+    return client;
+  }
+
+  async updateClient(id: number, data: Partial<InsertClient>): Promise<Client | undefined> {
+    const existing = await this.getClient(id);
+    if (!existing) return undefined;
+
+    const [updated] = await db
+      .update(clients)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(clients.id, id))
+      .returning();
+
+    // Create audit log
+    await this.createAuditLog({
+      companyId: existing.companyId,
+      userId: data.assignedTo || existing.assignedTo || 1,
+      action: "UPDATE",
+      resource: "client",
+      resourceId: id.toString(),
+      oldValues: existing,
+      newValues: data,
+      metadata: { module: "compliance_management" }
+    });
+
+    return updated || undefined;
+  }
+
+  async deleteClient(id: number): Promise<boolean> {
+    const existing = await this.getClient(id);
+    if (!existing) return false;
+
+    const result = await db.delete(clients).where(eq(clients.id, id));
+    
+    // Create audit log
+    await this.createAuditLog({
+      companyId: existing.companyId,
+      userId: existing.assignedTo || 1,
+      action: "DELETE",
+      resource: "client",
+      resourceId: id.toString(),
+      oldValues: existing,
+      newValues: {},
+      metadata: { module: "compliance_management" }
+    });
+
+    return result.rowCount > 0;
+  }
+
+  // Onboarding Workflows
+  async getOnboardingWorkflows(clientId: number): Promise<OnboardingWorkflow[]> {
+    return await db.select().from(onboardingWorkflows)
+      .where(eq(onboardingWorkflows.clientId, clientId))
+      .orderBy(onboardingWorkflows.stepNumber);
+  }
+
+  async createOnboardingWorkflow(data: InsertOnboardingWorkflow): Promise<OnboardingWorkflow> {
+    const [workflow] = await db.insert(onboardingWorkflows).values(data).returning();
+    return workflow;
+  }
+
+  async updateOnboardingWorkflow(id: number, data: Partial<InsertOnboardingWorkflow>): Promise<OnboardingWorkflow | undefined> {
+    const [updated] = await db
+      .update(onboardingWorkflows)
+      .set(data)
+      .where(eq(onboardingWorkflows.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Engagement Letters
+  async getEngagementLetters(clientId: number): Promise<EngagementLetter[]> {
+    return await db.select().from(engagementLetters)
+      .where(eq(engagementLetters.clientId, clientId))
+      .orderBy(desc(engagementLetters.createdAt));
+  }
+
+  async getEngagementLetter(id: number): Promise<EngagementLetter | undefined> {
+    const [letter] = await db.select().from(engagementLetters).where(eq(engagementLetters.id, id));
+    return letter || undefined;
+  }
+
+  async createEngagementLetter(data: InsertEngagementLetter): Promise<EngagementLetter> {
+    const [letter] = await db.insert(engagementLetters).values(data).returning();
+    return letter;
+  }
+
+  async updateEngagementLetter(id: number, data: Partial<InsertEngagementLetter>): Promise<EngagementLetter | undefined> {
+    const [updated] = await db
+      .update(engagementLetters)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(engagementLetters.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // SARS Compliance
+  async getSarsCompliance(clientId: number): Promise<SarsCompliance[]> {
+    return await db.select().from(sarsCompliance)
+      .where(eq(sarsCompliance.clientId, clientId))
+      .orderBy(desc(sarsCompliance.dueDate));
+  }
+
+  async getSarsComplianceByType(clientId: number, complianceType: string): Promise<SarsCompliance[]> {
+    return await db.select().from(sarsCompliance)
+      .where(and(
+        eq(sarsCompliance.clientId, clientId),
+        eq(sarsCompliance.complianceType, complianceType)
+      ))
+      .orderBy(desc(sarsCompliance.dueDate));
+  }
+
+  async createSarsCompliance(data: InsertSarsCompliance): Promise<SarsCompliance> {
+    const [compliance] = await db.insert(sarsCompliance).values(data).returning();
+    return compliance;
+  }
+
+  async updateSarsCompliance(id: number, data: Partial<InsertSarsCompliance>): Promise<SarsCompliance | undefined> {
+    const [updated] = await db
+      .update(sarsCompliance)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(sarsCompliance.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // CIPC Compliance
+  async getCipcCompliance(clientId: number): Promise<CipcCompliance[]> {
+    return await db.select().from(cipcCompliance)
+      .where(eq(cipcCompliance.clientId, clientId))
+      .orderBy(desc(cipcCompliance.dueDate));
+  }
+
+  async createCipcCompliance(data: InsertCipcCompliance): Promise<CipcCompliance> {
+    const [compliance] = await db.insert(cipcCompliance).values(data).returning();
+    return compliance;
+  }
+
+  async updateCipcCompliance(id: number, data: Partial<InsertCipcCompliance>): Promise<CipcCompliance | undefined> {
+    const [updated] = await db
+      .update(cipcCompliance)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(cipcCompliance.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Labour Compliance
+  async getLabourCompliance(clientId: number): Promise<LabourCompliance[]> {
+    return await db.select().from(labourCompliance)
+      .where(eq(labourCompliance.clientId, clientId))
+      .orderBy(desc(labourCompliance.dueDate));
+  }
+
+  async createLabourCompliance(data: InsertLabourCompliance): Promise<LabourCompliance> {
+    const [compliance] = await db.insert(labourCompliance).values(data).returning();
+    return compliance;
+  }
+
+  async updateLabourCompliance(id: number, data: Partial<InsertLabourCompliance>): Promise<LabourCompliance | undefined> {
+    const [updated] = await db
+      .update(labourCompliance)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(labourCompliance.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Document Management
+  async getComplianceDocuments(clientId: number, category?: string): Promise<ComplianceDocument[]> {
+    let query = db.select().from(complianceDocuments)
+      .where(eq(complianceDocuments.clientId, clientId));
+    
+    if (category) {
+      query = query.where(eq(complianceDocuments.category, category));
+    }
+    
+    return query.orderBy(desc(complianceDocuments.createdAt));
+  }
+
+  async createComplianceDocument(data: InsertComplianceDocument): Promise<ComplianceDocument> {
+    const [document] = await db.insert(complianceDocuments).values(data).returning();
+    return document;
+  }
+
+  async updateComplianceDocument(id: number, data: Partial<InsertComplianceDocument>): Promise<ComplianceDocument | undefined> {
+    const [updated] = await db
+      .update(complianceDocuments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(complianceDocuments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteComplianceDocument(id: number): Promise<boolean> {
+    const result = await db.delete(complianceDocuments).where(eq(complianceDocuments.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Task Management
+  async getComplianceTasks(companyId: number, clientId?: number, assignedTo?: number): Promise<ComplianceTask[]> {
+    let query = db.select().from(complianceTasks)
+      .where(eq(complianceTasks.companyId, companyId));
+    
+    if (clientId) {
+      query = query.where(eq(complianceTasks.clientId, clientId));
+    }
+    
+    if (assignedTo) {
+      query = query.where(eq(complianceTasks.assignedTo, assignedTo));
+    }
+    
+    return query.orderBy(complianceTasks.dueDate, desc(complianceTasks.priority));
+  }
+
+  async createComplianceTask(data: InsertComplianceTask): Promise<ComplianceTask> {
+    const [task] = await db.insert(complianceTasks).values(data).returning();
+    return task;
+  }
+
+  async updateComplianceTask(id: number, data: Partial<InsertComplianceTask>): Promise<ComplianceTask | undefined> {
+    const [updated] = await db
+      .update(complianceTasks)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(complianceTasks.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteComplianceTask(id: number): Promise<boolean> {
+    const result = await db.delete(complianceTasks).where(eq(complianceTasks.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Compliance Calendar
+  async getComplianceCalendar(companyId: number, startDate?: Date, endDate?: Date): Promise<ComplianceCalendar[]> {
+    let query = db.select().from(complianceCalendar)
+      .where(eq(complianceCalendar.companyId, companyId));
+    
+    if (startDate) {
+      query = query.where(gte(complianceCalendar.eventDate, startDate));
+    }
+    
+    if (endDate) {
+      query = query.where(lte(complianceCalendar.eventDate, endDate));
+    }
+    
+    return query.orderBy(complianceCalendar.eventDate);
+  }
+
+  async createComplianceCalendarEvent(data: InsertComplianceCalendar): Promise<ComplianceCalendar> {
+    const [event] = await db.insert(complianceCalendar).values(data).returning();
+    return event;
+  }
+
+  async updateComplianceCalendarEvent(id: number, data: Partial<InsertComplianceCalendar>): Promise<ComplianceCalendar | undefined> {
+    const [updated] = await db
+      .update(complianceCalendar)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(complianceCalendar.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Correspondence Tracker
+  async getCorrespondence(clientId: number): Promise<CorrespondenceTracker[]> {
+    return await db.select().from(correspondenceTracker)
+      .where(eq(correspondenceTracker.clientId, clientId))
+      .orderBy(desc(correspondenceTracker.receivedDate));
+  }
+
+  async createCorrespondence(data: InsertCorrespondenceTracker): Promise<CorrespondenceTracker> {
+    const [correspondence] = await db.insert(correspondenceTracker).values(data).returning();
+    return correspondence;
+  }
+
+  async updateCorrespondence(id: number, data: Partial<InsertCorrespondenceTracker>): Promise<CorrespondenceTracker | undefined> {
+    const [updated] = await db
+      .update(correspondenceTracker)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(correspondenceTracker.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Recurring Billing
+  async getRecurringBilling(companyId: number): Promise<RecurringBilling[]> {
+    return await db.select().from(recurringBilling)
+      .where(eq(recurringBilling.companyId, companyId))
+      .orderBy(recurringBilling.nextBillingDate);
+  }
+
+  async createRecurringBilling(data: InsertRecurringBilling): Promise<RecurringBilling> {
+    const [billing] = await db.insert(recurringBilling).values(data).returning();
+    return billing;
+  }
+
+  async updateRecurringBilling(id: number, data: Partial<InsertRecurringBilling>): Promise<RecurringBilling | undefined> {
+    const [updated] = await db
+      .update(recurringBilling)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(recurringBilling.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // AI Assistant
+  async getAiAssistantConversations(userId: number, companyId: number): Promise<AiAssistantConversation[]> {
+    return await db.select().from(aiAssistantConversations)
+      .where(and(
+        eq(aiAssistantConversations.userId, userId),
+        eq(aiAssistantConversations.companyId, companyId)
+      ))
+      .orderBy(desc(aiAssistantConversations.updatedAt));
+  }
+
+  async createAiAssistantConversation(data: InsertAiAssistantConversation): Promise<AiAssistantConversation> {
+    const [conversation] = await db.insert(aiAssistantConversations).values(data).returning();
+    return conversation;
+  }
+
+  async getAiAssistantMessages(conversationId: number): Promise<AiAssistantMessage[]> {
+    return await db.select().from(aiAssistantMessages)
+      .where(eq(aiAssistantMessages.conversationId, conversationId))
+      .orderBy(aiAssistantMessages.createdAt);
+  }
+
+  async createAiAssistantMessage(data: InsertAiAssistantMessage): Promise<AiAssistantMessage> {
+    const [message] = await db.insert(aiAssistantMessages).values(data).returning();
+    
+    // Update conversation message count and last message
+    await db
+      .update(aiAssistantConversations)
+      .set({ 
+        messageCount: sql`${aiAssistantConversations.messageCount} + 1`,
+        lastMessage: data.content.substring(0, 100),
+        updatedAt: new Date()
+      })
+      .where(eq(aiAssistantConversations.id, data.conversationId));
+    
+    return message;
+  }
+
+  // Compliance Dashboard Analytics
+  async getComplianceDashboardStats(companyId: number): Promise<any> {
+    // Get client counts
+    const clientStats = await db
+      .select({
+        total: count(clients.id),
+        active: count(sql`CASE WHEN ${clients.status} = 'active' THEN 1 END`),
+        onboarding: count(sql`CASE WHEN ${clients.onboardingStatus} = 'pending' OR ${clients.onboardingStatus} = 'in_progress' THEN 1 END`)
+      })
+      .from(clients)
+      .where(eq(clients.companyId, companyId));
+
+    // Get task counts
+    const taskStats = await db
+      .select({
+        total: count(complianceTasks.id),
+        pending: count(sql`CASE WHEN ${complianceTasks.status} = 'pending' THEN 1 END`),
+        overdue: count(sql`CASE WHEN ${complianceTasks.status} = 'pending' AND ${complianceTasks.dueDate} < CURRENT_DATE THEN 1 END`),
+        urgent: count(sql`CASE WHEN ${complianceTasks.priority} = 'urgent' THEN 1 END`)
+      })
+      .from(complianceTasks)
+      .where(eq(complianceTasks.companyId, companyId));
+
+    // Get upcoming deadlines
+    const upcomingDeadlines = await db
+      .select()
+      .from(complianceCalendar)
+      .where(and(
+        eq(complianceCalendar.companyId, companyId),
+        gte(complianceCalendar.eventDate, new Date()),
+        lte(complianceCalendar.eventDate, sql`CURRENT_DATE + INTERVAL '30 days'`)
+      ))
+      .orderBy(complianceCalendar.eventDate)
+      .limit(10);
+
+    return {
+      clients: clientStats[0] || { total: 0, active: 0, onboarding: 0 },
+      tasks: taskStats[0] || { total: 0, pending: 0, overdue: 0, urgent: 0 },
+      upcomingDeadlines
+    };
+  }
+
   async generateFinancialInsights(companyId: number, userId: number): Promise<SpendingWizardInsight[]> {
     // Get company's financial data for analysis
     const recentExpenses = await db.select()

@@ -70,6 +70,26 @@ import {
 import { z } from "zod";
 import { createPayFastService } from "./payfast";
 
+// Validation middleware
+function validateRequest(schema: { body?: z.ZodSchema }) {
+  return (req: any, res: any, next: any) => {
+    try {
+      if (schema.body) {
+        req.body = schema.body.parse(req.body);
+      }
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors,
+        });
+      }
+      next(error);
+    }
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register multi-company routes
   registerCompanyRoutes(app);
@@ -4820,5 +4840,456 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   const httpServer = createServer(app);
+  // ===========================
+  // COMPLIANCE MANAGEMENT ROUTES
+  // ===========================
+
+  // Client Management Routes
+  app.get("/api/compliance/clients", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const clients = await storage.getAllClients(companyId);
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
+  app.get("/api/compliance/clients/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const client = await storage.getClient(parseInt(req.params.id));
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      res.json(client);
+    } catch (error) {
+      console.error("Error fetching client:", error);
+      res.status(500).json({ message: "Failed to fetch client" });
+    }
+  });
+
+  app.post("/api/compliance/clients", authenticate, validateRequest({
+    body: z.object({
+      name: z.string().min(1),
+      businessType: z.string(),
+      email: z.string().email().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      province: z.string().optional(),
+      postalCode: z.string().optional(),
+      registrationNumber: z.string().optional(),
+      taxNumber: z.string().optional(),
+      vatNumber: z.string().optional(),
+      servicePackage: z.string().default("basic"),
+      assignedTo: z.number().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const userId = req.user.id;
+      
+      const clientData = {
+        ...req.body,
+        companyId,
+        assignedTo: req.body.assignedTo || userId
+      };
+      
+      const client = await storage.createClient(clientData);
+      res.status(201).json(client);
+    } catch (error) {
+      console.error("Error creating client:", error);
+      res.status(500).json({ message: "Failed to create client" });
+    }
+  });
+
+  app.put("/api/compliance/clients/:id", authenticate, validateRequest({
+    body: z.object({
+      name: z.string().min(1).optional(),
+      businessType: z.string().optional(),
+      email: z.string().email().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      province: z.string().optional(),
+      postalCode: z.string().optional(),
+      registrationNumber: z.string().optional(),
+      taxNumber: z.string().optional(),
+      vatNumber: z.string().optional(),
+      servicePackage: z.string().optional(),
+      status: z.string().optional(),
+      assignedTo: z.number().optional(),
+      notes: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const client = await storage.updateClient(parseInt(req.params.id), req.body);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      res.json(client);
+    } catch (error) {
+      console.error("Error updating client:", error);
+      res.status(500).json({ message: "Failed to update client" });
+    }
+  });
+
+  app.delete("/api/compliance/clients/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const success = await storage.deleteClient(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      res.json({ message: "Client deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
+
+  // SARS Compliance Routes
+  app.get("/api/compliance/sars/:clientId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const compliance = await storage.getSarsCompliance(parseInt(req.params.clientId));
+      res.json(compliance);
+    } catch (error) {
+      console.error("Error fetching SARS compliance:", error);
+      res.status(500).json({ message: "Failed to fetch SARS compliance" });
+    }
+  });
+
+  app.post("/api/compliance/sars", authenticate, validateRequest({
+    body: z.object({
+      clientId: z.number(),
+      complianceType: z.string(),
+      period: z.string(),
+      dueDate: z.string(),
+      status: z.string().default("pending"),
+      assignedTo: z.number().optional(),
+      notes: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const compliance = await storage.createSarsCompliance(req.body);
+      res.status(201).json(compliance);
+    } catch (error) {
+      console.error("Error creating SARS compliance:", error);
+      res.status(500).json({ message: "Failed to create SARS compliance" });
+    }
+  });
+
+  // CIPC Compliance Routes
+  app.get("/api/compliance/cipc/:clientId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const compliance = await storage.getCipcCompliance(parseInt(req.params.clientId));
+      res.json(compliance);
+    } catch (error) {
+      console.error("Error fetching CIPC compliance:", error);
+      res.status(500).json({ message: "Failed to fetch CIPC compliance" });
+    }
+  });
+
+  app.post("/api/compliance/cipc", authenticate, validateRequest({
+    body: z.object({
+      clientId: z.number(),
+      complianceType: z.string(),
+      period: z.string().optional(),
+      dueDate: z.string(),
+      status: z.string().default("pending"),
+      assignedTo: z.number().optional(),
+      notes: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const compliance = await storage.createCipcCompliance(req.body);
+      res.status(201).json(compliance);
+    } catch (error) {
+      console.error("Error creating CIPC compliance:", error);
+      res.status(500).json({ message: "Failed to create CIPC compliance" });
+    }
+  });
+
+  // Labour Compliance Routes
+  app.get("/api/compliance/labour/:clientId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const compliance = await storage.getLabourCompliance(parseInt(req.params.clientId));
+      res.json(compliance);
+    } catch (error) {
+      console.error("Error fetching Labour compliance:", error);
+      res.status(500).json({ message: "Failed to fetch Labour compliance" });
+    }
+  });
+
+  app.post("/api/compliance/labour", authenticate, validateRequest({
+    body: z.object({
+      clientId: z.number(),
+      complianceType: z.string(),
+      period: z.string(),
+      dueDate: z.string(),
+      status: z.string().default("pending"),
+      assignedTo: z.number().optional(),
+      notes: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const compliance = await storage.createLabourCompliance(req.body);
+      res.status(201).json(compliance);
+    } catch (error) {
+      console.error("Error creating Labour compliance:", error);
+      res.status(500).json({ message: "Failed to create Labour compliance" });
+    }
+  });
+
+  // Task Management Routes
+  app.get("/api/compliance/tasks", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
+      const assignedTo = req.query.assignedTo ? parseInt(req.query.assignedTo as string) : undefined;
+      
+      const tasks = await storage.getComplianceTasks(companyId, clientId, assignedTo);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching compliance tasks:", error);
+      res.status(500).json({ message: "Failed to fetch compliance tasks" });
+    }
+  });
+
+  app.post("/api/compliance/tasks", authenticate, validateRequest({
+    body: z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      taskType: z.string(),
+      priority: z.string().default("medium"),
+      clientId: z.number().optional(),
+      complianceType: z.string().optional(),
+      assignedTo: z.number().optional(),
+      dueDate: z.string().optional(),
+      notes: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const userId = req.user.id;
+      
+      const taskData = {
+        ...req.body,
+        companyId,
+        createdBy: userId,
+        assignedTo: req.body.assignedTo || userId
+      };
+      
+      const task = await storage.createComplianceTask(taskData);
+      res.status(201).json(task);
+    } catch (error) {
+      console.error("Error creating compliance task:", error);
+      res.status(500).json({ message: "Failed to create compliance task" });
+    }
+  });
+
+  app.put("/api/compliance/tasks/:id", authenticate, validateRequest({
+    body: z.object({
+      title: z.string().min(1).optional(),
+      description: z.string().optional(),
+      status: z.string().optional(),
+      priority: z.string().optional(),
+      assignedTo: z.number().optional(),
+      dueDate: z.string().optional(),
+      completedAt: z.string().optional(),
+      notes: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const task = await storage.updateComplianceTask(parseInt(req.params.id), req.body);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      console.error("Error updating compliance task:", error);
+      res.status(500).json({ message: "Failed to update compliance task" });
+    }
+  });
+
+  // Compliance Calendar Routes
+  app.get("/api/compliance/calendar", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      
+      const events = await storage.getComplianceCalendar(companyId, startDate, endDate);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching compliance calendar:", error);
+      res.status(500).json({ message: "Failed to fetch compliance calendar" });
+    }
+  });
+
+  app.post("/api/compliance/calendar", authenticate, validateRequest({
+    body: z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      eventType: z.string(),
+      complianceType: z.string().optional(),
+      eventDate: z.string(),
+      clientId: z.number().optional(),
+      assignedTo: z.number().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const userId = req.user.id;
+      
+      const eventData = {
+        ...req.body,
+        companyId,
+        createdBy: userId,
+        assignedTo: req.body.assignedTo || userId
+      };
+      
+      const event = await storage.createComplianceCalendarEvent(eventData);
+      res.status(201).json(event);
+    } catch (error) {
+      console.error("Error creating compliance calendar event:", error);
+      res.status(500).json({ message: "Failed to create compliance calendar event" });
+    }
+  });
+
+  // Document Management Routes
+  app.get("/api/compliance/documents/:clientId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      const category = req.query.category as string;
+      
+      const documents = await storage.getComplianceDocuments(clientId, category);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching compliance documents:", error);
+      res.status(500).json({ message: "Failed to fetch compliance documents" });
+    }
+  });
+
+  app.post("/api/compliance/documents", authenticate, validateRequest({
+    body: z.object({
+      clientId: z.number(),
+      category: z.string(),
+      subcategory: z.string().optional(),
+      documentType: z.string(),
+      title: z.string().min(1),
+      description: z.string().optional(),
+      fileName: z.string(),
+      filePath: z.string(),
+      tags: z.array(z.string()).optional(),
+      period: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const userId = req.user.id;
+      
+      const documentData = {
+        ...req.body,
+        companyId,
+        uploadedBy: userId
+      };
+      
+      const document = await storage.createComplianceDocument(documentData);
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error creating compliance document:", error);
+      res.status(500).json({ message: "Failed to create compliance document" });
+    }
+  });
+
+  // Compliance Dashboard Routes
+  app.get("/api/compliance/dashboard", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.activeCompanyId;
+      const stats = await storage.getComplianceDashboardStats(companyId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching compliance dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch compliance dashboard" });
+    }
+  });
+
+  // AI Assistant Routes for Compliance
+  app.get("/api/compliance/ai/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const companyId = req.user.activeCompanyId;
+      
+      const conversations = await storage.getAiAssistantConversations(userId, companyId);
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching AI conversations:", error);
+      res.status(500).json({ message: "Failed to fetch AI conversations" });
+    }
+  });
+
+  app.post("/api/compliance/ai/conversations", authenticate, validateRequest({
+    body: z.object({
+      title: z.string().optional(),
+      category: z.string(),
+      clientId: z.number().optional(),
+      context: z.object({}).optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const companyId = req.user.activeCompanyId;
+      
+      const conversationData = {
+        ...req.body,
+        userId,
+        companyId
+      };
+      
+      const conversation = await storage.createAiAssistantConversation(conversationData);
+      res.status(201).json(conversation);
+    } catch (error) {
+      console.error("Error creating AI conversation:", error);
+      res.status(500).json({ message: "Failed to create AI conversation" });
+    }
+  });
+
+  app.get("/api/compliance/ai/conversations/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const messages = await storage.getAiAssistantMessages(conversationId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching AI messages:", error);
+      res.status(500).json({ message: "Failed to fetch AI messages" });
+    }
+  });
+
+  app.post("/api/compliance/ai/conversations/:id/messages", authenticate, validateRequest({
+    body: z.object({
+      role: z.string(),
+      content: z.string().min(1),
+      messageType: z.string().default("text"),
+      intent: z.string().optional(),
+      confidence: z.number().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      
+      const messageData = {
+        ...req.body,
+        conversationId
+      };
+      
+      const message = await storage.createAiAssistantMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating AI message:", error);
+      res.status(500).json({ message: "Failed to create AI message" });
+    }
+  });
+
   return httpServer;
 }
