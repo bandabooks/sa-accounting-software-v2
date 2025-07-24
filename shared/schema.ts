@@ -1926,6 +1926,209 @@ export const SOUTH_AFRICAN_CHART_OF_ACCOUNTS = [
   { accountCode: "8100", accountName: "Income Tax Payable", accountType: "Liability", category: "Tax" },
 ] as const;
 
+// Point of Sale (POS) Module Tables
+export const posTerminals = pgTable("pos_terminals", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  terminalName: varchar("terminal_name", { length: 100 }).notNull(),
+  location: varchar("location", { length: 100 }),
+  serialNumber: varchar("serial_number", { length: 50 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  isActive: boolean("is_active").default(true),
+  settings: jsonb("settings").default({}), // layout, receipt settings, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_terminals_company_idx").on(table.companyId),
+}));
+
+export const posSales = pgTable("pos_sales", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  terminalId: integer("terminal_id").references(() => posTerminals.id),
+  saleNumber: varchar("sale_number", { length: 50 }).notNull(),
+  customerId: integer("customer_id").references(() => customers.id),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0.00"),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull(), // cash, card, mobile, credit, voucher
+  status: varchar("status", { length: 20 }).default("completed"), // draft, completed, refunded, voided
+  receiptNumber: varchar("receipt_number", { length: 50 }),
+  notes: text("notes"),
+  isVoided: boolean("is_voided").default(false),
+  voidReason: text("void_reason"),
+  voidedBy: integer("voided_by").references(() => users.id),
+  voidedAt: timestamp("voided_at"),
+  saleDate: timestamp("sale_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_sales_company_idx").on(table.companyId),
+  saleNumberIdx: index("pos_sales_number_idx").on(table.saleNumber),
+  saleDateIdx: index("pos_sales_date_idx").on(table.saleDate),
+}));
+
+export const posSaleItems = pgTable("pos_sale_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  saleId: integer("sale_id").references(() => posSales.id).notNull(),
+  productId: integer("product_id").references(() => products.id),
+  barcode: varchar("barcode", { length: 50 }),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  discountPercent: decimal("discount_percent", { precision: 5, scale: 2 }).default("0.00"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0.00"),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatInclusive: boolean("vat_inclusive").default(false),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
+  lineTotal: decimal("line_total", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_sale_items_company_idx").on(table.companyId),
+  saleIdx: index("pos_sale_items_sale_idx").on(table.saleId),
+}));
+
+export const posPayments = pgTable("pos_payments", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  saleId: integer("sale_id").references(() => posSales.id).notNull(),
+  bankAccountId: integer("bank_account_id").references(() => bankAccounts.id),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  reference: varchar("reference", { length: 100 }),
+  cardType: varchar("card_type", { length: 20 }), // visa, mastercard, amex
+  cardLast4: varchar("card_last4", { length: 4 }),
+  authCode: varchar("auth_code", { length: 20 }),
+  status: varchar("status", { length: 20 }).default("completed"),
+  processingFee: decimal("processing_fee", { precision: 10, scale: 2 }).default("0.00"),
+  netAmount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_payments_company_idx").on(table.companyId),
+  saleIdx: index("pos_payments_sale_idx").on(table.saleId),
+}));
+
+export const posPromotions = pgTable("pos_promotions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 20 }).notNull(), // percentage, fixed, buy_x_get_y, happy_hour
+  value: decimal("value", { precision: 10, scale: 2 }), // discount amount or percentage
+  minPurchase: decimal("min_purchase", { precision: 10, scale: 2 }).default("0.00"),
+  applicableProducts: jsonb("applicable_products").$type<number[]>().default([]), // product IDs
+  applicableCategories: jsonb("applicable_categories").$type<number[]>().default([]), // category IDs
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  startTime: varchar("start_time", { length: 8 }), // HH:MM:SS for happy hour
+  endTime: varchar("end_time", { length: 8 }),
+  daysOfWeek: jsonb("days_of_week").$type<number[]>().default([]), // 0=Sunday, 1=Monday, etc.
+  isActive: boolean("is_active").default(true),
+  usageLimit: integer("usage_limit"), // max uses per customer
+  totalUsageLimit: integer("total_usage_limit"), // max total uses
+  usageCount: integer("usage_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_promotions_company_idx").on(table.companyId),
+  activeIdx: index("pos_promotions_active_idx").on(table.isActive),
+}));
+
+export const posLoyaltyPrograms = pgTable("pos_loyalty_programs", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull(), // points, visits, amount_spent
+  pointsPerRand: decimal("points_per_rand", { precision: 5, scale: 2 }).default("1.00"),
+  rewardThreshold: integer("reward_threshold").default(100), // points needed for reward
+  rewardValue: decimal("reward_value", { precision: 10, scale: 2 }).default("10.00"),
+  expiryDays: integer("expiry_days").default(365), // days before points expire
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_loyalty_programs_company_idx").on(table.companyId),
+}));
+
+export const posCustomerLoyalty = pgTable("pos_customer_loyalty", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  programId: integer("program_id").references(() => posLoyaltyPrograms.id).notNull(),
+  cardNumber: varchar("card_number", { length: 20 }),
+  currentPoints: integer("current_points").default(0),
+  totalPointsEarned: integer("total_points_earned").default(0),
+  totalPointsRedeemed: integer("total_points_redeemed").default(0),
+  lastEarnedDate: timestamp("last_earned_date"),
+  lastRedeemedDate: timestamp("last_redeemed_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_customer_loyalty_company_idx").on(table.companyId),
+  customerProgramUnique: unique().on(table.customerId, table.programId),
+}));
+
+export const posShifts = pgTable("pos_shifts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  terminalId: integer("terminal_id").references(() => posTerminals.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  openingCash: decimal("opening_cash", { precision: 10, scale: 2 }).default("0.00"),
+  closingCash: decimal("closing_cash", { precision: 10, scale: 2 }),
+  expectedCash: decimal("expected_cash", { precision: 10, scale: 2 }),
+  cashVariance: decimal("cash_variance", { precision: 10, scale: 2 }),
+  totalSales: decimal("total_sales", { precision: 10, scale: 2 }).default("0.00"),
+  totalTransactions: integer("total_transactions").default(0),
+  notes: text("notes"),
+  status: varchar("status", { length: 20 }).default("open"), // open, closed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_shifts_company_idx").on(table.companyId),
+  terminalIdx: index("pos_shifts_terminal_idx").on(table.terminalId),
+  userIdx: index("pos_shifts_user_idx").on(table.userId),
+}));
+
+export const posRefunds = pgTable("pos_refunds", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  originalSaleId: integer("original_sale_id").references(() => posSales.id).notNull(),
+  refundNumber: varchar("refund_number", { length: 50 }).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }).notNull(),
+  refundMethod: varchar("refund_method", { length: 20 }).notNull(), // original_payment, cash, store_credit
+  reason: text("reason").notNull(),
+  status: varchar("status", { length: 20 }).default("completed"),
+  authorizationCode: varchar("authorization_code", { length: 50 }),
+  authorizedBy: integer("authorized_by").references(() => users.id),
+  refundDate: timestamp("refund_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_refunds_company_idx").on(table.companyId),
+  originalSaleIdx: index("pos_refunds_original_sale_idx").on(table.originalSaleId),
+}));
+
+export const posRefundItems = pgTable("pos_refund_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  refundId: integer("refund_id").references(() => posRefunds.id).notNull(),
+  originalItemId: integer("original_item_id").references(() => posSaleItems.id).notNull(),
+  quantityRefunded: decimal("quantity_refunded", { precision: 10, scale: 3 }).notNull(),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pos_refund_items_company_idx").on(table.companyId),
+  refundIdx: index("pos_refund_items_refund_idx").on(table.refundId),
+}));
+
 // Project Management Tables
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
@@ -3271,3 +3474,113 @@ export type InsertAiAssistantConversation = z.infer<typeof insertAiAssistantConv
 
 export type AiAssistantMessage = typeof aiAssistantMessages.$inferSelect;
 export type InsertAiAssistantMessage = z.infer<typeof insertAiAssistantMessageSchema>;
+
+// === POS MODULE SCHEMAS ===
+
+// POS Insert schemas
+export const insertPosTerminalSchema = createInsertSchema(posTerminals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPosSaleSchema = createInsertSchema(posSales).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPosSaleItemSchema = createInsertSchema(posSaleItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPosPaymentSchema = createInsertSchema(posPayments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPosPromotionSchema = createInsertSchema(posPromotions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPosLoyaltyProgramSchema = createInsertSchema(posLoyaltyPrograms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPosCustomerLoyaltySchema = createInsertSchema(posCustomerLoyalty).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPosShiftSchema = createInsertSchema(posShifts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPosRefundSchema = createInsertSchema(posRefunds).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPosRefundItemSchema = createInsertSchema(posRefundItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+// POS Type exports
+export type PosTerminal = typeof posTerminals.$inferSelect;
+export type InsertPosTerminal = z.infer<typeof insertPosTerminalSchema>;
+
+export type PosSale = typeof posSales.$inferSelect;
+export type InsertPosSale = z.infer<typeof insertPosSaleSchema>;
+
+export type PosSaleItem = typeof posSaleItems.$inferSelect;
+export type InsertPosSaleItem = z.infer<typeof insertPosSaleItemSchema>;
+
+export type PosPayment = typeof posPayments.$inferSelect;
+export type InsertPosPayment = z.infer<typeof insertPosPaymentSchema>;
+
+export type PosPromotion = typeof posPromotions.$inferSelect;
+export type InsertPosPromotion = z.infer<typeof insertPosPromotionSchema>;
+
+export type PosLoyaltyProgram = typeof posLoyaltyPrograms.$inferSelect;
+export type InsertPosLoyaltyProgram = z.infer<typeof insertPosLoyaltyProgramSchema>;
+
+export type PosCustomerLoyalty = typeof posCustomerLoyalty.$inferSelect;
+export type InsertPosCustomerLoyalty = z.infer<typeof insertPosCustomerLoyaltySchema>;
+
+export type PosShift = typeof posShifts.$inferSelect;
+export type InsertPosShift = z.infer<typeof insertPosShiftSchema>;
+
+export type PosRefund = typeof posRefunds.$inferSelect;
+export type InsertPosRefund = z.infer<typeof insertPosRefundSchema>;
+
+export type PosRefundItem = typeof posRefundItems.$inferSelect;
+export type InsertPosRefundItem = z.infer<typeof insertPosRefundItemSchema>;
+
+// Extended POS types for API responses
+export type PosSaleWithItems = PosSale & { 
+  items: PosSaleItem[]; 
+  customer?: Customer; 
+  user: User;
+  payments: PosPayment[];
+};
+
+export type PosShiftWithSales = PosShift & { 
+  sales: PosSale[];
+  user: User;
+  terminal: PosTerminal;
+};
+
+export type PosRefundWithItems = PosRefund & {
+  items: PosRefundItem[];
+  originalSale: PosSale;
+  user: User;
+};

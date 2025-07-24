@@ -70,6 +70,17 @@ export const PERMISSIONS = {
   SETTINGS_UPDATE: 'settings:update',
   AUDIT_VIEW: 'audit:view',
   
+  // POS (Point of Sale) permissions
+  POS_VIEW: 'pos:view',
+  POS_MANAGE: 'pos:manage',
+  POS_PROCESS_SALES: 'pos:process_sales',
+  POS_VOID_SALES: 'pos:void_sales',
+  POS_MANAGE_SHIFTS: 'pos:manage_shifts',
+  POS_PROCESS_REFUNDS: 'pos:process_refunds',
+  POS_MANAGE_PROMOTIONS: 'pos:manage_promotions',
+  POS_MANAGE_LOYALTY: 'pos:manage_loyalty',
+  POS_VIEW_REPORTS: 'pos:view_reports',
+
   // Super Admin permissions
   SUPER_ADMIN: 'super_admin:access',
   MANAGE_ALL_COMPANIES: 'super_admin:manage_companies',
@@ -115,6 +126,19 @@ export const ROLES = {
       PERMISSIONS.SUPPLIERS_VIEW,
       PERMISSIONS.SUPPLIERS_CREATE,
       PERMISSIONS.SUPPLIERS_UPDATE,
+      PERMISSIONS.PRODUCTS_VIEW,
+      PERMISSIONS.PRODUCTS_CREATE,
+      PERMISSIONS.PRODUCTS_UPDATE,
+      // POS permissions for managers
+      PERMISSIONS.POS_VIEW,
+      PERMISSIONS.POS_MANAGE,
+      PERMISSIONS.POS_PROCESS_SALES,
+      PERMISSIONS.POS_VOID_SALES,
+      PERMISSIONS.POS_MANAGE_SHIFTS,
+      PERMISSIONS.POS_PROCESS_REFUNDS,
+      PERMISSIONS.POS_MANAGE_PROMOTIONS,
+      PERMISSIONS.POS_MANAGE_LOYALTY,
+      PERMISSIONS.POS_VIEW_REPORTS,
     ],
   },
   accountant: {
@@ -150,6 +174,12 @@ export const ROLES = {
       PERMISSIONS.EXPENSES_VIEW,
       PERMISSIONS.PURCHASE_ORDERS_VIEW,
       PERMISSIONS.SUPPLIERS_VIEW,
+      PERMISSIONS.PRODUCTS_VIEW,
+      // Basic POS permissions for employees
+      PERMISSIONS.POS_VIEW,
+      PERMISSIONS.POS_PROCESS_SALES,
+      PERMISSIONS.POS_MANAGE_SHIFTS,
+      PERMISSIONS.POS_PROCESS_REFUNDS,
     ],
   },
 } as const;

@@ -84,6 +84,17 @@ import {
   recurringBilling,
   aiAssistantConversations,
   aiAssistantMessages,
+  // POS Module imports
+  posTerminals,
+  posSales,
+  posSaleItems,
+  posPayments,
+  posPromotions,
+  posLoyaltyPrograms,
+  posCustomerLoyalty,
+  posShifts,
+  posRefunds,
+  posRefundItems,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -233,6 +244,30 @@ import {
   type InsertSpendingWizardInsight,
   type SpendingWizardTip,
   type InsertSpendingWizardTip,
+  // POS Module type imports
+  type PosTerminal,
+  type InsertPosTerminal,
+  type PosSale,
+  type InsertPosSale,
+  type PosSaleItem,
+  type InsertPosSaleItem,
+  type PosPayment,
+  type InsertPosPayment,
+  type PosPromotion,
+  type InsertPosPromotion,
+  type PosLoyaltyProgram,
+  type InsertPosLoyaltyProgram,
+  type PosCustomerLoyalty,
+  type InsertPosCustomerLoyalty,
+  type PosShift,
+  type InsertPosShift,
+  type PosRefund,
+  type InsertPosRefund,
+  type PosRefundItem,
+  type InsertPosRefundItem,
+  type PosSaleWithItems,
+  type PosShiftWithSales,
+  type PosRefundWithItems,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull, inArray } from "drizzle-orm";
@@ -595,6 +630,57 @@ export interface IStorage {
   getCompanyBySlug(slug: string): Promise<Company | undefined>;
   createCompany(insertCompany: InsertCompany, userId?: number): Promise<Company>;
   addUserToCompany(userId: number, companyId: number, role: string): Promise<any>;
+
+  // POS Module - Critical new functionality
+  // POS Terminals
+  getPosTerminals(companyId: number): Promise<PosTerminal[]>;
+  getPosTerminal(id: number): Promise<PosTerminal | undefined>;
+  createPosTerminal(terminal: InsertPosTerminal): Promise<PosTerminal>;
+  updatePosTerminal(id: number, terminal: Partial<InsertPosTerminal>): Promise<PosTerminal | undefined>;
+  deletePosTerminal(id: number): Promise<boolean>;
+
+  // POS Sales
+  getPosSales(companyId: number, terminalId?: number): Promise<PosSale[]>;
+  getPosSale(id: number): Promise<PosSaleWithItems | undefined>;
+  createPosSale(sale: InsertPosSale, items: Omit<InsertPosSaleItem, 'saleId'>[], payments: Omit<InsertPosPayment, 'saleId'>[]): Promise<PosSaleWithItems>;
+  updatePosSale(id: number, sale: Partial<InsertPosSale>): Promise<PosSale | undefined>;
+  voidPosSale(id: number, voidReason: string, voidedBy: number): Promise<boolean>;
+
+  // POS Sale Items
+  getPosSaleItems(saleId: number): Promise<PosSaleItem[]>;
+  createPosSaleItem(item: InsertPosSaleItem): Promise<PosSaleItem>;
+  updatePosSaleItem(id: number, item: Partial<InsertPosSaleItem>): Promise<PosSaleItem | undefined>;
+
+  // POS Payments
+  getPosSalePayments(saleId: number): Promise<PosPayment[]>;
+  createPosPayment(payment: InsertPosPayment): Promise<PosPayment>;
+
+  // POS Shifts
+  getPosShifts(companyId: number, terminalId?: number): Promise<PosShift[]>;
+  getCurrentShift(terminalId: number, userId: number): Promise<PosShift | undefined>;
+  createPosShift(shift: InsertPosShift): Promise<PosShift>;
+  closeShift(id: number, closingData: { closingCash: number; notes?: string }): Promise<PosShift | undefined>;
+
+  // POS Refunds
+  getPosRefunds(companyId: number): Promise<PosRefund[]>;
+  getPosRefund(id: number): Promise<PosRefundWithItems | undefined>;
+  createPosRefund(refund: InsertPosRefund, refundItems: Omit<InsertPosRefundItem, 'refundId'>[]): Promise<PosRefundWithItems>;
+
+  // POS Promotions
+  getPosPromotions(companyId: number): Promise<PosPromotion[]>;
+  getActivePosPromotions(companyId: number): Promise<PosPromotion[]>;
+  createPosPromotion(promotion: InsertPosPromotion): Promise<PosPromotion>;
+  updatePosPromotion(id: number, promotion: Partial<InsertPosPromotion>): Promise<PosPromotion | undefined>;
+
+  // POS Loyalty Programs
+  getPosLoyaltyPrograms(companyId: number): Promise<PosLoyaltyProgram[]>;
+  createPosLoyaltyProgram(program: InsertPosLoyaltyProgram): Promise<PosLoyaltyProgram>;
+  getCustomerLoyalty(customerId: number, programId: number): Promise<PosCustomerLoyalty | undefined>;
+  updateCustomerLoyaltyPoints(customerId: number, programId: number, pointsChange: number): Promise<PosCustomerLoyalty | undefined>;
+
+  // POS Reports & Analytics
+  getPosDailySalesReport(companyId: number, date: Date): Promise<{ totalSales: number; totalTransactions: number; averageTransaction: number }>;
+  getPosTopProducts(companyId: number, startDate: Date, endDate: Date): Promise<{ productId: number; productName: string; totalQuantity: number; totalRevenue: number }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -6801,6 +6887,570 @@ export class DatabaseStorage implements IStorage {
 
       return false;
     }
+  }
+
+  // ===== POS MODULE IMPLEMENTATION =====
+  
+  // POS Terminals
+  async getPosTerminals(companyId: number): Promise<PosTerminal[]> {
+    return await db
+      .select()
+      .from(posTerminals)
+      .where(eq(posTerminals.companyId, companyId))
+      .orderBy(desc(posTerminals.createdAt));
+  }
+
+  async getPosTerminal(id: number): Promise<PosTerminal | undefined> {
+    const [terminal] = await db
+      .select()
+      .from(posTerminals)
+      .where(eq(posTerminals.id, id));
+    return terminal;
+  }
+
+  async createPosTerminal(terminal: InsertPosTerminal): Promise<PosTerminal> {
+    const [newTerminal] = await db
+      .insert(posTerminals)
+      .values(terminal)
+      .returning();
+    return newTerminal;
+  }
+
+  async updatePosTerminal(id: number, terminal: Partial<InsertPosTerminal>): Promise<PosTerminal | undefined> {
+    const [updatedTerminal] = await db
+      .update(posTerminals)
+      .set({ ...terminal, updatedAt: new Date() })
+      .where(eq(posTerminals.id, id))
+      .returning();
+    return updatedTerminal;
+  }
+
+  async deletePosTerminal(id: number): Promise<boolean> {
+    const result = await db.delete(posTerminals).where(eq(posTerminals.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // POS Sales
+  async getPosSales(companyId: number, terminalId?: number): Promise<PosSale[]> {
+    let query = db
+      .select()
+      .from(posSales)
+      .where(eq(posSales.companyId, companyId));
+
+    if (terminalId) {
+      query = query.where(and(eq(posSales.companyId, companyId), eq(posSales.terminalId, terminalId)));
+    }
+
+    return await query.orderBy(desc(posSales.saleDate));
+  }
+
+  async getPosSale(id: number): Promise<PosSaleWithItems | undefined> {
+    const [sale] = await db
+      .select()
+      .from(posSales)
+      .where(eq(posSales.id, id));
+
+    if (!sale) return undefined;
+
+    const items = await db
+      .select()
+      .from(posSaleItems)
+      .where(eq(posSaleItems.saleId, id));
+
+    const payments = await db
+      .select()
+      .from(posPayments)
+      .where(eq(posPayments.saleId, id));
+
+    return {
+      ...sale,
+      items,
+      payments
+    };
+  }
+
+  async createPosSale(
+    sale: InsertPosSale, 
+    items: Omit<InsertPosSaleItem, 'saleId'>[], 
+    payments: Omit<InsertPosPayment, 'saleId'>[]
+  ): Promise<PosSaleWithItems> {
+    // Generate POS sale number
+    const saleNumber = await this.getNextDocumentNumber(sale.companyId, 'pos_sale');
+    
+    const [newSale] = await db
+      .insert(posSales)
+      .values({ ...sale, saleNumber })
+      .returning();
+
+    // Insert sale items
+    const saleItems = items.length > 0 ? await db
+      .insert(posSaleItems)
+      .values(items.map(item => ({ ...item, saleId: newSale.id })))
+      .returning() : [];
+
+    // Insert payments
+    const salePayments = payments.length > 0 ? await db
+      .insert(posPayments)
+      .values(payments.map(payment => ({ ...payment, saleId: newSale.id })))
+      .returning() : [];
+
+    // Update inventory for products if product_id exists
+    for (const item of saleItems) {
+      if (item.productId) {
+        await this.createInventoryTransaction({
+          companyId: sale.companyId,
+          productId: item.productId,
+          transactionType: 'out',
+          quantity: -Math.abs(item.quantity), // Negative for outgoing
+          cost: item.unitPrice,
+          reference: `POS Sale ${saleNumber}`,
+          notes: `Sold via POS - ${item.description}`,
+          transactionDate: new Date()
+        });
+      }
+    }
+
+    return {
+      ...newSale,
+      items: saleItems,
+      payments: salePayments
+    };
+  }
+
+  async updatePosSale(id: number, sale: Partial<InsertPosSale>): Promise<PosSale | undefined> {
+    const [updatedSale] = await db
+      .update(posSales)
+      .set({ ...sale, updatedAt: new Date() })
+      .where(eq(posSales.id, id))
+      .returning();
+    return updatedSale;
+  }
+
+  async voidPosSale(id: number, voidReason: string, voidedBy: number): Promise<boolean> {
+    const result = await db
+      .update(posSales)
+      .set({
+        isVoided: true,
+        voidReason,
+        voidedBy,
+        voidedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(posSales.id, id));
+
+    // Reverse inventory transactions for voided sale
+    const saleItems = await db
+      .select()
+      .from(posSaleItems)
+      .where(eq(posSaleItems.saleId, id));
+
+    const [sale] = await db
+      .select()
+      .from(posSales)
+      .where(eq(posSales.id, id));
+
+    if (sale) {
+      for (const item of saleItems) {
+        if (item.productId) {
+          await this.createInventoryTransaction({
+            companyId: sale.companyId,
+            productId: item.productId,
+            transactionType: 'in',
+            quantity: Math.abs(item.quantity), // Positive to reverse the sale
+            cost: item.unitPrice,
+            reference: `POS Sale ${sale.saleNumber} - VOIDED`,
+            notes: `Inventory returned due to voided sale - ${voidReason}`,
+            transactionDate: new Date()
+          });
+        }
+      }
+    }
+
+    return (result.rowCount || 0) > 0;
+  }
+
+  // POS Sale Items
+  async getPosSaleItems(saleId: number): Promise<PosSaleItem[]> {
+    return await db
+      .select()
+      .from(posSaleItems)
+      .where(eq(posSaleItems.saleId, saleId));
+  }
+
+  async createPosSaleItem(item: InsertPosSaleItem): Promise<PosSaleItem> {
+    const [newItem] = await db
+      .insert(posSaleItems)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+
+  async updatePosSaleItem(id: number, item: Partial<InsertPosSaleItem>): Promise<PosSaleItem | undefined> {
+    const [updatedItem] = await db
+      .update(posSaleItems)
+      .set(item)
+      .where(eq(posSaleItems.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  // POS Payments
+  async getPosSalePayments(saleId: number): Promise<PosPayment[]> {
+    return await db
+      .select()
+      .from(posPayments)
+      .where(eq(posPayments.saleId, saleId));
+  }
+
+  async createPosPayment(payment: InsertPosPayment): Promise<PosPayment> {
+    const [newPayment] = await db
+      .insert(posPayments)
+      .values(payment)
+      .returning();
+    return newPayment;
+  }
+
+  // POS Shifts
+  async getPosShifts(companyId: number, terminalId?: number): Promise<PosShift[]> {
+    let query = db
+      .select()
+      .from(posShifts)
+      .where(eq(posShifts.companyId, companyId));
+
+    if (terminalId) {
+      query = query.where(and(eq(posShifts.companyId, companyId), eq(posShifts.terminalId, terminalId)));
+    }
+
+    return await query.orderBy(desc(posShifts.startTime));
+  }
+
+  async getCurrentShift(terminalId: number, userId: number): Promise<PosShift | undefined> {
+    const [shift] = await db
+      .select()
+      .from(posShifts)
+      .where(
+        and(
+          eq(posShifts.terminalId, terminalId),
+          eq(posShifts.userId, userId),
+          eq(posShifts.status, 'open')
+        )
+      )
+      .orderBy(desc(posShifts.startTime));
+    
+    return shift;
+  }
+
+  async createPosShift(shift: InsertPosShift): Promise<PosShift> {
+    const [newShift] = await db
+      .insert(posShifts)
+      .values(shift)
+      .returning();
+    return newShift;
+  }
+
+  async closeShift(id: number, closingData: { closingCash: number; notes?: string }): Promise<PosShift | undefined> {
+    // Calculate expected cash from sales
+    const salesTotal = await db
+      .select({ total: sum(posSales.total) })
+      .from(posSales)
+      .leftJoin(posShifts, eq(posShifts.id, id))
+      .where(
+        and(
+          eq(posSales.terminalId, posShifts.terminalId),
+          gte(posSales.saleDate, posShifts.startTime),
+          eq(posSales.paymentMethod, 'cash')
+        )
+      );
+
+    const expectedCash = Number(salesTotal[0]?.total) || 0;
+    const cashVariance = closingData.closingCash - expectedCash;
+
+    const [updatedShift] = await db
+      .update(posShifts)
+      .set({
+        endTime: new Date(),
+        closingCash: closingData.closingCash,
+        expectedCash,
+        cashVariance,
+        notes: closingData.notes,
+        status: 'closed',
+        updatedAt: new Date()
+      })
+      .where(eq(posShifts.id, id))
+      .returning();
+
+    return updatedShift;
+  }
+
+  // POS Refunds
+  async getPosRefunds(companyId: number): Promise<PosRefund[]> {
+    return await db
+      .select()
+      .from(posRefunds)
+      .where(eq(posRefunds.companyId, companyId))
+      .orderBy(desc(posRefunds.refundDate));
+  }
+
+  async getPosRefund(id: number): Promise<PosRefundWithItems | undefined> {
+    const [refund] = await db
+      .select()
+      .from(posRefunds)
+      .where(eq(posRefunds.id, id));
+
+    if (!refund) return undefined;
+
+    const refundItems = await db
+      .select()
+      .from(posRefundItems)
+      .where(eq(posRefundItems.refundId, id));
+
+    return {
+      ...refund,
+      refundItems
+    };
+  }
+
+  async createPosRefund(
+    refund: InsertPosRefund, 
+    refundItems: Omit<InsertPosRefundItem, 'refundId'>[]
+  ): Promise<PosRefundWithItems> {
+    // Generate refund number
+    const refundNumber = await this.getNextDocumentNumber(refund.companyId, 'pos_refund');
+    
+    const [newRefund] = await db
+      .insert(posRefunds)
+      .values({ ...refund, refundNumber })
+      .returning();
+
+    const newRefundItems = refundItems.length > 0 ? await db
+      .insert(posRefundItems)
+      .values(refundItems.map(item => ({ ...item, refundId: newRefund.id })))
+      .returning() : [];
+
+    // Update inventory for refunded items
+    for (const item of newRefundItems) {
+      const [originalItem] = await db
+        .select()
+        .from(posSaleItems)
+        .where(eq(posSaleItems.id, item.originalItemId));
+
+      if (originalItem?.productId) {
+        await this.createInventoryTransaction({
+          companyId: refund.companyId,
+          productId: originalItem.productId,
+          transactionType: 'in',
+          quantity: Math.abs(item.quantityRefunded),
+          cost: originalItem.unitPrice,
+          reference: `POS Refund ${refundNumber}`,
+          notes: `Refunded item: ${item.reason}`,
+          transactionDate: new Date()
+        });
+      }
+    }
+
+    return {
+      ...newRefund,
+      refundItems: newRefundItems
+    };
+  }
+
+  // POS Promotions
+  async getPosPromotions(companyId: number): Promise<PosPromotion[]> {
+    return await db
+      .select()
+      .from(posPromotions)
+      .where(eq(posPromotions.companyId, companyId))
+      .orderBy(desc(posPromotions.createdAt));
+  }
+
+  async getActivePosPromotions(companyId: number): Promise<PosPromotion[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(posPromotions)
+      .where(
+        and(
+          eq(posPromotions.companyId, companyId),
+          eq(posPromotions.isActive, true),
+          or(
+            isNull(posPromotions.startDate),
+            lte(posPromotions.startDate, now)
+          ),
+          or(
+            isNull(posPromotions.endDate),
+            gte(posPromotions.endDate, now)
+          )
+        )
+      );
+  }
+
+  async createPosPromotion(promotion: InsertPosPromotion): Promise<PosPromotion> {
+    const [newPromotion] = await db
+      .insert(posPromotions)
+      .values(promotion)
+      .returning();
+    return newPromotion;
+  }
+
+  async updatePosPromotion(id: number, promotion: Partial<InsertPosPromotion>): Promise<PosPromotion | undefined> {
+    const [updatedPromotion] = await db
+      .update(posPromotions)
+      .set({ ...promotion, updatedAt: new Date() })
+      .where(eq(posPromotions.id, id))
+      .returning();
+    return updatedPromotion;
+  }
+
+  // POS Loyalty Programs
+  async getPosLoyaltyPrograms(companyId: number): Promise<PosLoyaltyProgram[]> {
+    return await db
+      .select()
+      .from(posLoyaltyPrograms)
+      .where(eq(posLoyaltyPrograms.companyId, companyId))
+      .orderBy(desc(posLoyaltyPrograms.createdAt));
+  }
+
+  async createPosLoyaltyProgram(program: InsertPosLoyaltyProgram): Promise<PosLoyaltyProgram> {
+    const [newProgram] = await db
+      .insert(posLoyaltyPrograms)
+      .values(program)
+      .returning();
+    return newProgram;
+  }
+
+  async getCustomerLoyalty(customerId: number, programId: number): Promise<PosCustomerLoyalty | undefined> {
+    const [loyalty] = await db
+      .select()
+      .from(posCustomerLoyalty)
+      .where(
+        and(
+          eq(posCustomerLoyalty.customerId, customerId),
+          eq(posCustomerLoyalty.programId, programId)
+        )
+      );
+    return loyalty;
+  }
+
+  async updateCustomerLoyaltyPoints(customerId: number, programId: number, pointsChange: number): Promise<PosCustomerLoyalty | undefined> {
+    // Get existing loyalty record or create one
+    let [loyalty] = await db
+      .select()
+      .from(posCustomerLoyalty)
+      .where(
+        and(
+          eq(posCustomerLoyalty.customerId, customerId),
+          eq(posCustomerLoyalty.programId, programId)
+        )
+      );
+
+    if (!loyalty) {
+      // Create new loyalty record
+      const [customer] = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, customerId));
+      
+      if (!customer) return undefined;
+
+      [loyalty] = await db
+        .insert(posCustomerLoyalty)
+        .values({
+          companyId: customer.companyId,
+          customerId,
+          programId,
+          currentPoints: Math.max(0, pointsChange),
+          totalPointsEarned: pointsChange > 0 ? pointsChange : 0,
+          totalPointsRedeemed: pointsChange < 0 ? Math.abs(pointsChange) : 0,
+          lastEarnedDate: pointsChange > 0 ? new Date() : null,
+          lastRedeemedDate: pointsChange < 0 ? new Date() : null,
+        })
+        .returning();
+    } else {
+      // Update existing loyalty record
+      const newCurrentPoints = Math.max(0, loyalty.currentPoints + pointsChange);
+      const newTotalEarned = pointsChange > 0 ? loyalty.totalPointsEarned + pointsChange : loyalty.totalPointsEarned;
+      const newTotalRedeemed = pointsChange < 0 ? loyalty.totalPointsRedeemed + Math.abs(pointsChange) : loyalty.totalPointsRedeemed;
+
+      [loyalty] = await db
+        .update(posCustomerLoyalty)
+        .set({
+          currentPoints: newCurrentPoints,
+          totalPointsEarned: newTotalEarned,
+          totalPointsRedeemed: newTotalRedeemed,
+          lastEarnedDate: pointsChange > 0 ? new Date() : loyalty.lastEarnedDate,
+          lastRedeemedDate: pointsChange < 0 ? new Date() : loyalty.lastRedeemedDate,
+          updatedAt: new Date()
+        })
+        .where(eq(posCustomerLoyalty.id, loyalty.id))
+        .returning();
+    }
+
+    return loyalty;
+  }
+
+  // POS Reports & Analytics
+  async getPosDailySalesReport(companyId: number, date: Date): Promise<{ totalSales: number; totalTransactions: number; averageTransaction: number }> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [salesData] = await db
+      .select({
+        totalSales: sum(posSales.total),
+        totalTransactions: count(posSales.id)
+      })
+      .from(posSales)
+      .where(
+        and(
+          eq(posSales.companyId, companyId),
+          gte(posSales.saleDate, startOfDay),
+          lte(posSales.saleDate, endOfDay),
+          eq(posSales.isVoided, false)
+        )
+      );
+
+    const totalSales = Number(salesData.totalSales) || 0;
+    const totalTransactions = salesData.totalTransactions || 0;
+    const averageTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+
+    return {
+      totalSales,
+      totalTransactions,
+      averageTransaction
+    };
+  }
+
+  async getPosTopProducts(companyId: number, startDate: Date, endDate: Date): Promise<{ productId: number; productName: string; totalQuantity: number; totalRevenue: number }[]> {
+    const results = await db
+      .select({
+        productId: posSaleItems.productId,
+        productName: products.name,
+        totalQuantity: sum(posSaleItems.quantity),
+        totalRevenue: sum(posSaleItems.lineTotal)
+      })
+      .from(posSaleItems)
+      .leftJoin(posSales, eq(posSaleItems.saleId, posSales.id))
+      .leftJoin(products, eq(posSaleItems.productId, products.id))
+      .where(
+        and(
+          eq(posSales.companyId, companyId),
+          gte(posSales.saleDate, startDate),
+          lte(posSales.saleDate, endDate),
+          eq(posSales.isVoided, false)
+        )
+      )
+      .groupBy(posSaleItems.productId, products.name)
+      .orderBy(desc(sum(posSaleItems.lineTotal)))
+      .limit(10);
+
+    return results.map(result => ({
+      productId: result.productId || 0,
+      productName: result.productName || 'Unknown Product',
+      totalQuantity: Number(result.totalQuantity) || 0,
+      totalRevenue: Number(result.totalRevenue) || 0
+    }));
   }
 }
 

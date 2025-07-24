@@ -1,0 +1,86 @@
+Implement Modern, Full-Featured Point of Sale (POS) Module
+Implement a powerful, modern, and fully integrated Point of Sale (POS) module for our business management platform. The POS must be simple, flexible, and robust—suited for both small shops and growing enterprises. Follow these requirements:
+
+Core POS Features
+User-friendly standard and touch-screen interface (support both desktop and tablet)
+
+Fast product lookup by barcode/PLU, with barcode and weight barcode scanning
+
+Cart management: add/remove products, update quantity, line discounts, item notes
+
+Customer management (attach customer to sale, view purchase history)
+
+Print or email professional receipts (customizable, with branding, terms, and QR codes)
+
+Custom payment types: cash, card, mobile, credit, vouchers, part payment, etc.
+
+Support credit sales, loyalty cards, and tax-exempt sales
+
+Promotions & “Happy Hour” discount scheduling (by time or day)
+
+Stock control (auto-deduct on sale, block overselling, low stock warnings)
+
+Integrated document management (save sales docs, returns, and adjustments)
+
+Inventory Integration
+Full inventory sync: real-time stock updates, automatic deduction on sale
+
+Admin controls to manage products, categories, pricing, and stock adjustments
+
+Permissions & Security
+Advanced role-based permissions: admin, cashier, manager, etc.
+
+Admin controls for cash drawer, void/refund, override discounts, user access, and audit logs
+
+Secure login for POS operators, user action tracking, and permission control
+
+Flexible Layout & Hardware Support
+Toggle between standard and touch layouts
+
+Support for barcode/receipt printers, cash drawers, and on-screen keypad
+
+Customer Experience
+Customer loyalty programs: points, cards, or discounts
+
+Store and recall customer notes (allergies, preferences, etc.)
+
+Option for digital or printed receipts
+
+Reporting
+Real-time sales dashboard
+
+Daily/weekly/monthly sales summaries by user, product, category, or store
+
+Promotion performance, tax summary, product performance, and top customer reports
+
+Other Requirements
+Fast, modern UI—mobile/tablet responsive, latest tech stack
+
+Multi-store support (each with its own inventory and permissions if enabled)
+
+Tax/VAT handling, support for inclusive/exclusive pricing, and tax-exempt sales
+
+Custom receipts and notes per transaction
+
+Support for discounts, special pricing, and custom product fields
+
+Admin and Backend
+Admin dashboard for complete POS, inventory, and user management
+
+Ability to define permissions per user/role for POS access, price override, refunds, etc.
+
+Integrated document archive for receipts, sales, and adjustments
+
+Secure audit logs and reporting on all key actions
+
+Key principles:
+
+Must be as simple and fast as Square, Vend, Lightspeed, or Shopify POS
+
+Use modern design (rounded cards, bold font, touch-friendly controls)
+
+100% secure with role-based permissions and activity audit
+
+Support all payment and promo scenarios
+
+Fully integrated with accounting, inventory, and reporting modules
