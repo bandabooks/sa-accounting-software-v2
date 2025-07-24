@@ -18,7 +18,7 @@ import {
   type AuthenticatedRequest 
 } from "./auth";
 import { registerCompanyRoutes } from "./companyRoutes";
-import { registerEnterpriseRoutes } from "./enterpriseRoutes";
+import { registerEnterpriseRoutes } from "./routes/enterpriseRoutes";
 import { 
   insertCustomerSchema, 
   insertInvoiceSchema, 

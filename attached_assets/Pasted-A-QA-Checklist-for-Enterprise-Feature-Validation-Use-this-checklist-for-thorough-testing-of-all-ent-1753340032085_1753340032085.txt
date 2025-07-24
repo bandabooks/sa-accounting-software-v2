@@ -1,0 +1,113 @@
+A. QA Checklist for Enterprise Feature Validation
+Use this checklist for thorough testing of all enterprise features before launch.
+
+1. Security (2FA)
+ User can enroll in 2FA using Google/Microsoft Authenticator (QR code).
+
+ Backup codes are generated, downloadable, and work for login.
+
+ 2FA enforcement works for required roles (admin, accountant, etc.).
+
+ 2FA reset/recovery process is functional and secure.
+
+ User is clearly notified about 2FA status and enforcement.
+
+ All login attempts (including 2FA) are logged and viewable in audit log.
+
+2. OAuth (Google/Microsoft SSO)
+ User can log in with Google/Microsoft account.
+
+ OAuth login is possible on both desktop and mobile.
+
+ Users can link/unlink OAuth accounts in enterprise settings.
+
+ Token revocation/disconnection works as expected.
+
+3. Notification Management
+ Users receive email/SMS notifications for all critical events (2FA, security alerts, reminders, invoices, system updates).
+
+ Notification preferences are editable per user.
+
+ Test notification button sends a preview to the user.
+
+ Notification delivery is reliable (no duplicates or missing alerts).
+
+4. AI Assistant (Chat Component)
+ AI assistant responds contextually to business/accounting queries.
+
+ No cross-company data is leaked in AI conversations.
+
+ AI assistant can be enabled/disabled by user/company.
+
+ User can control sharing of sensitive data with AI.
+
+ Conversational UI works on both desktop and mobile.
+
+5. Enterprise Settings Page
+ All enterprise features (security, notifications, AI, OAuth) are accessible in one settings page.
+
+ Only authorized roles (super admin, company admin) can edit enterprise settings.
+
+ Changes persist after save and across devices.
+
+ Role-based access control is enforced for enterprise features.
+
+ All settings have clear descriptions/help text.
+
+6. Navigation/Responsiveness
+ Enterprise settings are easy to find in both sidebar and mobile navigation.
+
+ UI is responsive and all features are usable on mobile, tablet, and desktop.
+
+7. Audit Logging
+ All security-sensitive changes (2FA, OAuth, notification settings) are logged.
+
+ Audit log is viewable by super admin and company admin.
+
+B. UI and UX Enhancement Suggestions
+Improvements to maximize usability, professionalism, and user delight:
+
+1. UI Enhancements
+Grouped Tabs:
+Group security, notifications, AI, and OAuth into tabs or accordion panels for clarity.
+
+Status Indicators:
+Show real-time status for features (e.g., “2FA enabled”, “OAuth linked”, “AI active”).
+
+Success/Error Toasts:
+Use animated “toast” notifications for saves, errors, and important actions.
+
+Test/Preview Buttons:
+Provide “Send test notification” or “Preview AI reply” buttons.
+
+Profile Avatar & Brand Logo:
+Allow custom company branding and user avatars in header/side menu.
+
+2. UX Enhancements
+Onboarding Flows:
+Guided onboarding for enterprise features (first-time 2FA, AI assistant intro, notification setup).
+
+Progress Indicators:
+Show step-by-step progress (e.g., for 2FA setup).
+
+Smart Tooltips & Help Links:
+Add contextual tooltips and “learn more” links for advanced settings.
+
+Accessibility:
+Keyboard navigation, high-contrast mode, and ARIA labels for all forms.
+
+Mobile Gestures:
+Swipe-to-navigate or tap-and-hold for quick actions on mobile.
+
+Audit/History Tab:
+Include a visible “Activity History” or “Audit Log” in the enterprise settings area.
+
+3. Delight Features
+AI Quick Actions:
+AI suggestions as buttons (e.g., “Draft Invoice”, “Run VAT Report”).
+
+Dark Mode:
+Theme toggle for dark/light UI.
+
+In-App Announcements:
+Broadcast new features or system updates via modal/banner.

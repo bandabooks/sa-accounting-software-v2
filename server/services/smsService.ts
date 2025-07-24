@@ -1,10 +1,10 @@
-import { Twilio } from 'twilio';
+import twilio from 'twilio';
 import { db } from '../db';
 import { smsQueue } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 export class SMSService {
-  private client: Twilio | null = null;
+  private client: any | null = null;
   private fromNumber: string | null = null;
 
   constructor() {
@@ -17,7 +17,7 @@ export class SMSService {
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
     if (accountSid && authToken && fromNumber) {
-      this.client = new Twilio(accountSid, authToken);
+      this.client = twilio(accountSid, authToken);
       this.fromNumber = fromNumber;
     }
   }

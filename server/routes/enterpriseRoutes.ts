@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { authenticate } from "../auth";
+import { authenticate, type AuthenticatedRequest } from "../auth";
 import { emailService } from "../services/emailService";
 import { smsService } from "../services/smsService";
 import { twoFactorService } from "../services/twoFactorService";
@@ -27,10 +27,10 @@ export function registerEnterpriseRoutes(app: Express) {
   oauthService.initialize();
 
   // 2FA Routes
-  app.post("/api/2fa/setup", authenticate, async (req, res) => {
+  app.post("/api/2fa/setup", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
-      const userEmail = (req as any).user.email;
+      const userId = req.user.id;
+      const userEmail = req.user.email;
       
       const setup = await twoFactorService.generateSecret(userId, userEmail);
       res.json(setup);
@@ -40,9 +40,9 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/2fa/enable", authenticate, strictRateLimit, async (req, res) => {
+  app.post("/api/2fa/enable", authenticate, strictRateLimit, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user.id;
       const { token } = req.body;
       
       const result = await twoFactorService.enable2FA(userId, token);
@@ -62,9 +62,9 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/2fa/disable", authenticate, strictRateLimit, async (req, res) => {
+  app.post("/api/2fa/disable", authenticate, strictRateLimit, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user.id;
       const { token, backupCode } = req.body;
       
       const success = await twoFactorService.disable2FA(userId, token, backupCode);
@@ -97,9 +97,9 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/2fa/backup-codes/regenerate", authenticate, strictRateLimit, async (req, res) => {
+  app.post("/api/2fa/backup-codes/regenerate", authenticate, strictRateLimit, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user.id;
       const { token } = req.body;
       
       const result = await twoFactorService.regenerateBackupCodes(userId, token);
@@ -119,9 +119,9 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/2fa/status", authenticate, async (req, res) => {
+  app.get("/api/2fa/status", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user.id;
       const status = await twoFactorService.get2FAStatus(userId);
       res.json(status);
     } catch (error) {
@@ -153,9 +153,9 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   );
 
-  app.get("/api/auth/oauth/accounts", authenticate, async (req, res) => {
+  app.get("/api/auth/oauth/accounts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user.id;
       const accounts = await oauthService.getUserOAuthAccounts(userId);
       res.json(accounts);
     } catch (error) {
@@ -164,9 +164,9 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/auth/oauth/unlink", authenticate, strictRateLimit, async (req, res) => {
+  app.post("/api/auth/oauth/unlink", authenticate, strictRateLimit, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user.id;
       const { provider } = req.body;
       
       await oauthService.unlinkOAuthAccount(userId, provider);
@@ -178,10 +178,10 @@ export function registerEnterpriseRoutes(app: Express) {
   });
 
   // AI Assistant Routes
-  app.get("/api/ai/conversations", authenticate, async (req, res) => {
+  app.get("/api/ai/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
-      const companyId = (req as any).user.companyId || 1;
+      const userId = req.user.id;
+      const companyId = req.user.companyId || 1;
       
       const conversations = await aiService.getUserConversations(userId, companyId);
       res.json(conversations);
@@ -191,10 +191,10 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/ai/conversations", authenticate, async (req, res) => {
+  app.post("/api/ai/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
-      const companyId = (req as any).user.companyId || 1;
+      const userId = req.user.id;
+      const companyId = req.user.companyId || 1;
       const { title, context, contextId } = req.body;
       
       const conversation = await aiService.createConversation({
@@ -211,10 +211,10 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/ai/chat", authenticate, moderateRateLimit, async (req, res) => {
+  app.post("/api/ai/chat", authenticate, moderateRateLimit, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
-      const companyId = (req as any).user.companyId || 1;
+      const userId = req.user.id;
+      const companyId = req.user.companyId || 1;
       const { conversationId, message, context, contextId } = req.body;
       
       const result = await aiService.chat(conversationId, message, {
@@ -231,7 +231,7 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/ai/conversations/:id/history", authenticate, async (req, res) => {
+  app.get("/api/ai/conversations/:id/history", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const conversationId = parseInt(req.params.id);
       const history = await aiService.getConversationHistory(conversationId);
@@ -242,10 +242,10 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/ai/conversations/:id", authenticate, async (req, res) => {
+  app.delete("/api/ai/conversations/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const conversationId = parseInt(req.params.id);
-      const userId = (req as any).user.id;
+      const userId = req.user.id;
       
       await aiService.archiveConversation(conversationId, userId);
       res.json({ success: true, message: "Conversation archived" });
@@ -256,10 +256,10 @@ export function registerEnterpriseRoutes(app: Express) {
   });
 
   // Quick AI Analysis Routes
-  app.post("/api/ai/analyze/invoice", authenticate, moderateRateLimit, async (req, res) => {
+  app.post("/api/ai/analyze/invoice", authenticate, moderateRateLimit, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
-      const companyId = (req as any).user.companyId || 1;
+      const userId = req.user.id;
+      const companyId = req.user.companyId || 1;
       const { invoiceId } = req.body;
       
       const analysis = await aiService.analyzeInvoice(invoiceId, userId, companyId);
@@ -270,10 +270,10 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/ai/suggest/chart-of-accounts", authenticate, moderateRateLimit, async (req, res) => {
+  app.post("/api/ai/suggest/chart-of-accounts", authenticate, moderateRateLimit, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = (req as any).user.id;
-      const companyId = (req as any).user.companyId || 1;
+      const userId = req.user.id;
+      const companyId = req.user.companyId || 1;
       const { industry } = req.body;
       
       const suggestions = await aiService.suggestChartOfAccounts(companyId, userId, industry);
@@ -284,7 +284,7 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/ai/status", authenticate, async (req, res) => {
+  app.get("/api/ai/status", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       res.json({
         available: aiService.isAvailable(),
@@ -297,9 +297,9 @@ export function registerEnterpriseRoutes(app: Express) {
   });
 
   // Workflow Automation Routes
-  app.get("/api/workflows/rules", authenticate, async (req, res) => {
+  app.get("/api/workflows/rules", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as any).user.companyId || 1;
+      const companyId = req.user.companyId || 1;
       const rules = await workflowService.getWorkflowRules(companyId);
       res.json(rules);
     } catch (error) {
@@ -308,10 +308,10 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.post("/api/workflows/rules", authenticate, async (req, res) => {
+  app.post("/api/workflows/rules", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as any).user.companyId || 1;
-      const userId = (req as any).user.id;
+      const companyId = req.user.companyId || 1;
+      const userId = req.user.id;
       
       const ruleData = {
         ...req.body,
@@ -327,7 +327,7 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.put("/api/workflows/rules/:id", authenticate, async (req, res) => {
+  app.put("/api/workflows/rules/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const ruleId = parseInt(req.params.id);
       const rule = await workflowService.updateWorkflowRule(ruleId, req.body);
@@ -338,7 +338,7 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/workflows/rules/:id", authenticate, async (req, res) => {
+  app.delete("/api/workflows/rules/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const ruleId = parseInt(req.params.id);
       await workflowService.deleteWorkflowRule(ruleId);
@@ -349,9 +349,9 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/workflows/executions", authenticate, async (req, res) => {
+  app.get("/api/workflows/executions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as any).user.companyId || 1;
+      const companyId = req.user.companyId || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       
       const executions = await workflowService.getWorkflowExecutions(companyId, limit);
@@ -363,7 +363,7 @@ export function registerEnterpriseRoutes(app: Express) {
   });
 
   // Email and SMS Routes
-  app.get("/api/notifications/email/queue", authenticate, async (req, res) => {
+  app.get("/api/notifications/email/queue", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       // Implementation to get email queue status
       res.json({ message: "Email queue endpoint" });
@@ -373,7 +373,7 @@ export function registerEnterpriseRoutes(app: Express) {
     }
   });
 
-  app.get("/api/notifications/sms/queue", authenticate, async (req, res) => {
+  app.get("/api/notifications/sms/queue", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       // Implementation to get SMS queue status
       res.json({ message: "SMS queue endpoint" });
@@ -384,7 +384,7 @@ export function registerEnterpriseRoutes(app: Express) {
   });
 
   // System Configuration Routes
-  app.get("/api/system/configuration", authenticate, async (req, res) => {
+  app.get("/api/system/configuration", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       res.json({
         features: {
@@ -401,6 +401,85 @@ export function registerEnterpriseRoutes(app: Express) {
     } catch (error) {
       console.error("Error getting system configuration:", error);
       res.status(500).json({ error: "Failed to get system configuration" });
+    }
+  });
+
+  // Additional endpoints for enterprise settings components
+  app.get("/api/notifications/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const notificationSettings = {
+        email: {
+          enabled: true,
+          invoiceReminders: true,
+          paymentAlerts: true,
+          securityAlerts: true,
+          systemUpdates: false,
+        },
+        sms: {
+          enabled: false,
+          criticalAlerts: false,
+          paymentReminders: false,
+        },
+      };
+      res.json(notificationSettings);
+    } catch (error) {
+      console.error("Error getting notification settings:", error);
+      res.status(500).json({ error: "Failed to get notification settings" });
+    }
+  });
+
+  app.get("/api/oauth/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const oauthStatus = {
+        google: {
+          connected: false,
+          email: null,
+          connectedAt: null,
+        },
+        microsoft: {
+          connected: false,
+          email: null,
+          connectedAt: null,
+        },
+      };
+      res.json(oauthStatus);
+    } catch (error) {
+      console.error("Error getting OAuth status:", error);
+      res.status(500).json({ error: "Failed to get OAuth status" });
+    }
+  });
+
+  app.get("/api/audit-logs/enterprise", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Mock audit logs data for now
+      const auditLogs = [
+        {
+          id: 1,
+          action: "LOGIN",
+          resource: "users",
+          userId: 1,
+          userName: "Production Administrator",
+          timestamp: new Date().toISOString(),
+          details: { ip: "127.0.0.1", userAgent: "Mozilla/5.0" },
+          ipAddress: "127.0.0.1",
+          userAgent: "Mozilla/5.0 (Enterprise)",
+        },
+        {
+          id: 2,
+          action: "CREATE",
+          resource: "invoices",
+          userId: 1,
+          userName: "Production Administrator",
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          details: { invoiceId: 123, amount: 1500.00 },
+          ipAddress: "127.0.0.1",
+          userAgent: "Mozilla/5.0 (Enterprise)",
+        },
+      ];
+      res.json(auditLogs);
+    } catch (error) {
+      console.error("Error getting enterprise audit logs:", error);
+      res.status(500).json({ error: "Failed to get enterprise audit logs" });
     }
   });
 }
