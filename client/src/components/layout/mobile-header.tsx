@@ -18,7 +18,7 @@ export default function MobileHeader() {
               <span className="text-white text-sm font-bold">T</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Think Mybiz</h1>
+              <h1 className="text-lg font-bold text-gray-900">Taxnify</h1>
             </div>
           </div>
         </div>

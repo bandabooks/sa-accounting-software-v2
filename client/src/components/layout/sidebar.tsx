@@ -248,8 +248,8 @@ export default function Sidebar() {
             <Calculator className="text-white" size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Think Mybiz</h1>
-            <p className="text-sm text-gray-500">Accounting</p>
+            <h1 className="text-xl font-bold text-gray-900">Taxnify</h1>
+            <p className="text-sm text-gray-500">Business & Compliance</p>
           </div>
         </div>
         
