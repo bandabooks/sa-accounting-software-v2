@@ -113,7 +113,7 @@ export default function TrialSignup() {
 
   const signupMutation = useMutation({
     mutationFn: async (data: TrialSignupForm) => {
-      const response = await apiRequest('POST', '/api/auth/trial-signup', data);
+      const response = await apiRequest('/api/auth/trial-signup', 'POST', data);
       return response.json();
     },
     onSuccess: (data) => {
