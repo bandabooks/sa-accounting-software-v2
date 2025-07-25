@@ -123,6 +123,7 @@ const navigationGroups = [
     icon: UserCog,
     items: [
       { path: "/rbac/user-permissions", label: "User Permissions", icon: Key, permission: "USERS_ASSIGN_ROLES" },
+      { path: "/rbac/module-permissions", label: "Module Permissions", icon: Shield, requiredRole: "super_admin" },
       { path: "/rbac/roles", label: "Role Management", icon: Shield, permission: "ROLES_VIEW" }
     ]
   },

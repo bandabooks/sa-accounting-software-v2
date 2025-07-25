@@ -93,6 +93,7 @@ import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
 import RoleManagement from "@/pages/RoleManagement";
 import UserPermissions from "@/pages/UserPermissions";
+import ModulePermissions from "@/pages/ModulePermissions";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -416,6 +417,11 @@ function AuthenticatedApp() {
         <Route path="/rbac/user-permissions">
           <ProtectedRoute requiredRole="super_admin">
             <UserPermissions />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/rbac/module-permissions">
+          <ProtectedRoute requiredRole="super_admin">
+            <ModulePermissions />
           </ProtectedRoute>
         </Route>
 
