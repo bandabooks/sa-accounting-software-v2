@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { 
   Shield, 
   Crown,
@@ -18,8 +24,44 @@ import {
   CreditCard,
   Briefcase,
   Users,
-  Eye
+  Eye,
+  Edit3,
+  Save,
+  BarChart3,
+  UserCog,
+  Package,
+  Receipt,
+  Truck,
+  BookOpen,
+  Landmark,
+  PieChart
 } from "lucide-react";
+
+// Schema for role permission updates
+const rolePermissionSchema = z.object({
+  roleId: z.string(),
+  modulePermissions: z.record(z.record(z.boolean())),
+  reason: z.string().min(10, "Please provide a reason for this permission change")
+});
+
+type RolePermissionData = z.infer<typeof rolePermissionSchema>;
+
+// Module icons mapping
+const MODULE_ICONS = {
+  dashboard: BarChart3,
+  user_management: UserCog,
+  customers: Users,
+  invoicing: FileText,
+  products_services: Package,
+  expenses: Receipt,
+  suppliers: Truck,
+  pos_sales: CreditCard,
+  chart_of_accounts: Calculator,
+  journal_entries: BookOpen,
+  banking: Landmark,
+  financial_reports: PieChart,
+  default: Shield
+};
 
 // Comprehensive Business Roles as per user requirements
 const BUSINESS_ROLE_DESCRIPTIONS = {
@@ -133,13 +175,78 @@ interface SystemRole {
 
 export default function RoleManagement() {
   const [selectedRole, setSelectedRole] = useState<SystemRole | null>(null);
+  const [isEditPermissionsDialogOpen, setIsEditPermissionsDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Permission editing form
+  const permissionForm = useForm<RolePermissionData>({
+    resolver: zodResolver(rolePermissionSchema),
+    defaultValues: {
+      roleId: "",
+      modulePermissions: {},
+      reason: ""
+    }
+  });
 
   // Fetch system roles
   const { data: roles = [], isLoading: rolesLoading } = useQuery<SystemRole[]>({
     queryKey: ["/api/rbac/system-roles"],
   });
+
+  // Fetch permissions matrix data for editing
+  const { data: matrixData, isLoading: matrixLoading } = useQuery({
+    queryKey: ['/api/permissions/matrix'],
+    refetchInterval: 30000,
+  });
+
+  // Update role permissions mutation
+  const updateRolePermissionsMutation = useMutation({
+    mutationFn: async (data: RolePermissionData) => {
+      return await apiRequest(`/api/roles/${data.roleId}/permissions`, 'PUT', {
+        modulePermissions: data.modulePermissions,
+        reason: data.reason
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rbac/system-roles"] });
+      toast({
+        title: "Permissions Updated",
+        description: "Role permissions have been updated successfully.",
+      });
+      setIsEditPermissionsDialogOpen(false);
+      permissionForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onUpdatePermissions = (data: RolePermissionData) => {
+    updateRolePermissionsMutation.mutate(data);
+  };
+
+  const openEditPermissionsDialog = (role: SystemRole) => {
+    const matrixRole = matrixData?.roles?.find((r: any) => r.name === role.name);
+    if (matrixRole) {
+      setSelectedRole(role);
+      permissionForm.setValue('roleId', role.id.toString());
+      permissionForm.setValue('modulePermissions', matrixRole.permissions || {});
+      permissionForm.setValue('reason', '');
+      setIsEditPermissionsDialogOpen(true);
+    } else {
+      toast({
+        title: "Error",
+        description: "Unable to load permissions data for this role",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getRoleIcon = (roleName: string) => {
     const roleKey = roleName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
@@ -404,17 +511,124 @@ export default function RoleManagement() {
                 </Button>
                 <Button 
                   variant="outline"
-                  onClick={() => {
-                    toast({
-                      title: "Edit Permissions",
-                      description: `Role permission editing coming in next update`,
-                    });
-                  }}
+                  onClick={() => openEditPermissionsDialog(selectedRole)}
+                  disabled={matrixLoading}
                 >
+                  <Edit3 className="h-4 w-4 mr-2" />
                   Edit Permissions
                 </Button>
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Permissions Dialog */}
+      <Dialog open={isEditPermissionsDialogOpen} onOpenChange={setIsEditPermissionsDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Role Permissions</DialogTitle>
+            <DialogDescription>
+              {selectedRole && `Modify permissions for ${selectedRole.displayName} role`}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRole && matrixData && (
+            <Form {...permissionForm}>
+              <form onSubmit={permissionForm.handleSubmit(onUpdatePermissions)} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+                    <div className={`p-2 rounded-full bg-gradient-to-r ${getRoleDescription(selectedRole.name).color}`}>
+                      <Shield className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{selectedRole.displayName}</h3>
+                      <p className="text-sm text-muted-foreground">{getRoleDescription(selectedRole.name).description}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Badge variant="outline">Level {selectedRole.level}</Badge>
+                        <Badge variant="default">System Role</Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {matrixData.modules && (
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Module Permissions</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {matrixData.modules.map((module: any) => {
+                          const IconComponent = MODULE_ICONS[module.id as keyof typeof MODULE_ICONS] || MODULE_ICONS.default;
+                          return (
+                            <Card key={module.id} className="p-4">
+                              <div className="flex items-center space-x-3 mb-3">
+                                <IconComponent className="h-5 w-5 text-blue-600" />
+                                <div>
+                                  <h5 className="font-medium">{module.name}</h5>
+                                  <p className="text-xs text-muted-foreground">{module.description}</p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {module.permissions?.map((permission: any) => (
+                                  <FormField
+                                    key={`${module.id}.${permission.type}`}
+                                    control={permissionForm.control}
+                                    name={`modulePermissions.${module.id}.${permission.type}` as any}
+                                    render={({ field }) => (
+                                      <FormItem className="flex items-center justify-between">
+                                        <FormLabel className="text-xs font-normal">
+                                          {permission.name}
+                                        </FormLabel>
+                                        <FormControl>
+                                          <Switch
+                                            checked={field.value || false}
+                                            onCheckedChange={field.onChange}
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <FormField
+                    control={permissionForm.control}
+                    name="reason"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Reason for Permission Changes</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Explain why these permission changes are being made..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This will be logged for audit and compliance purposes
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setIsEditPermissionsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={updateRolePermissionsMutation.isPending}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {updateRolePermissionsMutation.isPending ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </Form>
           )}
         </DialogContent>
       </Dialog>
