@@ -26,11 +26,11 @@ const productSchema = z.object({
   description: z.string().optional(),
   sku: z.string().optional(),
   categoryId: z.string().optional(),
-  unitPrice: z.string().min(1, "Price is required"),
+  unitPrice: z.string().min(1, "Price is required"),  
   costPrice: z.string().optional(),
   vatRate: z.string().optional(),
   incomeAccountId: z.string().min(1, "Income account is required"),
-  expenseAccountId: z.string().optional(),
+  expenseAccountId: z.string().min(1, "Expense account is required for accurate reporting"),
   stockQuantity: z.number().optional(),
   minStockLevel: z.number().optional(),
   isService: z.boolean().default(false),
@@ -268,7 +268,7 @@ export default function ProductCreate() {
             <CardHeader>
               <CardTitle>Account Settings</CardTitle>
               <CardDescription>
-                Choose the accounts for recording income{!isService ? " and expenses" : ""} from this {isService ? "service" : "product"}
+                Choose the accounts for recording income and expenses from this {isService ? "service" : "product"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -295,29 +295,27 @@ export default function ProductCreate() {
                   )}
                 />
 
-                {!isService && (
-                  <FormField
-                    control={form.control}
-                    name="expenseAccountId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Expense Account</FormLabel>
-                        <FormControl>
-                          <AccountSelect
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            placeholder="Select expense account"
-                            accountType="expense"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Account for cost of goods sold (COGS)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                <FormField
+                  control={form.control}
+                  name="expenseAccountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expense Account *</FormLabel>
+                      <FormControl>
+                        <AccountSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select expense account"
+                          accountType="expense"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {isService ? "Account for service delivery costs" : "Account for cost of goods sold (COGS)"}
+                      </FormDescription>     
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </CardContent>
           </Card>

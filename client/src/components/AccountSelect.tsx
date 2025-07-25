@@ -41,20 +41,25 @@ export function AccountSelect({
 }: AccountSelectProps) {
   const [open, setOpen] = useState(false);
 
-  const { data: accounts = [] } = useQuery<Account[]>({
+  const { data: accounts = [], isLoading } = useQuery<Account[]>({
     queryKey: ["/api/chart-of-accounts"],
   });
+
+  console.log("AccountSelect - Raw accounts data:", accounts);
+  console.log("AccountSelect - Account type filter:", accountType);
 
   // Filter accounts based on type
   const filteredAccounts = accounts.filter((account: Account) => {
     if (accountType === "all") return true;
     
     const type = account.type?.toLowerCase();
+    console.log(`Checking account ${account.code} - ${account.name} with type: "${type}"`);
+    
     switch (accountType) {
       case "revenue":
         return type === "revenue" || type === "income";
       case "expense":
-        return type === "expense" || type === "cost of sales" || type === "cost of goods sold";
+        return type === "expense" || type === "cost of sales" || type === "cost of goods sold" || type === "cogs";
       case "asset":
         return type === "asset" || type === "current asset" || type === "non-current asset";
       case "liability":
@@ -65,6 +70,8 @@ export function AccountSelect({
         return true;
     }
   });
+
+  console.log("AccountSelect - Filtered accounts:", filteredAccounts);
 
   const selectedAccount = filteredAccounts.find((account: Account) => account.id.toString() === value);
 
