@@ -119,11 +119,13 @@ const navigationGroups = [
   },
   {
     id: "rbac",
-    label: "User Management",
+    label: "User Management", 
     icon: UserCog,
     items: [
+      { path: "/rbac/enhanced-users", label: "Enhanced User Management", icon: Users, permission: "USERS_VIEW" },
       { path: "/rbac/user-permissions", label: "User Permissions", icon: Key, permission: "USERS_ASSIGN_ROLES" },
-      { path: "/rbac/module-permissions", label: "Module Permissions", icon: Shield, requiredRole: "super_admin" },
+      { path: "/rbac/permissions-matrix", label: "Permissions Matrix", icon: Shield, permission: "PERMISSIONS_GRANT" },
+      { path: "/rbac/module-activation", label: "Module Activation", icon: Settings, requiredRole: "super_admin" },
       { path: "/rbac/roles", label: "Role Management", icon: Shield, permission: "ROLES_VIEW" }
     ]
   },

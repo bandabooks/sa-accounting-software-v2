@@ -94,6 +94,9 @@ import ComplianceDocuments from "@/pages/compliance-documents";
 import RoleManagement from "@/pages/RoleManagement";
 import UserPermissions from "@/pages/UserPermissions";
 import ModulePermissions from "@/pages/ModulePermissions";
+import EnhancedUserManagement from "@/pages/EnhancedUserManagement";
+import PermissionsMatrix from "@/pages/PermissionsMatrix";
+import ModuleActivation from "@/pages/ModuleActivation";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -128,7 +131,8 @@ const PERMISSIONS = {
   POS_PROCESS_SALES: 'pos:process_sales',
   POS_MANAGE_SHIFTS: 'pos:manage_shifts',
   POS_VIEW_REPORTS: 'pos:view_reports',
-  // RBAC permissions
+  // RBAC permissions  
+  USERS_VIEW: 'users:view',
   ROLES_VIEW: 'roles:view',
   ROLES_CREATE: 'roles:create',
   USERS_ASSIGN_ROLES: 'users:assign_roles',
@@ -409,6 +413,21 @@ function AuthenticatedApp() {
         </Route>
 
         {/* Role-Based Access Control (RBAC) Routes */}
+        <Route path="/rbac/enhanced-users">
+          <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
+            <EnhancedUserManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/rbac/permissions-matrix">
+          <ProtectedRoute permission={PERMISSIONS.PERMISSIONS_GRANT}>
+            <PermissionsMatrix />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/rbac/module-activation">
+          <ProtectedRoute requiredRole="super_admin">
+            <ModuleActivation />
+          </ProtectedRoute>
+        </Route>
         <Route path="/rbac/roles">
           <ProtectedRoute permission={PERMISSIONS.ROLES_VIEW}>
             <RoleManagement />

@@ -17,6 +17,15 @@ import {
   ROLES,
   type AuthenticatedRequest 
 } from "./auth";
+import {
+  getEnhancedUsers,
+  getPermissionsMatrix,
+  getCompanyModules,
+  toggleModuleActivation,
+  createCustomRole,
+  updateRolePermissions,
+  assignUserRole
+} from "./permissions-api";
 import { 
   requireAnyPermission, 
   SYSTEM_ROLES,
@@ -6269,6 +6278,51 @@ Format your response as a JSON array of tip objects with "title", "description",
     } catch (error) {
       console.error("Error fetching available permissions:", error);
       res.status(500).json({ message: "Failed to fetch available permissions" });
+    }
+  });
+
+  // =============================================
+  // COMPREHENSIVE PERMISSIONS MATRIX API ROUTES
+  // =============================================
+
+  // Enhanced User Management Routes
+  app.get("/api/admin/enhanced-users", authenticate, requirePermission(PERMISSIONS.USERS_VIEW), getEnhancedUsers);
+  
+  // Permissions Matrix Routes
+  app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getPermissionsMatrix);
+  
+  // Module Activation Routes
+  app.get("/api/modules/company", authenticate, requireSuperAdmin, getCompanyModules);
+  app.post("/api/modules/:moduleId/toggle", authenticate, requireSuperAdmin, toggleModuleActivation);
+  
+  // Role Management Routes
+  app.post("/api/roles/custom", authenticate, requirePermission(PERMISSIONS.ROLES_CREATE), createCustomRole);
+  app.put("/api/roles/:roleId/permissions", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), updateRolePermissions);
+  
+  // User Role Assignment Routes
+  app.post("/api/admin/assign-role", authenticate, requirePermission(PERMISSIONS.USERS_ASSIGN_ROLES), assignUserRole);
+  
+  // Toggle User Status Route
+  app.post("/api/admin/users/:userId/toggle-status", authenticate, requirePermission(PERMISSIONS.USERS_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { isActive } = req.body;
+      const currentUser = req.user;
+
+      if (!currentUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Update user status
+      await storage.updateUserStatus(parseInt(userId), isActive);
+
+      // Log the action
+      await logAudit(currentUser.id, isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED', 'user', parseInt(userId));
+
+      res.json({ success: true, message: `User ${isActive ? 'activated' : 'deactivated'} successfully` });
+    } catch (error) {
+      console.error("Error toggling user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
     }
   });
 
