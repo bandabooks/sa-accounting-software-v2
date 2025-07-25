@@ -47,7 +47,7 @@ export function AccountSelect({
   });
 
   // Get current company to filter accounts
-  const { data: activeCompany } = useQuery({
+  const { data: activeCompany } = useQuery<{id: number}>({
     queryKey: ["/api/companies/active"],
   });
 

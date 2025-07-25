@@ -131,7 +131,7 @@ export default function ProductCreate() {
   };
 
   // Get active company for filtering accounts
-  const { data: activeCompany } = useQuery({
+  const { data: activeCompany } = useQuery<{id: number}>({
     queryKey: ["/api/companies/active"],
   });
 
