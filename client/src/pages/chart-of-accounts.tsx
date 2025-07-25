@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -85,9 +85,25 @@ export default function ChartOfAccounts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: accounts = [], isLoading } = useQuery({
+  const { data: rawAccounts = [], isLoading } = useQuery({
     queryKey: ["/api/chart-of-accounts"],
   });
+
+  // Deduplication logic - keep only first occurrence of each account code
+  const accounts = React.useMemo(() => {
+    const seen = new Set<string>();
+    const deduplicatedAccounts: ChartOfAccountWithBalance[] = [];
+    
+    (rawAccounts as ChartOfAccountWithBalance[]).forEach(account => {
+      if (!seen.has(account.accountCode)) {
+        seen.add(account.accountCode);
+        deduplicatedAccounts.push(account);
+      }
+    });
+    
+    // Sort by account code for consistent display
+    return deduplicatedAccounts.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+  }, [rawAccounts]);
 
   const seedMutation = useMutation({
     mutationFn: () => apiRequest("/api/chart-of-accounts/seed-sa", "POST"),
@@ -197,12 +213,14 @@ export default function ChartOfAccounts() {
     defaultValues: {
       accountCode: "",
       accountName: "",
+      description: "",
       accountType: "Asset",
       accountSubType: "Current Asset",
       normalBalance: "Debit",
       level: 2,
       isActive: true,
       isSystemAccount: false,
+      taxType: undefined,
     },
   });
 
@@ -211,23 +229,27 @@ export default function ChartOfAccounts() {
     defaultValues: {
       accountCode: "",
       accountName: "",
+      description: "",
       accountType: "Asset",
       accountSubType: "Current Asset",
       normalBalance: "Debit",
       level: 2,
       isActive: true,
       isSystemAccount: false,
+      taxType: undefined,
     },
   });
 
-  const filteredAccounts = accounts.filter((account: ChartOfAccountWithBalance) => {
-    const matchesSearch = account.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         account.accountCode.includes(searchTerm);
+  const filteredAccounts = accounts.filter((account) => {
+    const matchesSearch = 
+      account.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      account.accountCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (account.description || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === "all" || account.accountType === selectedType;
     return matchesSearch && matchesType;
   });
 
-  const accountTypeGroups = filteredAccounts.reduce((groups: any, account: ChartOfAccountWithBalance) => {
+  const accountTypeGroups = filteredAccounts.reduce((groups: Record<string, ChartOfAccountWithBalance[]>, account) => {
     const type = account.accountType;
     if (!groups[type]) {
       groups[type] = [];
@@ -484,7 +506,7 @@ export default function ChartOfAccounts() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search accounts by name or code..."
+                placeholder="Search accounts by code, name, or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -507,6 +529,32 @@ export default function ChartOfAccounts() {
         </CardContent>
       </Card>
 
+      {/* Summary Statistics */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span>Total Accounts: <span className="font-medium text-gray-900 dark:text-gray-100">{accounts.length}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <BarChart className="h-4 w-4" />
+              <span>Active: <span className="font-medium text-green-600">{accounts.filter(a => a.isActive).length}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              <span>Unique Codes: <span className="font-medium text-blue-600">{new Set(accounts.map(a => a.accountCode)).size}</span></span>
+            </div>
+            {filteredAccounts.length !== accounts.length && (
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                <span>Filtered: <span className="font-medium text-orange-600">{filteredAccounts.length}</span></span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Accounts List */}
       {Object.keys(accountTypeGroups).length === 0 ? (
         <Card>
@@ -516,7 +564,7 @@ export default function ChartOfAccounts() {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {accounts.length === 0 
                 ? "Get started by setting up the South African Chart of Accounts or creating your first account."
-                : "No accounts match your search criteria."
+                : "No accounts match your search criteria. Try adjusting your search terms or filters."
               }
             </p>
             {accounts.length === 0 && (
@@ -550,7 +598,7 @@ export default function ChartOfAccounts() {
                   {(typeAccounts as ChartOfAccountWithBalance[]).map((account) => (
                     <div
                       key={account.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="flex items-start justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-4">
