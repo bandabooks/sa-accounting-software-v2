@@ -7709,7 +7709,7 @@ export class DatabaseStorage implements IStorage {
         ) as custom_permissions,
         u.notes
       FROM users u
-      LEFT JOIN user_companies uc ON u.id = uc.user_id
+      LEFT JOIN company_users uc ON u.id = uc.user_id
       LEFT JOIN system_roles sr ON uc.role = sr.id
       LEFT JOIN companies c ON uc.company_id = c.id
       LEFT JOIN user_permissions up ON u.id = up.user_id AND uc.company_id = up.company_id
@@ -7729,23 +7729,16 @@ export class DatabaseStorage implements IStorage {
         sr.display_name,
         sr.description,
         sr.level,
-        sr.color,
-        sr.icon,
+        'from-blue-500 to-indigo-500' as color,
+        'Shield' as icon,
         sr.is_system_role,
-        sr.max_users,
-        sr.security_level,
-        COUNT(DISTINCT uc.user_id) as current_users,
-        COALESCE(
-          json_object_agg(
-            rp.module_id,
-            rp.permissions
-          ) FILTER (WHERE rp.module_id IS NOT NULL),
-          '{}'::json
-        ) as permissions
+        50 as max_users,
+        'standard' as security_level,
+        COUNT(DISTINCT up.user_id) as current_users,
+        '{}' as permissions
       FROM system_roles sr
-      LEFT JOIN user_companies uc ON sr.id = uc.role
-      LEFT JOIN role_permissions rp ON sr.id = rp.role_id
-      GROUP BY sr.id, sr.name, sr.display_name, sr.description, sr.level, sr.color, sr.icon, sr.is_system_role, sr.max_users, sr.security_level
+      LEFT JOIN user_permissions up ON sr.id = up.system_role_id
+      GROUP BY sr.id, sr.name, sr.display_name, sr.description, sr.level, sr.is_system_role
       ORDER BY sr.level DESC, sr.display_name
     `;
     
@@ -7846,7 +7839,7 @@ export class DatabaseStorage implements IStorage {
     const { assignedBy, reason } = options;
     
     const updateQuery = sql`
-      UPDATE user_companies 
+      UPDATE company_users 
       SET role = ${roleId}, updated_at = NOW()
       WHERE user_id = ${userId}
     `;
