@@ -94,7 +94,7 @@ export default function UserPermissions() {
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ["/api/users"],
     select: (data: User[]) => {
-      return data.map(user => ({
+      return data.filter(user => user.isActive).map(user => ({
         ...user,
         permissions: undefined // Will be loaded separately
       }));
@@ -249,11 +249,17 @@ export default function UserPermissions() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id.toString()}>
-                              {user.name} ({user.username})
-                            </SelectItem>
-                          ))}
+                          {usersLoading ? (
+                            <div className="p-2 text-center text-sm text-gray-500">Loading users...</div>
+                          ) : users.length === 0 ? (
+                            <div className="p-2 text-center text-sm text-gray-500">No users found</div>
+                          ) : (
+                            users.map((user) => (
+                              <SelectItem key={user.id} value={user.id.toString()}>
+                                {user.name} ({user.username})
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />

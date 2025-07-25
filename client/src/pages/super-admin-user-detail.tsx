@@ -374,9 +374,54 @@ export default function SuperAdminUserDetail() {
                     )) || <p className="text-sm text-muted-foreground">No specific permissions assigned</p>}
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Permission management functionality coming soon...
-                </p>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Role Assignment</h4>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={user.role === 'super_admin' ? 'destructive' : 'default'}>
+                        {user.role?.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                      <Button size="sm" variant="outline">
+                        Change Role
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">Access Level</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {user.role === 'super_admin' ? 'Full system access across all companies' :
+                       user.role === 'admin' ? 'Company administration access' :
+                       user.role === 'user' ? 'Standard user access' : 'Limited access'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium mb-2">Module Access</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <span className={user.role === 'super_admin' || user.role === 'admin' ? 'text-green-600' : 'text-gray-400'}>
+                          ✓ Dashboard
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={user.role === 'super_admin' || user.role === 'admin' ? 'text-green-600' : 'text-gray-400'}>
+                          ✓ User Management
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={user.role === 'super_admin' || user.role === 'admin' ? 'text-green-600' : 'text-gray-400'}>
+                          ✓ Financial Reports
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={user.role === 'super_admin' ? 'text-green-600' : 'text-gray-400'}>
+                          {user.role === 'super_admin' ? '✓' : '✗'} Super Admin Panel
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

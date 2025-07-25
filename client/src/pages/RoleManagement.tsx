@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, 
   Crown,
@@ -119,13 +121,24 @@ const BUSINESS_ROLE_DESCRIPTIONS = {
   }
 };
 
+interface SystemRole {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string;
+  level: number;
+  isActive: boolean;
+  permissionsList?: string[];
+}
+
 export default function RoleManagement() {
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<SystemRole | null>(null);
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch system roles
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
-    queryKey: ["/api/rbac/roles"],
+  const { data: roles = [], isLoading: rolesLoading } = useQuery<SystemRole[]>({
+    queryKey: ["/api/rbac/system-roles"],
   });
 
   const getRoleIcon = (roleName: string) => {
@@ -195,7 +208,21 @@ export default function RoleManagement() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Object.entries(BUSINESS_ROLE_DESCRIPTIONS).map(([roleKey, roleInfo]) => (
-                  <Card key={roleKey} className="relative overflow-hidden">
+                  <Card 
+                    key={roleKey} 
+                    className="relative overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => {
+                      const systemRole = roles.find(r => r.name === roleKey);
+                      if (systemRole) {
+                        setSelectedRole(systemRole);
+                      } else {
+                        toast({
+                          title: "Role Details",
+                          description: `${roleInfo.description}`,
+                        });
+                      }
+                    }}
+                  >
                     <div className={`absolute top-0 left-0 right-0 h-2 bg-gradient-to-r ${roleInfo.color}`} />
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
@@ -233,6 +260,27 @@ export default function RoleManagement() {
                           ))}
                         </div>
                       </div>
+                      <div className="mt-4 pt-3 border-t">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const systemRole = roles.find(r => r.name === roleKey);
+                            if (systemRole) {
+                              setSelectedRole(systemRole);
+                            } else {
+                              toast({
+                                title: "Role Management",
+                                description: `Manage ${roleKey.replace(/_/g, ' ')} permissions and users`,
+                              });
+                            }
+                          }}
+                        >
+                          Manage Role
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -259,7 +307,7 @@ export default function RoleManagement() {
                 <div className="text-center py-8 text-gray-500">No roles found</div>
               ) : (
                 <div className="space-y-4">
-                  {roles.map((role: any) => (
+                  {roles.map((role: SystemRole) => (
                     <div key={role.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
@@ -299,6 +347,77 @@ export default function RoleManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Role Detail Dialog */}
+      <Dialog open={!!selectedRole} onOpenChange={() => setSelectedRole(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              {selectedRole && getRoleIcon(selectedRole.name)}
+              <span>{selectedRole?.displayName}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Role details and management options
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRole && (
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-2">Role Information</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>Level:</strong> {selectedRole.level}</div>
+                  <div><strong>Status:</strong> {selectedRole.isActive ? 'Active' : 'Inactive'}</div>
+                  <div><strong>Type:</strong> System Role</div>
+                  <div><strong>Users:</strong> {getRoleDescription(selectedRole.name).userCount}</div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">Description</h4>
+                <p className="text-sm text-gray-600">
+                  {getRoleDescription(selectedRole.name).description}
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">Access Areas</h4>
+                <div className="flex flex-wrap gap-1">
+                  {getRoleDescription(selectedRole.name).accessAreas.map((area, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {area}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex space-x-3 pt-4 border-t">
+                <Button 
+                  onClick={() => {
+                    toast({
+                      title: "Assign Users",
+                      description: `Navigate to User Permissions to assign ${selectedRole.displayName} role to users`,
+                    });
+                    setSelectedRole(null);
+                  }}
+                >
+                  Assign to Users
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    toast({
+                      title: "Edit Permissions",
+                      description: `Role permission editing coming in next update`,
+                    });
+                  }}
+                >
+                  Edit Permissions
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
