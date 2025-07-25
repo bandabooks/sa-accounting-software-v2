@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -48,6 +49,11 @@ export default function ProductCreate() {
     queryKey: ["/api/product-categories"],
   });
 
+  // Query for Chart of Accounts to set defaults
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["/api/chart-of-accounts"],
+  });
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -91,6 +97,40 @@ export default function ProductCreate() {
   };
 
   const isService = form.watch("isService");
+
+  // Set default accounts based on service type
+  const setDefaultAccounts = () => {
+    const incomeAccount = accounts.find((acc: any) => 
+      acc.accountType === "Revenue" && (
+        isService 
+          ? acc.accountName.toLowerCase().includes("service")
+          : acc.accountName.toLowerCase().includes("sales") || acc.accountName.toLowerCase().includes("product")
+      )
+    );
+    
+    const expenseAccount = accounts.find((acc: any) => 
+      acc.accountType === "Cost of Goods Sold" && (
+        isService 
+          ? acc.accountName.toLowerCase().includes("service")
+          : acc.accountName.toLowerCase().includes("goods") || acc.accountName.toLowerCase().includes("cogs")
+      )
+    );
+
+    if (incomeAccount && !form.getValues("incomeAccountId")) {
+      form.setValue("incomeAccountId", incomeAccount.id.toString());
+    }
+    
+    if (expenseAccount && !form.getValues("expenseAccountId")) {
+      form.setValue("expenseAccountId", expenseAccount.id.toString());
+    }
+  };
+
+  // Set defaults when accounts load or service type changes
+  React.useEffect(() => {
+    if (accounts.length > 0) {
+      setDefaultAccounts();
+    }
+  }, [accounts, isService, form]);
 
   return (
     <div className="container mx-auto px-4 py-8">

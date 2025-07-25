@@ -19,9 +19,9 @@ import {
 
 interface Account {
   id: number;
-  code: string;
-  name: string;
-  type: string;
+  accountCode: string;
+  accountName: string;
+  accountType: string;
 }
 
 interface AccountSelectProps {
@@ -52,18 +52,18 @@ export function AccountSelect({
   const filteredAccounts = accounts.filter((account: Account) => {
     if (accountType === "all") return true;
     
-    const type = account.type?.toLowerCase();
-    console.log(`Checking account ${account.code} - ${account.name} with type: "${type}"`);
+    const type = account.accountType?.toLowerCase();
+    console.log(`Checking account ${account.accountCode} - ${account.accountName} with type: "${type}"`);
     
     switch (accountType) {
       case "revenue":
-        return type === "revenue" || type === "income";
+        return type === "revenue";
       case "expense":
-        return type === "expense" || type === "cost of sales" || type === "cost of goods sold" || type === "cogs";
+        return type === "expense" || type === "cost of goods sold";
       case "asset":
-        return type === "asset" || type === "current asset" || type === "non-current asset";
+        return type === "asset";
       case "liability":
-        return type === "liability" || type === "current liability" || type === "non-current liability";
+        return type === "liability";
       case "equity":
         return type === "equity";
       default:
@@ -87,7 +87,7 @@ export function AccountSelect({
         >
           {selectedAccount ? (
             <span className="truncate">
-              {selectedAccount.code} - {selectedAccount.name}
+              {selectedAccount.accountCode} - {selectedAccount.accountName}
             </span>
           ) : (
             placeholder
@@ -117,10 +117,10 @@ export function AccountSelect({
                   />
                   <div className="flex-1">
                     <div className="font-medium">
-                      {account.code} - {account.name}
+                      {account.accountCode} - {account.accountName}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {account.type}
+                      {account.accountType}
                     </div>
                   </div>
                 </CommandItem>

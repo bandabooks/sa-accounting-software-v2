@@ -1,0 +1,66 @@
+for Accurate Chart of Accounts Dropdown in Products & Services Module
+Objective:
+Ensure the “Products and Services” creation/edit page pulls and displays the correct Chart of Accounts dropdown options for both income and expense/cost accounts. This must align with typical accounting practices and your existing account structure.
+
+INCOME ACCOUNT DROPDOWN:
+Only show income accounts from the Chart of Accounts in the dropdown when selecting the default income account for Products or Services.
+
+Defaults:
+
+For Products, the default should be Product Sales.
+
+For Services, the default should be Service Revenue.
+
+EXPENSE/COST ACCOUNT DROPDOWN:
+Products:
+
+Show only Cost of Goods Sold (COGS) accounts and relevant sub-accounts in the dropdown for the expense/cost account.
+
+Default: Cost of Goods Sold.
+
+Services:
+
+Show only Cost of Services (or Direct Service Costs) accounts and sub-accounts in the dropdown.
+
+Default: Cost of Services.
+
+Implementation Instructions:
+Dropdown Filtering Logic:
+
+Filter chart of accounts by accountType = "Revenue" for the income dropdown.
+
+Filter chart of accounts by accountType = "Cost of Goods Sold" for product costs, and by accountType = "Cost of Services" for service costs.
+
+Validation:
+
+Prevent selection of incorrect account types (e.g., cannot select an Expense or Asset account as income).
+
+Ensure dropdown always pulls the current, active accounts from the chart of accounts table.
+
+Default Values:
+
+Set Product Sales as the default for product income, Service Revenue for service income.
+
+Set Cost of Goods Sold for product costs, Cost of Services for service costs.
+
+UI/UX Notes:
+Clearly label each dropdown (e.g., “Income Account”, “Cost Account”) and show the account code + name for clarity.
+
+If the required account does not exist, allow users with appropriate permissions to add new accounts directly from the form.
+
+Sample Logic (for Developers):
+
+js
+Copy
+Edit
+// For Income Dropdown
+const incomeAccounts = chartOfAccounts.filter(acc => acc.accountType === "Revenue");
+
+// For Product Cost Dropdown
+const cogsAccounts = chartOfAccounts.filter(acc => acc.accountType === "Cost of Goods Sold");
+
+// For Service Cost Dropdown
+const serviceCostAccounts = chartOfAccounts.filter(acc => acc.accountType === "Cost of Services");
+Final Requirement:
+
+Update the Products and Services module so the account selection dropdowns ONLY show relevant income and cost accounts according to the item type, defaulting as specified. Validate that no irrelevant account types can be selected, ensuring accounting integrity and accurate reporting.
