@@ -84,23 +84,28 @@ export async function getPermissionsMatrix(req: PermissionsMatrixRequest, res: R
       permissions: role.permissions || {}
     }));
 
-    // Transform modules data
-    const transformedModules = Object.values(SYSTEM_MODULES).map(moduleId => {
-      const moduleConfig = companyModules.find(m => m.id === moduleId);
-      return {
-        id: moduleId,
-        name: moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        category: getModuleCategory(moduleId),
-        isActive: moduleConfig?.isActive || false
-      };
-    });
+    // Transform modules data with default permissions
+    const transformedModules = companyModules.map(module => ({
+      id: module.id,
+      name: module.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      description: `${module.id.replace(/_/g, ' ')} management and operations`,
+      category: 'business',
+      isActive: module.is_active,
+      permissions: [
+        { type: 'view', name: 'View' },
+        { type: 'create', name: 'Create' },
+        { type: 'edit', name: 'Edit' },
+        { type: 'delete', name: 'Delete' }
+      ]
+    }));
 
     // Transform permission types
-    const transformedPermissionTypes = Object.values(PERMISSION_TYPES).map(permType => ({
-      id: permType,
-      name: permType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      description: getPermissionDescription(permType)
-    }));
+    const transformedPermissionTypes = [
+      { id: 'view', name: 'View', description: 'View and read access' },
+      { id: 'create', name: 'Create', description: 'Create new records' },
+      { id: 'edit', name: 'Edit', description: 'Modify existing records' },
+      { id: 'delete', name: 'Delete', description: 'Remove records' }
+    ];
 
     const response = {
       roles: transformedRoles,
