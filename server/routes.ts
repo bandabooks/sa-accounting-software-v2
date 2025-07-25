@@ -127,8 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(429).json({ message: "Too many login attempts. Please try again later." });
       }
       
-      // Find user
-      const user = await storage.getUserByUsername(username);
+      // Find user by username or email (allow login with email address)
+      let user = await storage.getUserByUsername(username);
+      if (!user && username.includes('@')) {
+        user = await storage.getUserByEmail(username);
+      }
+      
       if (!user) {
         recordLoginAttempt(clientId, false);
         return res.status(401).json({ message: "Invalid credentials" });
@@ -376,6 +380,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Signup failed. Please try again." });
     }
   });
+
+  // Development helper to reset user password
+  app.post("/api/dev/reset-password", async (req, res) => {
+    try {
+      const { email, newPassword } = req.body;
+      
+      // Only allow in development
+      if (process.env.NODE_ENV !== 'development') {
+        return res.status(404).json({ message: "Not found" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUserPassword(user.id, hashedPassword);
+      
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Dev password reset error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // Development helper to unlock user account
+  app.post("/api/dev/unlock-account", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      // Only allow in development
+      if (process.env.NODE_ENV !== 'development') {
+        return res.status(404).json({ message: "Not found" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Reset failed login attempts and clear lock
+      await storage.updateUserLoginAttempts(user.id, 0, null);
+      
+      res.json({ message: "Account unlocked successfully" });
+    } catch (error) {
+      console.error("Dev unlock account error:", error);
+      res.status(500).json({ message: "Failed to unlock account" });
+    }
+  });
+
 
   app.post("/api/auth/logout", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
