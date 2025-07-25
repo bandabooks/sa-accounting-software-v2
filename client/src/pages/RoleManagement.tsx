@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,14 @@ import {
   Check,
   X,
   AlertTriangle,
-  Info
+  Info,
+  Calculator,
+  FileText,
+  UserCheck,
+  DollarSign,
+  CreditCard,
+  Briefcase,
+  Users
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -60,6 +68,106 @@ interface Permission {
   description: string;
   category: string;
 }
+
+// Comprehensive Business Roles as per user requirements
+const BUSINESS_ROLE_DESCRIPTIONS = {
+  "super_admin": {
+    icon: Crown,
+    color: "bg-red-500",
+    title: "Super Admin (Platform Owner)",
+    description: "Full access to all companies, billing, subscription, platform settings. Manage global roles, audit logs, system integrations.",
+    level: 10,
+    accessAreas: ["All Platform Functions", "Multi-Company Access", "Billing Management", "System Configuration"]
+  },
+  "company_admin": {
+    icon: Building,
+    color: "bg-blue-500", 
+    title: "Company Admin/Owner",
+    description: "Full access to all modules and settings for their company. Invite, create, and manage users within their company. Assign roles and permissions to other users. View and control billing for their company.",
+    level: 9,
+    accessAreas: ["All Company Modules", "User Management", "Role Assignment", "Company Settings", "Billing Control"]
+  },
+  "accountant": {
+    icon: Calculator,
+    color: "bg-green-500",
+    title: "Accountant",
+    description: "Access to core accounting features (invoicing, expenses, bank reconciliation, journals, VAT). Can view, create, and edit financial records. Cannot manage users or company settings (unless permission granted).",
+    level: 7,
+    accessAreas: ["Invoicing", "Expenses", "Bank Reconciliation", "Journals", "VAT Management", "Financial Reports"]
+  },
+  "bookkeeper": {
+    icon: FileText,
+    color: "bg-yellow-500",
+    title: "Bookkeeper", 
+    description: "Enter day-to-day transactions (sales, expenses, receipts, bills). Access to client, supplier, product, and transaction modules. Limited or no access to reporting and sensitive settings.",
+    level: 6,
+    accessAreas: ["Daily Transactions", "Client Management", "Supplier Management", "Product Management", "Basic Reporting"]
+  },
+  "auditor": {
+    icon: Eye,
+    color: "bg-purple-500",
+    title: "Auditor",
+    description: "Read-only access to financial data, transactions, and compliance modules. Can run and export reports, view logs, but cannot create or edit records.",
+    level: 5,
+    accessAreas: ["View Financial Data", "Generate Reports", "Export Data", "View Audit Logs", "Compliance Review"]
+  },
+  "manager": {
+    icon: UserCheck,
+    color: "bg-indigo-500",
+    title: "Manager/Department Manager",
+    description: "Access to relevant business units or departments (sales, inventory, payroll, projects, etc.). Approve transactions, view reports, limited edit rights for their area.",
+    level: 6,
+    accessAreas: ["Department Management", "Transaction Approval", "Team Reports", "Project Management", "Inventory Control"]
+  },
+  "sales_representative": {
+    icon: DollarSign,
+    color: "bg-teal-500",
+    title: "Sales Representative",
+    description: "Access to sales-related modules including customers, invoices, estimates, products. Limited access to financial reports.",
+    level: 4,
+    accessAreas: ["Customer Management", "Sales Processing", "Invoice Creation", "Estimates", "Product Catalog", "POS Access"]
+  },
+  "cashier": {
+    icon: CreditCard,
+    color: "bg-orange-500",
+    title: "Cashier/POS Operator",
+    description: "Use the Point of Sale module, process sales, print receipts. No access to back-office functions.",
+    level: 3,
+    accessAreas: ["POS Operations", "Sales Processing", "Receipt Handling", "Cash Management", "Customer Service"]
+  },
+  "payroll_admin": {
+    icon: Briefcase,
+    color: "bg-pink-500",
+    title: "Payroll Administrator",
+    description: "Access to payroll, employee management, leave, and salary modules. No access to sales or supplier data.",
+    level: 6,
+    accessAreas: ["Payroll Processing", "Employee Management", "Leave Management", "Salary Administration", "HR Reports"]
+  },
+  "compliance_officer": {
+    icon: Shield,
+    color: "bg-cyan-500",
+    title: "Compliance Officer/Tax Practitioner",
+    description: "Access to compliance modules (SARS, CIPC, Labour, VAT). Submit, track, and download compliance documents and reports.",
+    level: 6,
+    accessAreas: ["SARS Compliance", "CIPC Management", "Labour Compliance", "VAT Returns", "Tax Documentation"]
+  },
+  "employee": {
+    icon: Users,
+    color: "bg-gray-500",
+    title: "Employee/Staff/Operator",
+    description: "Access to only the modules necessary for their job (e.g., POS, sales entry, timesheets, tasks). Cannot view financial reports or manage company/users.",
+    level: 2,
+    accessAreas: ["Task Management", "Time Tracking", "Basic POS", "Limited Access", "Job-Specific Modules"]
+  },
+  "viewer": {
+    icon: Eye,
+    color: "bg-slate-500",
+    title: "Viewer/Read-Only User",
+    description: "Can only view data, reports, and dashboards. No editing or management rights.",
+    level: 1,
+    accessAreas: ["View-Only Access", "Dashboard Viewing", "Report Access", "Data Browsing", "No Edit Rights"]
+  }
+};
 
 // Available permissions organized by category
 const PERMISSION_CATEGORIES = {
@@ -260,6 +368,122 @@ export default function RoleManagement() {
     return allPermissions;
   };
 
+  // Render business role overview cards
+  const renderBusinessRoleOverview = () => {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-4">
+          <h2 className="text-2xl font-bold mb-2">Comprehensive Business Role System</h2>
+          <p className="text-gray-600">Professional role hierarchy designed for accounting and business management platforms</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.entries(BUSINESS_ROLE_DESCRIPTIONS).map(([roleKey, roleInfo]) => {
+            const IconComponent = roleInfo.icon;
+            const existingRole = systemRoles?.find((r: SystemRole) => r.name === roleKey);
+            
+            return (
+              <Card key={roleKey} className="relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-full h-1 ${roleInfo.color}`} />
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className={`p-2 rounded-lg ${roleInfo.color} text-white`}>
+                        <IconComponent className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold">{roleInfo.title}</CardTitle>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            Level {roleInfo.level}
+                          </Badge>
+                          {existingRole && (
+                            <Badge variant="outline" className="text-xs">
+                              {existingRole.userCount || 0} users
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+                    {roleInfo.description}
+                  </p>
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-gray-700">Key Access Areas:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {roleInfo.accessAreas.slice(0, 3).map((area, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {area}
+                        </Badge>
+                      ))}
+                      {roleInfo.accessAreas.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{roleInfo.accessAreas.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {existingRole && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1 text-xs text-green-600">
+                          <Check className="h-3 w-3" />
+                          <span>Active</span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditRole(existingRole)}
+                          className="text-xs"
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {!existingRole && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1 text-xs text-gray-500">
+                          <X className="h-3 w-3" />
+                          <span>Not Created</span>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            form.reset({
+                              name: roleKey,
+                              displayName: roleInfo.title,
+                              description: roleInfo.description,
+                              level: roleInfo.level,
+                              permissions: [],
+                              isSystemRole: true,
+                              isActive: true,
+                            });
+                            setIsCreateDialogOpen(true);
+                          }}
+                          className="text-xs"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Create
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -455,16 +679,16 @@ export default function RoleManagement() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Shield className="h-5 w-5" />
-            <span>System Roles</span>
-          </CardTitle>
-          <CardDescription>
-            Manage role definitions and their associated permissions
-          </CardDescription>
-        </CardHeader>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="h-5 w-5" />
+                <span>System Roles</span>
+              </CardTitle>
+              <CardDescription>
+                Manage role definitions and their associated permissions
+              </CardDescription>
+            </CardHeader>
         <CardContent>
           {rolesLoading ? (
             <div className="text-center py-8">Loading roles...</div>
@@ -526,8 +750,8 @@ export default function RoleManagement() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
       {selectedRole && (
         <Card>
@@ -668,6 +892,8 @@ export default function RoleManagement() {
           </DialogContent>
         </Dialog>
       )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -18,10 +18,10 @@ import {
   type AuthenticatedRequest 
 } from "./auth";
 import { 
-  PermissionManager, 
   requireAnyPermission, 
-  requireMinimumLevel,
-  SYSTEM_ROLES 
+  requireRole,
+  SYSTEM_ROLES,
+  hasPermission
 } from "./rbac";
 import { registerCompanyRoutes } from "./companyRoutes";
 import { registerEnterpriseRoutes } from "./routes/enterpriseRoutes";
