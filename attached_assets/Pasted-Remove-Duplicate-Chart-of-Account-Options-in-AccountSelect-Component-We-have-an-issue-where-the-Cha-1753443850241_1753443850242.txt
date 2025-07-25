@@ -1,0 +1,35 @@
+Remove Duplicate Chart of Account Options in AccountSelect Component
+
+We have an issue where the Chart of Accounts dropdowns (Income Account and Expense Account) in the products and services pages are showing multiple duplicate entries for each account (e.g., "4000 - Sales Revenue" appears four times instead of once). This is confusing for users and leads to potential data entry errors.
+
+What Needs to Be Fixed
+Ensure each account appears only once in all Chart of Accounts dropdowns, with no duplicates or triplicates.
+
+This applies to both income (Revenue type) and expense (Cost of Goods Sold, Expense type) account dropdowns on the product/service forms.
+
+Dropdown options should be displayed as:
+
+[accountCode] - [accountName]
+
+(e.g., "4000 - Sales Revenue", "5000 - Cost of Goods Sold")
+
+Remove all duplicate account entries from the dropdowns regardless of how many are currently present.
+
+Implementation Suggestions
+Deduplicate the accounts list before mapping to dropdown options, using unique values for either accountCode or a combination of accountCode and accountName.
+
+Ensure the filtering logic for account types (e.g., accountType === "Revenue" for income, accountType === "Cost of Goods Sold" for product expenses, accountType === "Expense" for service expenses) is applied after deduplication.
+
+If there are duplicates in the database, identify and clean these up so that only unique accounts are stored per company.
+
+For visual consistency, make sure that default selections (like "Product Sales" or "Service Revenue") also use the unique, deduplicated entry.
+
+Acceptance Criteria
+No account appears more than once in the dropdowns for any form/page.
+
+New and existing products/services can be created or edited with only unique Chart of Account options.
+
+The changes are applied globally to all account dropdowns in the system.
+
+Summary:
+Please update the Chart of Accounts dropdown logic so that each account appears only once in all related forms, with a clear format and correct account type filtering. This will greatly improve user experience and data accuracy.

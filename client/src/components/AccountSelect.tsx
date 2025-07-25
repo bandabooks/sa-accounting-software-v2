@@ -19,6 +19,7 @@ import {
 
 interface Account {
   id: number;
+  companyId: number;
   accountCode: string;
   accountName: string;
   accountType: string;
@@ -45,33 +46,56 @@ export function AccountSelect({
     queryKey: ["/api/chart-of-accounts"],
   });
 
+  // Get current company to filter accounts
+  const { data: activeCompany } = useQuery({
+    queryKey: ["/api/companies/active"],
+  });
+
   console.log("AccountSelect - Raw accounts data:", accounts);
   console.log("AccountSelect - Account type filter:", accountType);
 
-  // Filter accounts based on type
-  const filteredAccounts = accounts.filter((account: Account) => {
-    if (accountType === "all") return true;
-    
-    const type = account.accountType?.toLowerCase();
-    console.log(`Checking account ${account.accountCode} - ${account.accountName} with type: "${type}"`);
-    
-    switch (accountType) {
-      case "revenue":
-        return type === "revenue";
-      case "expense":
-        return type === "expense" || type === "cost of goods sold";
-      case "asset":
-        return type === "asset";
-      case "liability":
-        return type === "liability";
-      case "equity":
-        return type === "equity";
-      default:
-        return true;
-    }
-  });
+  // Filter accounts based on current company and type, then deduplicate
+  const filteredAccounts = accounts
+    .filter((account: Account) => {
+      // Only show accounts from the current company
+      if (activeCompany && account.companyId !== activeCompany.id) {
+        return false;
+      }
+      
+      if (accountType === "all") return true;
+      
+      const type = account.accountType?.toLowerCase();
+      console.log(`Checking account ${account.accountCode} - ${account.accountName} with type: "${type}"`);
+      
+      switch (accountType) {
+        case "revenue":
+          return type === "revenue";
+        case "expense":
+          return type === "expense" || type === "cost of goods sold";
+        case "asset":
+          return type === "asset";
+        case "liability":
+          return type === "liability";
+        case "equity":
+          return type === "equity";
+        default:
+          return true;
+      }
+    })
+    .reduce((unique: Account[], account: Account) => {
+      // Deduplicate by account code and name combination
+      const exists = unique.find(acc => 
+        acc.accountCode === account.accountCode && 
+        acc.accountName === account.accountName
+      );
+      if (!exists) {
+        unique.push(account);
+      }
+      return unique;
+    }, [])
+    .sort((a, b) => a.accountCode.localeCompare(b.accountCode)); // Sort by account code
 
-  console.log("AccountSelect - Filtered accounts:", filteredAccounts);
+  console.log("AccountSelect - Filtered and deduplicated accounts:", filteredAccounts);
 
   const selectedAccount = filteredAccounts.find((account: Account) => account.id.toString() === value);
 

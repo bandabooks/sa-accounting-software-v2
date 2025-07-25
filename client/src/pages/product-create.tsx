@@ -50,7 +50,7 @@ export default function ProductCreate() {
   });
 
   // Query for Chart of Accounts to set defaults
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [] } = useQuery<any[]>({
     queryKey: ["/api/chart-of-accounts"],
   });
 
@@ -100,7 +100,12 @@ export default function ProductCreate() {
 
   // Set default accounts based on service type
   const setDefaultAccounts = () => {
-    const incomeAccount = accounts.find((acc: any) => 
+    // Filter accounts by current company first
+    const companyAccounts = accounts.filter((acc: any) => 
+      activeCompany && acc.companyId === activeCompany.id
+    );
+
+    const incomeAccount = companyAccounts.find((acc: any) => 
       acc.accountType === "Revenue" && (
         isService 
           ? acc.accountName.toLowerCase().includes("service")
@@ -108,7 +113,7 @@ export default function ProductCreate() {
       )
     );
     
-    const expenseAccount = accounts.find((acc: any) => 
+    const expenseAccount = companyAccounts.find((acc: any) => 
       acc.accountType === "Cost of Goods Sold" && (
         isService 
           ? acc.accountName.toLowerCase().includes("service")
@@ -125,12 +130,17 @@ export default function ProductCreate() {
     }
   };
 
+  // Get active company for filtering accounts
+  const { data: activeCompany } = useQuery({
+    queryKey: ["/api/companies/active"],
+  });
+
   // Set defaults when accounts load or service type changes
   React.useEffect(() => {
-    if (accounts.length > 0) {
+    if (accounts.length > 0 && activeCompany) {
       setDefaultAccounts();
     }
-  }, [accounts, isService, form]);
+  }, [accounts, isService, form, activeCompany]);
 
   return (
     <div className="container mx-auto px-4 py-8">
