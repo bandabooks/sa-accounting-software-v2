@@ -68,23 +68,43 @@ export default function Subscription() {
     queryKey: ["/api/subscription-plans"],
   });
 
-  // Request subscription change mutation
-  const requestChangeMutation = useMutation({
+  // Create PayFast payment mutation
+  const createPaymentMutation = useMutation({
     mutationFn: async ({ planId, billingPeriod }: { planId: number; billingPeriod: string }) => {
       return await apiRequest("/api/company/subscription/request", "POST", { planId, billingPeriod });
     },
-    onSuccess: () => {
-      toast({
-        title: "Request Submitted",
-        description: "Your subscription change request has been submitted for review.",
-      });
+    onSuccess: (data: any) => {
+      if (data.paymentData && data.paymentUrl) {
+        // Create a form to submit to PayFast
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = data.paymentUrl;
+        form.target = '_blank';
+
+        // Add all PayFast fields
+        Object.entries(data.paymentData).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = String(value);
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+
+        toast({
+          title: "Payment Started",
+          description: "Redirecting to PayFast for secure payment processing...",
+        });
+      }
       setIsUpgradeDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/company/subscription"] });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to submit subscription change request",
+        description: error.message || "Failed to initiate payment",
         variant: "destructive",
       });
     },
@@ -92,7 +112,7 @@ export default function Subscription() {
 
   const handlePlanRequest = () => {
     if (selectedPlan && selectedBillingPeriod) {
-      requestChangeMutation.mutate({
+      createPaymentMutation.mutate({
         planId: selectedPlan,
         billingPeriod: selectedBillingPeriod
       });
@@ -265,10 +285,10 @@ export default function Subscription() {
                 </div>
                 <Button 
                   onClick={handlePlanRequest}
-                  disabled={!selectedPlan || requestChangeMutation.isPending}
+                  disabled={!selectedPlan || createPaymentMutation.isPending}
                   className="w-full"
                 >
-                  {requestChangeMutation.isPending ? "Submitting..." : "Submit Request"}
+                  {createPaymentMutation.isPending ? "Processing..." : "Proceed to Payment"}
                 </Button>
               </div>
             </DialogContent>

@@ -49,6 +49,8 @@ import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
 import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
 import SuperAdminAuditLogs from "@/pages/super-admin-audit-logs";
 import Subscription from "@/pages/subscription";
+import SubscriptionSuccess from "@/pages/subscription-success";
+import SubscriptionCancel from "@/pages/subscription-cancel";
 import SubscriptionPayment from "@/pages/subscription-payment";
 import PaymentSuccess from "@/pages/payment-success";
 import PaymentCancel from "@/pages/payment-cancel";
@@ -378,10 +380,20 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/subscription/success">
           <ProtectedRoute>
-            <PaymentSuccess />
+            <SubscriptionSuccess />
           </ProtectedRoute>
         </Route>
         <Route path="/subscription/cancel">
+          <ProtectedRoute>
+            <SubscriptionCancel />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/payment/success">
+          <ProtectedRoute>
+            <PaymentSuccess />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/payment/cancel">
           <ProtectedRoute>
             <PaymentCancel />
           </ProtectedRoute>

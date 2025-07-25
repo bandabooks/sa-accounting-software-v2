@@ -19,7 +19,6 @@ import {
 } from "./auth";
 import { 
   requireAnyPermission, 
-  requireRole,
   SYSTEM_ROLES,
   hasPermission
 } from "./rbac";
@@ -111,6 +110,15 @@ function validateRequest(schema: { body?: z.ZodSchema }) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize PayFast service
+  let payFastService;
+  try {
+    payFastService = createPayFastService();
+    console.log("PayFast service initialized successfully");
+  } catch (error) {
+    console.warn("PayFast service initialization failed:", error.message);
+  }
+
   // Register multi-company routes
   registerCompanyRoutes(app);
   // Register enterprise feature routes
