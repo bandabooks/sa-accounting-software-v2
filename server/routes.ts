@@ -3005,7 +3005,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/super-admin/companies/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = parseInt(req.params.id);
-      const updatedCompany = await storage.updateCompany(companyId, req.body);
+      
+      // Get current company data first
+      const currentCompany = await storage.getCompany(companyId);
+      if (!currentCompany) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      // Filter out null/undefined values and preserve required fields
+      const updateData = Object.fromEntries(
+        Object.entries(req.body).filter(([key, value]) => value !== null && value !== undefined)
+      );
+      
+      // Ensure required fields are not overwritten with null
+      if (!updateData.name && !currentCompany.name) {
+        updateData.name = currentCompany.displayName || 'Company';
+      }
+      if (!updateData.displayName && !currentCompany.displayName) {
+        updateData.displayName = currentCompany.name || 'Company';
+      }
+      
+      const updatedCompany = await storage.updateCompany(companyId, updateData);
       
       await logAudit(req.user!.id, 'UPDATE', 'company', companyId, 'Updated company details');
       

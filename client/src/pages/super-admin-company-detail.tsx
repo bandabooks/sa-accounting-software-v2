@@ -68,15 +68,26 @@ export default function SuperAdminCompanyDetail() {
   });
 
   const handleUpdateCompany = async (formData: FormData) => {
-    const data = {
-      name: formData.get("name"),
-      displayName: formData.get("displayName"),
-      email: formData.get("email"),
-      phone: formData.get("phone"),
-      address: formData.get("address"),
-      subscriptionPlan: formData.get("subscriptionPlan"),
-      isActive: formData.get("isActive") === "true",
-    };
+    // Build data object with only non-null, non-empty values
+    const data: any = {};
+    
+    const name = formData.get("name") as string;
+    const displayName = formData.get("displayName") as string;
+    const email = formData.get("email") as string;
+    const phone = formData.get("phone") as string;
+    const address = formData.get("address") as string;
+    const subscriptionPlan = formData.get("subscriptionPlan") as string;
+    const isActive = formData.get("isActive");
+    
+    // Only include fields that have values
+    if (name && name.trim()) data.name = name.trim();
+    if (displayName && displayName.trim()) data.displayName = displayName.trim();
+    if (email && email.trim()) data.email = email.trim();
+    if (phone && phone.trim()) data.phone = phone.trim();
+    if (address && address.trim()) data.address = address.trim();
+    if (subscriptionPlan && subscriptionPlan.trim()) data.subscriptionPlan = subscriptionPlan.trim();
+    if (isActive !== null) data.isActive = isActive === "true";
+    
     updateCompanyMutation.mutate(data);
   };
 
