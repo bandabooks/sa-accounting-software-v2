@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seedData";
+import { seedSystemRoles, createDefaultUserPermissions } from "./rbac-seeder";
 
 const app = express();
 app.use(express.json());
@@ -40,6 +41,14 @@ app.use((req, res, next) => {
 (async () => {
   // Seed database with initial data
   await seedDatabase();
+  
+  // Seed RBAC system roles (async, don't block startup)
+  seedSystemRoles().catch(console.error);
+  
+  // Create default user permissions (async, don't block startup)
+  setTimeout(() => {
+    createDefaultUserPermissions().catch(console.error);
+  }, 2000);
   
   const server = await registerRoutes(app);
 

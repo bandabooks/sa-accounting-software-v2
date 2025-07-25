@@ -17,6 +17,12 @@ import {
   ROLES,
   type AuthenticatedRequest 
 } from "./auth";
+import { 
+  PermissionManager, 
+  requireAnyPermission, 
+  requireMinimumLevel,
+  SYSTEM_ROLES 
+} from "./rbac";
 import { registerCompanyRoutes } from "./companyRoutes";
 import { registerEnterpriseRoutes } from "./routes/enterpriseRoutes";
 import { registerOnboardingRoutes } from "./routes/onboardingRoutes";
@@ -5955,6 +5961,236 @@ Format your response as a JSON array of tip objects with "title", "description",
       res.status(500).json({ message: "Failed to generate top products report" });
     }
   });
+
+  // =============================================
+  // RBAC (Role-Based Access Control) API Routes
+  // =============================================
+
+  // System Roles Management
+  app.get("/api/rbac/system-roles", authenticate, requirePermission(PERMISSIONS.ROLES_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const roles = await storage.getSystemRoles();
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching system roles:", error);
+      res.status(500).json({ message: "Failed to fetch system roles" });
+    }
+  });
+
+  app.post("/api/rbac/system-roles", authenticate, requirePermission(PERMISSIONS.ROLES_CREATE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const roleData = req.body;
+      const role = await storage.createSystemRole(roleData);
+      
+      await PermissionManager.logPermissionChange({
+        userId: req.user.id,
+        companyId: req.user.companyId,
+        changedBy: req.user.id,
+        action: 'CREATE_SYSTEM_ROLE',
+        targetType: 'system_role',
+        targetId: role.id,
+        newValue: role,
+        reason: 'System role created via API'
+      });
+      
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("Error creating system role:", error);
+      res.status(500).json({ message: "Failed to create system role" });
+    }
+  });
+
+  // Company Roles Management
+  app.get("/api/rbac/company-roles", authenticate, requirePermission(PERMISSIONS.ROLES_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const roles = await storage.getCompanyRoles(companyId);
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching company roles:", error);
+      res.status(500).json({ message: "Failed to fetch company roles" });
+    }
+  });
+
+  app.post("/api/rbac/company-roles", authenticate, requirePermission(PERMISSIONS.ROLES_CREATE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const roleData = { ...req.body, companyId };
+      const role = await storage.createCompanyRole(roleData);
+      
+      await PermissionManager.logPermissionChange({
+        userId: req.user.id,
+        companyId,
+        changedBy: req.user.id,
+        action: 'CREATE_COMPANY_ROLE',
+        targetType: 'company_role',
+        targetId: role.id,
+        newValue: role,
+        reason: 'Company role created via API'
+      });
+      
+      res.status(201).json(role);
+    } catch (error) {
+      console.error("Error creating company role:", error);
+      res.status(500).json({ message: "Failed to create company role" });
+    }
+  });
+
+  // User Permission Management
+  app.get("/api/rbac/user-permissions/:userId", authenticate, requireAnyPermission([PERMISSIONS.USERS_VIEW, PERMISSIONS.PERMISSIONS_VIEW_AUDIT]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const companyId = req.user.companyId;
+      
+      // Check if user can view this user's permissions
+      if (userId !== req.user.id && !await PermissionManager.hasPermission(req.user.id, companyId, PERMISSIONS.USERS_VIEW)) {
+        return res.status(403).json({ message: "Insufficient permissions to view user permissions" });
+      }
+      
+      const permissions = await PermissionManager.getUserPermissions(userId, companyId);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ message: "Failed to fetch user permissions" });
+    }
+  });
+
+  app.post("/api/rbac/user-permissions", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), async (req: AuthenticatedRequest, res) => {
+    try {
+      const permissionData = { ...req.body, grantedBy: req.user.id };
+      const permission = await storage.createUserPermission(permissionData);
+      
+      await PermissionManager.logPermissionChange({
+        userId: permission.userId,
+        companyId: permission.companyId,
+        changedBy: req.user.id,
+        action: 'GRANT_PERMISSION',
+        targetType: 'user_permission',
+        targetId: permission.id,
+        newValue: permission,
+        reason: req.body.reason || 'Permission granted via API'
+      });
+      
+      res.status(201).json(permission);
+    } catch (error) {
+      console.error("Error granting user permission:", error);
+      res.status(500).json({ message: "Failed to grant user permission" });
+    }
+  });
+
+  // Permission Validation & Checking
+  app.post("/api/rbac/check-permission", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, permission } = req.body;
+      const companyId = req.user.companyId;
+      const targetUserId = userId || req.user.id;
+      
+      const hasPermission = await PermissionManager.hasPermission(targetUserId, companyId, permission);
+      res.json({ hasPermission });
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      res.status(500).json({ message: "Failed to check permission" });
+    }
+  });
+
+  app.get("/api/rbac/my-permissions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const companyId = req.user.companyId;
+      
+      const permissions = await PermissionManager.getUserPermissions(userId, companyId);
+      const userLevel = await PermissionManager.getUserLevel(userId, companyId);
+      
+      res.json({ permissions, level: userLevel });
+    } catch (error) {
+      console.error("Error fetching user's permissions:", error);
+      res.status(500).json({ message: "Failed to fetch user's permissions" });
+    }
+  });
+
+  // Permission Audit Logs
+  app.get("/api/rbac/audit-logs", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_VIEW_AUDIT), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const { limit = 100 } = req.query;
+      
+      const auditLogs = await storage.getPermissionAuditLogs(companyId, parseInt(limit as string));
+      res.json(auditLogs);
+    } catch (error) {
+      console.error("Error fetching permission audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch permission audit logs" });
+    }
+  });
+
+  // Role Assignment & Management
+  app.post("/api/rbac/assign-role", authenticate, requirePermission(PERMISSIONS.USERS_ASSIGN_ROLES), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, systemRoleId, companyRoleId, reason } = req.body;
+      const companyId = req.user.companyId;
+      
+      // Check if assignment already exists
+      let existingPermission = await storage.getUserPermission(userId, companyId);
+      
+      if (existingPermission) {
+        // Update existing permission
+        existingPermission = await storage.updateUserPermission(existingPermission.id, {
+          systemRoleId,
+          companyRoleId,
+        });
+      } else {
+        // Create new permission
+        existingPermission = await storage.createUserPermission({
+          userId,
+          companyId,
+          systemRoleId,
+          companyRoleId,
+          customPermissions: [],
+          deniedPermissions: [],
+          isActive: true,
+          grantedBy: req.user.id,
+        });
+      }
+      
+      await PermissionManager.logPermissionChange({
+        userId,
+        companyId,
+        changedBy: req.user.id,
+        action: 'ASSIGN_ROLE',
+        targetType: 'role_assignment',
+        newValue: { systemRoleId, companyRoleId },
+        reason: reason || 'Role assigned via API'
+      });
+      
+      res.json(existingPermission);
+    } catch (error) {
+      console.error("Error assigning role:", error);
+      res.status(500).json({ message: "Failed to assign role" });
+    }
+  });
+
+  // Available Permissions List
+  app.get("/api/rbac/available-permissions", authenticate, requirePermission(PERMISSIONS.ROLES_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const permissionGroups = {
+        system: Object.entries(PERMISSIONS).filter(([key]) => key.includes('SYSTEM')).map(([key, value]) => ({ key, value })),
+        users: Object.entries(PERMISSIONS).filter(([key]) => key.includes('USERS')).map(([key, value]) => ({ key, value })),
+        roles: Object.entries(PERMISSIONS).filter(([key]) => key.includes('ROLES') || key.includes('PERMISSIONS')).map(([key, value]) => ({ key, value })),
+        companies: Object.entries(PERMISSIONS).filter(([key]) => key.includes('COMPANIES')).map(([key, value]) => ({ key, value })),
+        financial: Object.entries(PERMISSIONS).filter(([key]) => key.includes('INVOICES') || key.includes('ESTIMATES') || key.includes('PAYMENTS') || key.includes('EXPENSES')).map(([key, value]) => ({ key, value })),
+        pos: Object.entries(PERMISSIONS).filter(([key]) => key.includes('POS')).map(([key, value]) => ({ key, value })),
+        reports: Object.entries(PERMISSIONS).filter(([key]) => key.includes('REPORTS') || key.includes('ANALYTICS')).map(([key, value]) => ({ key, value })),
+      };
+      
+      res.json(permissionGroups);
+    } catch (error) {
+      console.error("Error fetching available permissions:", error);
+      res.status(500).json({ message: "Failed to fetch available permissions" });
+    }
+  });
+
+  // =============================================
+  // END OF RBAC API ROUTES
+  // =============================================
 
   // Initialize collaboration WebSocket server
   try {

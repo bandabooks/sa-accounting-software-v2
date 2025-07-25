@@ -44,12 +44,79 @@ export const companies = pgTable("companies", {
   activeIdx: index("companies_active_idx").on(table.isActive),
 }));
 
+// RBAC System Tables
+export const systemRoles = pgTable("system_roles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  isSystemRole: boolean("is_system_role").default(true), // Cannot be deleted if true
+  permissions: jsonb("permissions").notNull().default([]), // Array of permission strings
+  level: integer("level").notNull().default(1), // 1=lowest, 10=highest access level
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const companyRoles = pgTable("company_roles", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  basedOnSystemRole: integer("based_on_system_role"), // Reference to system_roles.id
+  permissions: jsonb("permissions").notNull().default([]), // Custom permissions for this company
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyRoleUnique: unique().on(table.companyId, table.name),
+  companyIdx: index("company_roles_company_idx").on(table.companyId),
+}));
+
+export const userPermissions = pgTable("user_permissions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  companyId: integer("company_id").notNull(),
+  systemRoleId: integer("system_role_id"), // Reference to system_roles.id
+  companyRoleId: integer("company_role_id"), // Reference to company_roles.id
+  customPermissions: jsonb("custom_permissions").default([]), // Additional permissions beyond role
+  deniedPermissions: jsonb("denied_permissions").default([]), // Explicitly denied permissions
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"), // For temporary permissions
+  grantedBy: integer("granted_by"), // User ID who granted these permissions
+  grantedAt: timestamp("granted_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userCompanyUnique: unique().on(table.userId, table.companyId),
+  userIdx: index("user_permissions_user_idx").on(table.userId),
+  companyIdx: index("user_permissions_company_idx").on(table.companyId),
+}));
+
+export const permissionAuditLog = pgTable("permission_audit_log", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(), // User whose permissions were changed
+  companyId: integer("company_id").notNull(),
+  changedBy: integer("changed_by").notNull(), // User who made the change
+  action: text("action").notNull(), // 'granted', 'revoked', 'role_assigned', 'role_removed', 'role_created', 'role_updated'
+  targetType: text("target_type").notNull(), // 'user', 'role'
+  targetId: integer("target_id"), // ID of the target (user_id, role_id)
+  oldValue: jsonb("old_value"), // Previous state
+  newValue: jsonb("new_value"), // New state
+  reason: text("reason"), // Optional reason for the change
+  metadata: jsonb("metadata").default({}), // Additional context
+  timestamp: timestamp("timestamp").defaultNow(),
+}, (table) => ({
+  userIdx: index("permission_audit_user_idx").on(table.userId),
+  companyIdx: index("permission_audit_company_idx").on(table.companyId),
+  timestampIdx: index("permission_audit_timestamp_idx").on(table.timestamp),
+}));
+
 export const companyUsers = pgTable("company_users", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   userId: integer("user_id").notNull(),
-  role: text("role").notNull().default("employee"), // owner, admin, manager, accountant, employee
-  permissions: jsonb("permissions").default([]),
+  role: text("role").notNull().default("employee"), // Legacy field, will be replaced by userPermissions
+  permissions: jsonb("permissions").default([]), // Legacy field
   isActive: boolean("is_active").default(true),
   joinedAt: timestamp("joined_at").defaultNow(),
 }, (table) => ({
@@ -682,6 +749,17 @@ export type InsertEstimateItem = z.infer<typeof insertEstimateItemSchema>;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = typeof users.$inferInsert;
+
+// RBAC Type exports
+export type SystemRole = typeof systemRoles.$inferSelect;
+export type InsertSystemRole = typeof systemRoles.$inferInsert;
+export type CompanyRole = typeof companyRoles.$inferSelect;
+export type InsertCompanyRole = typeof companyRoles.$inferInsert;
+export type UserPermission = typeof userPermissions.$inferSelect;
+export type InsertUserPermission = typeof userPermissions.$inferInsert;
+export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
+export type InsertPermissionAuditLog = typeof permissionAuditLog.$inferInsert;
 
 // Authentication types
 export type UserSession = typeof userSessions.$inferSelect;

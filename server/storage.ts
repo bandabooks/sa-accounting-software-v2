@@ -8,6 +8,11 @@ import {
   userSessions,
   userRoles,
   auditLogs,
+  // RBAC imports
+  systemRoles,
+  companyRoles,
+  userPermissions,
+  permissionAuditLog,
   payments,
   expenses,
   vatReturns,
@@ -681,6 +686,35 @@ export interface IStorage {
   // POS Reports & Analytics
   getPosDailySalesReport(companyId: number, date: Date): Promise<{ totalSales: number; totalTransactions: number; averageTransaction: number }>;
   getPosTopProducts(companyId: number, startDate: Date, endDate: Date): Promise<{ productId: number; productName: string; totalQuantity: number; totalRevenue: number }[]>;
+
+  // RBAC - System Roles
+  getSystemRoles(): Promise<SystemRole[]>;
+  getSystemRole(id: number): Promise<SystemRole | undefined>;
+  getSystemRoleByName(name: string): Promise<SystemRole | undefined>;
+  createSystemRole(role: InsertSystemRole): Promise<SystemRole>;
+  updateSystemRole(id: number, role: Partial<InsertSystemRole>): Promise<SystemRole | undefined>;
+  deleteSystemRole(id: number): Promise<boolean>;
+
+  // RBAC - Company Roles
+  getCompanyRoles(companyId: number): Promise<CompanyRole[]>;
+  getCompanyRole(id: number): Promise<CompanyRole | undefined>;
+  getCompanyRoleByName(companyId: number, name: string): Promise<CompanyRole | undefined>;
+  createCompanyRole(role: InsertCompanyRole): Promise<CompanyRole>;
+  updateCompanyRole(id: number, role: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined>;
+  deleteCompanyRole(id: number): Promise<boolean>;
+
+  // RBAC - User Permissions
+  getUserPermission(userId: number, companyId: number): Promise<UserPermission | undefined>;
+  getAllUserPermissions(userId: number): Promise<UserPermission[]>;
+  createUserPermission(permission: InsertUserPermission): Promise<UserPermission>;
+  updateUserPermission(id: number, permission: Partial<InsertUserPermission>): Promise<UserPermission | undefined>;
+  deleteUserPermission(id: number): Promise<boolean>;
+  getUsersWithRole(roleId: number, roleType: 'system' | 'company'): Promise<User[]>;
+
+  // RBAC - Permission Audit
+  createPermissionAuditLog(log: InsertPermissionAuditLog): Promise<PermissionAuditLog>;
+  getPermissionAuditLogs(companyId: number, limit?: number): Promise<PermissionAuditLog[]>;
+  getUserPermissionAuditLogs(userId: number, companyId: number, limit?: number): Promise<PermissionAuditLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -7451,6 +7485,217 @@ export class DatabaseStorage implements IStorage {
       totalQuantity: Number(result.totalQuantity) || 0,
       totalRevenue: Number(result.totalRevenue) || 0
     }));
+  }
+  // =============================================
+  // RBAC Implementation Methods
+  // =============================================
+
+  // System Roles
+  async getSystemRoles(): Promise<SystemRole[]> {
+    return await db.select().from(systemRoles).orderBy(desc(systemRoles.level));
+  }
+
+  async getSystemRole(id: number): Promise<SystemRole | undefined> {
+    const [role] = await db.select().from(systemRoles).where(eq(systemRoles.id, id));
+    return role || undefined;
+  }
+
+  async getSystemRoleByName(name: string): Promise<SystemRole | undefined> {
+    const [role] = await db.select().from(systemRoles).where(eq(systemRoles.name, name));
+    return role || undefined;
+  }
+
+  async createSystemRole(role: InsertSystemRole): Promise<SystemRole> {
+    const [newRole] = await db.insert(systemRoles).values(role).returning();
+    return newRole;
+  }
+
+  async updateSystemRole(id: number, role: Partial<InsertSystemRole>): Promise<SystemRole | undefined> {
+    const [updatedRole] = await db
+      .update(systemRoles)
+      .set({ ...role, updatedAt: new Date() })
+      .where(eq(systemRoles.id, id))
+      .returning();
+    return updatedRole || undefined;
+  }
+
+  async deleteSystemRole(id: number): Promise<boolean> {
+    // Check if it's a system role that can't be deleted
+    const role = await this.getSystemRole(id);
+    if (!role || role.isSystemRole) {
+      return false;
+    }
+
+    const result = await db.delete(systemRoles).where(eq(systemRoles.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Company Roles
+  async getCompanyRoles(companyId: number): Promise<CompanyRole[]> {
+    return await db
+      .select()
+      .from(companyRoles)
+      .where(and(eq(companyRoles.companyId, companyId), eq(companyRoles.isActive, true)))
+      .orderBy(companyRoles.displayName);
+  }
+
+  async getCompanyRole(id: number): Promise<CompanyRole | undefined> {
+    const [role] = await db.select().from(companyRoles).where(eq(companyRoles.id, id));
+    return role || undefined;
+  }
+
+  async getCompanyRoleByName(companyId: number, name: string): Promise<CompanyRole | undefined> {
+    const [role] = await db
+      .select()
+      .from(companyRoles)
+      .where(and(eq(companyRoles.companyId, companyId), eq(companyRoles.name, name)));
+    return role || undefined;
+  }
+
+  async createCompanyRole(role: InsertCompanyRole): Promise<CompanyRole> {
+    const [newRole] = await db.insert(companyRoles).values(role).returning();
+    return newRole;
+  }
+
+  async updateCompanyRole(id: number, role: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined> {
+    const [updatedRole] = await db
+      .update(companyRoles)
+      .set({ ...role, updatedAt: new Date() })
+      .where(eq(companyRoles.id, id))
+      .returning();
+    return updatedRole || undefined;
+  }
+
+  async deleteCompanyRole(id: number): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const [updatedRole] = await db
+      .update(companyRoles)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(companyRoles.id, id))
+      .returning();
+    return !!updatedRole;
+  }
+
+  // User Permissions
+  async getUserPermission(userId: number, companyId: number): Promise<UserPermission | undefined> {
+    const [permission] = await db
+      .select()
+      .from(userPermissions)
+      .where(
+        and(
+          eq(userPermissions.userId, userId),
+          eq(userPermissions.companyId, companyId),
+          eq(userPermissions.isActive, true)
+        )
+      );
+    return permission || undefined;
+  }
+
+  async getAllUserPermissions(userId: number): Promise<UserPermission[]> {
+    return await db
+      .select()
+      .from(userPermissions)
+      .where(and(eq(userPermissions.userId, userId), eq(userPermissions.isActive, true)));
+  }
+
+  async createUserPermission(permission: InsertUserPermission): Promise<UserPermission> {
+    const [newPermission] = await db.insert(userPermissions).values(permission).returning();
+    return newPermission;
+  }
+
+  async updateUserPermission(id: number, permission: Partial<InsertUserPermission>): Promise<UserPermission | undefined> {
+    const [updatedPermission] = await db
+      .update(userPermissions)
+      .set({ ...permission, updatedAt: new Date() })
+      .where(eq(userPermissions.id, id))
+      .returning();
+    return updatedPermission || undefined;
+  }
+
+  async deleteUserPermission(id: number): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const [updatedPermission] = await db
+      .update(userPermissions)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(userPermissions.id, id))
+      .returning();
+    return !!updatedPermission;
+  }
+
+  async getUsersWithRole(roleId: number, roleType: 'system' | 'company'): Promise<User[]> {
+    let query;
+    if (roleType === 'system') {
+      query = db
+        .select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          name: users.name,
+          isActive: users.isActive,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        })
+        .from(users)
+        .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
+        .where(
+          and(
+            eq(userPermissions.systemRoleId, roleId),
+            eq(userPermissions.isActive, true),
+            eq(users.isActive, true)
+          )
+        );
+    } else {
+      query = db
+        .select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          name: users.name,
+          isActive: users.isActive,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        })
+        .from(users)
+        .innerJoin(userPermissions, eq(users.id, userPermissions.userId))
+        .where(
+          and(
+            eq(userPermissions.companyRoleId, roleId),
+            eq(userPermissions.isActive, true),
+            eq(users.isActive, true)
+          )
+        );
+    }
+    
+    return await query;
+  }
+
+  // Permission Audit
+  async createPermissionAuditLog(log: InsertPermissionAuditLog): Promise<PermissionAuditLog> {
+    const [newLog] = await db.insert(permissionAuditLog).values(log).returning();
+    return newLog;
+  }
+
+  async getPermissionAuditLogs(companyId: number, limit: number = 100): Promise<PermissionAuditLog[]> {
+    return await db
+      .select()
+      .from(permissionAuditLog)
+      .where(eq(permissionAuditLog.companyId, companyId))
+      .orderBy(desc(permissionAuditLog.timestamp))
+      .limit(limit);
+  }
+
+  async getUserPermissionAuditLogs(userId: number, companyId: number, limit: number = 50): Promise<PermissionAuditLog[]> {
+    return await db
+      .select()
+      .from(permissionAuditLog)
+      .where(
+        and(
+          eq(permissionAuditLog.userId, userId),
+          eq(permissionAuditLog.companyId, companyId)
+        )
+      )
+      .orderBy(desc(permissionAuditLog.timestamp))
+      .limit(limit);
   }
 }
 

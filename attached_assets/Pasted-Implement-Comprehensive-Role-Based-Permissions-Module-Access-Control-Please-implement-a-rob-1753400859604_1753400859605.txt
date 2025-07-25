@@ -1,0 +1,88 @@
+Implement Comprehensive Role-Based Permissions & Module Access Control
+
+
+---
+
+Please implement a robust, scalable Role-Based Access Control (RBAC) system for the entire platform, supporting user permissions for all key modules and actions.
+
+
+---
+
+Core Requirements:
+
+1. User Roles and Permissions
+
+Define system roles (e.g. Super Admin, Admin, Accountant, Manager, Employee, Cashier, Viewer, etc.).
+
+Each role must have a clear set of default permissions (view, create, edit, delete, export, approve, etc.) for each module or feature.
+
+Allow company admins (with permission) to create custom roles and adjust permissions as needed.
+
+
+
+2. Module and Page Access
+
+Assign module/page access rights for each role (e.g., can access “Invoices”, “Bulk Capture”, “Payroll”, “Compliance Management”, “Point of Sale”, etc.).
+
+Users must only see and access menu items, pages, and actions for which they have permission.
+
+Hide or disable unauthorized modules, actions, and buttons in the UI for non-privileged users.
+
+
+
+3. Fine-Grained Permissions
+
+Support granular control (e.g., a user can create invoices but not delete, can view payroll but not edit, can only see their assigned companies, etc.).
+
+Allow permission assignment at both module level and feature/action level within modules.
+
+
+
+4. User Assignment and Management
+
+Enable assigning roles to users at creation or through user management page.
+
+Support multi-company setups: user can have different roles in different companies.
+
+Option for temporary elevated permissions (e.g., to cover leave, audits, etc.).
+
+
+
+5. Audit Logging & Security
+
+Log all permission changes and role assignments for audit and security purposes.
+
+Restrict permission/role management to Super Admin and authorized Admin users only.
+
+
+
+6. Admin UI
+
+Provide an admin dashboard or settings page to:
+
+View and manage all roles and permissions
+
+Assign users to roles
+
+Edit permissions for each role
+
+Add, edit, or remove custom roles as needed
+
+
+
+
+7. API & Backend Enforcement
+
+Enforce permissions not just in the UI, but also at the API/backend level for full security.
+
+Validate user access on every sensitive API call and backend operation.
+
+
+
+
+
+---
+
+Goal:
+Ensure every user only sees and can access what they’re authorized for, across all modules and features. Support custom roles, easy permission management, and strong security at both the UI and backend levels. All role and permission changes must be auditable.
+
