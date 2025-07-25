@@ -7669,6 +7669,199 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
+  // Get all users with role details for enhanced user management
+  async getAllUsersWithRoleDetails(): Promise<any[]> {
+    const usersQuery = sql`
+      SELECT 
+        u.id,
+        u.username,
+        u.name,
+        u.email,
+        u.phone,
+        u.department,
+        u.is_active,
+        u.last_login,
+        u.created_at,
+        u.updated_at,
+        u.login_attempts,
+        u.is_locked,
+        uc.role,
+        uc.company_id,
+        sr.display_name as role_display_name,
+        sr.level as role_level,
+        sr.color as role_color,
+        sr.description as role_description,
+        c.name as company_name,
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'moduleId', up.module_id,
+              'permissions', up.permissions
+            )
+          ) FILTER (WHERE up.module_id IS NOT NULL), 
+          '[]'::json
+        ) as assigned_modules,
+        COALESCE(
+          json_agg(
+            DISTINCT up.custom_permissions
+          ) FILTER (WHERE up.custom_permissions IS NOT NULL), 
+          '[]'::json
+        ) as custom_permissions,
+        u.notes
+      FROM users u
+      LEFT JOIN user_companies uc ON u.id = uc.user_id
+      LEFT JOIN system_roles sr ON uc.role = sr.id
+      LEFT JOIN companies c ON uc.company_id = c.id
+      LEFT JOIN user_permissions up ON u.id = up.user_id AND uc.company_id = up.company_id
+      GROUP BY u.id, uc.role, uc.company_id, sr.display_name, sr.level, sr.color, sr.description, c.name
+      ORDER BY u.created_at DESC
+    `;
+    
+    return await db.execute(usersQuery);
+  }
+
+  // Get roles with their permissions for permissions matrix
+  async getRolesWithPermissions(): Promise<any[]> {
+    const rolesQuery = sql`
+      SELECT 
+        sr.id,
+        sr.name,
+        sr.display_name,
+        sr.description,
+        sr.level,
+        sr.color,
+        sr.icon,
+        sr.is_system_role,
+        sr.max_users,
+        sr.security_level,
+        COUNT(DISTINCT uc.user_id) as current_users,
+        COALESCE(
+          json_object_agg(
+            rp.module_id,
+            rp.permissions
+          ) FILTER (WHERE rp.module_id IS NOT NULL),
+          '{}'::json
+        ) as permissions
+      FROM system_roles sr
+      LEFT JOIN user_companies uc ON sr.id = uc.role
+      LEFT JOIN role_permissions rp ON sr.id = rp.role_id
+      GROUP BY sr.id, sr.name, sr.display_name, sr.description, sr.level, sr.color, sr.icon, sr.is_system_role, sr.max_users, sr.security_level
+      ORDER BY sr.level DESC, sr.display_name
+    `;
+    
+    return await db.execute(rolesQuery);
+  }
+
+  // Get active company modules
+  async getActiveCompanyModules(companyId: number): Promise<any[]> {
+    const modulesQuery = sql`
+      SELECT 
+        cms.module_id as id,
+        cms.is_active,
+        cms.activated_date,
+        cms.activated_by
+      FROM company_module_settings cms
+      WHERE cms.company_id = ${companyId} AND cms.is_active = true
+      ORDER BY cms.module_id
+    `;
+    
+    return await db.execute(modulesQuery);
+  }
+
+  // Get company module settings
+  async getCompanyModuleSettings(companyId: number): Promise<any[]> {
+    const settingsQuery = sql`
+      SELECT 
+        module_id,
+        is_active,
+        activated_date,
+        activated_by
+      FROM company_module_settings
+      WHERE company_id = ${companyId}
+      ORDER BY module_id
+    `;
+    
+    return await db.execute(settingsQuery);
+  }
+
+  // Update company module activation
+  async updateCompanyModuleActivation(data: {
+    companyId: number;
+    moduleId: string;
+    isActive: boolean;
+    reason?: string;
+    updatedBy: number;
+  }): Promise<void> {
+    const { companyId, moduleId, isActive, updatedBy } = data;
+    
+    const updateQuery = sql`
+      INSERT INTO company_module_settings (company_id, module_id, is_active, activated_date, activated_by, updated_at)
+      VALUES (${companyId}, ${moduleId}, ${isActive}, ${isActive ? new Date() : null}, ${isActive ? updatedBy : null}, NOW())
+      ON CONFLICT (company_id, module_id)
+      DO UPDATE SET 
+        is_active = ${isActive},
+        activated_date = ${isActive ? new Date() : null},
+        activated_by = ${isActive ? updatedBy : null},
+        updated_at = NOW()
+    `;
+    
+    await db.execute(updateQuery);
+  }
+
+  // Update role permissions
+  async updateRolePermissions(roleId: string, modulePermissions: Record<string, Record<string, boolean>>): Promise<void> {
+    // Delete existing permissions for this role
+    const deleteQuery = sql`DELETE FROM role_permissions WHERE role_id = ${roleId}`;
+    await db.execute(deleteQuery);
+    
+    // Insert new permissions
+    for (const [moduleId, permissions] of Object.entries(modulePermissions)) {
+      if (Object.values(permissions).some(Boolean)) {
+        const insertQuery = sql`
+          INSERT INTO role_permissions (role_id, module_id, permissions, created_at, updated_at)
+          VALUES (${roleId}, ${moduleId}, ${JSON.stringify(permissions)}, NOW(), NOW())
+        `;
+        await db.execute(insertQuery);
+      }
+    }
+  }
+
+  // Update user status
+  async updateUserStatus(userId: number, isActive: boolean): Promise<void> {
+    const updateQuery = sql`
+      UPDATE users 
+      SET is_active = ${isActive}, updated_at = NOW()
+      WHERE id = ${userId}
+    `;
+    
+    await db.execute(updateQuery);
+  }
+
+  // Update user role
+  async updateUserRole(userId: number, roleId: string, options: {
+    assignedBy: number;
+    reason?: string;
+    effectiveDate?: string;
+  }): Promise<void> {
+    const { assignedBy, reason } = options;
+    
+    const updateQuery = sql`
+      UPDATE user_companies 
+      SET role = ${roleId}, updated_at = NOW()
+      WHERE user_id = ${userId}
+    `;
+    
+    await db.execute(updateQuery);
+    
+    // Log the role assignment
+    const logQuery = sql`
+      INSERT INTO audit_logs (user_id, action, resource, resource_id, details, created_at)
+      VALUES (${assignedBy}, 'ROLE_ASSIGNED', 'user', ${userId.toString()}, ${JSON.stringify({ newRole: roleId, reason })}, NOW())
+    `;
+    
+    await db.execute(logQuery);
+  }
+
   // Permission Audit
   async createPermissionAuditLog(log: InsertPermissionAuditLog): Promise<PermissionAuditLog> {
     const [newLog] = await db.insert(permissionAuditLog).values(log).returning();

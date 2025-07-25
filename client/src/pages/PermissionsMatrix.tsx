@@ -610,10 +610,10 @@ export default function PermissionsMatrix() {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={updateRolePermissionsMutation.isPending || selectedRole.isSystemRole}
+                    disabled={updateRolePermissionsMutation.isPending}
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {selectedRole.isSystemRole ? 'System Role (Read-Only)' : 'Save Changes'}
+                    {updateRolePermissionsMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
               </form>

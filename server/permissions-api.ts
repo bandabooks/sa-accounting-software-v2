@@ -1,13 +1,26 @@
-// Comprehensive Permissions Matrix API Implementation
-import { Request, Response } from 'express';
-import { storage } from "./storage";
-import { SYSTEM_MODULES, PERMISSION_TYPES, ACCOUNTING_ROLES, type SystemModule, type PermissionType } from "@shared/permissions-matrix";
+import { Response } from 'express';
+import { storage } from './storage';
+import { AuthenticatedRequest } from './auth';
+import { 
+  SYSTEM_ROLES, 
+  SYSTEM_MODULES, 
+  PERMISSION_TYPES, 
+  type SystemModule,
+  type PermissionType 
+} from '../shared/permissions-matrix';
 
-interface PermissionsMatrixRequest extends Request {
-  user?: any;
+// Enhanced request interface for permissions matrix endpoints
+export interface PermissionsMatrixRequest extends AuthenticatedRequest {
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    companyId: number;
+    role: string;
+  };
 }
 
-// Enhanced User Management API
+// Enhanced Users API
 export async function getEnhancedUsers(req: PermissionsMatrixRequest, res: Response) {
   try {
     const currentUser = req.user;
@@ -15,57 +28,26 @@ export async function getEnhancedUsers(req: PermissionsMatrixRequest, res: Respo
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get all users with enhanced information
-    const users = await storage.getAllUsersWithRoleDetails();
+    // Get all users with their company associations and permissions
+    const users = await storage.getAllUsers();
     
-    // Get role distribution data
-    const roles = await storage.getAccountingRoles();
-    
-    // Calculate statistics
-    const totalUsers = users.length;
-    const activeUsers = users.filter(u => u.isActive).length;
-    const inactiveUsers = users.filter(u => !u.isActive).length;
-    const lockedUsers = users.filter(u => u.isLocked).length;
+    // Transform users data with enhanced information
+    const enhancedUsers = users.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      companyId: user.companyId,
+      isActive: user.isActive,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt,
+      // Remove sensitive data
+      password: undefined,
+      twoFactorSecret: undefined
+    }));
 
-    const response = {
-      users: users.map(user => ({
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        department: user.department,
-        role: user.role,
-        roleDisplayName: user.roleDisplayName,
-        roleLevel: user.roleLevel,
-        roleColor: user.roleColor,
-        isActive: user.isActive,
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        loginAttempts: user.loginAttempts || 0,
-        isLocked: user.isLocked || false,
-        assignedModules: user.assignedModules || [],
-        customPermissions: user.customPermissions || [],
-        notes: user.notes
-      })),
-      roles: roles.map(role => ({
-        id: role.id,
-        name: role.name,
-        displayName: role.displayName,
-        level: role.level,
-        color: role.color,
-        currentUsers: users.filter(u => u.role === role.id).length,
-        maxUsers: role.maxUsers,
-        securityLevel: role.securityLevel
-      })),
-      totalUsers,
-      activeUsers,
-      inactiveUsers,
-      lockedUsers
-    };
-
-    res.json(response);
+    res.json(enhancedUsers);
   } catch (error) {
     console.error("Error fetching enhanced users:", error);
     res.status(500).json({ message: "Failed to fetch enhanced users" });
@@ -162,15 +144,6 @@ export async function getCompanyModules(req: PermissionsMatrixRequest, res: Resp
       };
     });
 
-    // Group modules by category
-    const modulesByCategory = modules.reduce((acc, module) => {
-      if (!acc[module.category]) {
-        acc[module.category] = [];
-      }
-      acc[module.category].push(module);
-      return acc;
-    }, {} as Record<string, any[]>);
-
     const response = {
       companyId: currentUser.companyId,
       totalModules: modules.length,
@@ -214,22 +187,11 @@ export async function toggleModuleActivation(req: PermissionsMatrixRequest, res:
 
     // Update module activation status
     await storage.updateCompanyModuleActivation({
-      companyId: currentUser.companyId,
+      companyId: currentUser.companyId,  
       moduleId: moduleId as SystemModule,
       isActive,
       reason,
       updatedBy: currentUser.id
-    });
-
-    // Log the action for audit
-    await storage.createAuditLog({
-      userId: currentUser.id,
-      companyId: currentUser.companyId,
-      action: isActive ? 'MODULE_ACTIVATED' : 'MODULE_DEACTIVATED',
-      resource: moduleId,
-      details: { reason },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
     });
 
     res.json({ 
@@ -252,12 +214,6 @@ export async function createCustomRole(req: PermissionsMatrixRequest, res: Respo
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Validate required permissions
-    const hasPermission = await storage.checkUserPermission(currentUser.id, 'roles:create');
-    if (!hasPermission && currentUser.role !== 'super_admin') {
-      return res.status(403).json({ message: "Insufficient permissions to create roles" });
-    }
-
     // Create the role
     const newRole = await storage.createCustomRole({
       ...roleData,
@@ -265,21 +221,10 @@ export async function createCustomRole(req: PermissionsMatrixRequest, res: Respo
       createdBy: currentUser.id
     });
 
-    // Log the action
-    await storage.createAuditLog({
-      userId: currentUser.id,
-      companyId: currentUser.companyId,
-      action: 'ROLE_CREATED',
-      resource: `role:${newRole.id}`,
-      details: { roleName: roleData.displayName },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.status(201).json(newRole);
+    res.json(newRole);
   } catch (error) {
     console.error("Error creating custom role:", error);
-    res.status(500).json({ message: "Failed to create role" });
+    res.status(500).json({ message: "Failed to create custom role" });
   }
 }
 
@@ -294,25 +239,12 @@ export async function updateRolePermissions(req: PermissionsMatrixRequest, res: 
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Validate permissions
-    const hasPermission = await storage.checkUserPermission(currentUser.id, 'permissions:grant');
-    if (!hasPermission && currentUser.role !== 'super_admin') {
-      return res.status(403).json({ message: "Insufficient permissions to modify role permissions" });
+    // Verify user has permission to update roles
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ message: "Insufficient permissions" });
     }
 
-    // Update role permissions
     await storage.updateRolePermissions(roleId, modulePermissions);
-
-    // Log the action
-    await storage.createAuditLog({
-      userId: currentUser.id,
-      companyId: currentUser.companyId,
-      action: 'ROLE_PERMISSIONS_UPDATED',
-      resource: `role:${roleId}`,
-      details: { reason, updatedPermissions: Object.keys(modulePermissions).length },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
 
     res.json({ success: true, message: "Role permissions updated successfully" });
   } catch (error) {
@@ -321,196 +253,75 @@ export async function updateRolePermissions(req: PermissionsMatrixRequest, res: 
   }
 }
 
-// Assign Role to User
+// Assign User Role
 export async function assignUserRole(req: PermissionsMatrixRequest, res: Response) {
   try {
-    const { userId, roleId, reason, effectiveDate } = req.body;
     const currentUser = req.user;
-
     if (!currentUser) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Validate permissions
-    const hasPermission = await storage.checkUserPermission(currentUser.id, 'users:assign_roles');
-    if (!hasPermission && currentUser.role !== 'super_admin') {
-      return res.status(403).json({ message: "Insufficient permissions to assign roles" });
-    }
+    const { userId, roleId, reason, effectiveDate } = req.body;
 
-    // Get target user to validate security level
-    const targetUser = await storage.getUser(userId);
-    if (!targetUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Prevent demo users from getting super admin role
-    if (roleId === 'super_admin' && (targetUser.username.includes('demo') || targetUser.email.includes('demo'))) {
-      return res.status(400).json({ message: "Demo users cannot be assigned Super Admin role" });
-    }
-
-    // Update user role
-    await storage.updateUserRole(userId, roleId, {
+    await storage.updateUserRole(parseInt(userId), roleId, {
       assignedBy: currentUser.id,
       reason,
       effectiveDate
     });
 
-    // Log the action
-    await storage.createAuditLog({
-      userId: currentUser.id,
-      companyId: currentUser.companyId,
-      action: 'ROLE_ASSIGNED',
-      resource: `user:${userId}`,
-      details: { newRole: roleId, reason },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({ success: true, message: "Role assigned successfully" });
+    res.json({ success: true, message: "User role assigned successfully" });
   } catch (error) {
     console.error("Error assigning user role:", error);
-    res.status(500).json({ message: "Failed to assign role" });
+    res.status(500).json({ message: "Failed to assign user role" });
   }
 }
 
-// Helper Functions
+// Helper functions for module and permission categorization
 function getModuleCategory(moduleId: string): string {
-  const categoryMap = {
-    dashboard: 'Core System',
-    user_management: 'Core System',
-    system_settings: 'Core System',
-    audit_logs: 'Core System',
-    chart_of_accounts: 'Financial Management',
-    journal_entries: 'Financial Management',
-    banking: 'Financial Management',
-    financial_reports: 'Financial Management',
-    customers: 'Sales & Revenue',
-    invoicing: 'Sales & Revenue',
-    estimates: 'Sales & Revenue',
-    recurring_billing: 'Sales & Revenue',
-    credit_notes: 'Sales & Revenue',
-    suppliers: 'Purchases & Expenses',
-    purchase_orders: 'Purchases & Expenses',
-    bills: 'Purchases & Expenses',
-    expenses: 'Purchases & Expenses',
-    supplier_payments: 'Purchases & Expenses',
-    products_services: 'Inventory & Products',
-    inventory_management: 'Inventory & Products',
-    stock_adjustments: 'Inventory & Products',
-    product_categories: 'Inventory & Products',
-    pos_terminals: 'Point of Sale',
-    pos_sales: 'Point of Sale',
-    pos_shifts: 'Point of Sale',
-    pos_reports: 'Point of Sale',
-    pos_loyalty: 'Point of Sale',
-    payroll: 'Payroll & HR',
-    employees: 'Payroll & HR',
-    time_tracking: 'Payroll & HR',
-    leave_management: 'Payroll & HR',
-    performance: 'Payroll & HR',
-    vat_management: 'Tax & Compliance',
-    tax_returns: 'Tax & Compliance',
-    sars_integration: 'Tax & Compliance',
-    cipc_compliance: 'Tax & Compliance',
-    labour_compliance: 'Tax & Compliance',
-    project_management: 'Advanced Features',
-    fixed_assets: 'Advanced Features',
-    budgeting: 'Advanced Features',
-    cash_flow: 'Advanced Features',
-    bank_reconciliation: 'Advanced Features',
-    api_access: 'Integration & API',
-    third_party_integrations: 'Integration & API',
-    data_import_export: 'Integration & API',
-    backup_restore: 'Integration & API'
+  const categories = {
+    'dashboard': 'Core System',
+    'user_management': 'Core System',
+    'customers': 'Sales & Revenue',
+    'invoicing': 'Sales & Revenue',
+    'products_services': 'Inventory & Products',
+    'expenses': 'Financial Management',
+    'suppliers': 'Purchases & Expenses',
+    'pos_sales': 'Point of Sale',
+    'chart_of_accounts': 'Financial Management',
+    'journal_entries': 'Financial Management',
+    'banking': 'Financial Management',
+    'financial_reports': 'Financial Management'
   };
-  
-  return categoryMap[moduleId as keyof typeof categoryMap] || 'Other';
+  return categories[moduleId as keyof typeof categories] || 'Other';
+}
+
+function getPermissionDescription(permType: string): string {
+  const descriptions = {
+    'view': 'Can view and read data',
+    'create': 'Can create new records',
+    'edit': 'Can modify existing records',
+    'delete': 'Can delete records',
+    'manage': 'Full administrative access',
+    'approve': 'Can approve transactions'
+  };
+  return descriptions[permType as keyof typeof descriptions] || 'Permission access';
 }
 
 function getModuleDescription(moduleId: string): string {
-  const descriptionMap = {
-    dashboard: 'Central business overview and analytics',
-    user_management: 'Manage user accounts and access',
-    system_settings: 'Configure system preferences',
-    audit_logs: 'Track system activities and changes',
-    chart_of_accounts: 'Manage accounting structure',
-    journal_entries: 'Record financial transactions',
-    banking: 'Bank account management and reconciliation',
-    financial_reports: 'Generate financial statements',
-    customers: 'Customer relationship management',
-    invoicing: 'Create and manage invoices',
-    estimates: 'Quotation and estimate management',
-    recurring_billing: 'Automated recurring invoices',
-    credit_notes: 'Credit note processing',
-    suppliers: 'Supplier management and procurement',
-    purchase_orders: 'Purchase order processing',
-    bills: 'Supplier bill management',
-    expenses: 'Expense tracking and management',
-    supplier_payments: 'Supplier payment processing',
-    products_services: 'Product and service catalog',
-    inventory_management: 'Stock level monitoring',
-    stock_adjustments: 'Inventory adjustments and counts',
-    product_categories: 'Product categorization',
-    pos_terminals: 'Point of sale terminal management',
-    pos_sales: 'Process retail sales',
-    pos_shifts: 'Staff shift management',
-    pos_reports: 'POS analytics and reports',
-    pos_loyalty: 'Customer loyalty programs',
-    payroll: 'Employee payroll processing',
-    employees: 'Employee information management',
-    time_tracking: 'Track employee working hours',
-    leave_management: 'Manage employee leave requests',
-    performance: 'Employee performance tracking',
-    vat_management: 'VAT calculation and reporting',
-    tax_returns: 'Tax return preparation',
-    sars_integration: 'SARS electronic submission',
-    cipc_compliance: 'CIPC compliance management',
-    labour_compliance: 'Labour law compliance',
-    project_management: 'Project tracking and billing',
-    fixed_assets: 'Asset management and depreciation',
-    budgeting: 'Budget planning and analysis',
-    cash_flow: 'Cash flow forecasting',
-    bank_reconciliation: 'Automated bank reconciliation',
-    api_access: 'Third-party API access',
-    third_party_integrations: 'External system integrations',
-    data_import_export: 'Data import and export tools',
-    backup_restore: 'System backup and restoration'
-  };
-  
-  return descriptionMap[moduleId as keyof typeof descriptionMap] || 'System module';
+  return `${moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} module for managing business operations`;
 }
 
 function isModuleCore(moduleId: string): boolean {
-  const coreModules = ['dashboard', 'user_management', 'system_settings', 'audit_logs'];
+  const coreModules = ['dashboard', 'user_management', 'chart_of_accounts'];
   return coreModules.includes(moduleId);
 }
 
 function getModuleDependencies(moduleId: string): string[] {
-  const dependencyMap = {
-    financial_reports: ['chart_of_accounts', 'journal_entries'],
-    bank_reconciliation: ['banking', 'chart_of_accounts'],
-    pos_reports: ['pos_sales', 'pos_terminals'],
-    vat_management: ['chart_of_accounts', 'invoicing'],
-    payroll: ['employees', 'chart_of_accounts'],
-    project_management: ['customers', 'invoicing'],
-    fixed_assets: ['chart_of_accounts', 'journal_entries']
+  const dependencies = {
+    'invoicing': ['customers'],
+    'pos_sales': ['products_services', 'customers'],
+    'journal_entries': ['chart_of_accounts'],
+    'financial_reports': ['chart_of_accounts']
   };
-  
-  return dependencyMap[moduleId as keyof typeof dependencyMap] || [];
-}
-
-function getPermissionDescription(permType: string): string {
-  const descriptionMap = {
-    view: 'View and read access to data',
-    create: 'Create new records and entries',
-    edit: 'Modify existing records',
-    delete: 'Remove records permanently',
-    approve: 'Approve transactions and workflows',
-    export: 'Export data to external formats',
-    manage: 'Full management access',
-    configure: 'Configure system settings',
-    audit: 'Access audit trails and logs'
-  };
-  
-  return descriptionMap[permType as keyof typeof descriptionMap] || 'System permission';
+  return dependencies[moduleId as keyof typeof dependencies] || [];
 }

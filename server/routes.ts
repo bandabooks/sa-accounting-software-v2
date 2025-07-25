@@ -3016,6 +3016,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced Permissions Matrix API Routes
+  app.get("/api/admin/enhanced-users", authenticate, getEnhancedUsers);
+  app.get("/api/permissions/matrix", authenticate, requireSuperAdmin(), getPermissionsMatrix);
+  app.get("/api/modules/company", authenticate, requireSuperAdmin(), getCompanyModules);
+  app.post("/api/modules/:moduleId/toggle", authenticate, requireSuperAdmin(), toggleModuleActivation);
+  app.post("/api/roles/custom", authenticate, requireSuperAdmin(), createCustomRole);
+  app.put("/api/roles/:roleId/permissions", authenticate, requireSuperAdmin(), updateRolePermissions);
+  app.post("/api/users/assign-role", authenticate, requireSuperAdmin(), assignUserRole);
+
   // Individual User Details (Super Admin)
   app.get("/api/super-admin/users/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
