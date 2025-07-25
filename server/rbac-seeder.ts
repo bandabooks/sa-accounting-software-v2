@@ -51,8 +51,9 @@ export async function createDefaultUserPermissions(): Promise<void> {
     // Get default system roles
     const viewerRole = await storage.getSystemRoleByName('viewer');
     const superAdminRole = await storage.getSystemRoleByName('super_admin');
+    const companyAdminRole = await storage.getSystemRoleByName('company_admin');
     
-    if (!viewerRole || !superAdminRole) {
+    if (!viewerRole || !superAdminRole || !companyAdminRole) {
       console.log('System roles not found, skipping user permission creation');
       return;
     }
@@ -63,12 +64,32 @@ export async function createDefaultUserPermissions(): Promise<void> {
         const existingPermission = await storage.getUserPermission(user.id, company.id);
         
         if (!existingPermission) {
-          // Determine role based on username/email
-          const isAdmin = user.username.includes('admin') || 
-                         user.email?.includes('admin') || 
-                         user.username === 'sysadmin_7f3a2b8e';
+          // Determine role based on strict criteria
+          let roleId = viewerRole.id;
+          let roleName = 'Viewer';
           
-          const roleId = isAdmin ? superAdminRole.id : viewerRole.id;
+          // Only specific system admin accounts get Super Admin role
+          if (user.username === 'sysadmin_7f3a2b8e' || user.email === 'bandabookkeepers@gmail.com') {
+            roleId = superAdminRole.id;
+            roleName = 'Super Admin';
+          }
+          // Check if user is owner/first user of this specific company
+          else {
+            try {
+              const userCompanies = await storage.getUserCompanies(user.id);
+              const isOwnerOfThisCompany = userCompanies.some(uc => 
+                uc.companyId === company.id && uc.role === 'owner'
+              );
+              
+              if (isOwnerOfThisCompany) {
+                roleId = companyAdminRole.id;
+                roleName = 'Company Admin';
+              }
+            } catch (error) {
+              // If getUserCompanies fails, default to viewer
+              console.log(`Could not determine company ownership for ${user.username}, defaulting to Viewer`);
+            }
+          }
           
           // Create user permission
           await storage.createUserPermission({
@@ -82,7 +103,7 @@ export async function createDefaultUserPermissions(): Promise<void> {
             grantedBy: user.id, // Self-granted for initial setup
           });
           
-          console.log(`✓ Created permissions for ${user.username} in ${company.name} (${isAdmin ? 'Super Admin' : 'Viewer'})`);
+          console.log(`✓ Created permissions for ${user.username} in ${company.name} (${roleName})`);
         }
       }
     }

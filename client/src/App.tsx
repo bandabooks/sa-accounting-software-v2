@@ -89,6 +89,8 @@ import LabourCompliance from "@/pages/labour-compliance";
 import ComplianceTasks from "@/pages/compliance-tasks";
 import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
+import RoleManagement from "@/pages/RoleManagement";
+import UserPermissions from "@/pages/UserPermissions";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -123,6 +125,11 @@ const PERMISSIONS = {
   POS_PROCESS_SALES: 'pos:process_sales',
   POS_MANAGE_SHIFTS: 'pos:manage_shifts',
   POS_VIEW_REPORTS: 'pos:view_reports',
+  // RBAC permissions
+  ROLES_VIEW: 'roles:view',
+  ROLES_CREATE: 'roles:create',
+  USERS_ASSIGN_ROLES: 'users:assign_roles',
+  PERMISSIONS_GRANT: 'permissions:grant',
 } as const;
 
 function AuthenticatedApp() {
@@ -385,6 +392,18 @@ function AuthenticatedApp() {
         <Route path="/spending-wizard">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <SpendingWizard />
+          </ProtectedRoute>
+        </Route>
+
+        {/* Role-Based Access Control (RBAC) Routes */}
+        <Route path="/rbac/roles">
+          <ProtectedRoute permission={PERMISSIONS.ROLES_VIEW}>
+            <RoleManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/rbac/user-permissions">
+          <ProtectedRoute permission={PERMISSIONS.USERS_ASSIGN_ROLES}>
+            <UserPermissions />
           </ProtectedRoute>
         </Route>
 

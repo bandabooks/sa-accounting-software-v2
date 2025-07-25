@@ -268,20 +268,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await hashPassword(signupData.password);
       
-      // Create user
+      // Create user - First user of company gets company admin role (NOT super admin)
       const user = await storage.createUser({
         username,
         name: `${signupData.firstName} ${signupData.lastName}`,
         email: signupData.email,
         password: hashedPassword,
-        role: 'super_admin', // First user of company gets super admin
-        permissions: ['*'], // All permissions
+        role: 'company_admin', // First user of company gets company admin (not super admin)
+        permissions: [], // Permissions will be managed through RBAC system
         isActive: true,
         twoFactorEnabled: false
       });
       
       // Add user to company as owner
       await storage.addUserToCompany(user.id, company.id, 'owner');
+      
+      // Assign Company Admin role through RBAC system
+      try {
+        const companyAdminRole = await storage.getSystemRoleByName('company_admin');
+        if (companyAdminRole) {
+          await storage.createUserPermission({
+            userId: user.id,
+            companyId: company.id,
+            systemRoleId: companyAdminRole.id,
+            companyRoleId: null,
+            customPermissions: [],
+            deniedPermissions: [],
+            isActive: true,
+            grantedBy: user.id, // Self-granted for trial signup
+          });
+          console.log(`✓ Assigned Company Admin role to ${user.username} for company ${company.name}`);
+        }
+      } catch (error) {
+        console.error('Failed to assign Company Admin role during signup:', error);
+        // Don't fail signup if role assignment fails - user can be assigned role later
+      }
       
       // Create session for immediate login
       const sessionToken = generateSessionToken();

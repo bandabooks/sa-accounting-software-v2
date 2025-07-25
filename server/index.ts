@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seedData";
 import { seedSystemRoles, createDefaultUserPermissions } from "./rbac-seeder";
+import { migrateIncorrectRoleAssignments, auditCurrentRoleAssignments } from "./rbac-migration";
 
 const app = express();
 app.use(express.json());
@@ -49,6 +50,13 @@ app.use((req, res, next) => {
   setTimeout(() => {
     createDefaultUserPermissions().catch(console.error);
   }, 2000);
+  
+  // Run RBAC migration to fix incorrect role assignments (async, don't block startup)
+  setTimeout(() => {
+    auditCurrentRoleAssignments()
+      .then(() => migrateIncorrectRoleAssignments())
+      .catch(console.error);
+  }, 5000);
   
   const server = await registerRoutes(app);
 

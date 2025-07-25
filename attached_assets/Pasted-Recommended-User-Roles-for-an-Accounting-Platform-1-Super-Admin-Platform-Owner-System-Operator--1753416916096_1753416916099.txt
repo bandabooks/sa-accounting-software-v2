@@ -1,0 +1,146 @@
+Recommended User Roles for an Accounting Platform
+
+1. Super Admin (Platform Owner/System Operator)
+
+Full access to all companies, billing, subscription, platform settings
+
+Manage global roles, audit logs, system integrations
+
+
+2. Company Admin / Owner
+
+Full access to all modules and settings for their company
+
+Invite, create, and manage users within their company
+
+Assign roles and permissions to other users
+
+View and control billing for their company
+
+
+3. Accountant
+
+Access to core accounting features (invoicing, expenses, bank reconciliation, journals, VAT)
+
+Can view, create, and edit financial records
+
+Cannot manage users or company settings (unless permission granted)
+
+
+4. Bookkeeper
+
+Enter day-to-day transactions (sales, expenses, receipts, bills)
+
+Access to client, supplier, product, and transaction modules
+
+Limited or no access to reporting and sensitive settings
+
+
+5. Auditor
+
+Read-only access to financial data, transactions, and compliance modules
+
+Can run and export reports, view logs, but cannot create or edit records
+
+
+6. Manager / Department Manager
+
+Access to relevant business units or departments (sales, inventory, payroll, projects, etc.)
+
+Approve transactions, view reports, limited edit rights for their area
+
+
+7. Employee / Staff / Operator
+
+Access to only the modules necessary for their job (e.g., POS, sales entry, timesheets, tasks)
+
+Cannot view financial reports or manage company/users
+
+
+8. Cashier / POS Operator
+
+Use the Point of Sale module, process sales, print receipts
+
+No access to back-office functions
+
+
+9. Payroll Admin
+
+Access to payroll, employee management, leave, and salary modules
+
+No access to sales or supplier data
+
+
+10. Compliance Officer / Tax Practitioner
+
+Access to compliance modules (SARS, CIPC, Labour, VAT)
+
+Submit, track, and download compliance documents and reports
+
+
+11. Viewer / Read-Only User
+
+Can only view data, reports, and dashboards
+
+No editing or management rights
+
+
+12. Custom Role
+
+Admin-defined roles with tailored permissions for unique business needs
+
+
+
+---
+
+Prompt to Amend and Implement Full Role Management
+
+
+---
+
+Prompt:
+
+> Please implement or update the platform’s user roles and permission system to support the following roles:
+
+Super Admin (platform owner)
+
+Company Admin/Owner
+
+Accountant
+
+Bookkeeper
+
+Auditor
+
+Manager/Department Manager
+
+Employee/Staff/Operator
+
+Cashier/POS Operator
+
+Payroll Admin
+
+Compliance Officer/Tax Practitioner
+
+Viewer/Read-Only User
+
+Custom Role (admin-defined)
+
+
+Requirements:
+
+Each role must have clear, well-documented permissions (module access, create/edit/delete rights, reporting, approvals, user management, etc.).
+
+Allow Company Admins to assign and manage roles for their users.
+
+Support custom role creation and tailored permission sets for unique workflows.
+
+Enforce all permissions at both UI and API/backend level.
+
+Update all user management, onboarding, and invitation workflows to reflect the new role structure.
+
+Display role and permission details in the user management interface for easy administration.
+
+
+Goal:
+Provide robust, granular, and secure user role management so every organization can match access to job function and maintain compliance and security throughout the p

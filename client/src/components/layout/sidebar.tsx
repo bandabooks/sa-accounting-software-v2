@@ -5,7 +5,7 @@ import {
   Settings, TrendingUp, Package, Building, Archive, Building2, BookOpen, 
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
-  Briefcase, FolderOpen, CheckSquare, Clock, Brain, Tablet
+  Briefcase, FolderOpen, CheckSquare, Clock, Brain, Tablet, UserCog, Key
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -115,6 +115,15 @@ const navigationGroups = [
     items: [
       { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW" },
       { path: "/reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW" }
+    ]
+  },
+  {
+    id: "rbac",
+    label: "User Management",
+    icon: UserCog,
+    items: [
+      { path: "/rbac/user-permissions", label: "User Permissions", icon: Key, permission: "USERS_ASSIGN_ROLES" },
+      { path: "/rbac/roles", label: "Role Management", icon: Shield, permission: "ROLES_VIEW" }
     ]
   },
   {
