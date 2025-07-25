@@ -1,0 +1,101 @@
+Revamp User Roles, Permissions, and Module Access in Super Admin Panel
+Current Issues to Fix:
+
+User roles dropdown is limited (shows only 4, not customizable, not reflecting a full accounting environment)
+
+Demo users are inappropriately assigned as Super Admin (major security risk)
+
+Permissions are NOT granular or mapped to real system modules
+
+No ability to add new roles, customize roles, or define module access
+
+Permissions UI does not show real, assignable module permissions or reflect system changes
+
+No unified roles/permissions structure across the system (not blending with accounting modules)
+
+No page for activating/deactivating system modules per company/account
+
+Lacks audit trails for permission changes
+
+Requirements for a Robust Roles & Permissions System
+Full Role List & Management:
+
+Show all standard roles relevant for an accounting/business suite (e.g., Super Admin, Admin, Accountant, Bookkeeper, Auditor, Payroll Admin, POS Operator, Sales, Purchases, Inventory Manager, HR, etc.)
+
+Allow creation of custom roles (with name, description, and selected permissions)
+
+Assign default roles only to legitimate real users, NEVER to demo/test users
+
+Module & Feature Permissions:
+
+List ALL available system modules/features in a permissions matrix/grid
+
+Examples: Dashboard, Chart of Accounts, Sales, Invoicing, Purchases, Bills, Suppliers, Payments, Inventory, VAT, Compliance, Reports, Payroll, HR, POS, System Settings, User Management, API Integrations, etc.
+
+Allow per-role and per-user assignment of permissions (View, Create, Edit, Delete, Approve, Export, Manage, Configure, etc.)
+
+Allow module activation/deactivation per company/account for multi-tenant SaaS use
+
+Role Assignment & Security:
+
+Show a list of all users with columns: Username, Email, Role, Status, Last Login, Actions (Manage, Edit, Deactivate, Delete, Set Permissions)
+
+Assign users only to roles they are permitted for (no demo/test users as Super Admins)
+
+Super Admin role can access everything, but only one or a few legitimate users should have this
+
+Permissions UI/UX:
+
+Clean, modern permissions matrix/table: all modules listed in rows, permission types in columns, checkboxes/toggles per role
+
+Easy to bulk-assign or revoke permissions
+
+View/assign permissions per role or per user
+
+Ability to clone/copy roles and their permissions
+
+Audit & Transparency:
+
+Log all changes to roles and permissions with timestamps, user, and action
+
+Optional: allow export of roles/permissions for compliance/audit
+
+Integration with System:
+
+Role and permission logic enforced across all system pages, APIs, and features
+
+Permissions determine visibility and access throughout the UI and backend
+
+Module Activation Page:
+
+Dedicated page in Super Admin/Settings: activate/deactivate modules per company/account (with a toggle for each module)
+
+Only show modules in user navigation/menu if active for their company
+
+Example UI Flows
+Manage Users: List, Add, Edit, Assign Role, Set Permissions, Activate/Deactivate, Delete
+
+Manage Roles: List, Add, Edit, Copy, Delete, Assign Permissions
+
+Permissions Matrix: [Role/User] x [Module/Feature] x [Permission Type]
+
+Module Activation: List of modules with activation toggles per company
+
+Summary Prompt for Implementation:
+Redesign the Super Admin/User Management panel to support full-featured, secure user roles and permissions management for the accounting/business system. Include:
+
+All industry-standard roles, ability to add/edit/delete/custom roles
+
+Comprehensive permissions matrix (all modules, CRUD actions)
+
+Assign roles and permissions per user
+
+Activate/deactivate modules per company
+
+Audit logging for all changes
+
+Ensure no demo/test users are assigned as Super Admin
+
+UI must be modern, intuitive, and reflect true system structure—not a stand-alone module
+
+Permissions must be enforced across all system features, navigation, and data access
