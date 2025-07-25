@@ -266,14 +266,14 @@ export default function UserPermissions() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>System Role</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}>
+                      <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a system role (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No System Role</SelectItem>
+                          <SelectItem value="none">No System Role</SelectItem>
                           {systemRoles.map((role) => (
                             <SelectItem key={role.id} value={role.id.toString()}>
                               {role.displayName} (Level {role.level})
@@ -294,14 +294,14 @@ export default function UserPermissions() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Company Role</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}>
+                      <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a company role (optional)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No Company Role</SelectItem>
+                          <SelectItem value="none">No Company Role</SelectItem>
                           {companyRoles.map((role) => (
                             <SelectItem key={role.id} value={role.id.toString()}>
                               {role.displayName}
