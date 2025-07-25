@@ -6051,7 +6051,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // =============================================
 
   // System Roles Management
-  app.get("/api/rbac/system-roles", authenticate, requirePermission(PERMISSIONS.ROLES_VIEW), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/rbac/system-roles", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const roles = await storage.getSystemRoles();
       res.json(roles);
@@ -6085,7 +6085,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // Company Roles Management
-  app.get("/api/rbac/company-roles", authenticate, requirePermission(PERMISSIONS.ROLES_VIEW), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/rbac/company-roles", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user.companyId;
       const roles = await storage.getCompanyRoles(companyId);
@@ -6121,7 +6121,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // User Permission Management
-  app.get("/api/rbac/user-permissions/:userId", authenticate, requireAnyPermission([PERMISSIONS.USERS_VIEW, PERMISSIONS.PERMISSIONS_VIEW_AUDIT]), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/rbac/user-permissions/:userId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const companyId = req.user.companyId;
@@ -6139,7 +6139,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.post("/api/rbac/user-permissions", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/rbac/user-permissions", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const permissionData = { ...req.body, grantedBy: req.user.id };
       const permission = await storage.createUserPermission(permissionData);
@@ -6207,7 +6207,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // Role Assignment & Management
-  app.post("/api/rbac/assign-role", authenticate, requirePermission(PERMISSIONS.USERS_ASSIGN_ROLES), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/rbac/assign-role", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const { userId, systemRoleId, companyRoleId, reason } = req.body;
       const companyId = req.user.companyId;

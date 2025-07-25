@@ -414,7 +414,7 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         <Route path="/rbac/user-permissions">
-          <ProtectedRoute permission={PERMISSIONS.USERS_ASSIGN_ROLES}>
+          <ProtectedRoute requiredRole="super_admin">
             <UserPermissions />
           </ProtectedRoute>
         </Route>
