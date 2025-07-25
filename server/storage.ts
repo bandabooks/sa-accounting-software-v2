@@ -1549,11 +1549,11 @@ export class DatabaseStorage implements IStorage {
     return {
       total: allProducts.length,
       active: allProducts.filter(p => p.isActive !== false).length,
-      services: allProducts.filter(p => p.type === "service").length,
+      services: allProducts.filter(p => p.isService === true).length,
       lowStock: allProducts.filter(p => 
-        p.type === "product" && 
+        p.isService !== true && 
         p.stockQuantity !== null && 
-        p.stockQuantity <= (p.lowStockThreshold || 10)
+        p.stockQuantity <= (p.minStockLevel || 10)
       ).length
     };
   }

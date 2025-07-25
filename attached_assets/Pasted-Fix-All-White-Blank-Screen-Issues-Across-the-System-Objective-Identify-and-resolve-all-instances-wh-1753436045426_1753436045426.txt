@@ -1,0 +1,62 @@
+Fix All White/Blank Screen Issues Across the System
+Objective:
+Identify and resolve all instances where navigating to any page (e.g., /products) results in a blank or white screen. Ensure all pages in the system load the appropriate content and never show a blank screen, even in the case of errors.
+
+Requirements & Steps:
+Audit All Routes:
+
+Systematically check every main navigation route and their subpages (/products, /clients, /sales, /expenses, /dashboard, /settings, etc.) for blank/white screen issues.
+
+If any route renders blank (including modals, dialogs, or subcomponents), document the error and investigate the cause.
+
+Error Boundary & Handling:
+
+Implement a robust error boundary at the app root and main page layout levels.
+
+All React errors (JSX, data fetching, missing imports, etc.) must be caught and should display a user-friendly error message or fallback UI, never a blank screen.
+
+If a component fails to load due to missing data, API errors, or render errors, show a clear message ("Error loading page", "No data available", or the actual error), with options to retry or contact support.
+
+Loading States:
+
+Ensure all pages/components implement proper loading indicators while waiting for data or processing logic.
+
+Never display an empty/white screen during data fetches or state transitions.
+
+API & Data Fetching Issues:
+
+Review all useQuery, useEffect, or data-fetching hooks for error handling.
+
+If any API request fails or returns no data, ensure the UI displays an appropriate error, empty state, or retry option.
+
+Validate all returned data structures and gracefully handle missing or unexpected values.
+
+Component Imports and Exports:
+
+Audit for missing or incorrectly named component imports/exports, which can cause blank screens on render.
+
+Resolve all unresolved imports, typos, and ensure every page/component is properly exported.
+
+404 and Route Guarding:
+
+Implement a default 404 "Page Not Found" route for any undefined paths, never a blank screen.
+
+If a user is unauthorized or session expires, redirect to login with an informative message.
+
+Test All Devices and Browsers:
+
+Test navigation and page loads on multiple browsers (Chrome, Edge, Safari) and mobile/tablet viewports to ensure no blank pages under any circumstances.
+
+Regression Test:
+
+After fixes, click through all links/menus in the app and confirm that all routes load content, loading indicators, or error messages as appropriate.
+
+Confirm specifically that /products and any previously reported routes now load correctly.
+
+Success Criteria:
+
+No route, page, or modal in the system should ever show a blank/white screen under any circumstance.
+
+All errors must be handled gracefully with user feedback.
+
+All valid pages must display their respective content or a proper loading indicator.

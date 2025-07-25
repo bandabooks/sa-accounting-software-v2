@@ -27,9 +27,13 @@ export default function Products() {
     queryKey: ["/api/product-categories"],
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<{
+    total: number;
+    active: number;
+    services: number;
+    lowStock: number;
+  }>({
     queryKey: ["/api/products/stats"],
-    queryFn: () => apiRequest("/api/products/stats", "GET")
   });
 
   const deleteProductMutation = useMutation({
@@ -59,9 +63,9 @@ export default function Products() {
     
     const matchesStatus = !statusFilter || 
       (statusFilter === "active" && product.isActive !== false) ||
-      (statusFilter === "services" && product.type === "service") ||
-      (statusFilter === "lowStock" && product.type === "product" && 
-       product.stockQuantity !== null && product.stockQuantity <= (product.lowStockThreshold || 10));
+      (statusFilter === "services" && product.isService === true) ||
+      (statusFilter === "lowStock" && product.isService !== true && 
+       product.stockQuantity !== null && product.stockQuantity <= (product.minStockLevel || 10));
     
     return matchesSearch && matchesStatus;
   });
@@ -92,38 +96,37 @@ export default function Products() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Mini Dashboard */}
-      {stats && (
-        <MiniDashboard title="Products Overview">
-          <DashboardCard
-            title="Total Products"
-            value={stats.total}
-            icon={Package}
-            color="blue"
-            onClick={() => setStatusFilter("")}
-          />
-          <DashboardCard
-            title="Active"
-            value={stats.active}
-            icon={CheckCircle}
-            color="green"
-            onClick={() => setStatusFilter("active")}
-          />
-          <DashboardCard
-            title="Services"
-            value={stats.services}
-            icon={Tag}
-            color="purple"
-            onClick={() => setStatusFilter("services")}
-          />
-          <DashboardCard
-            title="Low Stock"
-            value={stats.lowStock}
-            icon={AlertTriangle}
-            color="orange"
-            onClick={() => setStatusFilter("lowStock")}
-          />
-        </MiniDashboard>
-      )}
+      <MiniDashboard title="Products Overview">
+        <DashboardCard
+          title="Total Products"
+          value={stats?.total || products.length}
+          icon={Package}
+          color="blue"
+          onClick={() => setStatusFilter("")}
+        />
+        <DashboardCard
+          title="Active"
+          value={stats?.active || products.filter(p => p.isActive !== false).length}
+          icon={CheckCircle}
+          color="green"
+          onClick={() => setStatusFilter("active")}
+        />
+        <DashboardCard
+          title="Services"
+          value={stats?.services || products.filter(p => p.isService === true).length}
+          icon={Tag}
+          color="purple"
+          onClick={() => setStatusFilter("services")}
+        />
+        <DashboardCard
+          title="Low Stock"
+          value={stats?.lowStock || products.filter(p => p.isService !== true && 
+            p.stockQuantity !== null && p.stockQuantity <= (p.minStockLevel || 10)).length}
+          icon={AlertTriangle}
+          color="orange"
+          onClick={() => setStatusFilter("lowStock")}
+        />
+      </MiniDashboard>
 
       <div className="flex justify-between items-center mb-8">
         <div>
