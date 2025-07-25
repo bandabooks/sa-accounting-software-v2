@@ -36,7 +36,7 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
 
   const manageVatTypeMutation = useMutation({
     mutationFn: async ({ vatTypeId, isActive }: { vatTypeId: number; isActive: boolean }) => {
-      return await apiRequest("PUT", `/api/companies/${companyId}/vat-types/${vatTypeId}`, { isActive });
+      return await apiRequest(`/api/companies/${companyId}/vat-types/${vatTypeId}`, "PUT", { isActive });
     },
     onSuccess: () => {
       toast({

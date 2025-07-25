@@ -110,7 +110,7 @@ export default function PurchaseOrders() {
   });
 
   const createOrderMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/purchase-orders', data),
+    mutationFn: (data: any) => apiRequest('/api/purchase-orders', 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
       setIsCreateModalOpen(false);
@@ -137,7 +137,7 @@ export default function PurchaseOrders() {
   });
 
   const updateOrderMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest('PUT', `/api/purchase-orders/${id}`, data),
+    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest(`/api/purchase-orders/${id}`, 'PUT', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
       setEditingOrder(null);
@@ -156,7 +156,7 @@ export default function PurchaseOrders() {
   });
 
   const deleteOrderMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/purchase-orders/${id}`),
+    mutationFn: (id: number) => apiRequest(`/api/purchase-orders/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
       toast({
@@ -175,7 +175,7 @@ export default function PurchaseOrders() {
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) => 
-      apiRequest('PUT', `/api/purchase-orders/${id}/status`, { status }),
+      apiRequest(`/api/purchase-orders/${id}/status`, 'PUT', { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
       toast({

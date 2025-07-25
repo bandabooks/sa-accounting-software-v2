@@ -60,7 +60,7 @@ export default function Expenses() {
   });
 
   const createExpenseMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', '/api/expenses', data),
+    mutationFn: (data: any) => apiRequest('/api/expenses', 'POST', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       setIsCreateModalOpen(false);
@@ -79,7 +79,7 @@ export default function Expenses() {
   });
 
   const updateExpenseMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest('PUT', `/api/expenses/${id}`, data),
+    mutationFn: ({ id, data }: { id: number; data: any }) => apiRequest(`/api/expenses/${id}`, 'PUT', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       setEditingExpense(null);
@@ -98,7 +98,7 @@ export default function Expenses() {
   });
 
   const deleteExpenseMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/expenses/${id}`),
+    mutationFn: (id: number) => apiRequest(`/api/expenses/${id}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       toast({

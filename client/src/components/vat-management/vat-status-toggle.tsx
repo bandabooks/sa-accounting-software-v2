@@ -52,7 +52,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
 
   const updateVatSettingsMutation = useMutation({
     mutationFn: async (data: VatSettingsForm) => {
-      return await apiRequest("PUT", `/api/companies/${companyId}/vat-settings`, data);
+      return await apiRequest(`/api/companies/${companyId}/vat-settings`, "PUT", data);
     },
     onSuccess: () => {
       toast({

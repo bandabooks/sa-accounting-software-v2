@@ -29,7 +29,7 @@ export function VATSettings({ companyId }: VATSettingsProps) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof settings) => {
-      return apiRequest("PUT", `/api/companies/${companyId}/vat-settings`, data);
+      return apiRequest(`/api/companies/${companyId}/vat-settings`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/companies/${companyId}/vat-settings`] });
