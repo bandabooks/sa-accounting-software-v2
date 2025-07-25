@@ -8,10 +8,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, User, Shield, Activity, Settings, Clock, Eye, Edit, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, User, Shield, Activity, Settings, Clock, Eye, Edit, Trash2, Plus, UserCheck } from "lucide-react";
 import { Link } from "wouter";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// Role change form schema
+const roleChangeSchema = z.object({
+  userId: z.number(),
+  roleId: z.string().min(1, "Please select a role"),
+  reason: z.string().min(10, "Please provide a reason of at least 10 characters"),
+  effectiveDate: z.string().optional()
+});
+
+type RoleChangeData = z.infer<typeof roleChangeSchema>;
+
+// Available roles for assignment
+const AVAILABLE_ROLES = [
+  { id: 'super_admin', name: 'Super Administrator', description: 'Full system access', level: 10, color: 'from-red-500 to-red-700' },
+  { id: 'company_admin', name: 'Company Administrator', description: 'Company-wide access', level: 8, color: 'from-blue-500 to-blue-700' },
+  { id: 'accountant', name: 'Accountant', description: 'Financial management access', level: 6, color: 'from-green-500 to-green-700' },
+  { id: 'bookkeeper', name: 'Bookkeeper', description: 'Basic bookkeeping access', level: 4, color: 'from-yellow-500 to-yellow-700' },
+  { id: 'manager', name: 'Manager', description: 'Department management access', level: 5, color: 'from-purple-500 to-purple-700' },
+  { id: 'employee', name: 'Employee', description: 'Basic employee access', level: 2, color: 'from-gray-500 to-gray-700' },
+  { id: 'viewer', name: 'Viewer', description: 'Read-only access', level: 1, color: 'from-slate-500 to-slate-700' }
+];
 
 // Audit Logs Component
 function UserAuditLogs({ userId }: { userId: number }) {
@@ -133,6 +160,18 @@ export default function SuperAdminUserDetail() {
   const userId = params?.id;
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
+  const [isRoleChangeDialogOpen, setIsRoleChangeDialogOpen] = useState(false);
+
+  // Role change form
+  const roleChangeForm = useForm<RoleChangeData>({
+    resolver: zodResolver(roleChangeSchema),
+    defaultValues: {
+      userId: parseInt(userId || '0'),
+      roleId: '',
+      reason: '',
+      effectiveDate: new Date().toISOString().split('T')[0]
+    }
+  });
 
   // Fetch user details
   const { data: user, isLoading } = useQuery({
@@ -162,6 +201,37 @@ export default function SuperAdminUserDetail() {
     },
   });
 
+  // Role change mutation
+  const roleChangeMutation = useMutation({
+    mutationFn: async (data: RoleChangeData) => {
+      // Convert the data to match the existing RBAC API format
+      const rbacData = {
+        userId: data.userId,
+        systemRoleId: data.roleId,
+        companyRoleId: null,
+        reason: data.reason
+      };
+      return apiRequest('/api/rbac/assign-role', 'POST', rbacData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users", userId] });
+      toast({
+        title: "Role Updated",
+        description: "User role has been successfully updated.",
+      });
+      setIsRoleChangeDialogOpen(false);
+      roleChangeForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update role",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleUpdateUser = async (formData: FormData) => {
     const data = {
       name: formData.get("name"),
@@ -170,6 +240,18 @@ export default function SuperAdminUserDetail() {
       isActive: formData.get("isActive") === "true",
     };
     updateUserMutation.mutate(data);
+  };
+
+  const onRoleChange = (data: RoleChangeData) => {
+    roleChangeMutation.mutate(data);
+  };
+
+  const openRoleChangeDialog = () => {
+    if (user) {
+      roleChangeForm.setValue('userId', parseInt(userId || '0'));
+      roleChangeForm.setValue('roleId', user.role || '');
+      setIsRoleChangeDialogOpen(true);
+    }
   };
 
   if (isLoading) {
@@ -381,7 +463,7 @@ export default function SuperAdminUserDetail() {
                       <Badge variant={user.role === 'super_admin' ? 'destructive' : 'default'}>
                         {user.role?.replace('_', ' ').toUpperCase()}
                       </Badge>
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={openRoleChangeDialog}>
                         Change Role
                       </Button>
                     </div>
@@ -467,6 +549,103 @@ export default function SuperAdminUserDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Role Change Dialog */}
+      <Dialog open={isRoleChangeDialogOpen} onOpenChange={setIsRoleChangeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change User Role</DialogTitle>
+            <DialogDescription>
+              Update the role assignment for {user?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...roleChangeForm}>
+            <form onSubmit={roleChangeForm.handleSubmit(onRoleChange)} className="space-y-4">
+              <FormField
+                control={roleChangeForm.control}
+                name="roleId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Role</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select new role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {AVAILABLE_ROLES.map(role => (
+                          <SelectItem key={role.id} value={role.id}>
+                            <div className="flex items-center space-x-2">
+                              <Badge 
+                                className={`bg-gradient-to-r ${role.color} text-white text-xs`}
+                              >
+                                Level {role.level}
+                              </Badge>
+                              <div>
+                                <div className="font-medium">{role.name}</div>
+                                <div className="text-xs text-muted-foreground">{role.description}</div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={roleChangeForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason for Change</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Explain why this role change is being made..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This will be logged for audit and compliance purposes
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={roleChangeForm.control}
+                name="effectiveDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Effective Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      When this role change should take effect
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsRoleChangeDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={roleChangeMutation.isPending}>
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  {roleChangeMutation.isPending ? 'Updating...' : 'Update Role'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
