@@ -1,0 +1,56 @@
+ntegrate Account Selection on /products/create with Chart of Accounts
+Objective:
+Enhance the /products/create page so that when adding a new product or service, users must select or assign the relevant income and expense accounts. This must integrate with the system’s chart of accounts, ensuring all product/service sales and costs are correctly reported in financials.
+
+Required Changes:
+Account Selection Fields:
+
+Add two dropdown fields to the create product/service form:
+
+Income Account: Select from chart of accounts (filtered to ‘Revenue’ type).
+
+Expense Account: Select from chart of accounts (filtered to ‘Expense’ or ‘Cost of Goods Sold’ types).
+
+Both fields should support searching and must pull from the current chart of accounts in real time.
+
+Make “Income Account” required for all products and services.
+
+“Expense Account” is required for products (with inventory/cost tracking), optional for pure services.
+
+Chart of Accounts Integration:
+
+Link these dropdowns directly to the company’s chart of accounts table.
+
+If a new account needs to be created, allow user to add a new account inline, without leaving the form.
+
+Accurate Reporting & Validation:
+
+On product/service save, persist the selected account references in the database.
+
+Ensure all future sales, purchase, and expense transactions using these products/services auto-allocate to the selected accounts for real-time and accurate financial reporting.
+
+Add validation so that products/services without an assigned account cannot be saved.
+
+UI/UX:
+
+Clearly label the dropdowns as “Income Account” and “Expense Account” with appropriate tooltips/help text (e.g., “This is where all income for this item will be reported”).
+
+Show account code, name, and description in each dropdown option for clarity.
+
+Backwards Compatibility:
+
+For legacy products/services, require account selection on first edit, or prompt admin to assign accounts.
+
+Success Criteria:
+
+Every product/service must have an associated income and (if applicable) expense account, linked to the chart of accounts.
+
+All related sales/expense transactions post automatically to correct accounts, with accurate real-time reporting.
+
+No product/service can be created without this assignment.
+
+UI is seamless and user-friendly.
+
+Extra:
+
+Optionally, add a “Default Income/Expense Account” at company level for quick assignment.

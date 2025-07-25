@@ -25,7 +25,7 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   sku: z.string().optional(),
-  categoryId: z.number().optional(),
+  categoryId: z.string().optional(),
   unitPrice: z.string().min(1, "Price is required"),
   costPrice: z.string().optional(),
   vatRate: z.string().optional(),
