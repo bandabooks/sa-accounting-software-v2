@@ -6342,7 +6342,8 @@ Format your response as a JSON array of tip objects with "title", "description",
       }
       
       // Additional security: Only super admins can assign super admin roles
-      if (isSuperAdminRole && req.user.role !== 'super_admin') {
+      const currentUser = await storage.getUser(req.user.id);
+      if (isSuperAdminRole && currentUser?.role !== 'super_admin') {
         return res.status(403).json({ 
           message: "Only Super Administrators can assign Super Admin roles" 
         });

@@ -69,7 +69,9 @@ export async function createDefaultUserPermissions(): Promise<void> {
           let roleName = 'Company Admin';
           
           // Only specific system admin accounts get Super Admin role
-          if (user.username === 'sysadmin_7f3a2b8e' || user.username === 'admin') {
+          if (user.username === 'sysadmin_7f3a2b8e' || 
+              user.username === 'admin' || 
+              user.email === 'accounts@thinkmybiz.com') {
             roleId = superAdminRole.id;
             roleName = 'Super Admin';
           }
