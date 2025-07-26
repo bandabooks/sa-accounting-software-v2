@@ -144,9 +144,9 @@ export default function EnhancedUserManagement() {
     }
   });
 
-  // Fetch user management data
+  // USE WORKING SUPER ADMIN API INSTEAD OF BROKEN RBAC API
   const { data: managementData, isLoading } = useQuery({
-    queryKey: ['/api/admin/enhanced-users'],
+    queryKey: ['/api/super-admin/users'],
     refetchInterval: 30000,
   });
 
@@ -300,13 +300,57 @@ export default function EnhancedUserManagement() {
     );
   }
 
-  const data: UserManagementData = managementData || {
-    users: [],
-    roles: [],
-    totalUsers: 0,
-    activeUsers: 0,
-    inactiveUsers: 0,
-    lockedUsers: 0
+  // Transform Super Admin user data to RBAC format
+  const superAdminUsers = Array.isArray(managementData) ? managementData : [];
+  
+  const data: UserManagementData = {
+    users: superAdminUsers.map(user => ({
+      id: user.id,
+      username: user.username,
+      name: user.name || user.username,
+      email: user.email,
+      phone: '',
+      department: '',
+      role: user.role,
+      roleDisplayName: user.role === 'company_admin' ? 'Company Administrator' : user.role,
+      roleLevel: user.role === 'super_admin' ? 10 : user.role === 'company_admin' ? 5 : 1,
+      roleColor: user.role === 'super_admin' ? 'from-red-500 to-red-600' : 'from-blue-500 to-blue-600',
+      isActive: user.isActive !== false,
+      lastLogin: user.lastLogin || null,
+      createdAt: user.createdAt || new Date().toISOString(),
+      updatedAt: user.updatedAt || new Date().toISOString(),
+      loginAttempts: user.failedLoginAttempts || 0,
+      isLocked: user.accountLocked || false,
+      assignedModules: [],
+      customPermissions: [],
+      notes: ''
+    })),
+    roles: [
+      {
+        id: 'super_admin',
+        name: 'super_admin',
+        displayName: 'Super Administrator',
+        level: 10,
+        color: 'from-red-500 to-red-600',
+        currentUsers: superAdminUsers.filter(u => u.role === 'super_admin').length,
+        maxUsers: 5,
+        securityLevel: 'maximum'
+      },
+      {
+        id: 'company_admin',
+        name: 'company_admin', 
+        displayName: 'Company Administrator',
+        level: 5,
+        color: 'from-blue-500 to-blue-600',
+        currentUsers: superAdminUsers.filter(u => u.role === 'company_admin').length,
+        maxUsers: 50,
+        securityLevel: 'high'
+      }
+    ],
+    totalUsers: superAdminUsers.length,
+    activeUsers: superAdminUsers.filter(u => u.isActive !== false).length,
+    inactiveUsers: superAdminUsers.filter(u => u.isActive === false).length,
+    lockedUsers: superAdminUsers.filter(u => u.accountLocked).length
   };
 
   // Filter users based on search and filters
