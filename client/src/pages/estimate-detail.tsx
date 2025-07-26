@@ -5,12 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, Mail, Edit, FileText } from "lucide-react";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 
 export default function EstimateDetail() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   
   const estimateId = parseInt(params.id || "0");
@@ -38,9 +41,10 @@ export default function EstimateDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       queryClient.invalidateQueries({ queryKey: ["/api/estimates", estimateId] });
-      toast({
-        title: "Status updated",
-        description: "Estimate status has been updated successfully.",
+      successModal.showSuccess({
+        title: "Status Updated Successfully",
+        description: "The estimate status has been updated and saved successfully.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -63,11 +67,12 @@ export default function EstimateDetail() {
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
-      toast({
-        title: "Success",
-        description: "Estimate converted to invoice successfully.",
+      successModal.showSuccess({
+        title: "Estimate Converted Successfully",
+        description: "Your estimate has been converted to an invoice and is now ready for billing.",
+        confirmText: "View Invoice",
+        onConfirm: () => setLocation(`/invoices/${invoice.id}`)
       });
-      setLocation(`/invoices/${invoice.id}`);
     },
     onError: () => {
       toast({
@@ -282,6 +287,15 @@ export default function EstimateDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }

@@ -13,6 +13,8 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertJournalEntrySchema, type JournalEntryWithLines } from "@shared/schema";
 import { Plus, Search, Edit, FileCheck, RotateCcw, Trash2, BookOpen } from "lucide-react";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { format } from "date-fns";
@@ -61,6 +63,7 @@ export default function JournalEntries() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntryWithLines | null>(null);
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
 
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
@@ -77,9 +80,10 @@ export default function JournalEntries() {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
       setIsCreateDialogOpen(false);
       form.reset();
-      toast({
-        title: "Success",
-        description: "Journal entry created successfully",
+      successModal.showSuccess({
+        title: "Journal Entry Created Successfully",
+        description: "Your journal entry has been saved and added to the general ledger.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -95,9 +99,10 @@ export default function JournalEntries() {
     mutationFn: (id: number) => apiRequest(`/api/journal-entries/${id}/post`, "PUT"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
-      toast({
-        title: "Success",
-        description: "Journal entry posted successfully",
+      successModal.showSuccess({
+        title: "Journal Entry Posted Successfully",
+        description: "The journal entry has been posted to the general ledger and is now final.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -114,9 +119,10 @@ export default function JournalEntries() {
       apiRequest(`/api/journal-entries/${id}/reverse`, "POST", { description }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
-      toast({
-        title: "Success",
-        description: "Journal entry reversed successfully",
+      successModal.showSuccess({
+        title: "Journal Entry Reversed Successfully",
+        description: "The journal entry has been reversed and a new reversing entry has been created.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -673,6 +679,15 @@ export default function JournalEntries() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }
