@@ -65,31 +65,16 @@ export async function createDefaultUserPermissions(): Promise<void> {
         
         if (!existingPermission) {
           // Determine role based on strict criteria
-          let roleId = viewerRole.id;
-          let roleName = 'Viewer';
+          let roleId = companyAdminRole.id; // Default to Company Admin for all users
+          let roleName = 'Company Admin';
           
           // Only specific system admin accounts get Super Admin role
-          if (user.username === 'sysadmin_7f3a2b8e' || user.email === 'bandabookkeepers@gmail.com') {
+          if (user.username === 'sysadmin_7f3a2b8e' || user.username === 'admin') {
             roleId = superAdminRole.id;
             roleName = 'Super Admin';
           }
-          // Check if user is owner/first user of this specific company
-          else {
-            try {
-              const userCompanies = await storage.getUserCompanies(user.id);
-              const isOwnerOfThisCompany = userCompanies.some(uc => 
-                uc.companyId === company.id && uc.role === 'owner'
-              );
-              
-              if (isOwnerOfThisCompany) {
-                roleId = companyAdminRole.id;
-                roleName = 'Company Admin';
-              }
-            } catch (error) {
-              // If getUserCompanies fails, default to viewer
-              console.log(`Could not determine company ownership for ${user.username}, defaulting to Viewer`);
-            }
-          }
+          // All other legitimate business users get Company Admin to access modules based on subscriptions
+          // This ensures trial signups and business users can access their subscribed modules
           
           // Create user permission
           await storage.createUserPermission({
