@@ -17,13 +17,16 @@ import {
   Plus,
   Edit,
   Trash2,
-  UserCheck
+  UserCheck,
+  LogIn,
+  Info
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SystemAnalytics {
   totalCompanies: number;
@@ -90,8 +93,8 @@ export default function SuperAdminDashboard() {
     setLocation(`/super-admin/plans/${planId}`);
   };
 
-  // Impersonate user function
-  const impersonateUser = async (userId: number) => {
+  // Log in as user function for support and troubleshooting
+  const loginAsUser = async (userId: number) => {
     try {
       const result = await apiRequest(`/api/super-admin/impersonate/${userId}`, "POST");
       if (result.token) {
@@ -104,7 +107,7 @@ export default function SuperAdminDashboard() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to impersonate user",
+        description: error.message || "Failed to log in as user",
         variant: "destructive",
       });
     }
@@ -489,17 +492,29 @@ export default function SuperAdminDashboard() {
                       </div>
                     </div>
                     <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => {
-                          console.log("Impersonating user:", user.id);
-                          impersonateUser(user.id);
-                        }}
-                      >
-                        <UserCheck className="h-4 w-4 mr-2" />
-                        Impersonate
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                console.log("Logging in as user:", user.id);
+                                loginAsUser(user.id);
+                              }}
+                            >
+                              <LogIn className="h-4 w-4 mr-2" />
+                              Log In As User
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="flex items-center space-x-2 max-w-xs">
+                              <Info className="h-4 w-4" />
+                              <p>Allows admin to view and access the system as this user, for support and troubleshooting purposes.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <Button 
                         size="sm" 
                         variant="outline"
