@@ -7742,7 +7742,8 @@ export class DatabaseStorage implements IStorage {
       ORDER BY sr.level DESC, sr.display_name
     `;
     
-    return await db.execute(rolesQuery);
+    const result = await db.execute(rolesQuery);
+    return result.rows || [];
   }
 
   // Get active company modules - simplified version without complex tables

@@ -3662,3 +3662,42 @@ export type PosRefundWithItems = PosRefund & {
   originalSale: PosSale;
   user: User;
 };
+
+// === RBAC SCHEMA EXPORTS ===
+
+// RBAC Insert schemas
+export const insertSystemRoleSchema = createInsertSchema(systemRoles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCompanyRoleSchema = createInsertSchema(companyRoles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserPermissionSchema = createInsertSchema(userPermissions).omit({
+  id: true,
+  grantedAt: true,
+  updatedAt: true,
+});
+
+export const insertPermissionAuditLogSchema = createInsertSchema(permissionAuditLog).omit({
+  id: true,
+  timestamp: true,
+});
+
+// RBAC Type exports
+export type SystemRole = typeof systemRoles.$inferSelect;
+export type InsertSystemRole = z.infer<typeof insertSystemRoleSchema>;
+
+export type CompanyRole = typeof companyRoles.$inferSelect;
+export type InsertCompanyRole = z.infer<typeof insertCompanyRoleSchema>;
+
+export type UserPermission = typeof userPermissions.$inferSelect;
+export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
+
+export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
+export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;

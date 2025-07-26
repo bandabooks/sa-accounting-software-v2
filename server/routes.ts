@@ -26,6 +26,11 @@ import {
   updateRolePermissions,
   assignUserRole
 } from "./permissions-api";
+import {
+  getBridgedPermissionsMatrix,
+  getBridgedCompanyModules,
+  assignRoleBridged
+} from "./rbac-bridge";
 import { 
   getDefaultPermissionsForRole, 
   createDefaultUserPermissions,
@@ -6421,19 +6426,19 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Enhanced User Management Routes
   app.get("/api/admin/enhanced-users", authenticate, requirePermission(PERMISSIONS.USERS_VIEW), getEnhancedUsers);
   
-  // Permissions Matrix Routes
-  app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getPermissionsMatrix);
+  // Permissions Matrix Routes - BRIDGED TO WORKING RBAC SYSTEM
+  app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getBridgedPermissionsMatrix);
   
-  // Module Activation Routes
-  app.get("/api/modules/company", authenticate, requireSuperAdmin, getCompanyModules);
+  // Module Activation Routes - BRIDGED TO WORKING RBAC SYSTEM
+  app.get("/api/modules/company", authenticate, requireSuperAdmin, getBridgedCompanyModules);
   app.post("/api/modules/:moduleId/toggle", authenticate, requireSuperAdmin, toggleModuleActivation);
   
   // Role Management Routes
   app.post("/api/roles/custom", authenticate, requirePermission(PERMISSIONS.ROLES_CREATE), createCustomRole);
   app.put("/api/roles/:roleId/permissions", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), updateRolePermissions);
   
-  // User Role Assignment Routes
-  app.post("/api/admin/assign-role", authenticate, requirePermission(PERMISSIONS.USERS_ASSIGN_ROLES), assignUserRole);
+  // User Role Assignment Routes - BRIDGED TO WORKING RBAC SYSTEM
+  app.post("/api/admin/assign-role", authenticate, requirePermission(PERMISSIONS.USERS_ASSIGN_ROLES), assignRoleBridged);
   
   // Toggle User Status Route
   app.post("/api/admin/users/:userId/toggle-status", authenticate, requirePermission(PERMISSIONS.USERS_VIEW), async (req: AuthenticatedRequest, res) => {
