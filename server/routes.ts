@@ -2,6 +2,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
+  validateAdminCreation,
+  auditDuplicateAdmins,
+  resolveDuplicateAdmin,
+  getAdminRoleHistory
+} from "./admin-duplicate-prevention";
+import { 
   authenticate, 
   requirePermission, 
   requireRole, 
@@ -650,6 +656,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching company audit logs:", error);
       res.status(500).json({ message: "Failed to fetch company audit logs" });
+    }
+  });
+
+  // Admin Duplicate Prevention API Routes
+  app.post("/api/admin/validate-creation", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { email, role, companyId } = req.body;
+      const validation = await validateAdminCreation(email, role, companyId);
+      res.json(validation);
+    } catch (error) {
+      console.error("Error validating admin creation:", error);
+      res.status(500).json({ message: "Failed to validate admin creation" });
+    }
+  });
+
+  app.get("/api/admin/audit-duplicates", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const auditResult = await auditDuplicateAdmins();
+      res.json(auditResult);
+    } catch (error) {
+      console.error("Error auditing duplicate admins:", error);
+      res.status(500).json({ message: "Failed to audit duplicate admins" });
+    }
+  });
+
+  app.post("/api/admin/resolve-duplicate", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, reason } = req.body;
+      const resolvedBy = req.user!.id;
+      const result = await resolveDuplicateAdmin(userId, reason, resolvedBy);
+      res.json(result);
+    } catch (error) {
+      console.error("Error resolving duplicate admin:", error);
+      res.status(500).json({ message: "Failed to resolve duplicate admin" });
+    }
+  });
+
+  app.get("/api/admin/role-history/:timeframe?", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const timeframe = req.params.timeframe as 'week' | 'month' | 'quarter' | 'year' || 'month';
+      const history = await getAdminRoleHistory(timeframe);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching admin role history:", error);
+      res.status(500).json({ message: "Failed to fetch admin role history" });
     }
   });
 

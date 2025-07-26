@@ -1,0 +1,56 @@
+Prevent and Audit Duplicate Admin Roles
+Goal:
+Ensure that only one unique "System Admin" (and other critical admin roles) is present in the system. Prevent the creation of duplicate admin users and provide an audit trail for all admin role assignments.
+
+Instructions for Enhancement:
+
+Deduplication on Creation
+
+Before creating or assigning a new admin role (including System Admin, Super Admin, Company Admin), check if a user with the same role and email already exists.
+
+If such a user exists, block creation and return an error/notification:
+"Admin user with this email and role already exists."
+
+Audit Existing Admins
+
+Build an automated audit job or function to run on-demand or on schedule:
+
+Scan the user database for duplicate admin roles (users with same role and/or same email).
+
+List all duplicate entries in a report.
+
+Optionally, offer a tool/button to merge or deactivate duplicates, keeping only the primary admin per organization.
+
+Role Assignment Integrity
+
+Enforce business logic so that:
+
+Each organization can have only one System Admin (unless multi-admin is a requirement).
+
+All admin roles must be unique per organization and per user/email.
+
+User Interface Enhancements
+
+On the User Management or Admin Dashboard, highlight duplicates if found, and provide options to resolve them.
+
+Add a warning if an attempt is made to create/assign a duplicate admin role.
+
+Logging & Notifications
+
+Log every admin creation, deletion, or role assignment change for audit purposes.
+
+Optionally, notify the Super Admin if a duplication attempt or auto-resolution occurs.
+
+Sample Test Script (for TDA/QA):
+
+ When a new System Admin is created with an existing admin email, creation is blocked.
+
+ When multiple System Admins are found, the audit tool lists them and allows resolution.
+
+ UI clearly shows duplicate admin warnings and resolution options.
+
+ Only unique admin roles exist after audit and cleanup.
+
+Summary:
+Enhance the existing user and role management modules to enforce unique admin roles, prevent duplication, and enable easy auditing and resolution of duplicates. If feature is not available, implement accordingly for robust compliance and user management integrity.
+

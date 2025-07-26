@@ -96,6 +96,16 @@ export default function UnifiedUserManagement() {
     queryKey: ["/api/super-admin/subscription-plans"],
   });
 
+  // Fetch duplicate admin audit
+  const { data: duplicateAudit } = useQuery<any>({
+    queryKey: ["/api/admin/audit-duplicates"],
+  });
+
+  // Fetch admin role history
+  const { data: adminHistory = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/role-history"],
+  });
+
   // Mutations
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: number; status: string }) => {
@@ -138,6 +148,20 @@ export default function UnifiedUserManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
       showSuccess("Module Status Updated", "Module activation status has been successfully updated.");
+    },
+  });
+
+  const resolveDuplicateMutation = useMutation({
+    mutationFn: async ({ userId, reason }: { userId: number; reason: string }) => {
+      return apiRequest("/api/admin/resolve-duplicate", {
+        method: "POST",
+        body: { userId, reason },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/audit-duplicates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      showSuccess("Duplicate Resolved", "Duplicate admin user has been successfully resolved.");
     },
   });
 
@@ -489,15 +513,167 @@ export default function UnifiedUserManagement() {
     </div>
   );
 
-  // Activity Log Tab
+  // Activity Log Tab with Duplicate Admin Prevention
   const ActivityLogTab = () => (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Activity & Audit Log</h2>
-        <p className="text-gray-600">Track user logins and permission changes</p>
+        <p className="text-gray-600">Track user activities and prevent duplicate admin roles</p>
       </div>
 
+      {/* Duplicate Admin Prevention Alert */}
+      {duplicateAudit?.hasDuplicates && (
+        <Alert className="border-red-200 bg-red-50">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            <div className="flex items-center justify-between">
+              <span>
+                <strong>Warning:</strong> {duplicateAudit.totalDuplicateUsers} duplicate admin roles detected. 
+                Click "View Duplicates" to resolve them.
+              </span>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="ml-4">
+                    View Duplicates
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl">
+                  <DialogHeader>
+                    <DialogTitle>Duplicate Admin Roles Detected</DialogTitle>
+                    <DialogDescription>
+                      The following duplicate admin roles have been found in the system. 
+                      Only one admin per role/email should exist for security reasons.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {duplicateAudit.duplicates.map((duplicate: any, index: number) => (
+                      <Card key={index} className="border-orange-200">
+                        <CardHeader>
+                          <CardTitle className="text-lg text-orange-800">
+                            {duplicate.role}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {duplicate.users.map((user: any) => (
+                              <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                  <p className="font-medium">{user.username}</p>
+                                  <p className="text-sm text-gray-600">{user.email}</p>
+                                  {user.companyName && (
+                                    <p className="text-xs text-gray-500">Company: {user.companyName}</p>
+                                  )}
+                                </div>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="destructive" size="sm">
+                                      <UserX className="h-4 w-4 mr-2" />
+                                      Resolve
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Resolve Duplicate Admin</DialogTitle>
+                                      <DialogDescription>
+                                        This will deactivate the duplicate admin user: {user.username}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label htmlFor="reason">Reason for Resolution</Label>
+                                        <Textarea 
+                                          id="reason"
+                                          placeholder="Explain why this duplicate is being resolved..."
+                                        />
+                                      </div>
+                                      <div className="flex justify-end space-x-2">
+                                        <Button variant="outline">Cancel</Button>
+                                        <Button 
+                                          variant="destructive"
+                                          onClick={() => {
+                                            const reason = (document.getElementById('reason') as HTMLTextAreaElement)?.value;
+                                            resolveDuplicateMutation.mutate({ userId: user.id, reason });
+                                          }}
+                                        >
+                                          Resolve Duplicate
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Admin Role History */}
       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Crown className="h-5 w-5 mr-2 text-purple-600" />
+            Admin Role Assignment History
+          </CardTitle>
+          <CardDescription>
+            Track all admin role assignments, removals, and security actions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {adminHistory.slice(0, 10).map((entry: any, index: number) => (
+              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-full ${
+                    entry.action === 'role_assigned' ? 'bg-green-100' :
+                    entry.action === 'role_removed' ? 'bg-red-100' :
+                    entry.action === 'admin_duplicate_resolved' ? 'bg-orange-100' :
+                    'bg-blue-100'
+                  }`}>
+                    {entry.action === 'role_assigned' && <CheckCircle className="h-4 w-4 text-green-600" />}
+                    {entry.action === 'role_removed' && <XCircle className="h-4 w-4 text-red-600" />}
+                    {entry.action === 'admin_duplicate_resolved' && <AlertTriangle className="h-4 w-4 text-orange-600" />}
+                    {entry.action === 'user_created' && <UserPlus className="h-4 w-4 text-blue-600" />}
+                  </div>
+                  <div>
+                    <p className="font-medium">{entry.username}</p>
+                    <p className="text-sm text-gray-600">{entry.email}</p>
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <Badge variant="outline">{entry.role}</Badge>
+                      <span>•</span>
+                      <span>{entry.action.replace(/_/g, ' ')}</span>
+                      <span>•</span>
+                      <span>by {entry.performedBy}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {new Date(entry.timestamp).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+            {adminHistory.length === 0 && (
+              <p className="text-center text-gray-500 py-4">No admin role history found.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Regular Activity Log */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Activity className="h-5 w-5 mr-2 text-blue-600" />
+            System Activity Log
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>

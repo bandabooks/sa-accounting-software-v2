@@ -7860,6 +7860,68 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(permissionAuditLog.timestamp))
       .limit(limit);
   }
+
+  // Admin duplicate prevention methods
+  async getUsersByRole(role: string): Promise<User[]> {
+    const userCompanies = await db
+      .select({
+        user: users,
+        role: userCompanyMemberships.role
+      })
+      .from(userCompanyMemberships)
+      .innerJoin(users, eq(users.id, userCompanyMemberships.userId))
+      .where(eq(userCompanyMemberships.role, role));
+
+    return userCompanies.map(uc => uc.user);
+  }
+
+  async getCompanyAdminsByCompanyId(companyId: number): Promise<User[]> {
+    const admins = await db
+      .select({
+        user: users
+      })
+      .from(userCompanyMemberships)
+      .innerJoin(users, eq(users.id, userCompanyMemberships.userId))
+      .where(
+        and(
+          eq(userCompanyMemberships.companyId, companyId),
+          eq(userCompanyMemberships.role, 'company_admin')
+        )
+      );
+
+    return admins.map(a => a.user);
+  }
+
+  async getUserCompanies(userId: number): Promise<Array<{
+    companyId: number;
+    companyName: string;
+    role: string;
+  }>> {
+    const memberships = await db
+      .select({
+        companyId: userCompanyMemberships.companyId,
+        companyName: companies.name,
+        role: userCompanyMemberships.role
+      })
+      .from(userCompanyMemberships)
+      .innerJoin(companies, eq(companies.id, userCompanyMemberships.companyId))
+      .where(eq(userCompanyMemberships.userId, userId));
+
+    return memberships;
+  }
+
+  async getAuditLogsByActionAndDate(actions: string[], startDate: Date): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(
+        and(
+          inArray(auditLogs.action, actions),
+          gte(auditLogs.createdAt, startDate)
+        )
+      )
+      .orderBy(desc(auditLogs.createdAt));
+  }
 }
 
 export const storage = new DatabaseStorage();
