@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmationModal, useConfirmationModal } from "@/components/ui/confirmation-modal";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, User, Shield, Activity, Settings, Clock, Eye, Edit, Trash2, Plus, UserCheck, KeyRound, Mail, UserX, Loader2 } from "lucide-react";
@@ -161,6 +162,13 @@ export default function SuperAdminUserDetail() {
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [isRoleChangeDialogOpen, setIsRoleChangeDialogOpen] = useState(false);
+  
+  // Confirmation modal states
+  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
+  const [verificationEmailModalOpen, setVerificationEmailModalOpen] = useState(false);
+  const [deactivateAccountModalOpen, setDeactivateAccountModalOpen] = useState(false);
+  
+  const confirmationTemplates = useConfirmationModal();
 
   // Role change form
   const roleChangeForm = useForm<RoleChangeData>({
@@ -322,21 +330,30 @@ export default function SuperAdminUserDetail() {
   };
 
   const handleResetPassword = () => {
-    if (confirm(`Are you sure you want to reset the password for ${user?.name}? This will send a new password to their email address.`)) {
-      resetPasswordMutation.mutate();
-    }
+    setResetPasswordModalOpen(true);
   };
 
   const handleSendVerificationEmail = () => {
-    if (confirm(`Send verification email to ${user?.email}?`)) {
-      sendVerificationMutation.mutate();
-    }
+    setVerificationEmailModalOpen(true);
   };
 
   const handleDeactivateAccount = () => {
-    if (confirm(`Are you sure you want to deactivate ${user?.name}'s account? This will prevent them from logging in.`)) {
-      deactivateAccountMutation.mutate();
-    }
+    setDeactivateAccountModalOpen(true);
+  };
+
+  const confirmResetPassword = () => {
+    resetPasswordMutation.mutate();
+    setResetPasswordModalOpen(false);
+  };
+
+  const confirmSendVerificationEmail = () => {
+    sendVerificationMutation.mutate();
+    setVerificationEmailModalOpen(false);
+  };
+
+  const confirmDeactivateAccount = () => {
+    deactivateAccountMutation.mutate();
+    setDeactivateAccountModalOpen(false);
   };
 
   if (isLoading) {
@@ -776,6 +793,50 @@ export default function SuperAdminUserDetail() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Modals */}
+      {user && (
+        <>
+          <ConfirmationModal
+            isOpen={resetPasswordModalOpen}
+            onClose={() => setResetPasswordModalOpen(false)}
+            onConfirm={confirmResetPassword}
+            title="Reset Password Confirmation"
+            description={`Are you sure you want to reset the password for ${user.name}? This will send a new password to ${user.email}.`}
+            confirmText="Reset Password"
+            cancelText="Cancel"
+            variant="warning"
+            icon="key"
+            isLoading={resetPasswordMutation.isPending}
+          />
+
+          <ConfirmationModal
+            isOpen={verificationEmailModalOpen}
+            onClose={() => setVerificationEmailModalOpen(false)}
+            onConfirm={confirmSendVerificationEmail}
+            title="Send Verification Email"
+            description={`Send verification email to ${user.email}? They will receive a 6-digit verification code that expires in 24 hours.`}
+            confirmText="Send Email"
+            cancelText="Cancel"
+            variant="info"
+            icon="mail"
+            isLoading={sendVerificationMutation.isPending}
+          />
+
+          <ConfirmationModal
+            isOpen={deactivateAccountModalOpen}
+            onClose={() => setDeactivateAccountModalOpen(false)}
+            onConfirm={confirmDeactivateAccount}
+            title="Deactivate Account"
+            description={`Are you sure you want to deactivate ${user.name}'s account? This will prevent them from logging in until the account is reactivated.`}
+            confirmText="Deactivate Account"
+            cancelText="Cancel"
+            variant="destructive"
+            icon="user"
+            isLoading={deactivateAccountMutation.isPending}
+          />
+        </>
+      )}
     </div>
   );
 }

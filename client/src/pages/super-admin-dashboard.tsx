@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 interface SystemAnalytics {
   totalCompanies: number;
@@ -79,6 +80,10 @@ export default function SuperAdminDashboard() {
   const [, setLocation] = useLocation();
   const [isCreatePlanDialogOpen, setIsCreatePlanDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  
+  // Login As User confirmation modal
+  const [loginAsUserModalOpen, setLoginAsUserModalOpen] = useState(false);
+  const [selectedUserForLogin, setSelectedUserForLogin] = useState<User | null>(null);
 
   // Navigation functions
   const navigateToCompany = (companyId: number) => {
@@ -110,6 +115,19 @@ export default function SuperAdminDashboard() {
         description: error.message || "Failed to log in as user",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleLoginAsUser = (user: User) => {
+    setSelectedUserForLogin(user);
+    setLoginAsUserModalOpen(true);
+  };
+
+  const confirmLoginAsUser = () => {
+    if (selectedUserForLogin) {
+      loginAsUser(selectedUserForLogin.id);
+      setLoginAsUserModalOpen(false);
+      setSelectedUserForLogin(null);
     }
   };
 
@@ -498,10 +516,7 @@ export default function SuperAdminDashboard() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => {
-                                console.log("Logging in as user:", user.id);
-                                loginAsUser(user.id);
-                              }}
+                              onClick={() => handleLoginAsUser(user)}
                             >
                               <LogIn className="h-4 w-4 mr-2" />
                               Log In As User
@@ -572,6 +587,25 @@ export default function SuperAdminDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Login As User Confirmation Modal */}
+      {selectedUserForLogin && (
+        <ConfirmationModal
+          isOpen={loginAsUserModalOpen}
+          onClose={() => {
+            setLoginAsUserModalOpen(false);
+            setSelectedUserForLogin(null);
+          }}
+          onConfirm={confirmLoginAsUser}
+          title="Log In As User"
+          description={`Log in as ${selectedUserForLogin.name}? You will be able to view and access the system as this user for support and troubleshooting purposes.`}
+          confirmText="Log In As User"
+          cancelText="Cancel"
+          variant="warning"
+          icon="login"
+          isLoading={false}
+        />
+      )}
     </div>
   );
 }
