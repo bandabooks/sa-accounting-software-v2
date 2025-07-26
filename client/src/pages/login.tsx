@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { loginSchema, type LoginRequest } from '@shared/schema';
@@ -16,6 +17,8 @@ export default function Login() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccessModalOpen, setLoginSuccessModalOpen] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState<any>(null);
 
   const form = useForm<LoginRequest>({
     resolver: zodResolver(loginSchema),
@@ -42,13 +45,9 @@ export default function Login() {
       // Invalidate auth queries to trigger re-authentication
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       
-      toast({
-        title: "Login Successful",
-        description: `Welcome back, ${data.user.name}!`,
-      });
-      
-      // Force page reload to ensure proper authentication state
-      window.location.href = '/dashboard';
+      // Show professional login success modal
+      setLoggedInUser(data.user);
+      setLoginSuccessModalOpen(true);
     },
     onError: (error: Error) => {
       console.error('Login error:', error);
@@ -89,6 +88,12 @@ export default function Login() {
   const onSubmit = (data: LoginRequest) => {
     setLoginError(null);
     loginMutation.mutate(data);
+  };
+
+  const handleLoginSuccessConfirm = () => {
+    setLoginSuccessModalOpen(false);
+    // Force page reload to ensure proper authentication state  
+    window.location.href = '/dashboard';
   };
 
   return (
@@ -188,6 +193,21 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Login Success Confirmation Modal */}
+      {loggedInUser && (
+        <ConfirmationModal
+          isOpen={loginSuccessModalOpen}
+          onClose={handleLoginSuccessConfirm}
+          onConfirm={handleLoginSuccessConfirm}
+          title="Login Successful"
+          description={`Welcome back, ${loggedInUser.name}! You have successfully signed in to your Taxnify account.`}
+          confirmText="Continue to Dashboard"
+          variant="success"
+          icon="success"
+          isLoading={false}
+        />
+      )}
     </div>
   );
 }

@@ -82,9 +82,11 @@ export function ConfirmationModal({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose} disabled={isLoading}>
-            {cancelText}
-          </AlertDialogCancel>
+          {cancelText && (
+            <AlertDialogCancel onClick={onClose} disabled={isLoading}>
+              {cancelText}
+            </AlertDialogCancel>
+          )}
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isLoading}
