@@ -8,7 +8,7 @@ import {
   Settings, TrendingUp, Package, Building, Archive, Building2, 
   BookOpen, Landmark, BookOpenCheck, ReceiptText, DollarSign, 
   CreditCard, Box, Truck, PieChart, CheckCircle, Shield, Briefcase,
-  FolderOpen, CheckSquare, Clock, Tablet, UserCog, Key
+  FolderOpen, CheckSquare, Clock, Tablet, UserCog, Key, ToggleLeft
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -155,6 +155,17 @@ const navigationGroups = [
       { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
       { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" }
     ]
+  },
+  {
+    id: "super-admin",
+    label: "Super Admin",
+    icon: Settings,
+    requiredRole: "super_admin",
+    module: "advanced_analytics",
+    items: [
+      { path: "/super-admin", label: "Super Admin Dashboard", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" },
+      { path: "/super-admin/module-activation", label: "Module Activation Control", icon: ToggleLeft, requiredRole: "super_admin", module: "advanced_analytics" }
+    ]
   }
 ];
 
@@ -162,23 +173,42 @@ interface MobileNavigationGroupProps {
   group: typeof navigationGroups[0];
   location: string;
   userPermissions: string[];
+  userRole: string;
   isExpanded: boolean;
   onToggle: () => void;
   onItemClick: () => void;
 }
 
-function MobileNavigationGroup({ group, location, userPermissions, isExpanded, onToggle, onItemClick }: MobileNavigationGroupProps) {
+function MobileNavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle, onItemClick }: MobileNavigationGroupProps) {
   const { isModuleAvailable } = useCompanySubscription();
   
-  // Filter items based on permissions and subscription plan
+  // Check if group should be visible based on role requirements
+  if (group.requiredRole && userRole !== group.requiredRole) {
+    return null;
+  }
+
+  // Check if group module is available in subscription plan
+  if (group.module && !isModuleAvailable(group.module)) {
+    return null;
+  }
+  
+  // Filter items based on permissions, role requirements, and subscription plan
   const visibleItems = group.items.filter(item => {
-    // Check subscription plan module availability first
+    if ('requiredRole' in item && item.requiredRole && userRole !== item.requiredRole) {
+      return false;
+    }
+    
+    // Check subscription plan module availability
     if (item.module && !isModuleAvailable(item.module)) {
       return false;
     }
     
-    // Then check permissions
-    return !item.permission || userPermissions.includes(item.permission);
+    // Check permissions for items that have permission property
+    if ('permission' in item) {
+      return !item.permission || userPermissions.includes(item.permission);
+    }
+    
+    return true;
   });
 
   if (visibleItems.length === 0) return null;
@@ -349,6 +379,7 @@ export default function MobileMenu() {
                     group={group}
                     location={location}
                     userPermissions={userPermissions}
+                    userRole={user?.role || ""}
                     isExpanded={expandedGroup === group.id}
                     onToggle={() => toggleGroup(group.id)}
                     onItemClick={handleItemClick}

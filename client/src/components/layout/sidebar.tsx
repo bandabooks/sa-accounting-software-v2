@@ -6,7 +6,7 @@ import {
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, Tablet, UserCog, Key,
-  Lock
+  Lock, ToggleLeft
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -161,7 +161,8 @@ const navigationGroups = [
     requiredRole: "super_admin",
     module: "advanced_analytics",
     items: [
-      { path: "/super-admin", label: "Super Admin Dashboard", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" }
+      { path: "/super-admin", label: "Super Admin Dashboard", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" },
+      { path: "/super-admin/module-activation", label: "Module Activation Control", icon: ToggleLeft, requiredRole: "super_admin", module: "advanced_analytics" }
     ]
   }
 ];

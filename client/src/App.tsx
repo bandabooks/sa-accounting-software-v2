@@ -373,6 +373,11 @@ function AuthenticatedApp() {
             <SuperAdminPlanEdit />
           </ProtectedRoute>
         </Route>
+        <Route path="/super-admin/module-activation">
+          <ProtectedRoute requiredRole="super_admin">
+            <ModuleActivation />
+          </ProtectedRoute>
+        </Route>
         <Route path="/subscription">
           <ProtectedRoute>
             <Subscription />
