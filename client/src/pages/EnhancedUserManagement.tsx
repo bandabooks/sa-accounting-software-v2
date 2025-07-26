@@ -578,27 +578,61 @@ export default function EnhancedUserManagement() {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => openRoleAssignmentDialog(user)}
-                        >
-                          <Settings className="h-4 w-4 mr-1" />
-                          Permissions
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => openEditUserDialog(user)}
-                        >
-                          <Edit3 className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Switch
-                          checked={user.isActive}
-                          onCheckedChange={(checked) => toggleUserStatusMutation.mutate({ userId: user.id, isActive: checked })}
-                          disabled={toggleUserStatusMutation.isPending}
-                        />
+                        {/* Check if user is protected administrator */}
+                        {(() => {
+                          const isProtectedAdmin = user.role === 'super_admin' || 
+                                                   user.username === 'sysadmin_7f3a2b8e' || 
+                                                   user.email === 'accounts@thinkmybiz.com' || 
+                                                   user.username === 'admin' ||
+                                                   user.role === 'Admin';
+                          
+                          return (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => openRoleAssignmentDialog(user)}
+                                disabled={isProtectedAdmin}
+                                title={isProtectedAdmin ? "Cannot modify permissions for Super Administrators" : "Manage user permissions"}
+                              >
+                                <Settings className="h-4 w-4 mr-1" />
+                                Permissions
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => openEditUserDialog(user)}
+                                title="Edit user information and email"
+                              >
+                                <Edit3 className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <div className="relative">
+                                <Switch
+                                  checked={user.isActive}
+                                  onCheckedChange={(checked) => {
+                                    if (isProtectedAdmin) {
+                                      toast({
+                                        title: "Action Restricted",
+                                        description: "Cannot disable Super Administrators or System Administrators for security reasons.",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
+                                    toggleUserStatusMutation.mutate({ userId: user.id, isActive: checked });
+                                  }}
+                                  disabled={toggleUserStatusMutation.isPending || isProtectedAdmin}
+                                  title={isProtectedAdmin ? "Protected Administrator - Cannot be disabled" : "Toggle user active status"}
+                                />
+                                {isProtectedAdmin && (
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                                    <Shield className="h-2 w-2 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

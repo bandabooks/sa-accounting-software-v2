@@ -641,8 +641,23 @@ export default function PermissionsMatrix() {
                                 <div key={permType.id} className="flex items-center space-x-2 p-2 border rounded">
                                   <Switch
                                     checked={currentPermissions[permType.id] || false}
-                                    onCheckedChange={(checked) => togglePermission(module.id, permType.id, checked)}
-                                    disabled={!module.isActive || selectedRole.isSystemRole}
+                                    onCheckedChange={(checked) => {
+                                      // Protect Super Admin and System Admin roles from permission changes
+                                      const isProtectedRole = selectedRole.name === 'super_admin' || 
+                                                             selectedRole.displayName?.includes('Super Admin') ||
+                                                             selectedRole.displayName?.includes('System Administrator');
+                                      
+                                      if (isProtectedRole) {
+                                        toast({
+                                          title: "Permission Locked",
+                                          description: "Cannot modify permissions for Super Administrators or System Administrators.",
+                                          variant: "destructive",
+                                        });
+                                        return;
+                                      }
+                                      togglePermission(module.id, permType.id, checked);
+                                    }}
+                                    disabled={!module.isActive || selectedRole.isSystemRole || selectedRole.name === 'super_admin' || selectedRole.displayName?.includes('Super Admin') || selectedRole.displayName?.includes('System Administrator')}
                                   />
                                   <div>
                                     <span className="text-sm font-medium">{permType.name}</span>

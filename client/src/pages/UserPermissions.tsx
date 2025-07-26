@@ -162,6 +162,25 @@ export default function UserPermissions() {
   });
 
   const onAssignRole = (data: AssignRoleData) => {
+    // Find the selected user to check if they are protected
+    const targetUser = users.find(user => user.id === data.userId);
+    
+    if (targetUser) {
+      const isProtectedAdmin = targetUser.role === 'super_admin' || 
+                               targetUser.username === 'sysadmin_7f3a2b8e' || 
+                               targetUser.email === 'accounts@thinkmybiz.com' || 
+                               targetUser.username === 'admin';
+      
+      if (isProtectedAdmin) {
+        toast({
+          title: "Role Assignment Blocked",
+          description: "Cannot modify roles for Super Administrators or System Administrators for security reasons.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     assignRoleMutation.mutate(data);
   };
 
