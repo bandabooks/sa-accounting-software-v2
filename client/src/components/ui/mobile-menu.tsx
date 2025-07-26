@@ -255,7 +255,7 @@ export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
   const { user } = useAuth();
-  const { isModuleAvailable, currentPlan } = useCompanySubscription();
+  const { isModuleAvailable, currentPlan, isSuperAdminOrOwner } = useCompanySubscription();
   const [expandedGroup, setExpandedGroup] = useState<string | null>("overview");
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
@@ -294,13 +294,21 @@ export default function MobileMenu() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Taxnify</h1>
                 <p className="text-sm text-gray-500">Business & Compliance</p>
-                {currentPlan && (
-                  <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1">
+                  {isSuperAdminOrOwner ? (
+                    <span className="text-xs px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full font-medium">
+                      Super Admin - Full Access
+                    </span>
+                  ) : currentPlan ? (
                     <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
                       {currentPlan.displayName}
                     </span>
-                  </div>
-                )}
+                  ) : (
+                    <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                      No Active Plan
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -329,7 +337,7 @@ export default function MobileMenu() {
                   }
                   
                   // Check for role requirements  
-                  if (group.requiredRole && user?.role !== group.requiredRole) {
+                  if ('requiredRole' in group && group.requiredRole && user?.role !== group.requiredRole) {
                     return false;
                   }
                   

@@ -274,7 +274,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const { isModuleAvailable, currentPlan, planName } = useCompanySubscription();
+  const { isModuleAvailable, currentPlan, planName, isSuperAdminOrOwner } = useCompanySubscription();
   const [expandedGroup, setExpandedGroup] = useState<string | null>("overview");
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
@@ -301,13 +301,21 @@ export default function Sidebar() {
           <div className="flex-1">
             <h1 className="text-xl font-bold text-gray-900">Taxnify</h1>
             <p className="text-sm text-gray-500">Business & Compliance</p>
-            {currentPlan && (
-              <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1">
+              {isSuperAdminOrOwner ? (
+                <span className="text-xs px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full font-medium">
+                  Super Admin - Full Access
+                </span>
+              ) : currentPlan ? (
                 <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
                   {currentPlan.displayName}
                 </span>
-              </div>
-            )}
+              ) : (
+                <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                  No Active Plan
+                </span>
+              )}
+            </div>
           </div>
         </div>
         

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "./useAuth";
 
 interface SubscriptionPlan {
   id: number;
@@ -59,13 +60,24 @@ const SUBSCRIPTION_PLAN_MODULES = {
 };
 
 export function useCompanySubscription() {
+  const { user } = useAuth();
   const { data: subscription, isLoading, error } = useQuery<CompanySubscription>({
     queryKey: ["/api/company/subscription"],
     retry: false,
   });
 
+  // Check if user is super admin or software owner
+  const isSuperAdminOrOwner = user?.role === "super_admin" || 
+                              user?.username === "sysadmin_7f3a2b8e" || 
+                              user?.email === "accounts@thinkmybiz.com";
+
   // Function to check if module is available for current subscription plan
   const isModuleAvailable = (module: string): boolean => {
+    // Super admin and software owner have access to all modules
+    if (isSuperAdminOrOwner) {
+      return true;
+    }
+
     if (!subscription?.plan) {
       // Default to basic plan if no subscription found
       const basicModules = SUBSCRIPTION_PLAN_MODULES.basic;
@@ -85,6 +97,11 @@ export function useCompanySubscription() {
 
   // Function to get available modules for current plan
   const getAvailableModules = (): string[] => {
+    // Super admin and software owner have access to all modules
+    if (isSuperAdminOrOwner) {
+      return Object.values(SUBSCRIPTION_PLAN_MODULES).flat();
+    }
+
     if (!subscription?.plan) {
       return SUBSCRIPTION_PLAN_MODULES.basic;
     }
@@ -100,6 +117,7 @@ export function useCompanySubscription() {
     isModuleAvailable,
     getAvailableModules,
     currentPlan: subscription?.plan,
-    planName: subscription?.plan?.name || 'basic'
+    planName: subscription?.plan?.name || 'basic',
+    isSuperAdminOrOwner
   };
 }
