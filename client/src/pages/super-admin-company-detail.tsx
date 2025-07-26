@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Building, Users, CreditCard, Settings, Plus, UserPlus, Trash2, Edit } from "lucide-react";
@@ -19,6 +21,7 @@ export default function SuperAdminCompanyDetail() {
   const [, params] = useRoute("/super-admin/companies/:id");
   const companyId = params?.id;
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const [editMode, setEditMode] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
@@ -50,9 +53,10 @@ export default function SuperAdminCompanyDetail() {
       return apiRequest(`/api/super-admin/companies/${companyId}`, "PUT", data);
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Company updated successfully",
+      successModal.showSuccess({
+        title: "Company Updated Successfully",
+        description: "The company information has been updated and saved successfully.",
+        confirmText: "Continue"
       });
       setEditMode(false);
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/companies"] });
@@ -622,6 +626,15 @@ export default function SuperAdminCompanyDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }

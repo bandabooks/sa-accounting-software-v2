@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CompanySettings } from "@shared/schema";
@@ -49,6 +51,7 @@ const currencies = [
 
 export default function Settings() {
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("company");
 
@@ -102,9 +105,10 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings/company"] });
-      toast({
-        title: "Success",
-        description: "Company settings updated successfully",
+      successModal.showSuccess({
+        title: "Settings Updated Successfully",
+        description: "Your company settings have been saved and are now active across the platform.",
+        confirmText: "Continue"
       });
     },
     onError: (error) => {
@@ -571,6 +575,15 @@ export default function Settings() {
         </TabsContent>
         </Tabs>
       </Form>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }
