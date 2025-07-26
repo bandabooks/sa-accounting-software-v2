@@ -1,0 +1,105 @@
+Default Roles, Permissions & Subscription Plan Module Access
+Objective:
+Ensure that when a new company or user is created, all essential roles (especially company_admin) are automatically assigned the correct permissions for dashboard, sales, purchases, and other core modules. Additionally, guarantee that subscription plans control module access as intended, so features are properly enabled/disabled per plan.
+
+Requirements:
+1. Role & Permission Defaults:
+Company Admin/Owner Role
+
+On new company signup, create the first user as company_admin (or company_owner).
+
+Assign all core permissions by default:
+
+Dashboard (landing page)
+
+Sales
+
+Purchases
+
+Products & Inventory
+
+Accounting
+
+POS (if enabled)
+
+Reports
+
+User Management
+
+Company Settings
+
+Compliance (if included in plan)
+
+All other key modules available for their plan
+
+Other Default Roles:
+
+Manager: Full access except company/user settings.
+
+Accountant: Access to financial and reporting modules.
+
+Employee/User: Limited to their tasks, timesheets, or designated areas.
+
+Ensure role-permission mapping is clear, easy to update, and scalable.
+
+2. Subscription Plan Module Mapping:
+Plan-Module Matrix:
+
+Define which modules are available for each subscription plan.
+
+Example:
+
+Basic Plan: Dashboard, Sales, Purchases, Products, Basic Reports
+
+Standard Plan: All Basic + Accounting, Compliance, Advanced Reports
+
+Premium/Enterprise: All modules enabled
+
+Automatic Enforcement:
+
+On new company creation or plan upgrade/downgrade, ensure the user’s available modules are updated in real time.
+
+Users cannot access modules not included in their plan (hide or show locked icon).
+
+3. Onboarding Flow:
+First Login:
+
+Automatically land on the dashboard with full company admin access (if eligible).
+
+Show only modules included in their current subscription plan.
+
+All permission/role issues should be handled by default logic—no manual fix needed.
+
+4. Admin/Dev Checklist:
+Audit and update all role-permission mapping in the database or config files.
+
+Audit subscription plan-module mapping for all plans.
+
+Add migration script to backfill or fix any current users/companies missing permissions.
+
+Acceptance Criteria:
+All new company admins can access all key modules in their plan from the first login—no “Access Denied.”
+
+All modules are hidden/disabled according to plan limits.
+
+Roles and permissions can be managed easily from the admin dashboard.
+
+Existing users with missing permissions are corrected.
+
+Subscription plan upgrade/downgrade updates module access in real time.
+
+Example: Default Role-Permission Table
+Role	Dashboard	Sales	Purchases	Products	Accounting	POS	Reports	User Management	Settings	Compliance
+Company Admin	✅	✅	✅	✅	✅	✅	✅	✅	✅	✅ (if plan)
+Manager	✅	✅	✅	✅	✅	✅	✅	❌	❌	✅ (if plan)
+Accountant	✅	❌	✅	❌	✅	❌	✅	❌	❌	✅ (if plan)
+Employee	✅	❌	❌	❌	❌	❌	❌	❌	❌	❌
+
+Instructions for Developers:
+Implement the above logic in the onboarding workflow and permissions management.
+
+Review and update any existing role/permission seeders/migrations.
+
+Test new company signup, user creation, and plan upgrades/downgrades to ensure modules and permissions are assigned correctly.
+
+If you need a default JSON or SQL mapping for roles/permissions/subscription plans, let me know—I can generate that for you too!

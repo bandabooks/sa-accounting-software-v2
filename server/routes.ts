@@ -27,6 +27,11 @@ import {
   assignUserRole
 } from "./permissions-api";
 import { 
+  getDefaultPermissionsForRole, 
+  createDefaultUserPermissions,
+  filterPermissionsByPlan 
+} from "./default-permissions";
+import { 
   requireAnyPermission, 
   SYSTEM_ROLES,
   hasPermission
@@ -471,13 +476,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      // Get user permissions based on their role assignments
+      let userPermissions: string[] = [];
+      
+      try {
+        // Check if user is super admin or production admin
+        if (user.role === 'admin' || user.username === 'sysadmin_7f3a2b8e' || 
+            user.email === 'accounts@thinkmybiz.com') {
+          // Grant full permissions for super admin users
+          userPermissions = [
+            'dashboard:view', 'system:admin', 'system:maintenance',
+            'users:view', 'users:create', 'users:update', 'users:delete',
+            'companies:view', 'companies:create', 'companies:update', 'companies:delete',
+            'customers:view', 'customers:create', 'customers:update', 'customers:delete',
+            'invoices:view', 'invoices:create', 'invoices:update', 'invoices:delete',
+            'estimates:view', 'estimates:create', 'estimates:update', 'estimates:delete',
+            'payments:view', 'payments:create', 'payments:update', 'payments:delete',
+            'products:view', 'products:create', 'products:update', 'products:delete',
+            'inventory:view', 'inventory:manage', 'pos:view', 'reports:view',
+            'accounting:view', 'vat:view', 'settings:view', 'super_admin:access'
+          ];
+        } else {
+          // Get permissions from role assignments for regular users
+          try {
+            const permissions = await storage.getUserPermissions(user.id);
+            userPermissions = permissions;
+          } catch (error) {
+            // Fallback to default permissions based on user role
+            userPermissions = getDefaultPermissionsForRole(user.role || 'employee');
+          }
+        }
+      } catch (permError) {
+        console.error("Error getting user permissions:", permError);
+        // Fallback to basic permissions
+        userPermissions = user.permissions || [];
+      }
+      
       res.json({
         id: user.id,
         username: user.username,
         name: user.name,
         email: user.email,
         role: user.role,
-        permissions: user.permissions,
+        permissions: userPermissions,
         lastLogin: user.lastLogin,
         twoFactorEnabled: user.twoFactorEnabled,
       });
