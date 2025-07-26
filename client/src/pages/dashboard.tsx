@@ -27,14 +27,17 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400">Loading your business overview...</p>
+        </div>
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="h-6 bg-gray-200 rounded w-24 mb-2"></div>
-                <div className="h-10 bg-gray-200 rounded w-32 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-28"></div>
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
+                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28"></div>
               </div>
             ))}
           </div>
@@ -43,19 +46,15 @@ export default function Dashboard() {
     );
   }
 
-  if (!stats) {
-    return (
-      <div className="space-y-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400">Loading dashboard data...</p>
-        </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-          <p className="text-yellow-800">Dashboard data is loading. Please wait...</p>
-        </div>
-      </div>
-    );
-  }
+  // Return basic dashboard even if stats is null/undefined to prevent loading loop
+  const dashboardStats = stats || {
+    totalRevenue: "0.00",
+    outstandingInvoices: "0.00", 
+    totalCustomers: 0,
+    pendingEstimates: 0,
+    recentInvoices: [],
+    revenueByMonth: []
+  };
 
   return (
     <div className="space-y-6">
@@ -89,12 +88,12 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div data-onboarding="dashboard-stats">
-        <StatsGrid stats={stats} />
+        <StatsGrid stats={dashboardStats} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Invoices */}
-        <RecentInvoices invoices={stats.recentInvoices} />
+        <RecentInvoices invoices={dashboardStats.recentInvoices} />
 
         {/* Chart Section */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -105,7 +104,7 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.revenueByMonth}>
+                <BarChart data={dashboardStats.revenueByMonth}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis 
                     dataKey="month" 

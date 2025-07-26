@@ -11,135 +11,149 @@ import {
   FolderOpen, CheckSquare, Clock, Tablet, UserCog, Key
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompanySubscription } from "@/hooks/useCompanySubscription";
 
-// Same navigation groups as sidebar
+// Same navigation groups as sidebar with module mapping
 const navigationGroups = [
   {
     id: "overview",
     label: "Dashboard",
+    module: "dashboard",
     items: [
-      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null },
-      { path: "/spending-wizard", label: "Smart Spending Wizard", icon: Brain, permission: null }
+      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" },
+      { path: "/spending-wizard", label: "Smart Spending Wizard", icon: Brain, permission: null, module: "dashboard" }
     ]
   },
   {
     id: "sales",
     label: "Sales",
     icon: DollarSign,
+    module: "invoicing",
     items: [
-      { path: "/invoices", label: "Invoices", icon: FileText, permission: "INVOICE_VIEW" },
-      { path: "/estimates", label: "Estimates", icon: FileText, permission: "ESTIMATE_VIEW" },
-      { path: "/customers", label: "Customers", icon: Users, permission: "CUSTOMER_VIEW" }
+      { path: "/invoices", label: "Invoices", icon: FileText, permission: "INVOICE_VIEW", module: "invoicing" },
+      { path: "/estimates", label: "Estimates", icon: FileText, permission: "ESTIMATE_VIEW", module: "invoicing" },
+      { path: "/customers", label: "Customers", icon: Users, permission: "CUSTOMER_VIEW", module: "invoicing" }
     ]
   },
   {
     id: "purchases",
     label: "Purchases", 
     icon: Truck,
+    module: "expense_management",
     items: [
-      { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW" },
-      { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW" },
-      { path: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSE_VIEW" }
+      { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "expense_management" },
+      { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "expense_management" },
+      { path: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSE_VIEW", module: "expense_management" }
     ]
   },
   {
     id: "inventory",
     label: "Products & Inventory",
     icon: Box,
+    module: "inventory",
     items: [
-      { path: "/products", label: "Products", icon: Package, permission: "PRODUCT_VIEW" },
-      { path: "/inventory", label: "Inventory", icon: Archive, permission: "INVENTORY_VIEW" }
+      { path: "/products", label: "Products", icon: Package, permission: "PRODUCT_VIEW", module: "inventory" },
+      { path: "/inventory", label: "Inventory", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" }
     ]
   },
   {
     id: "pos",
     label: "Point of Sale",
     icon: Tablet,
+    module: "pos",
     items: [
-      { path: "/pos", label: "POS Terminal", icon: Tablet, permission: "POS_VIEW" },
-      { path: "/pos/shifts", label: "Shift Management", icon: Clock, permission: "POS_MANAGE_SHIFTS" },
-      { path: "/pos/reports", label: "POS Reports", icon: BarChart3, permission: "POS_VIEW_REPORTS" }
+      { path: "/pos", label: "POS Terminal", icon: Tablet, permission: "POS_VIEW", module: "pos" },
+      { path: "/pos/shifts", label: "Shift Management", icon: Clock, permission: "POS_MANAGE_SHIFTS", module: "pos" },
+      { path: "/pos/reports", label: "POS Reports", icon: BarChart3, permission: "POS_VIEW_REPORTS", module: "pos" }
     ]
   },
   {
     id: "accounting",
     label: "Accounting",
     icon: Calculator,
+    module: "accounting",
     items: [
-      { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW" },
-      { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW" },
-      { path: "/banking", label: "Banking", icon: Landmark, permission: "BANKING_VIEW" },
-      { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW" },
-      { path: "/fixed-assets", label: "Fixed Assets", icon: Building2, permission: "FIXED_ASSETS_VIEW" },
-      { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW" },
-      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW" },
-      { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANK_RECONCILIATION_VIEW" }
+      { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW", module: "accounting" },
+      { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
+      { path: "/banking", label: "Banking", icon: Landmark, permission: "BANKING_VIEW", module: "accounting" },
+      { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
+      { path: "/fixed-assets", label: "Fixed Assets", icon: Building2, permission: "FIXED_ASSETS_VIEW", module: "advanced_analytics" },
+      { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW", module: "advanced_analytics" },
+      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW", module: "advanced_analytics" },
+      { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANK_RECONCILIATION_VIEW", module: "advanced_analytics" }
     ]
   },
   {
     id: "projects",
     label: "Project Management",
     icon: Briefcase,
+    module: "project_management",
     items: [
-      { path: "/projects", label: "Projects", icon: FolderOpen, permission: "PROJECTS_VIEW" },
-      { path: "/tasks", label: "Tasks", icon: CheckSquare, permission: "TASKS_VIEW" },
-      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW" }
+      { path: "/projects", label: "Projects", icon: FolderOpen, permission: "PROJECTS_VIEW", module: "project_management" },
+      { path: "/tasks", label: "Tasks", icon: CheckSquare, permission: "TASKS_VIEW", module: "project_management" },
+      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "project_management" }
     ]
   },
   {
     id: "compliance",
     label: "Compliance Management",
     icon: Shield,
+    module: "compliance",
     items: [
-      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW" },
-      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW" },
-      { path: "/compliance/sars", label: "SARS Compliance", icon: FileText, permission: "COMPLIANCE_VIEW" },
-      { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW" },
-      { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW" },
-      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW" },
-      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: "COMPLIANCE_VIEW" },
-      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW" }
+      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/sars", label: "SARS Compliance", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" }
     ]
   },
   {
     id: "vat",
     label: "VAT Management",
     icon: Receipt,
+    module: "vat_management",
     items: [
-      { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW" },
-      { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW" },
-      { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW" }
+      { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "vat_management" },
+      { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW", module: "vat_management" },
+      { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW", module: "vat_management" }
     ]
   },
   {
     id: "reports",
     label: "Reports",
     icon: BarChart3,
+    module: "reporting",
     items: [
-      { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW" },
-      { path: "/reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW" }
+      { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reporting" },
+      { path: "/reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reporting" }
     ]
   },
   {
     id: "rbac",
     label: "User Management",
     icon: UserCog,
+    module: "advanced_analytics",
     items: [
-      { path: "/rbac/enhanced-users", label: "Enhanced User Management", icon: Users, permission: "USERS_VIEW" },
-      { path: "/rbac/user-permissions", label: "User Permissions", icon: Key, permission: "USERS_ASSIGN_ROLES" },
-      { path: "/rbac/permissions-matrix", label: "Permissions Matrix", icon: Shield, permission: "PERMISSIONS_GRANT" },
-      { path: "/rbac/module-activation", label: "Module Activation", icon: Settings, requiredRole: "super_admin" },
-      { path: "/rbac/roles", label: "Role Management", icon: Shield, permission: "ROLES_VIEW" }
+      { path: "/rbac/enhanced-users", label: "Enhanced User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
+      { path: "/rbac/user-permissions", label: "User Permissions", icon: Key, permission: "USERS_ASSIGN_ROLES", module: "advanced_analytics" },
+      { path: "/rbac/permissions-matrix", label: "Permissions Matrix", icon: Shield, permission: "PERMISSIONS_GRANT", module: "advanced_analytics" },
+      { path: "/rbac/module-activation", label: "Module Activation", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" },
+      { path: "/rbac/roles", label: "Role Management", icon: Shield, permission: "ROLES_VIEW", module: "advanced_analytics" }
     ]
   },
   {
     id: "company",
     label: "Company",
     icon: Building2,
+    module: "dashboard",
     items: [
-      { path: "/companies", label: "Companies", icon: Building2, permission: "COMPANY_VIEW" },
-      { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW" },
-      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW" }
+      { path: "/companies", label: "Companies", icon: Building2, permission: "COMPANY_VIEW", module: "multi_company" },
+      { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
+      { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" }
     ]
   }
 ];
@@ -154,10 +168,18 @@ interface MobileNavigationGroupProps {
 }
 
 function MobileNavigationGroup({ group, location, userPermissions, isExpanded, onToggle, onItemClick }: MobileNavigationGroupProps) {
-  // Filter items based on permissions
-  const visibleItems = group.items.filter(item => 
-    !item.permission || userPermissions.includes(item.permission)
-  );
+  const { isModuleAvailable } = useCompanySubscription();
+  
+  // Filter items based on permissions and subscription plan
+  const visibleItems = group.items.filter(item => {
+    // Check subscription plan module availability first
+    if (item.module && !isModuleAvailable(item.module)) {
+      return false;
+    }
+    
+    // Then check permissions
+    return !item.permission || userPermissions.includes(item.permission);
+  });
 
   if (visibleItems.length === 0) return null;
 
@@ -233,7 +255,8 @@ export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
   const { user } = useAuth();
-  const [expandedGroup, setExpandedGroup] = useState<string | null>("sales");
+  const { isModuleAvailable, currentPlan } = useCompanySubscription();
+  const [expandedGroup, setExpandedGroup] = useState<string | null>("overview");
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
   const userPermissions = user?.permissions || [
@@ -269,8 +292,15 @@ export default function MobileMenu() {
                 <Calculator className="text-white" size={20} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Think Mybiz</h1>
-                <p className="text-sm text-gray-500">Accounting</p>
+                <h1 className="text-xl font-bold text-gray-900">Taxnify</h1>
+                <p className="text-sm text-gray-500">Business & Compliance</p>
+                {currentPlan && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                      {currentPlan.displayName}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -291,17 +321,31 @@ export default function MobileMenu() {
           
           <nav className="flex-1 overflow-y-auto mt-6 px-3 pb-6">
             <div className="space-y-2">
-              {navigationGroups.map((group) => (
-                <MobileNavigationGroup
-                  key={group.id}
-                  group={group}
-                  location={location}
-                  userPermissions={userPermissions}
-                  isExpanded={expandedGroup === group.id}
-                  onToggle={() => toggleGroup(group.id)}
-                  onItemClick={handleItemClick}
-                />
-              ))}
+              {navigationGroups
+                .filter(group => {
+                  // Check if group module is available in subscription plan
+                  if (group.module && !isModuleAvailable(group.module)) {
+                    return false;
+                  }
+                  
+                  // Check for role requirements  
+                  if (group.requiredRole && user?.role !== group.requiredRole) {
+                    return false;
+                  }
+                  
+                  return true;
+                })
+                .map((group) => (
+                  <MobileNavigationGroup
+                    key={group.id}
+                    group={group}
+                    location={location}
+                    userPermissions={userPermissions}
+                    isExpanded={expandedGroup === group.id}
+                    onToggle={() => toggleGroup(group.id)}
+                    onItemClick={handleItemClick}
+                  />
+                ))}
             </div>
           </nav>
         </div>
