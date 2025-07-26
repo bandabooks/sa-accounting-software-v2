@@ -221,7 +221,19 @@ export default function PermissionsMatrix() {
         maxUsers: 5,
         securityLevel: 'maximum',
         currentUsers: superAdminUsers.filter(u => u.role === 'super_admin').length,
-        permissions: {} // All permissions granted by default
+        permissions: {
+          'dashboard': { view: true, create: true, edit: true, delete: true, manage: true },
+          'user_management': { view: true, create: true, edit: true, delete: true, manage: true },
+          'customers': { view: true, create: true, edit: true, delete: true, manage: true },
+          'invoicing': { view: true, create: true, edit: true, delete: true, manage: true },
+          'products_services': { view: true, create: true, edit: true, delete: true, manage: true },
+          'expenses': { view: true, create: true, edit: true, delete: true, manage: true },
+          'suppliers': { view: true, create: true, edit: true, delete: true, manage: true },
+          'pos_sales': { view: true, create: true, edit: true, delete: true, manage: true },
+          'chart_of_accounts': { view: true, create: true, edit: true, delete: true, manage: true },
+          'banking': { view: true, create: true, edit: true, delete: true, manage: true },
+          'financial_reports': { view: true, create: true, edit: true, delete: true, manage: true }
+        }
       },
       {
         id: 'company_admin',
@@ -235,7 +247,19 @@ export default function PermissionsMatrix() {
         maxUsers: 50,
         securityLevel: 'high',
         currentUsers: superAdminUsers.filter(u => u.role === 'company_admin').length,
-        permissions: {} // Company permissions only
+        permissions: {
+          'dashboard': { view: true, create: true, edit: true, delete: false, manage: false },
+          'user_management': { view: true, create: true, edit: true, delete: false, manage: true },
+          'customers': { view: true, create: true, edit: true, delete: true, manage: true },
+          'invoicing': { view: true, create: true, edit: true, delete: true, manage: true },
+          'products_services': { view: true, create: true, edit: true, delete: true, manage: true },
+          'expenses': { view: true, create: true, edit: true, delete: true, manage: true },
+          'suppliers': { view: true, create: true, edit: true, delete: true, manage: true },
+          'pos_sales': { view: true, create: true, edit: true, delete: true, manage: true },
+          'chart_of_accounts': { view: true, create: true, edit: true, delete: false, manage: false },
+          'banking': { view: true, create: true, edit: true, delete: false, manage: true },
+          'financial_reports': { view: true, create: false, edit: false, delete: false, manage: false }
+        }
       }
     ],
     modules: [

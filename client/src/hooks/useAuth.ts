@@ -108,8 +108,9 @@ export function useAuth(): AuthState {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
     
-    // Production Administrator and Admin users have unrestricted access to all modules
-    if (user.role === 'Admin' || user.username === 'sysadmin_7f3a2b8e' || 
+    // Super Administrators and Production Administrator have unrestricted access to ALL permissions
+    if (user.role === 'super_admin' || user.role === 'Admin' || 
+        user.username === 'sysadmin_7f3a2b8e' || 
         user.email === 'accounts@thinkmybiz.com') {
       return true;
     }
