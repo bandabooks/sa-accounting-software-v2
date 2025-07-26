@@ -29,7 +29,8 @@ import {
 import {
   getBridgedPermissionsMatrix,
   getBridgedCompanyModules,
-  assignRoleBridged
+  assignRoleBridged,
+  getBridgedEnhancedUsers
 } from "./rbac-bridge";
 import { 
   getDefaultPermissionsForRole, 
@@ -6423,8 +6424,8 @@ Format your response as a JSON array of tip objects with "title", "description",
   // COMPREHENSIVE PERMISSIONS MATRIX API ROUTES
   // =============================================
 
-  // Enhanced User Management Routes
-  app.get("/api/admin/enhanced-users", authenticate, requirePermission(PERMISSIONS.USERS_VIEW), getEnhancedUsers);
+  // Enhanced User Management Routes - BRIDGED TO WORKING RBAC SYSTEM
+  app.get("/api/admin/enhanced-users", authenticate, requirePermission(PERMISSIONS.USERS_VIEW), getBridgedEnhancedUsers);
   
   // Permissions Matrix Routes - BRIDGED TO WORKING RBAC SYSTEM
   app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getBridgedPermissionsMatrix);

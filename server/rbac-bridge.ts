@@ -136,12 +136,12 @@ export async function assignRoleBridged(req: AuthenticatedRequest, res: Response
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Use existing working role assignment
-    await storage.assignUserRole({
+    // Use existing working role assignment method
+    await storage.assignUserRoleWithAudit({
       userId: parseInt(userId),
-      systemRoleId: parseInt(roleId),
+      roleId: parseInt(roleId),
       companyId: currentUser.companyId || 1,
-      grantedBy: currentUser.id,
+      assignedBy: currentUser.id,
       reason: reason || 'Role assignment via admin panel'
     });
 
@@ -152,5 +152,71 @@ export async function assignRoleBridged(req: AuthenticatedRequest, res: Response
   } catch (error) {
     console.error("Error in bridged role assignment:", error);
     res.status(500).json({ message: "Failed to assign role" });
+  }
+}
+
+// Bridge enhanced users management to working RBAC data
+export async function getBridgedEnhancedUsers(req: AuthenticatedRequest, res: Response) {
+  try {
+    const currentUser = req.user;
+    if (!currentUser) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Get all users and system roles
+    const users = await storage.getAllUsers();
+    const systemRoles = await storage.getSystemRoles();
+    
+    // Transform users to match EnhancedUserManagement interface
+    const enhancedUsers = users.map(user => {
+      const userRole = systemRoles.find(role => role.name === user.role);
+      return {
+        id: user.id,
+        username: user.username,
+        name: user.name || user.username,
+        email: user.email,
+        phone: '', // Field doesn't exist in current schema
+        department: '', // Field doesn't exist in current schema
+        role: user.role,
+        roleDisplayName: userRole?.displayName || user.role,
+        roleLevel: userRole?.level || 1,
+        roleColor: userRole?.color || 'from-gray-500 to-slate-600',
+        isActive: user.isActive || false,
+        lastLogin: user.lastLogin?.toISOString() || null,
+        createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+        updatedAt: user.updatedAt?.toISOString() || new Date().toISOString(),
+        loginAttempts: user.failedLoginAttempts || 0,
+        isLocked: user.accountLocked || false,
+        assignedModules: [], // Will be populated from permissions
+        customPermissions: [], // Will be populated from permissions
+        notes: '' // Field doesn't exist in current schema
+      };
+    });
+
+    // Transform roles for the interface
+    const enhancedRoles = systemRoles.map(role => ({
+      id: role.id.toString(),
+      name: role.name,
+      displayName: role.displayName,
+      level: role.level,
+      color: role.color || 'from-blue-500 to-indigo-500',
+      currentUsers: users.filter(u => u.role === role.name).length,
+      maxUsers: role.maxUsers || 50,
+      securityLevel: role.securityLevel || 'standard'
+    }));
+
+    const response = {
+      users: enhancedUsers,
+      roles: enhancedRoles,
+      totalUsers: users.length,
+      activeUsers: users.filter(u => u.isActive).length,
+      lockedUsers: users.filter(u => u.accountLocked).length,
+      lastActivity: new Date().toISOString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error("Error in bridged enhanced users:", error);
+    res.status(500).json({ message: "Failed to fetch enhanced users" });
   }
 }
