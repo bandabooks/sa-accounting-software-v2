@@ -6460,6 +6460,161 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // =============================================
+  // USER MANAGEMENT API ROUTES
+  // =============================================
+
+  // Reset User Password (Admin/Super Admin only)
+  app.post("/api/admin/users/:userId/reset-password", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const targetUserId = parseInt(userId);
+      
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      // Get target user
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate a random secure password (12 characters)
+      const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user password
+      await storage.updateUserPassword(targetUserId, hashedPassword);
+
+      // Clear failed login attempts and unlock account
+      await storage.updateUser(targetUserId, {
+        failedLoginAttempts: 0,
+        lockedUntil: null
+      });
+
+      // Delete all user sessions (force re-login)
+      await storage.deleteUserSessions(targetUserId);
+
+      // Log the action
+      await logAudit(req.user!.id, 'RESET_PASSWORD', 'users', targetUserId, `Password reset for user ${targetUser.username}`);
+
+      // Send password reset email (if email service is configured)
+      try {
+        const { EmailService } = await import('./services/emailService');
+        const emailService = new EmailService();
+        
+        await emailService.sendEmail({
+          to: targetUser.email,
+          subject: 'Your Taxnify Account Password Has Been Reset',
+          bodyText: `Hello ${targetUser.name},\n\nYour Taxnify account password has been reset by an administrator.\n\nNew Password: ${newPassword}\n\nPlease log in and change your password immediately for security.\n\nBest regards,\nTaxnify Support Team`,
+          bodyHtml: `
+            <h2>Password Reset Notification</h2>
+            <p>Hello ${targetUser.name},</p>
+            <p>Your Taxnify account password has been reset by an administrator.</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+              <strong>New Password:</strong> <code style="background-color: #e9ecef; padding: 3px 6px; border-radius: 3px;">${newPassword}</code>
+            </div>
+            <p><strong>Important:</strong> Please log in and change your password immediately for security.</p>
+            <p>Best regards,<br>Taxnify Support Team</p>
+          `,
+          companyId: targetUser.companyId,
+          userId: req.user!.id
+        });
+        
+        res.json({ 
+          success: true, 
+          message: "Password reset successfully. New password has been sent to user's email.",
+          emailSent: true
+        });
+      } catch (emailError) {
+        console.warn("Failed to send password reset email:", emailError);
+        res.json({ 
+          success: true, 
+          message: `Password reset successfully. New password: ${newPassword}`,
+          emailSent: false,
+          newPassword: newPassword // Only return if email failed
+        });
+      }
+    } catch (error) {
+      console.error("Error resetting user password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // Send Verification Email (Admin/Super Admin only)
+  app.post("/api/admin/users/:userId/send-verification", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const targetUserId = parseInt(userId);
+      
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      // Get target user
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate verification token (6-digit code)
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expirationTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      // Store verification code (you may want to add a verification_codes table)
+      // For now, we'll use the user's verification fields if they exist
+      await storage.updateUser(targetUserId, {
+        emailVerificationToken: verificationCode,
+        emailVerificationExpires: expirationTime
+      });
+
+      // Log the action
+      await logAudit(req.user!.id, 'SEND_VERIFICATION', 'users', targetUserId, `Verification email sent to ${targetUser.email}`);
+
+      // Send verification email
+      try {
+        const { EmailService } = await import('./services/emailService');
+        const emailService = new EmailService();
+        
+        await emailService.sendEmail({
+          to: targetUser.email,
+          subject: 'Verify Your Taxnify Account',
+          bodyText: `Hello ${targetUser.name},\n\nPlease verify your Taxnify account using the following code:\n\nVerification Code: ${verificationCode}\n\nThis code will expire in 24 hours.\n\nIf you did not request this verification, please contact support.\n\nBest regards,\nTaxnify Support Team`,
+          bodyHtml: `
+            <h2>Account Verification Required</h2>
+            <p>Hello ${targetUser.name},</p>
+            <p>Please verify your Taxnify account using the following code:</p>
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center;">
+              <h3 style="color: #495057; margin: 0; font-size: 24px; letter-spacing: 3px;">${verificationCode}</h3>
+            </div>
+            <p><strong>This code will expire in 24 hours.</strong></p>
+            <p>If you did not request this verification, please contact support immediately.</p>
+            <p>Best regards,<br>Taxnify Support Team</p>
+          `,
+          companyId: targetUser.companyId,
+          userId: req.user!.id
+        });
+        
+        res.json({ 
+          success: true, 
+          message: "Verification email sent successfully.",
+          emailSent: true,
+          expiresAt: expirationTime
+        });
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+        res.status(500).json({ 
+          message: "Failed to send verification email. Email service may not be configured.",
+          emailSent: false
+        });
+      }
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+      res.status(500).json({ message: "Failed to send verification email" });
+    }
+  });
+
+  // =============================================
   // END OF RBAC API ROUTES
   // =============================================
 

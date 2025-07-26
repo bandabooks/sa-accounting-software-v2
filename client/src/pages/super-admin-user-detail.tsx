@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, User, Shield, Activity, Settings, Clock, Eye, Edit, Trash2, Plus, UserCheck } from "lucide-react";
+import { ArrowLeft, User, Shield, Activity, Settings, Clock, Eye, Edit, Trash2, Plus, UserCheck, KeyRound, Mail, UserX, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -232,6 +232,73 @@ export default function SuperAdminUserDetail() {
     },
   });
 
+  // Reset Password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/admin/users/${userId}/reset-password`, "POST");
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Password Reset",
+        description: data.emailSent 
+          ? "New password has been sent to the user's email address."
+          : `Password reset successfully. New password: ${data.newPassword}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset password",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send Verification Email mutation
+  const sendVerificationMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/admin/users/${userId}/send-verification`, "POST");
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Verification Email Sent",
+        description: data.emailSent 
+          ? "Verification email has been sent successfully."
+          : "Failed to send verification email. Email service may not be configured.",
+        variant: data.emailSent ? "default" : "destructive",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send verification email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Deactivate Account mutation
+  const deactivateAccountMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/admin/users/${userId}/toggle-status`, "POST", { isActive: false });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account Deactivated",
+        description: "User account has been deactivated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users", userId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deactivate account",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleUpdateUser = async (formData: FormData) => {
     const data = {
       name: formData.get("name"),
@@ -251,6 +318,24 @@ export default function SuperAdminUserDetail() {
       roleChangeForm.setValue('userId', parseInt(userId || '0'));
       roleChangeForm.setValue('roleId', user.role || '');
       setIsRoleChangeDialogOpen(true);
+    }
+  };
+
+  const handleResetPassword = () => {
+    if (confirm(`Are you sure you want to reset the password for ${user?.name}? This will send a new password to their email address.`)) {
+      resetPasswordMutation.mutate();
+    }
+  };
+
+  const handleSendVerificationEmail = () => {
+    if (confirm(`Send verification email to ${user?.email}?`)) {
+      sendVerificationMutation.mutate();
+    }
+  };
+
+  const handleDeactivateAccount = () => {
+    if (confirm(`Are you sure you want to deactivate ${user?.name}'s account? This will prevent them from logging in.`)) {
+      deactivateAccountMutation.mutate();
     }
   };
 
@@ -535,14 +620,59 @@ export default function SuperAdminUserDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Button variant="outline" className="w-full">
-                  Reset Password
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleResetPassword}
+                  disabled={resetPasswordMutation.isPending}
+                >
+                  {resetPasswordMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting Password...
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Reset Password
+                    </>
+                  )}
                 </Button>
-                <Button variant="outline" className="w-full">
-                  Send Verification Email
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleSendVerificationEmail}
+                  disabled={sendVerificationMutation.isPending}
+                >
+                  {sendVerificationMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending Email...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Verification Email
+                    </>
+                  )}
                 </Button>
-                <Button variant="destructive" className="w-full">
-                  Deactivate Account
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  onClick={handleDeactivateAccount}
+                  disabled={deactivateAccountMutation.isPending}
+                >
+                  {deactivateAccountMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deactivating...
+                    </>
+                  ) : (
+                    <>
+                      <UserX className="h-4 w-4 mr-2" />
+                      Deactivate Account
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
