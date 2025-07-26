@@ -12,16 +12,16 @@ export async function seedDatabase() {
     if (existingCompanies.length === 0) {
       defaultCompany = await storage.createCompany({
         name: "Think Mybiz Accounting",
+        displayName: "Think Mybiz Accounting",
+        slug: "think-mybiz-accounting",
         registrationNumber: "2024/001234/07",
         vatNumber: "4123456789",
         email: "accounts@thinkmybiz.com",
         phone: "+27 11 123 4567",
         address: "123 Business Park Drive",
         city: "Johannesburg",
-        province: "Gauteng",
         postalCode: "2000",
         country: "South Africa",
-        website: "https://thinkmybiz.com",
         industry: "Professional Services",
         timezone: "Africa/Johannesburg",
         currency: "ZAR",
@@ -42,13 +42,11 @@ export async function seedDatabase() {
         username: "sysadmin_7f3a2b8e",
         email: "accounts@thinkmybiz.com",
         name: "Production Administrator",
-        passwordHash: hashedPassword,
+        password: hashedPassword,
         role: "SUPER_ADMIN",
-        companyId: defaultCompany.id,
+        activeCompanyId: defaultCompany.id,
         isActive: true,
-        lastLoginAt: null,
-        failedLoginAttempts: 0,
-        lockedUntil: null
+        failedLoginAttempts: 0
       });
 
       // Create demo user  
@@ -57,13 +55,11 @@ export async function seedDatabase() {
         username: "demo",
         email: "demo@thinkmybiz.com", 
         name: "Demo User",
-        passwordHash: demoPassword,
+        password: demoPassword,
         role: "ACCOUNTANT",
-        companyId: defaultCompany.id,
+        activeCompanyId: defaultCompany.id,
         isActive: true,
-        lastLoginAt: null,
-        failedLoginAttempts: 0,
-        lockedUntil: null
+        failedLoginAttempts: 0
       });
 
       console.log("✓ Production admin and demo users created");
@@ -120,7 +116,7 @@ export async function seedDatabase() {
     }
 
     // Seed default product categories for South African businesses
-    const existingCategories = await storage.getAllProductCategories(defaultCompany.id);
+    const existingCategories = await storage.getAllProductCategories();
     if (existingCategories.length === 0) {
       const DEFAULT_PRODUCT_CATEGORIES = [
         { name: "Professional Services", description: "Accounting, legal, consulting, and other professional services", companyId: defaultCompany.id },
