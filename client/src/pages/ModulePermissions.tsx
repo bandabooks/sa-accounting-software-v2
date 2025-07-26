@@ -41,6 +41,8 @@ import {
   UserCheck,
   AlertCircle
 } from "lucide-react";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 
 // Schema for creating custom roles
@@ -153,6 +155,7 @@ export default function ModulePermissions() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("system-roles");
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
 
   // Fetch system roles
@@ -173,9 +176,10 @@ export default function ModulePermissions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac/company-roles"] });
       setIsCreateDialogOpen(false);
-      toast({
-        title: "Success",
-        description: "Custom role created successfully",
+      successModal.showSuccess({
+        title: "Custom Role Created Successfully",
+        description: "The new role has been created with the specified permissions and is ready for assignment.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -613,6 +617,15 @@ export default function ModulePermissions() {
           </CardContent>
         </Card>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }

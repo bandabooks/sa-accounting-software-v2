@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useVATStatus } from "@/hooks/useVATStatus";
@@ -42,6 +44,7 @@ type ProductFormData = z.infer<typeof productSchema>;
 export default function ProductCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   const { shouldShowVATFields } = useVATStatus();
 
@@ -77,11 +80,12 @@ export default function ProductCreate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({
-        title: "Success",
-        description: "Product created successfully",
+      successModal.showSuccess({
+        title: "Product Created Successfully",
+        description: "The new product has been added to your inventory and is now available for use.",
+        confirmText: "Continue",
+        onConfirm: () => setLocation("/products")
       });
-      setLocation("/products");
     },
     onError: (error) => {
       toast({
@@ -544,6 +548,16 @@ export default function ProductCreate() {
           </div>
         </form>
       </Form>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+        onConfirm={successModal.modalOptions.onConfirm}
+      />
     </div>
   );
 }

@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmationModal, useConfirmationModal } from "@/components/ui/confirmation-modal";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, User, Shield, Activity, Settings, Clock, Eye, Edit, Trash2, Plus, UserCheck, KeyRound, Mail, UserX, Loader2 } from "lucide-react";
@@ -160,6 +162,7 @@ export default function SuperAdminUserDetail() {
   const [, params] = useRoute("/super-admin/users/:id");
   const userId = params?.id;
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const [editMode, setEditMode] = useState(false);
   const [isRoleChangeDialogOpen, setIsRoleChangeDialogOpen] = useState(false);
   
@@ -193,9 +196,10 @@ export default function SuperAdminUserDetail() {
       return apiRequest(`/api/super-admin/users/${userId}`, "PUT", data);
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "User updated successfully",
+      successModal.showSuccess({
+        title: "User Updated Successfully",
+        description: "The user information has been updated and saved to the system.",
+        confirmText: "Continue"
       });
       setEditMode(false);
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
@@ -224,9 +228,10 @@ export default function SuperAdminUserDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users", userId] });
-      toast({
-        title: "Role Updated",
-        description: "User role has been successfully updated.",
+      successModal.showSuccess({
+        title: "Role Updated Successfully",
+        description: "The user's role has been updated and permissions have been applied.",
+        confirmText: "Continue"
       });
       setIsRoleChangeDialogOpen(false);
       roleChangeForm.reset();
@@ -834,6 +839,15 @@ export default function SuperAdminUserDetail() {
             variant="destructive"
             icon="user"
             isLoading={deactivateAccountMutation.isPending}
+          />
+
+          {/* Success Modal */}
+          <SuccessModal
+            isOpen={successModal.isOpen}
+            onClose={successModal.hideSuccess}
+            title={successModal.modalOptions.title}
+            description={successModal.modalOptions.description}
+            confirmText={successModal.modalOptions.confirmText}
           />
         </>
       )}

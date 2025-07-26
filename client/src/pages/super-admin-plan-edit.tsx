@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, CreditCard } from "lucide-react";
@@ -16,6 +18,7 @@ export default function SuperAdminPlanEdit() {
   const [, params] = useRoute("/super-admin/plans/:id");
   const planId = params?.id;
   const { toast } = useToast();
+  const successModal = useSuccessModal();
 
   // Fetch plan details
   const { data: plan, isLoading } = useQuery({
@@ -29,9 +32,10 @@ export default function SuperAdminPlanEdit() {
       return apiRequest(`/api/super-admin/subscription-plans/${planId}`, "PUT", data);
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Subscription plan updated successfully",
+      successModal.showSuccess({
+        title: "Plan Updated Successfully",
+        description: "The subscription plan has been updated and changes are now active.",
+        confirmText: "Continue"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/subscription-plans"] });
     },
@@ -250,6 +254,15 @@ export default function SuperAdminPlanEdit() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }

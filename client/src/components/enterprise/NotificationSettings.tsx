@@ -5,6 +5,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SuccessModal } from '@/components/ui/success-modal';
+import { useSuccessModal } from '@/hooks/useSuccessModal';
 import { toast } from '@/hooks/use-toast';
 import { Bell, Mail, MessageSquare, Send, Check, AlertTriangle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -43,6 +45,7 @@ interface NotificationSettingsProps {
 export default function NotificationSettings({ notificationSettings, systemConfig }: NotificationSettingsProps) {
   const [testEmailSent, setTestEmailSent] = useState(false);
   const [testSMSSent, setTestSMSSent] = useState(false);
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
 
   // Update notification settings mutation
@@ -52,9 +55,10 @@ export default function NotificationSettings({ notificationSettings, systemConfi
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/settings'] });
-      toast({
-        title: "Settings Updated",
-        description: "Your notification preferences have been saved",
+      successModal.showSuccess({
+        title: "Settings Updated Successfully",
+        description: "Your notification preferences have been saved and are now active.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -74,9 +78,10 @@ export default function NotificationSettings({ notificationSettings, systemConfi
     onSuccess: () => {
       setTestEmailSent(true);
       setTimeout(() => setTestEmailSent(false), 3000);
-      toast({
-        title: "Test Email Sent",
-        description: "Check your inbox for the test notification",
+      successModal.showSuccess({
+        title: "Test Email Sent Successfully",
+        description: "Check your inbox for the test notification email.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -96,9 +101,10 @@ export default function NotificationSettings({ notificationSettings, systemConfi
     onSuccess: () => {
       setTestSMSSent(true);
       setTimeout(() => setTestSMSSent(false), 3000);
-      toast({
-        title: "Test SMS Sent",
-        description: "Check your phone for the test notification",
+      successModal.showSuccess({
+        title: "Test SMS Sent Successfully",
+        description: "Check your phone for the test notification message.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -420,6 +426,15 @@ export default function NotificationSettings({ notificationSettings, systemConfi
           </div>
         </CardContent>
       </Card>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }

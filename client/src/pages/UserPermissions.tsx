@@ -27,6 +27,8 @@ import {
   Crown,
   Building
 } from "lucide-react";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 
 // Schema for role assignment
@@ -88,6 +90,7 @@ export default function UserPermissions() {
   const [selectedUser, setSelectedUser] = useState<UserWithPermissions | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
 
   // Fetch all users with their permissions
@@ -133,9 +136,10 @@ export default function UserPermissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/rbac/user-permissions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setIsAssignDialogOpen(false);
-      toast({
-        title: "Success",
-        description: "Role assigned successfully",
+      successModal.showSuccess({
+        title: "Role Assigned Successfully",
+        description: "The user role has been updated and permissions are now active.",
+        confirmText: "Continue"
       });
     },
     onError: () => {
@@ -491,6 +495,15 @@ export default function UserPermissions() {
           </CardContent>
         </Card>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }

@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { SuccessModal } from "@/components/ui/success-modal";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,6 +67,7 @@ type MessageForm = z.infer<typeof messageSchema>;
 
 export default function SpendingWizard() {
   const { toast } = useToast();
+  const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   const [activeConversation, setActiveConversation] = useState<number | null>(null);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
@@ -129,9 +132,10 @@ export default function SpendingWizard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wizard/profile"] });
       setShowProfileSetup(false);
-      toast({
-        title: "Profile Created",
-        description: "Your financial wizard profile has been set up successfully.",
+      successModal.showSuccess({
+        title: "Profile Created Successfully",
+        description: "Your financial wizard profile has been set up and is ready to provide personalized insights.",
+        confirmText: "Continue"
       });
     },
   });
@@ -142,9 +146,10 @@ export default function SpendingWizard() {
       queryClient.invalidateQueries({ queryKey: ["/api/wizard/conversations"] });
       setActiveConversation(newConversation.id);
       conversationForm.reset();
-      toast({
-        title: "Conversation Started",
-        description: "Your new financial discussion has been created.",
+      successModal.showSuccess({
+        title: "Conversation Started Successfully",
+        description: "Your new financial discussion has been created and is ready for interactive guidance.",
+        confirmText: "Continue"
       });
     },
   });
@@ -686,6 +691,15 @@ export default function SpendingWizard() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={successModal.hideSuccess}
+        title={successModal.modalOptions.title}
+        description={successModal.modalOptions.description}
+        confirmText={successModal.modalOptions.confirmText}
+      />
     </div>
   );
 }
