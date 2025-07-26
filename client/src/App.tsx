@@ -97,6 +97,7 @@ import ModulePermissions from "@/pages/ModulePermissions";
 import EnhancedUserManagement from "@/pages/EnhancedUserManagement";
 import PermissionsMatrix from "@/pages/PermissionsMatrix";
 import ModuleActivation from "@/pages/ModuleActivation";
+import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -418,6 +419,11 @@ function AuthenticatedApp() {
         </Route>
 
         {/* Role-Based Access Control (RBAC) Routes */}
+        <Route path="/user-management">
+          <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
+            <UnifiedUserManagement />
+          </ProtectedRoute>
+        </Route>
         <Route path="/rbac/enhanced-users">
           <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
             <EnhancedUserManagement />

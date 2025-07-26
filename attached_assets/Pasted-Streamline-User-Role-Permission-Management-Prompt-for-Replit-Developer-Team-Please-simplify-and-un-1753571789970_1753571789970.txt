@@ -1,0 +1,36 @@
+Streamline User/Role/Permission Management
+Prompt for Replit/Developer Team:
+
+Please simplify and unify all user, role, and permission management pages into a single, modern User Management Dashboard. The dashboard should have these core tabs or sections:
+
+User Directory: List and manage all users (invite, activate/deactivate, assign roles, basic details).
+
+Role Management: Create/edit business roles (e.g., Admin, Accountant, Manager, Sales, Viewer). Each role shows which modules it can access and with what permissions (view, create, edit, delete).
+
+Permission Matrix: A visual grid/matrix to easily see and change which roles have what access to which modules. Permissions are toggled here, not on separate pages.
+
+Module Access/Subscription Integration: Modules available to each company/user should be auto-assigned based on subscription. If a module is not in a company’s plan, it should be hidden/locked for their users.
+
+Activity & Audit Log: Track user logins, critical changes, and permission updates for security and compliance.
+
+Requirements:
+
+Merge all current user/role/permission pages into this single dashboard.
+
+Remove redundant and legacy pages (e.g., "Enhanced User Management", "User Permissions", "Permissions Matrix", "Role Management" should all be tabs/sections in one page).
+
+Consistent UI/UX: Use modern, clean tables and toggles—NO JSON input, no manual typing of feature names.
+
+Simple Navigation: All settings must be accessible within 2 clicks from the dashboard sidebar.
+
+Default Roles and Permissions: Predefine standard roles (Super Admin, Company Admin, Accountant, Bookkeeper, Sales, Cashier, Viewer, Employee). On company/user creation, auto-assign default permissions based on best practices.
+
+Role-Based Access Control: All page/module access must check permissions against the matrix.
+
+Module Activation: Add a clear toggle to activate/deactivate modules for each subscription plan, affecting what users can access in real-time.
+
+Goal:
+To provide an intuitive, centralized, and user-friendly admin experience for managing users, roles, and permissions—comparable to Zoho Books, QuickBooks, or Sage.
+
+One-Liner Summary for Developers:
+Unify all user, role, and permission management into a single dashboard page with tabs (User List, Role Management, Permission Matrix, Activity Log). Eliminate redundant pages, use default roles and permissions, and ensure permissions are automatically integrated with subscription plans and module activation. Follow the UI/UX simplicity of QuickBooks and Zoho.
