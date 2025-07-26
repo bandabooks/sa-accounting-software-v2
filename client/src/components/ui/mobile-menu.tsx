@@ -137,7 +137,11 @@ const navigationGroups = [
     icon: UserCog,
     module: "advanced_analytics",
     items: [
-      { path: "/admin-panel", label: "System Administration", icon: Shield, permission: "USERS_VIEW", module: "advanced_analytics" }
+      { path: "/rbac/enhanced-users", label: "Enhanced User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
+      { path: "/rbac/user-permissions", label: "User Permissions", icon: Key, permission: "USERS_ASSIGN_ROLES", module: "advanced_analytics" },
+      { path: "/rbac/permissions-matrix", label: "Permissions Matrix", icon: Shield, permission: "PERMISSIONS_GRANT", module: "advanced_analytics" },
+      { path: "/rbac/module-activation", label: "Module Activation", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" },
+      { path: "/rbac/roles", label: "Role Management", icon: Shield, permission: "ROLES_VIEW", module: "advanced_analytics" }
     ]
   },
   {
