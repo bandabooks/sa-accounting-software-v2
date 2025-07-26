@@ -12,66 +12,53 @@ export default function Pricing() {
 
   const plans = [
     {
-      name: "Starter",
-      description: "Perfect for small businesses just getting started",
-      price: { monthly: 299, annually: 2990 },
-      originalPrice: { annually: 3588 },
+      name: "Basic Plan",
+      description: "Perfect for small businesses getting started",
+      price: { monthly: 29.99, annually: 299.90 },
+      originalPrice: { annually: 359.88 },
       popular: false,
       features: [
-        "Up to 5 invoices per month",
-        "Basic expense tracking",
-        "Simple financial reports",
-        "VAT compliance (basic)",
-        "Email support",
-        "Mobile app access",
-        "1 user account"
+        "Invoice Management",
+        "Customer Database",
+        "Basic Reports",
+        "Email Support"
       ],
       limitations: [
-        "Limited invoice templates",
+        "Limited features",
         "Basic reporting only"
       ],
       cta: "Start Free Trial"
     },
     {
-      name: "Professional",
-      description: "Most popular for growing businesses",
-      price: { monthly: 599, annually: 5990 },
-      originalPrice: { annually: 7188 },
+      name: "Professional Plan",
+      description: "Advanced features for growing businesses",
+      price: { monthly: 79.99, annually: 799.90 },
+      originalPrice: { annually: 959.88 },
       popular: true,
       features: [
-        "Unlimited invoices",
-        "Advanced expense management",
-        "Comprehensive reporting suite",
-        "Full VAT & SARS integration",
-        "Inventory management",
-        "Multi-company support",
-        "Bank reconciliation",
-        "Customer portal access",
-        "Priority email & phone support",
-        "API access",
-        "Up to 5 users"
+        "Everything in Basic",
+        "Purchase Orders",
+        "Inventory Management",
+        "Financial Reports",
+        "Multi-Currency",
+        "Priority Support"
       ],
       limitations: [],
       cta: "Start Free Trial"
     },
     {
-      name: "Enterprise",
-      description: "For accounting firms and large businesses",
-      price: { monthly: 1299, annually: 12990 },
-      originalPrice: { annually: 15588 },
+      name: "Enterprise Plan",
+      description: "Full-featured solution for large organizations",
+      price: { monthly: 199.99, annually: 1999.90 },
+      originalPrice: { annually: 2399.88 },
       popular: false,
       features: [
         "Everything in Professional",
-        "White-label options",
-        "Custom integrations",
-        "Advanced user permissions",
-        "Dedicated account manager",
-        "SLA guarantee (99.9% uptime)",
-        "Custom reporting",
-        "Data export & backup",
-        "Priority phone support",
-        "On-site training available",
-        "Unlimited users"
+        "Multi-Company",
+        "Advanced Analytics",
+        "API Access",
+        "Custom Integrations",
+        "Dedicated Support"
       ],
       limitations: [],
       cta: "Contact Sales"

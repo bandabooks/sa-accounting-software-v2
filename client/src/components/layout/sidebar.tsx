@@ -332,8 +332,8 @@ export default function Sidebar() {
           </div>
         )}
         
-        {/* Subscription Plan Information */}
-        {!currentPlan && (
+        {/* Subscription Plan Information - Only show for non-super admins without active plans */}
+        {!currentPlan && !isSuperAdminOrOwner && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <div className="flex items-center gap-2">

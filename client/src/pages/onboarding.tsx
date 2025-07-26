@@ -77,29 +77,29 @@ const industries = [
 
 const subscriptionPlans = [
   {
-    id: "starter",
-    name: "Starter",
-    monthlyPrice: "99",
-    yearlyPrice: "999",
-    description: "Perfect for small businesses",
-    features: ["Up to 5 users", "Basic reporting", "Email support", "Invoice management"]
+    id: "basic",
+    name: "Basic Plan",
+    monthlyPrice: "29.99",
+    yearlyPrice: "299.90",
+    description: "Perfect for small businesses getting started",
+    features: ["Invoice Management", "Customer Database", "Basic Reports", "Email Support"]
   },
   {
     id: "professional",
-    name: "Professional", 
-    monthlyPrice: "199",
-    yearlyPrice: "1999",
-    description: "For growing businesses",
-    features: ["Up to 25 users", "Advanced reporting", "Priority support", "Multi-currency", "API access"],
+    name: "Professional Plan", 
+    monthlyPrice: "79.99",
+    yearlyPrice: "799.90",
+    description: "Advanced features for growing businesses",
+    features: ["Everything in Basic", "Purchase Orders", "Inventory Management", "Financial Reports", "Multi-Currency", "Priority Support"],
     popular: true
   },
   {
     id: "enterprise",
-    name: "Enterprise",
-    monthlyPrice: "399", 
-    yearlyPrice: "3999",
-    description: "For large organizations",
-    features: ["Unlimited users", "Custom reporting", "24/7 support", "White-label", "Custom integrations"]
+    name: "Enterprise Plan",
+    monthlyPrice: "199.99", 
+    yearlyPrice: "1999.90",
+    description: "Full-featured solution for large organizations",
+    features: ["Everything in Professional", "Multi-Company", "Advanced Analytics", "API Access", "Custom Integrations", "Dedicated Support"]
   }
 ];
 

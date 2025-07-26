@@ -73,48 +73,47 @@ export default function Landing() {
 
   const pricingPlans = [
     {
-      name: "Starter",
-      price: "R299",
+      name: "Basic Plan",
+      price: "R29.99",
       period: "/month",
-      description: "Perfect for small businesses and startups",
+      description: "Perfect for small businesses getting started",
       features: [
-        "Up to 3 users",
-        "Basic accounting features",
-        "VAT compliance",
-        "Mobile app access",
-        "Email support"
+        "Invoice Management",
+        "Customer Database",
+        "Basic Reports",
+        "Email Support"
       ],
       cta: "Start Free Trial",
       popular: false
     },
     {
-      name: "Professional",
-      price: "R599",
+      name: "Professional Plan",
+      price: "R79.99",
       period: "/month",
-      description: "Ideal for growing businesses and accounting firms",
+      description: "Advanced features for growing businesses",
       features: [
-        "Up to 10 users",
-        "Advanced features",
-        "Multi-company support",
-        "SARS integration",
-        "Priority support",
-        "API access"
+        "Everything in Basic",
+        "Purchase Orders",
+        "Inventory Management",
+        "Financial Reports",
+        "Multi-Currency",
+        "Priority Support"
       ],
       cta: "Start Free Trial",
       popular: true
     },
     {
-      name: "Enterprise",
-      price: "R1,299",
+      name: "Enterprise Plan",
+      price: "R199.99",
       period: "/month",
-      description: "For accounting firms and large businesses",
+      description: "Full-featured solution for large organizations",
       features: [
-        "Unlimited users",
-        "White-label options",
-        "Custom integrations",
-        "Dedicated account manager",
-        "SLA guarantee",
-        "Advanced security"
+        "Everything in Professional",
+        "Multi-Company",
+        "Advanced Analytics",
+        "API Access",
+        "Custom Integrations",
+        "Dedicated Support"
       ],
       cta: "Contact Sales",
       popular: false

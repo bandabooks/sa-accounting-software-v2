@@ -46,46 +46,45 @@ export default function TrialSignup() {
   // Available plans for trial signup
   const plans = [
     {
-      id: 'starter',
-      name: 'Starter',
-      price: 'R299',
-      description: 'Perfect for small businesses just getting started',
+      id: 'basic',
+      name: 'Basic Plan',
+      price: 'R29.99',
+      description: 'Perfect for small businesses getting started',
       features: [
-        'Up to 3 users',
-        'Basic accounting features', 
-        'VAT compliance',
-        'Mobile app access',
-        'Email support'
+        'Invoice Management',
+        'Customer Database',
+        'Basic Reports',
+        'Email Support'
       ],
       popular: false
     },
     {
       id: 'professional',
-      name: 'Professional',
-      price: 'R599',
-      description: 'Most popular for growing businesses',
+      name: 'Professional Plan',
+      price: 'R79.99',
+      description: 'Advanced features for growing businesses',
       features: [
-        'Up to 10 users',
-        'Advanced features',
-        'Multi-company support',
-        'SARS integration',
-        'Priority support',
-        'API access'
+        'Everything in Basic',
+        'Purchase Orders',
+        'Inventory Management',
+        'Financial Reports',
+        'Multi-Currency',
+        'Priority Support'
       ],
       popular: true
     },
     {
       id: 'enterprise',
-      name: 'Enterprise',
-      price: 'R1,299',
-      description: 'For accounting firms and large businesses',
+      name: 'Enterprise Plan',
+      price: 'R199.99',
+      description: 'Full-featured solution for large organizations',
       features: [
-        'Unlimited users',
-        'White-label options',
-        'Custom integrations',
-        'Dedicated account manager',
-        'SLA guarantee',
-        'Advanced security'
+        'Everything in Professional',
+        'Multi-Company',
+        'Advanced Analytics',
+        'API Access',
+        'Custom Integrations',
+        'Dedicated Support'
       ],
       popular: false
     }
