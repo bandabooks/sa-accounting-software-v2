@@ -6291,13 +6291,43 @@ Format your response as a JSON array of tip objects with "title", "description",
       const { userId, systemRoleId, companyRoleId, reason } = req.body;
       const companyId = req.user.companyId;
       
+      // Map role names to IDs if needed
+      const roleNameToId = {
+        'super_admin': 1,
+        'system_admin': 2,
+        'company_owner': 3,
+        'company_admin': 4,
+        'accountant': 5,
+        'manager': 6,
+        'sales_rep': 7,
+        'cashier': 8,
+        'employee': 9,
+        'viewer': 10,
+        'bookkeeper': 11,
+        'auditor': 12,
+        'sales_representative': 13,
+        'payroll_admin': 14,
+        'compliance_officer': 15
+      };
+      
+      // Convert role name to ID if it's a string
+      let actualSystemRoleId = systemRoleId;
+      if (typeof systemRoleId === 'string') {
+        actualSystemRoleId = roleNameToId[systemRoleId as keyof typeof roleNameToId] || parseInt(systemRoleId);
+      }
+      
+      // Ensure we have a valid role ID
+      if (!actualSystemRoleId || isNaN(actualSystemRoleId)) {
+        return res.status(400).json({ message: "Invalid role specified" });
+      }
+      
       // Check if assignment already exists
       let existingPermission = await storage.getUserPermission(userId, companyId);
       
       if (existingPermission) {
         // Update existing permission
         existingPermission = await storage.updateUserPermission(existingPermission.id, {
-          systemRoleId,
+          systemRoleId: actualSystemRoleId,
           companyRoleId,
         });
       } else {
@@ -6305,7 +6335,7 @@ Format your response as a JSON array of tip objects with "title", "description",
         existingPermission = await storage.createUserPermission({
           userId,
           companyId,
-          systemRoleId,
+          systemRoleId: actualSystemRoleId,
           companyRoleId,
           customPermissions: [],
           deniedPermissions: [],
@@ -6320,7 +6350,7 @@ Format your response as a JSON array of tip objects with "title", "description",
         changedBy: req.user.id,
         action: 'ASSIGN_ROLE',
         targetType: 'role_assignment',
-        newValue: { systemRoleId, companyRoleId },
+        newValue: { systemRoleId: actualSystemRoleId, companyRoleId },
         reason: reason || 'Role assigned via API'
       });
       

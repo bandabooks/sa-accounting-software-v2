@@ -126,7 +126,11 @@ export default function SuperAdminPlanEdit() {
           <CardDescription>Update the subscription plan information</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleUpdatePlan} className="space-y-6">
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            await handleUpdatePlan(formData);
+          }} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Plan Name (Internal)</Label>
