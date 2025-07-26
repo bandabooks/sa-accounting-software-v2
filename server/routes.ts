@@ -6321,6 +6321,33 @@ Format your response as a JSON array of tip objects with "title", "description",
         return res.status(400).json({ message: "Invalid role specified" });
       }
       
+      // Security check: Get the target user to validate assignment
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Target user not found" });
+      }
+      
+      // Security validation: Prevent demo/test users from getting Super Admin roles
+      const isDemoUser = targetUser.username.includes('test') || 
+                         targetUser.username.includes('demo') || 
+                         targetUser.email.includes('test') || 
+                         targetUser.email.includes('demo');
+      
+      const isSuperAdminRole = actualSystemRoleId === 1; // Super Admin role ID
+      
+      if (isDemoUser && isSuperAdminRole) {
+        return res.status(403).json({ 
+          message: "Security violation: Demo/test users cannot be assigned Super Admin privileges" 
+        });
+      }
+      
+      // Additional security: Only super admins can assign super admin roles
+      if (isSuperAdminRole && req.user.role !== 'super_admin') {
+        return res.status(403).json({ 
+          message: "Only Super Administrators can assign Super Admin roles" 
+        });
+      }
+      
       // Check if assignment already exists
       let existingPermission = await storage.getUserPermission(userId, companyId);
       
