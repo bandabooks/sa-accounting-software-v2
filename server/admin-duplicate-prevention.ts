@@ -211,15 +211,15 @@ export async function resolveDuplicateAdmin(
     }
 
     // Deactivate the duplicate user
-    await storage.updateUserStatus(userId, 'inactive');
+    await storage.updateUserStatus(userId, false);
 
     // Log the resolution action
     await storage.createAuditLog({
       userId: resolvedBy,
       action: 'admin_duplicate_resolved',
       resource: 'user',
-      resourceId: userId.toString(),
-      details: {
+      resourceId: userId,
+      details: JSON.stringify({
         resolvedUser: {
           id: user.id,
           username: user.username,
@@ -227,7 +227,7 @@ export async function resolveDuplicateAdmin(
         },
         reason,
         timestamp: new Date().toISOString()
-      },
+      }),
       companyId: null // System-level audit
     });
 

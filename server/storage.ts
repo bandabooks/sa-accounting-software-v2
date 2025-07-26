@@ -7861,7 +7861,7 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  // Admin duplicate prevention methods
+  // Admin duplicate prevention methods - moved inside class
   async getUsersByRole(role: string): Promise<User[]> {
     const userCompanies = await db
       .select({
@@ -7910,7 +7910,7 @@ export class DatabaseStorage implements IStorage {
     return memberships;
   }
 
-  async getAuditLogsByActionAndDate(actions: string[], startDate: Date): Promise<AuditLog[]> {
+  async getAuditLogsByActionAndDate(actions: string[], startDate: Date): Promise<any[]> {
     return await db
       .select()
       .from(auditLogs)
@@ -7925,9 +7925,3 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
-
-
-
-
-
-

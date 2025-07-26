@@ -86,35 +86,7 @@ export const getMultiCompanyData = async (
   }
 };
 
-// Audit trail enforcement
-export const createAuditLog = async (
-  userId: number,
-  companyId: number | null,
-  action: string,
-  resource: string,
-  resourceId: number | null,
-  oldValues?: any,
-  newValues?: any,
-  details?: string,
-  ipAddress?: string,
-  userAgent?: string
-): Promise<void> => {
-  try {
-    await db.execute(sql`
-      INSERT INTO audit_logs (
-        company_id, user_id, action, resource, resource_id,
-        old_values, new_values, details, ip_address, user_agent
-      ) VALUES (
-        ${companyId}, ${userId}, ${action}, ${resource}, ${resourceId},
-        ${oldValues ? JSON.stringify(oldValues) : null},
-        ${newValues ? JSON.stringify(newValues) : null},
-        ${details}, ${ipAddress}, ${userAgent}
-      )
-    `);
-  } catch (error) {
-    console.error('Error creating audit log:', error);
-  }
-};
+// Note: createAuditLog is centralized in storage.ts to avoid duplication
 
 // Data isolation verification
 export const verifyDataIsolation = async (): Promise<{
@@ -231,7 +203,6 @@ export default {
   getCrossCompanyAccess,
   validateCompanyScope,
   getMultiCompanyData,
-  createAuditLog,
   verifyDataIsolation,
   getCompanyMetrics
 };
