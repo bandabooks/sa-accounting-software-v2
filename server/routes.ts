@@ -6344,14 +6344,19 @@ Format your response as a JSON array of tip objects with "title", "description",
         });
       }
       
-      await PermissionManager.logPermissionChange({
-        userId,
+      // Log the permission change in audit logs
+      await logAudit({
+        userId: req.user.id,
         companyId,
-        changedBy: req.user.id,
         action: 'ASSIGN_ROLE',
-        targetType: 'role_assignment',
-        newValue: { systemRoleId: actualSystemRoleId, companyRoleId },
-        reason: reason || 'Role assigned via API'
+        resource: 'user_permissions',
+        resourceId: existingPermission.id,
+        details: {
+          targetUserId: userId,
+          newSystemRoleId: actualSystemRoleId,
+          newCompanyRoleId: companyRoleId,
+          reason: reason || 'Role assigned via API'
+        }
       });
       
       res.json(existingPermission);
