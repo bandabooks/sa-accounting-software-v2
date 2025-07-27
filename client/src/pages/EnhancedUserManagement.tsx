@@ -495,11 +495,10 @@ export default function EnhancedUserManagement() {
       {/* User Management Tabs */}
       <Tabs value={currentTab} onValueChange={setCurrentTab}>
         <TabsList>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
-          <TabsTrigger value="modules">Module Access</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions Matrix</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="users">User List</TabsTrigger>
+          <TabsTrigger value="roles">Role Distribution</TabsTrigger>
+          <TabsTrigger value="permissions">Permission Overview</TabsTrigger>
+          <TabsTrigger value="audit">Activity Audit</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -643,98 +642,7 @@ export default function EnhancedUserManagement() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="roles" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Roles & Permissions</CardTitle>
-              <CardDescription>
-                Manage user roles and their associated permissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {data.roles.map(role => (
-                  <div key={role.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge className={`bg-gradient-to-r ${role.color} text-white`}>
-                        {role.displayName}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {role.currentUsers} users
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      Security Level: {role.securityLevel}
-                    </p>
-                    <Button variant="outline" size="sm" className="w-full">
-                      Manage Role
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="modules" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Module Access Control</CardTitle>
-              <CardDescription>
-                Control which business modules are available to users
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">Module Access Manager</p>
-                <p className="text-muted-foreground">
-                  Configure module availability based on user roles and subscription plans
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="permissions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Permissions Matrix</CardTitle>
-              <CardDescription>
-                Visual overview of all role permissions across modules
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">Permissions Matrix View</p>
-                <p className="text-muted-foreground">
-                  Comprehensive grid showing role-based access controls
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Activity Audit</CardTitle>
-              <CardDescription>
-                Monitor user activities and system changes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">Activity Audit Trail</p>
-                <p className="text-muted-foreground">
-                  Track user actions, login attempts, and permission changes
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* Other tab contents would go here */}
       </Tabs>
 
       {/* Create User Dialog */}

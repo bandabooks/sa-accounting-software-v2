@@ -91,8 +91,7 @@ import LabourCompliance from "@/pages/labour-compliance";
 import ComplianceTasks from "@/pages/compliance-tasks";
 import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
-import EnhancedUserManagement from "@/pages/EnhancedUserManagement";
-import SubscriptionUsageDashboard from "@/pages/subscription-usage-dashboard";
+import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -409,17 +408,10 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
 
-        {/* Subscription Usage Dashboard */}
-        <Route path="/subscription/usage">
-          <ProtectedRoute>
-            <SubscriptionUsageDashboard />
-          </ProtectedRoute>
-        </Route>
-
         {/* Role-Based Access Control (RBAC) Routes */}
         <Route path="/user-management">
           <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
-            <EnhancedUserManagement />
+            <UnifiedUserManagement />
           </ProtectedRoute>
         </Route>
 
