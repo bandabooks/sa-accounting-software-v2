@@ -48,9 +48,9 @@ interface ExceptionAlert {
 
 export default function ExceptionDashboard() {
   const [selectedTab, setSelectedTab] = useState("exceptions");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [severityFilter, setSeverityFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedException, setSelectedException] = useState<PaymentException | null>(null);
   const [escalationReason, setEscalationReason] = useState("");
@@ -147,9 +147,9 @@ export default function ExceptionDashboard() {
       exception.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       exception.description.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === "" || exception.status === statusFilter;
-    const matchesSeverity = severityFilter === "" || exception.severity === severityFilter;
-    const matchesType = typeFilter === "" || exception.exceptionType === typeFilter;
+    const matchesStatus = statusFilter === "all" || statusFilter === "" || exception.status === statusFilter;
+    const matchesSeverity = severityFilter === "all" || severityFilter === "" || exception.severity === severityFilter;
+    const matchesType = typeFilter === "all" || typeFilter === "" || exception.exceptionType === typeFilter;
     
     return matchesSearch && matchesStatus && matchesSeverity && matchesType;
   });
@@ -307,7 +307,7 @@ export default function ExceptionDashboard() {
                       <SelectValue placeholder="All statuses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All statuses</SelectItem>
+                      <SelectItem value="all">All statuses</SelectItem>
                       <SelectItem value="open">Open</SelectItem>
                       <SelectItem value="investigating">Investigating</SelectItem>
                       <SelectItem value="escalated">Escalated</SelectItem>
@@ -323,7 +323,7 @@ export default function ExceptionDashboard() {
                       <SelectValue placeholder="All severities" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All severities</SelectItem>
+                      <SelectItem value="all">All severities</SelectItem>
                       <SelectItem value="critical">Critical</SelectItem>
                       <SelectItem value="high">High</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
@@ -338,7 +338,7 @@ export default function ExceptionDashboard() {
                       <SelectValue placeholder="All types" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All types</SelectItem>
+                      <SelectItem value="all">All types</SelectItem>
                       <SelectItem value="amount_mismatch">Amount Mismatch</SelectItem>
                       <SelectItem value="duplicate_supplier">Duplicate Supplier</SelectItem>
                       <SelectItem value="duplicate_payment">Duplicate Payment</SelectItem>
