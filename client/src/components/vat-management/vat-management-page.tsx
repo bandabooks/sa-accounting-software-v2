@@ -74,22 +74,73 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">VAT Management</h1>
-        <p className="text-gray-600 dark:text-gray-400">Configure VAT registration, types, and compliance settings</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Enterprise VAT Management</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Professional VAT compliance with SARS integration, AI-powered tips, and unlimited custom types
+        </p>
+        
+        {/* Enhanced Features Banner */}
+        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+          <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200 mb-2">
+            <CheckCircle className="h-5 w-5" />
+            <span className="font-semibold">✨ NEW ENTERPRISE FEATURES ADDED</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            <div className="flex items-center gap-1 text-blue-600 dark:text-blue-300">
+              <Plus className="h-3 w-3" />
+              Unlimited Custom VAT Types
+            </div>
+            <div className="flex items-center gap-1 text-green-600 dark:text-green-300">
+              <FileText className="h-3 w-3" />
+              Automated VAT201 Returns
+            </div>
+            <div className="flex items-center gap-1 text-purple-600 dark:text-purple-300">
+              <BarChart3 className="h-3 w-3" />
+              Multi-Format VAT Reports
+            </div>
+            <div className="flex items-center gap-1 text-orange-600 dark:text-orange-300">
+              <Globe className="h-3 w-3" />
+              SARS eFiling Integration
+            </div>
+            <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-300">
+              <Brain className="h-3 w-3" />
+              AI Compliance Tips
+            </div>
+            <div className="flex items-center gap-1 text-red-600 dark:text-red-300">
+              <Shield className="h-3 w-3" />
+              Advanced Compliance
+            </div>
+          </div>
+        </div>
       </div>
 
-      <Tabs defaultValue="settings" className="space-y-6">
+      <Tabs defaultValue="types" className="space-y-6">
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="settings">VAT Settings</TabsTrigger>
-          <TabsTrigger value="types">VAT Types</TabsTrigger>
-          <TabsTrigger value="returns" disabled={!vatSettings?.isVatRegistered}>VAT201 Returns</TabsTrigger>
-          <TabsTrigger value="reports" disabled={!vatSettings?.isVatRegistered}>VAT Reports</TabsTrigger>
-          <TabsTrigger value="sars-integration" disabled={!vatSettings?.isVatRegistered}>SARS eFiling</TabsTrigger>
-          <TabsTrigger value="ai-tips">
+          <TabsTrigger value="types" className="bg-blue-50 border-blue-200">
+            <Plus className="h-4 w-4 mr-1" />
+            VAT Types
+          </TabsTrigger>
+          <TabsTrigger value="returns" className="bg-green-50 border-green-200">
+            <FileText className="h-4 w-4 mr-1" />
+            VAT201 Returns
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="bg-purple-50 border-purple-200">
+            <BarChart3 className="h-4 w-4 mr-1" />
+            VAT Reports
+          </TabsTrigger>
+          <TabsTrigger value="sars-integration" className="bg-orange-50 border-orange-200">
+            <Globe className="h-4 w-4 mr-1" />
+            SARS eFiling
+          </TabsTrigger>
+          <TabsTrigger value="ai-tips" className="bg-indigo-50 border-indigo-200">
             <Brain className="h-4 w-4 mr-1" />
             AI Tips
           </TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
+          <TabsTrigger value="compliance" className="bg-red-50 border-red-200">
+            <Shield className="h-4 w-4 mr-1" />
+            Compliance
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="settings" className="space-y-6">
