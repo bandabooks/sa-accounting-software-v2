@@ -91,12 +91,6 @@ import LabourCompliance from "@/pages/labour-compliance";
 import ComplianceTasks from "@/pages/compliance-tasks";
 import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
-import RoleManagement from "@/pages/RoleManagement";
-import UserPermissions from "@/pages/UserPermissions";
-import ModulePermissions from "@/pages/ModulePermissions";
-import EnhancedUserManagement from "@/pages/EnhancedUserManagement";
-import PermissionsMatrix from "@/pages/PermissionsMatrix";
-import ModuleActivation from "@/pages/ModuleActivation";
 import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -374,11 +368,7 @@ function AuthenticatedApp() {
             <SuperAdminPlanEdit />
           </ProtectedRoute>
         </Route>
-        <Route path="/super-admin/module-activation">
-          <ProtectedRoute requiredRole="super_admin">
-            <ModuleActivation />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/subscription">
           <ProtectedRoute>
             <Subscription />
@@ -422,36 +412,6 @@ function AuthenticatedApp() {
         <Route path="/user-management">
           <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
             <UnifiedUserManagement />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/rbac/enhanced-users">
-          <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
-            <EnhancedUserManagement />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/rbac/permissions-matrix">
-          <ProtectedRoute permission={PERMISSIONS.PERMISSIONS_GRANT}>
-            <PermissionsMatrix />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/rbac/module-activation">
-          <ProtectedRoute requiredRole="super_admin">
-            <ModuleActivation />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/rbac/roles">
-          <ProtectedRoute permission={PERMISSIONS.ROLES_VIEW}>
-            <RoleManagement />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/rbac/user-permissions">
-          <ProtectedRoute requiredRole="super_admin">
-            <UserPermissions />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/rbac/module-permissions">
-          <ProtectedRoute requiredRole="super_admin">
-            <ModulePermissions />
           </ProtectedRoute>
         </Route>
 

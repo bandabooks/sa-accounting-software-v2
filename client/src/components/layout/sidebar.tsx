@@ -135,12 +135,7 @@ const navigationGroups = [
     icon: UserCog,
     module: "advanced_analytics",
     items: [
-      { path: "/user-management", label: "User Management Dashboard", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
-      { path: "/rbac/enhanced-users", label: "Enhanced User Management (Legacy)", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
-      { path: "/rbac/user-permissions", label: "User Permissions (Legacy)", icon: Key, permission: "USERS_ASSIGN_ROLES", module: "advanced_analytics" },
-      { path: "/rbac/permissions-matrix", label: "Permissions Matrix (Legacy)", icon: Shield, permission: "PERMISSIONS_GRANT", module: "advanced_analytics" },
-      { path: "/rbac/module-activation", label: "Module Activation", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" },
-      { path: "/rbac/roles", label: "Role Management (Legacy)", icon: Shield, permission: "ROLES_VIEW", module: "advanced_analytics" }
+      { path: "/user-management", label: "User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" }
     ]
   },
   {
@@ -162,8 +157,7 @@ const navigationGroups = [
     requiredRole: "super_admin",
     module: "advanced_analytics",
     items: [
-      { path: "/super-admin", label: "Super Admin Dashboard", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" },
-      { path: "/super-admin/module-activation", label: "Module Activation Control", icon: ToggleLeft, requiredRole: "super_admin", module: "advanced_analytics" }
+      { path: "/super-admin", label: "Super Admin Panel", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" }
     ]
   }
 ];
