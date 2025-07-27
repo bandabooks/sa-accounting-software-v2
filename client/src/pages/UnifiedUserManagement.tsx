@@ -282,16 +282,43 @@ export default function UnifiedUserManagement() {
         reason: "Module toggled via admin interface",
       });
     },
+    onMutate: async ({ module, enabled }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["/api/modules/company"] });
+
+      // Snapshot the previous value
+      const previousModuleData = queryClient.getQueryData(["/api/modules/company"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["/api/modules/company"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          modules: old.modules.map((mod: any) => 
+            mod.id === module ? { 
+              ...mod, 
+              isActive: enabled 
+            } : mod
+          )
+        };
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousModuleData };
+    },
     onSuccess: (_, variables) => {
       // Invalidate and refetch the modules data immediately
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
-      queryClient.refetchQueries({ queryKey: ["/api/modules/company"] });
       showSuccess({
         title: "Module Status Updated",
         description: `${variables.module.replace(/_/g, ' ')} module has been ${variables.enabled ? "activated" : "deactivated"} successfully`,
       });
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousModuleData) {
+        queryClient.setQueryData(["/api/modules/company"], context.previousModuleData);
+      }
       toast({
         title: "Module Update Failed",
         description: `Unable to update module status. Error: ${error.message || "Unknown error"}`,
