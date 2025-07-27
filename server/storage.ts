@@ -7847,6 +7847,172 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Set default permissions for role based on role type
+  async setDefaultPermissionsForRole(roleId: number, roleName: string): Promise<void> {
+    const defaultPermissions = this.getDefaultPermissionsForRole(roleName);
+    
+    // Save default permissions to database
+    await db
+      .update(systemRoles)
+      .set({ 
+        permissions: JSON.stringify(defaultPermissions),
+        updatedAt: new Date()
+      })
+      .where(eq(systemRoles.id, roleId));
+  }
+
+  // Get default permissions based on role type
+  private getDefaultPermissionsForRole(roleName: string): Record<string, Record<string, boolean>> {
+    const allPermissions = ['view', 'create', 'edit', 'delete'];
+    const viewOnlyPermissions = ['view'];
+    const basicPermissions = ['view', 'create', 'edit'];
+    
+    switch (roleName.toLowerCase()) {
+      case 'super_admin':
+      case 'super_administrator':
+        // Super Admin gets all permissions for all modules
+        return {
+          dashboard: Object.fromEntries(allPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries(allPermissions.map(p => [p, true])),
+          expense_management: Object.fromEntries(allPermissions.map(p => [p, true])),
+          inventory: Object.fromEntries(allPermissions.map(p => [p, true])),
+          accounting: Object.fromEntries(allPermissions.map(p => [p, true])),
+          vat_management: Object.fromEntries(allPermissions.map(p => [p, true])),
+          financial_reports: Object.fromEntries(allPermissions.map(p => [p, true])),
+          multi_company: Object.fromEntries(allPermissions.map(p => [p, true])),
+          advanced_analytics: Object.fromEntries(allPermissions.map(p => [p, true])),
+          point_of_sale: Object.fromEntries(allPermissions.map(p => [p, true])),
+          payroll: Object.fromEntries(allPermissions.map(p => [p, true])),
+          compliance: Object.fromEntries(allPermissions.map(p => [p, true]))
+        };
+        
+      case 'company_administrator':
+      case 'company_owner':
+        // Company Admin gets most permissions except super admin functions
+        return {
+          dashboard: Object.fromEntries(allPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries(allPermissions.map(p => [p, true])),
+          expense_management: Object.fromEntries(allPermissions.map(p => [p, true])),
+          inventory: Object.fromEntries(allPermissions.map(p => [p, true])),
+          accounting: Object.fromEntries(allPermissions.map(p => [p, true])),
+          vat_management: Object.fromEntries(allPermissions.map(p => [p, true])),
+          financial_reports: Object.fromEntries(allPermissions.map(p => [p, true])),
+          advanced_analytics: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          point_of_sale: Object.fromEntries(allPermissions.map(p => [p, true])),
+          payroll: Object.fromEntries(allPermissions.map(p => [p, true])),
+          compliance: Object.fromEntries(basicPermissions.map(p => [p, true]))
+        };
+        
+      case 'accountant':
+        // Accountant gets full access to financial modules
+        return {
+          dashboard: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries(allPermissions.map(p => [p, true])),
+          expense_management: Object.fromEntries(allPermissions.map(p => [p, true])),
+          inventory: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          accounting: Object.fromEntries(allPermissions.map(p => [p, true])),
+          vat_management: Object.fromEntries(allPermissions.map(p => [p, true])),
+          financial_reports: Object.fromEntries(allPermissions.map(p => [p, true])),
+          advanced_analytics: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          point_of_sale: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          payroll: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          compliance: Object.fromEntries(basicPermissions.map(p => [p, true]))
+        };
+        
+      case 'bookkeeper':
+        // Bookkeeper gets basic transaction access
+        return {
+          dashboard: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          expense_management: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          inventory: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          accounting: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          vat_management: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          financial_reports: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          advanced_analytics: Object.fromEntries([]),
+          point_of_sale: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          payroll: Object.fromEntries([]),
+          compliance: Object.fromEntries([])
+        };
+        
+      case 'manager':
+        // Manager gets operational access
+        return {
+          dashboard: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          expense_management: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          inventory: Object.fromEntries(allPermissions.map(p => [p, true])),
+          accounting: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          vat_management: Object.fromEntries([]),
+          financial_reports: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          advanced_analytics: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          point_of_sale: Object.fromEntries(allPermissions.map(p => [p, true])),
+          payroll: Object.fromEntries([]),
+          compliance: Object.fromEntries([])
+        };
+        
+      case 'sales_representative':
+        // Sales Rep gets customer and sales access
+        return {
+          dashboard: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries(basicPermissions.map(p => [p, true])),
+          expense_management: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          inventory: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          accounting: Object.fromEntries([]),
+          vat_management: Object.fromEntries([]),
+          financial_reports: Object.fromEntries([]),
+          advanced_analytics: Object.fromEntries([]),
+          point_of_sale: Object.fromEntries(allPermissions.map(p => [p, true])),
+          payroll: Object.fromEntries([]),
+          compliance: Object.fromEntries([])
+        };
+        
+      case 'auditor':
+        // Auditor gets view-only access to most modules
+        return {
+          dashboard: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          expense_management: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          inventory: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          accounting: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          vat_management: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          financial_reports: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          advanced_analytics: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          point_of_sale: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          payroll: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          compliance: Object.fromEntries(viewOnlyPermissions.map(p => [p, true]))
+        };
+        
+      case 'employee':
+      case 'viewer':
+        // Employee/Viewer gets basic view access
+        return {
+          dashboard: Object.fromEntries(viewOnlyPermissions.map(p => [p, true])),
+          invoicing: Object.fromEntries([]),
+          expense_management: Object.fromEntries([]),
+          inventory: Object.fromEntries([]),
+          accounting: Object.fromEntries([]),
+          vat_management: Object.fromEntries([]),
+          financial_reports: Object.fromEntries([]),
+          advanced_analytics: Object.fromEntries([]),
+          point_of_sale: Object.fromEntries([]),
+          payroll: Object.fromEntries([]),
+          compliance: Object.fromEntries([])
+        };
+        
+      default:
+        // Default minimal permissions
+        return {
+          dashboard: Object.fromEntries(viewOnlyPermissions.map(p => [p, true]))
+        };
+    }
+  }
+
+  // Get all system roles
+  async getAllSystemRoles(): Promise<any[]> {
+    return await db.select().from(systemRoles).orderBy(systemRoles.level, systemRoles.displayName);
+  }
+
   // Update user status
   async updateUserStatus(userId: number, isActive: boolean): Promise<void> {
     const updateQuery = sql`

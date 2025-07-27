@@ -138,9 +138,17 @@ export default function UnifiedUserManagement() {
     }) => {
       return apiRequest("/api/permissions/update", "POST", { roleId, module, permission, enabled });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
-      showSuccess("Permission Updated", "Permission has been successfully updated.");
+      showSuccess("Permission Updated", `${variables.enabled ? 'Granted' : 'Revoked'} ${variables.permission} permission for ${variables.module} module`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Permission Update Failed",
+        description: "Unable to update permission. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Permission update error:', error);
     },
   });
 
@@ -148,9 +156,17 @@ export default function UnifiedUserManagement() {
     mutationFn: async ({ module, enabled }: { module: string; enabled: boolean }) => {
       return apiRequest(`/api/modules/${module}/toggle`, "POST", { isActive: enabled, reason: "Module toggled via admin interface" });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
-      showSuccess("Module Status Updated", "Module activation status has been successfully updated.");
+      showSuccess("Module Status Updated", `${variables.module} module has been ${variables.enabled ? 'activated' : 'deactivated'} successfully`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Module Update Failed", 
+        description: "Unable to update module status. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Module toggle error:', error);
     },
   });
 
@@ -162,6 +178,23 @@ export default function UnifiedUserManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/audit-duplicates"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
       showSuccess("Duplicate Resolved", "Duplicate admin user has been successfully resolved.");
+    },
+  });
+
+  const initializeDefaultPermissionsMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/permissions/initialize-defaults", "POST", {});
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
+      showSuccess("Default Permissions Initialized", `Default permissions set for ${data.updatedCount} roles`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Initialization Failed",
+        description: "Unable to initialize default permissions. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -407,9 +440,26 @@ export default function UnifiedUserManagement() {
   // Permission Matrix Tab
   const PermissionMatrixTab = () => (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Permission Matrix</h2>
-        <p className="text-gray-600">Visual grid to manage role permissions across all modules</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Permission Matrix</h2>
+          <p className="text-gray-600">Visual grid to manage role permissions across all modules</p>
+        </div>
+        <Button 
+          onClick={() => initializeDefaultPermissionsMutation.mutate()}
+          disabled={initializeDefaultPermissionsMutation.isPending}
+          variant="outline"
+          size="sm"
+        >
+          {initializeDefaultPermissionsMutation.isPending ? (
+            <>Loading...</>
+          ) : (
+            <>
+              <Shield className="h-4 w-4 mr-2" />
+              Initialize Default Permissions
+            </>
+          )}
+        </Button>
       </div>
 
       <Card>

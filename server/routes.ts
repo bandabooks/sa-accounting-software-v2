@@ -6508,6 +6508,34 @@ Format your response as a JSON array of tip objects with "title", "description",
       res.status(500).json({ message: "Failed to update permission" });
     }
   });
+
+  // Initialize default permissions for all roles
+  app.post("/api/permissions/initialize-defaults", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get all roles
+      const roles = await storage.getAllSystemRoles();
+      
+      let updatedCount = 0;
+      for (const role of roles) {
+        // Check if role already has permissions
+        const hasPermissions = role.permissions && role.permissions !== '{}';
+        
+        if (!hasPermissions) {
+          await storage.setDefaultPermissionsForRole(role.id, role.name);
+          updatedCount++;
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Default permissions initialized for ${updatedCount} roles`,
+        updatedCount 
+      });
+    } catch (error) {
+      console.error("Error initializing default permissions:", error);
+      res.status(500).json({ message: "Failed to initialize default permissions" });
+    }
+  });
   
   // Module Activation Routes - BRIDGED TO WORKING RBAC SYSTEM
   app.get("/api/modules/company", authenticate, requireSuperAdmin, getBridgedCompanyModules);

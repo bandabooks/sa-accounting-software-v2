@@ -1,0 +1,81 @@
+Fix Permission Matrix & Module Access Control Toggles
+
+Enhance and Fix Role-Based Permission System & Module Access Controls
+
+Context:
+The Permission Matrix and Module Access Control toggles in User Management Dashboard are not saving or reflecting updates. All toggles are unresponsive, permissions aren’t persisted, and there is no immediate feedback or confirmation. Backend API methods for saving, updating, and retrieving permissions seem incomplete or broken.
+
+Action Items:
+
+Backend:
+
+Fix Permission Saving Logic:
+Ensure the updateRolePermission method persists changes to the system_roles.permissions JSON field in the database, not just logs or returns empty objects.
+
+Fix Permission Retrieval Logic:
+Update getRolesWithPermissions to fetch, parse, and return the actual stored permissions for each role.
+
+Fix Module Access Saving & Retrieval:
+Confirm that toggling modules in "Module Access Control" updates the related company/plan/module record and is fetched correctly on reload.
+
+Return Actual Data:
+All API endpoints must return the real permission/module state, not defaults or static data.
+
+Frontend/UI:
+
+Make All Toggles Fully Functional:
+
+Permission Matrix: Allow real-time enabling/disabling of each permission (VIEW, CREATE, EDIT, DELETE, etc) per role × module, with immediate saving.
+
+Module Access Control: Allow enabling/disabling each module per plan or company, with immediate saving and visible state.
+
+Show Feedback:
+Display a brief toast/snackbar on successful update or error.
+
+Auto-Refresh State:
+On toggle, update the UI to match new state from backend without requiring page reload.
+
+Disable Toggle Only if Not Permitted:
+If a toggle is meant to be disabled (e.g. by higher-level admin lock), show a tooltip explaining why.
+
+Set Sensible Defaults (Best Practice):
+
+When creating a new role, auto-assign standard default permissions per role type:
+
+Company Owner: All modules, all permissions except SuperAdmin/system admin functions.
+
+Bookkeeper: VIEW, CREATE, and EDIT on transactions/invoicing, limited or no access to settings or compliance.
+
+Manager: VIEW on all, CREATE/EDIT on operational modules (e.g. sales, inventory), no finance.
+
+Auditor: VIEW only on all modules.
+
+(and so forth for all defined roles).
+
+For new companies/plans, activate modules by default as per subscription tier:
+
+Basic: Dashboard, Invoicing, Customers, Reports
+
+Professional: Everything in Basic + Purchases, Inventory, Accounting, VAT, POS
+
+Enterprise: All modules, Multi-Company, Payroll, Advanced Analytics, Compliance, Custom Integration
+
+Confirm API/DB Integration:
+
+All changes made via UI must be instantly reflected in database and available on page refresh.
+
+If using optimistic UI, always confirm with backend on save.
+
+Testing & QA:
+
+Test all roles with realistic scenarios: update a permission, reload, check it sticks.
+
+Test enabling/disabling modules and confirm system respects those changes in access control.
+
+Test with a brand-new company, plan, and user to confirm all defaults work out-of-the-box.
+
+Summary:
+
+Goal: Make Permission Matrix and Module Access Control fully interactive and persistent, with clear, user-friendly defaults for all roles and plans. All UI toggles should work instantly, save to backend, and show feedback. The system must never return empty or outdated data, and everything should “just work” for admins and users.
+
+Implement these enhancements and fixes now. If feature is missing, add it. Test thoroughly and report back with a checklist of what was fixed and how it works.
