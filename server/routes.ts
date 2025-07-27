@@ -2027,6 +2027,552 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // ENHANCED INVENTORY MANAGEMENT API ROUTES
+  // ============================================================================
+
+  // Product Brands API
+  app.get("/api/product-brands", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const brands = await storage.getProductBrands(companyId);
+      res.json(brands);
+    } catch (error) {
+      console.error("Error fetching product brands:", error);
+      res.status(500).json({ message: "Failed to fetch product brands" });
+    }
+  });
+
+  app.post("/api/product-brands", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const brandData = insertProductBrandSchema.parse({ ...req.body, companyId });
+      const brand = await storage.createProductBrand(brandData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product_brand', brand?.id || 0);
+      res.status(201).json(brand);
+    } catch (error) {
+      console.error("Error creating product brand:", error);
+      res.status(500).json({ message: "Failed to create product brand" });
+    }
+  });
+
+  app.put("/api/product-brands/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const brandData = insertProductBrandSchema.partial().parse(req.body);
+      const brand = await storage.updateProductBrand(id, brandData);
+      if (!brand) {
+        return res.status(404).json({ message: "Product brand not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product_brand', id);
+      res.json(brand);
+    } catch (error) {
+      console.error("Error updating product brand:", error);
+      res.status(500).json({ message: "Failed to update product brand" });
+    }
+  });
+
+  app.delete("/api/product-brands/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteProductBrand(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Product brand not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'DELETE', 'product_brand', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting product brand:", error);
+      res.status(500).json({ message: "Failed to delete product brand" });
+    }
+  });
+
+  // Product Variants API
+  app.get("/api/product-variants", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const parentProductId = req.query.parentProductId ? parseInt(req.query.parentProductId as string) : undefined;
+      const variants = await storage.getProductVariants(companyId, parentProductId);
+      res.json(variants);
+    } catch (error) {
+      console.error("Error fetching product variants:", error);
+      res.status(500).json({ message: "Failed to fetch product variants" });
+    }
+  });
+
+  app.post("/api/product-variants", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const variantData = insertProductVariantSchema.parse({ ...req.body, companyId });
+      const variant = await storage.createProductVariant(variantData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product_variant', variant?.id || 0);
+      res.status(201).json(variant);
+    } catch (error) {
+      console.error("Error creating product variant:", error);
+      res.status(500).json({ message: "Failed to create product variant" });
+    }
+  });
+
+  app.put("/api/product-variants/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const variantData = insertProductVariantSchema.partial().parse(req.body);
+      const variant = await storage.updateProductVariant(id, variantData);
+      if (!variant) {
+        return res.status(404).json({ message: "Product variant not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product_variant', id);
+      res.json(variant);
+    } catch (error) {
+      console.error("Error updating product variant:", error);
+      res.status(500).json({ message: "Failed to update product variant" });
+    }
+  });
+
+  app.delete("/api/product-variants/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteProductVariant(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Product variant not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'DELETE', 'product_variant', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting product variant:", error);
+      res.status(500).json({ message: "Failed to delete product variant" });
+    }
+  });
+
+  // Warehouses API
+  app.get("/api/warehouses", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const warehouses = await storage.getWarehouses(companyId);
+      res.json(warehouses);
+    } catch (error) {
+      console.error("Error fetching warehouses:", error);
+      res.status(500).json({ message: "Failed to fetch warehouses" });
+    }
+  });
+
+  app.get("/api/warehouses/main", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const warehouse = await storage.getMainWarehouse(companyId);
+      if (!warehouse) {
+        return res.status(404).json({ message: "Main warehouse not found" });
+      }
+      res.json(warehouse);
+    } catch (error) {
+      console.error("Error fetching main warehouse:", error);
+      res.status(500).json({ message: "Failed to fetch main warehouse" });
+    }
+  });
+
+  app.post("/api/warehouses", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const warehouseData = insertWarehouseSchema.parse({ ...req.body, companyId });
+      const warehouse = await storage.createWarehouse(warehouseData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'warehouse', warehouse?.id || 0);
+      res.status(201).json(warehouse);
+    } catch (error) {
+      console.error("Error creating warehouse:", error);
+      res.status(500).json({ message: "Failed to create warehouse" });
+    }
+  });
+
+  app.put("/api/warehouses/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const warehouseData = insertWarehouseSchema.partial().parse(req.body);
+      const warehouse = await storage.updateWarehouse(id, warehouseData);
+      if (!warehouse) {
+        return res.status(404).json({ message: "Warehouse not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'warehouse', id);
+      res.json(warehouse);
+    } catch (error) {
+      console.error("Error updating warehouse:", error);
+      res.status(500).json({ message: "Failed to update warehouse" });
+    }
+  });
+
+  app.delete("/api/warehouses/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteWarehouse(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Warehouse not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'DELETE', 'warehouse', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting warehouse:", error);
+      res.status(500).json({ message: "Failed to delete warehouse" });
+    }
+  });
+
+  // Warehouse Stock API
+  app.get("/api/warehouse-stock", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const warehouseId = req.query.warehouseId ? parseInt(req.query.warehouseId as string) : undefined;
+      const productId = req.query.productId ? parseInt(req.query.productId as string) : undefined;
+      const stock = await storage.getWarehouseStock(companyId, warehouseId, productId);
+      res.json(stock);
+    } catch (error) {
+      console.error("Error fetching warehouse stock:", error);
+      res.status(500).json({ message: "Failed to fetch warehouse stock" });
+    }
+  });
+
+  app.post("/api/warehouse-stock/update", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const { productId, warehouseId, quantity } = req.body;
+      
+      if (!productId || !warehouseId || quantity === undefined) {
+        return res.status(400).json({ message: "productId, warehouseId, and quantity are required" });
+      }
+      
+      const stock = await storage.updateWarehouseStock(
+        parseInt(productId),
+        parseInt(warehouseId),
+        parseInt(quantity),
+        companyId
+      );
+      
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'warehouse_stock', stock.id);
+      res.json(stock);
+    } catch (error) {
+      console.error("Error updating warehouse stock:", error);
+      res.status(500).json({ message: "Failed to update warehouse stock" });
+    }
+  });
+
+  // Product Lots API
+  app.get("/api/product-lots", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const productId = req.query.productId ? parseInt(req.query.productId as string) : undefined;
+      const lots = await storage.getProductLots(companyId, productId);
+      res.json(lots);
+    } catch (error) {
+      console.error("Error fetching product lots:", error);
+      res.status(500).json({ message: "Failed to fetch product lots" });
+    }
+  });
+
+  app.post("/api/product-lots", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const lotData = insertProductLotSchema.parse({ ...req.body, companyId });
+      const lot = await storage.createProductLot(lotData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product_lot', lot?.id || 0);
+      res.status(201).json(lot);
+    } catch (error) {
+      console.error("Error creating product lot:", error);
+      res.status(500).json({ message: "Failed to create product lot" });
+    }
+  });
+
+  app.put("/api/product-lots/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const lotData = insertProductLotSchema.partial().parse(req.body);
+      const lot = await storage.updateProductLot(id, lotData);
+      if (!lot) {
+        return res.status(404).json({ message: "Product lot not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product_lot', id);
+      res.json(lot);
+    } catch (error) {
+      console.error("Error updating product lot:", error);
+      res.status(500).json({ message: "Failed to update product lot" });
+    }
+  });
+
+  // Product Serials API
+  app.get("/api/product-serials", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const productId = req.query.productId ? parseInt(req.query.productId as string) : undefined;
+      const serials = await storage.getProductSerials(companyId, productId);
+      res.json(serials);
+    } catch (error) {
+      console.error("Error fetching product serials:", error);
+      res.status(500).json({ message: "Failed to fetch product serials" });
+    }
+  });
+
+  app.post("/api/product-serials", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const serialData = insertProductSerialSchema.parse({ ...req.body, companyId });
+      const serial = await storage.createProductSerial(serialData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product_serial', serial?.id || 0);
+      res.status(201).json(serial);
+    } catch (error) {
+      console.error("Error creating product serial:", error);
+      res.status(500).json({ message: "Failed to create product serial" });
+    }
+  });
+
+  app.put("/api/product-serials/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const serialData = insertProductSerialSchema.partial().parse(req.body);
+      const serial = await storage.updateProductSerial(id, serialData);
+      if (!serial) {
+        return res.status(404).json({ message: "Product serial not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product_serial', id);
+      res.json(serial);
+    } catch (error) {
+      console.error("Error updating product serial:", error);
+      res.status(500).json({ message: "Failed to update product serial" });
+    }
+  });
+
+  app.post("/api/product-serials/reserve", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const { serialNumber } = req.body;
+      
+      if (!serialNumber) {
+        return res.status(400).json({ message: "serialNumber is required" });
+      }
+      
+      const reserved = await storage.reserveSerial(serialNumber, companyId);
+      if (!reserved) {
+        return res.status(404).json({ message: "Serial number not found or already reserved" });
+      }
+      
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product_serial', 0, 'Serial number reserved');
+      res.json({ message: "Serial number reserved successfully" });
+    } catch (error) {
+      console.error("Error reserving serial number:", error);
+      res.status(500).json({ message: "Failed to reserve serial number" });
+    }
+  });
+
+  // Enhanced Inventory Transactions API
+  app.post("/api/inventory-transactions/enhanced", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = (req as AuthenticatedRequest).user?.id || 1;
+      const transactionData = { ...req.body, companyId, userId };
+      
+      const transaction = await storage.createEnhancedInventoryTransaction(transactionData);
+      await logAudit(userId, 'CREATE', 'inventory_transaction', transaction?.id || 0);
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error creating enhanced inventory transaction:", error);
+      res.status(500).json({ message: "Failed to create inventory transaction" });
+    }
+  });
+
+  // Stock Counts API
+  app.get("/api/stock-counts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const stockCounts = await storage.getStockCounts(companyId);
+      res.json(stockCounts);
+    } catch (error) {
+      console.error("Error fetching stock counts:", error);
+      res.status(500).json({ message: "Failed to fetch stock counts" });
+    }
+  });
+
+  app.post("/api/stock-counts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const stockCountData = insertStockCountSchema.parse({ ...req.body, companyId });
+      const stockCount = await storage.createStockCount(stockCountData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'stock_count', stockCount?.id || 0);
+      res.status(201).json(stockCount);
+    } catch (error) {
+      console.error("Error creating stock count:", error);
+      res.status(500).json({ message: "Failed to create stock count" });
+    }
+  });
+
+  app.put("/api/stock-counts/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const stockCountData = insertStockCountSchema.partial().parse(req.body);
+      const stockCount = await storage.updateStockCount(id, stockCountData);
+      if (!stockCount) {
+        return res.status(404).json({ message: "Stock count not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'stock_count', id);
+      res.json(stockCount);
+    } catch (error) {
+      console.error("Error updating stock count:", error);
+      res.status(500).json({ message: "Failed to update stock count" });
+    }
+  });
+
+  app.get("/api/stock-counts/:id/items", authenticate, async (req, res) => {
+    try {
+      const stockCountId = parseInt(req.params.id);
+      const items = await storage.getStockCountItems(stockCountId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching stock count items:", error);
+      res.status(500).json({ message: "Failed to fetch stock count items" });
+    }
+  });
+
+  app.post("/api/stock-count-items", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const itemData = insertStockCountItemSchema.parse({ ...req.body, companyId });
+      const item = await storage.createStockCountItem(itemData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'stock_count_item', item?.id || 0);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating stock count item:", error);
+      res.status(500).json({ message: "Failed to create stock count item" });
+    }
+  });
+
+  // Reorder Rules API
+  app.get("/api/reorder-rules", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const rules = await storage.getReorderRules(companyId);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching reorder rules:", error);
+      res.status(500).json({ message: "Failed to fetch reorder rules" });
+    }
+  });
+
+  app.post("/api/reorder-rules", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const ruleData = insertReorderRuleSchema.parse({ ...req.body, companyId });
+      const rule = await storage.createReorderRule(ruleData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'reorder_rule', rule?.id || 0);
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating reorder rule:", error);
+      res.status(500).json({ message: "Failed to create reorder rule" });
+    }
+  });
+
+  app.put("/api/reorder-rules/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const ruleData = insertReorderRuleSchema.partial().parse(req.body);
+      const rule = await storage.updateReorderRule(id, ruleData);
+      if (!rule) {
+        return res.status(404).json({ message: "Reorder rule not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'reorder_rule', id);
+      res.json(rule);
+    } catch (error) {
+      console.error("Error updating reorder rule:", error);
+      res.status(500).json({ message: "Failed to update reorder rule" });
+    }
+  });
+
+  // Product Bundles API
+  app.get("/api/product-bundles", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const bundleProductId = req.query.bundleProductId ? parseInt(req.query.bundleProductId as string) : undefined;
+      const bundles = await storage.getProductBundles(companyId, bundleProductId);
+      res.json(bundles);
+    } catch (error) {
+      console.error("Error fetching product bundles:", error);
+      res.status(500).json({ message: "Failed to fetch product bundles" });
+    }
+  });
+
+  app.post("/api/product-bundles", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const bundleData = insertProductBundleSchema.parse({ ...req.body, companyId });
+      const bundle = await storage.createProductBundle(bundleData);
+      await logAudit((req as AuthenticatedRequest).user!.id, 'CREATE', 'product_bundle', bundle?.id || 0);
+      res.status(201).json(bundle);
+    } catch (error) {
+      console.error("Error creating product bundle:", error);
+      res.status(500).json({ message: "Failed to create product bundle" });
+    }
+  });
+
+  app.put("/api/product-bundles/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const bundleData = insertProductBundleSchema.partial().parse(req.body);
+      const bundle = await storage.updateProductBundle(id, bundleData);
+      if (!bundle) {
+        return res.status(404).json({ message: "Product bundle not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'UPDATE', 'product_bundle', id);
+      res.json(bundle);
+    } catch (error) {
+      console.error("Error updating product bundle:", error);
+      res.status(500).json({ message: "Failed to update product bundle" });
+    }
+  });
+
+  app.delete("/api/product-bundles/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteProductBundle(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Product bundle not found" });
+      }
+      await logAudit((req as AuthenticatedRequest).user!.id, 'DELETE', 'product_bundle', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting product bundle:", error);
+      res.status(500).json({ message: "Failed to delete product bundle" });
+    }
+  });
+
+  // Inventory Reports and Analytics API
+  app.get("/api/inventory/valuation", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const warehouseId = req.query.warehouseId ? parseInt(req.query.warehouseId as string) : undefined;
+      const valuation = await storage.getInventoryValuation(companyId, warehouseId);
+      res.json(valuation);
+    } catch (error) {
+      console.error("Error fetching inventory valuation:", error);
+      res.status(500).json({ message: "Failed to fetch inventory valuation" });
+    }
+  });
+
+  app.get("/api/inventory/low-stock", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const lowStockItems = await storage.getLowStockItems(companyId);
+      res.json(lowStockItems);
+    } catch (error) {
+      console.error("Error fetching low stock items:", error);
+      res.status(500).json({ message: "Failed to fetch low stock items" });
+    }
+  });
+
+  app.get("/api/inventory/expiring-lots", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      const expiringLots = await storage.getExpiringLots(companyId, days);
+      res.json(expiringLots);
+    } catch (error) {
+      console.error("Error fetching expiring lots:", error);
+      res.status(500).json({ message: "Failed to fetch expiring lots" });
+    }
+  });
+
   // =============================================
   // ENHANCED SALES MODULE API ROUTES
   // =============================================

@@ -620,9 +620,96 @@ export const productCategories = pgTable("product_categories", {
   companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
+  parentCategoryId: integer("parent_category_id").references(() => productCategories.id),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("product_categories_company_idx").on(table.companyId),
+}));
+
+// Product Brands
+export const productBrands = pgTable("product_brands", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  logoPath: text("logo_path"),
+  website: text("website"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("product_brands_company_idx").on(table.companyId),
+}));
+
+// Product Variants (for products with different sizes, colors, etc.)
+export const productVariants = pgTable("product_variants", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  parentProductId: integer("parent_product_id").notNull().references(() => products.id),
+  variantName: text("variant_name").notNull(), // e.g., "Red Large", "Size M"
+  variantSku: text("variant_sku").unique(),
+  barcode: text("barcode").unique(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }).default("0.00"),
+  stockQuantity: integer("stock_quantity").default(0),
+  reservedQuantity: integer("reserved_quantity").default(0),
+  reorderPoint: integer("reorder_point").default(0),
+  weight: decimal("weight", { precision: 10, scale: 3 }),
+  dimensions: text("dimensions"),
+  variantAttributes: jsonb("variant_attributes").default({}), // {color: "red", size: "large"}
+  imagePath: text("image_path"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("product_variants_company_idx").on(table.companyId),
+  parentProductIdx: index("product_variants_parent_idx").on(table.parentProductId),
+}));
+
+// Warehouses/Locations
+export const warehouses = pgTable("warehouses", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  code: text("code").notNull(), // Unique warehouse code
+  description: text("description"),
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  contactPerson: text("contact_person"),
+  phone: text("phone"),
+  email: text("email"),
+  isMainWarehouse: boolean("is_main_warehouse").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyCodeUnique: unique().on(table.companyId, table.code),
+  companyIdx: index("warehouses_company_idx").on(table.companyId),
+}));
+
+// Product Stock by Warehouse
+export const warehouseStock = pgTable("warehouse_stock", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  variantId: integer("variant_id").references(() => productVariants.id),
+  warehouseId: integer("warehouse_id").notNull().references(() => warehouses.id),
+  quantity: integer("quantity").default(0),
+  reservedQuantity: integer("reserved_quantity").default(0),
+  availableQuantity: integer("available_quantity").default(0),
+  minStockLevel: integer("min_stock_level").default(0),
+  maxStockLevel: integer("max_stock_level").default(0),
+  lastRestockDate: timestamp("last_restock_date"),
+  lastCountDate: timestamp("last_count_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  productWarehouseUnique: unique().on(table.productId, table.warehouseId, table.variantId),
+  companyIdx: index("warehouse_stock_company_idx").on(table.companyId),
+  productIdx: index("warehouse_stock_product_idx").on(table.productId),
+  warehouseIdx: index("warehouse_stock_warehouse_idx").on(table.warehouseId),
+}));
 
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -630,22 +717,54 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   description: text("description"),
   sku: text("sku").unique(),
+  barcode: text("barcode").unique(),
   categoryId: integer("category_id").references(() => productCategories.id),
+  brandId: integer("brand_id").references(() => productBrands.id),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }).default("0.00"),
+  lastCost: decimal("last_cost", { precision: 10, scale: 2 }).default("0.00"),
+  averageCost: decimal("average_cost", { precision: 10, scale: 2 }).default("0.00"),
+  standardCost: decimal("standard_cost", { precision: 10, scale: 2 }).default("0.00"),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
   incomeAccountId: integer("income_account_id").references(() => chartOfAccounts.id), // Account for revenue recording
   expenseAccountId: integer("expense_account_id").references(() => chartOfAccounts.id), // Account for COGS/expense recording
+  inventoryAccountId: integer("inventory_account_id").references(() => chartOfAccounts.id), // Asset account for inventory valuation
   stockQuantity: integer("stock_quantity").default(0),
+  reservedQuantity: integer("reserved_quantity").default(0), // Stock reserved for orders
+  availableQuantity: integer("available_quantity").default(0), // Available for sale
   minStockLevel: integer("min_stock_level").default(0),
   maxStockLevel: integer("max_stock_level").default(0),
+  reorderPoint: integer("reorder_point").default(0),
+  reorderQuantity: integer("reorder_quantity").default(0),
+  leadTimeDays: integer("lead_time_days").default(0),
+  // Product characteristics
+  weight: decimal("weight", { precision: 10, scale: 3 }),
+  weightUnit: text("weight_unit").default("kg"), // kg, g, lb, oz
+  dimensions: text("dimensions"), // Length x Width x Height
+  dimensionUnit: text("dimension_unit").default("cm"), // cm, in, m
+  // Inventory management
   isActive: boolean("is_active").default(true),
   isService: boolean("is_service").default(false), // true for services, false for products
+  trackInventory: boolean("track_inventory").default(true),
+  trackSerialNumbers: boolean("track_serial_numbers").default(false),
+  trackLotNumbers: boolean("track_lot_numbers").default(false),
+  hasExpiryDate: boolean("has_expiry_date").default(false),
+  costingMethod: text("costing_method").default("FIFO"), // FIFO, LIFO, Average, Standard
+  // Media and additional info
   imagePath: text("image_path"),
+  alternativeImagePaths: jsonb("alternative_image_paths").default([]),
+  tags: jsonb("tags").default([]),
   notes: text("notes"),
+  // Supplier info
+  preferredSupplierId: integer("preferred_supplier_id").references(() => suppliers.id),
+  // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("products_company_idx").on(table.companyId),
+  categoryIdx: index("products_category_idx").on(table.categoryId),
+  barcodeIdx: index("products_barcode_idx").on(table.barcode),
+}));
 
 // PayFast payment integration tables
 export const payfastPayments = pgTable("payfast_payments", {
@@ -667,6 +786,8 @@ export const payfastPayments = pgTable("payfast_payments", {
   createdAt: timestamp("created_at").defaultNow(),
   completedAt: timestamp("completed_at"),
 });
+
+
 
 // Insert schemas
 export const insertCustomerSchema = createInsertSchema(customers).omit({
@@ -801,6 +922,32 @@ export const insertProductSchema = createInsertSchema(products).omit({
   updatedAt: true,
 });
 
+// Enhanced Inventory schemas
+export const insertProductBrandSchema = createInsertSchema(productBrands).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductVariantSchema = createInsertSchema(productVariants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWarehouseSchema = createInsertSchema(warehouses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWarehouseStockSchema = createInsertSchema(warehouseStock).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+
+
 export const insertPayfastPaymentSchema = createInsertSchema(payfastPayments).omit({
   id: true,
   createdAt: true,
@@ -917,6 +1064,28 @@ export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type PayfastPayment = typeof payfastPayments.$inferSelect;
 export type InsertPayfastPayment = z.infer<typeof insertPayfastPaymentSchema>;
+
+// Enhanced Inventory Types
+export type ProductBrand = typeof productBrands.$inferSelect;
+export type InsertProductBrand = z.infer<typeof insertProductBrandSchema>;
+export type ProductVariant = typeof productVariants.$inferSelect;
+export type InsertProductVariant = z.infer<typeof insertProductVariantSchema>;
+export type Warehouse = typeof warehouses.$inferSelect;
+export type InsertWarehouse = z.infer<typeof insertWarehouseSchema>;
+export type WarehouseStock = typeof warehouseStock.$inferSelect;
+export type InsertWarehouseStock = z.infer<typeof insertWarehouseStockSchema>;
+export type ProductLot = typeof productLots.$inferSelect;
+export type InsertProductLot = z.infer<typeof insertProductLotSchema>;
+export type ProductSerial = typeof productSerials.$inferSelect;
+export type InsertProductSerial = z.infer<typeof insertProductSerialSchema>;
+export type StockCount = typeof stockCounts.$inferSelect;
+export type InsertStockCount = z.infer<typeof insertStockCountSchema>;
+export type StockCountItem = typeof stockCountItems.$inferSelect;
+export type InsertStockCountItem = z.infer<typeof insertStockCountItemSchema>;
+export type ReorderRule = typeof reorderRules.$inferSelect;
+export type InsertReorderRule = z.infer<typeof insertReorderRuleSchema>;
+export type ProductBundle = typeof productBundles.$inferSelect;
+export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
 
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),
@@ -1083,23 +1252,213 @@ export const companySettings = pgTable("company_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Inventory management tables
+// Lot/Batch Tracking
+export const productLots = pgTable("product_lots", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  variantId: integer("variant_id").references(() => productVariants.id),
+  lotNumber: text("lot_number").notNull(),
+  batchNumber: text("batch_number"),
+  manufactureDate: timestamp("manufacture_date"),
+  expiryDate: timestamp("expiry_date"),
+  supplierRef: text("supplier_ref"), // Supplier's lot/batch reference
+  quantity: integer("quantity").default(0),
+  reservedQuantity: integer("reserved_quantity").default(0),
+  availableQuantity: integer("available_quantity").default(0),
+  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyLotUnique: unique().on(table.companyId, table.productId, table.lotNumber),
+  companyIdx: index("product_lots_company_idx").on(table.companyId),
+  productIdx: index("product_lots_product_idx").on(table.productId),
+  expiryIdx: index("product_lots_expiry_idx").on(table.expiryDate),
+}));
+
+// Serial Number Tracking
+export const productSerials = pgTable("product_serials", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  variantId: integer("variant_id").references(() => productVariants.id),
+  lotId: integer("lot_id").references(() => productLots.id),
+  serialNumber: text("serial_number").notNull(),
+  status: text("status").default("available"), // available, sold, reserved, damaged, returned
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  customerInvoiceId: integer("customer_invoice_id").references(() => invoices.id), // When sold
+  warrantyStartDate: timestamp("warranty_start_date"),
+  warrantyEndDate: timestamp("warranty_end_date"),
+  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companySerialUnique: unique().on(table.companyId, table.serialNumber),
+  companyIdx: index("product_serials_company_idx").on(table.companyId),
+  productIdx: index("product_serials_product_idx").on(table.productId),
+  statusIdx: index("product_serials_status_idx").on(table.status),
+}));
+
+// Enhanced Inventory Transactions with lot/serial support
 export const inventoryTransactions = pgTable("inventory_transactions", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
-  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // 'in', 'out', 'adjustment'
+  variantId: integer("variant_id").references(() => productVariants.id),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  lotId: integer("lot_id").references(() => productLots.id),
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // 'in', 'out', 'adjustment', 'transfer'
+  movementType: varchar("movement_type", { length: 30 }).notNull(), // 'purchase', 'sale', 'adjustment', 'transfer', 'return', 'damage', 'shrinkage'
   quantity: integer("quantity").notNull(),
   unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
+  fromWarehouseId: integer("from_warehouse_id").references(() => warehouses.id), // For transfers
+  toWarehouseId: integer("to_warehouse_id").references(() => warehouses.id), // For transfers
   reference: varchar("reference", { length: 100 }), // invoice, purchase order, adjustment ref
+  referenceId: integer("reference_id"), // ID of related document
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id), // GL posting
   notes: text("notes"),
   userId: integer("user_id").references(() => users.id).notNull(),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  serialNumbers: jsonb("serial_numbers").default([]), // Array of serial numbers involved
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyIdx: index("inventory_transactions_company_idx").on(table.companyId),
+  productIdx: index("inventory_transactions_product_idx").on(table.productId),
+  typeIdx: index("inventory_transactions_type_idx").on(table.transactionType),
+  referenceIdx: index("inventory_transactions_reference_idx").on(table.reference, table.referenceId),
 }));
+
+// Physical Inventory / Stocktaking
+export const stockCounts = pgTable("stock_counts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  countNumber: text("count_number").notNull(),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  countType: text("count_type").default("full"), // full, partial, cycle
+  status: text("status").default("draft"), // draft, in_progress, completed, cancelled
+  countDate: timestamp("count_date").defaultNow(),
+  scheduledDate: timestamp("scheduled_date"),
+  startedBy: integer("started_by").references(() => users.id),
+  completedBy: integer("completed_by").references(() => users.id),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  totalItemsCounted: integer("total_items_counted").default(0),
+  totalVariances: integer("total_variances").default(0),
+  totalAdjustmentValue: decimal("total_adjustment_value", { precision: 10, scale: 2 }).default("0.00"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyCountUnique: unique().on(table.companyId, table.countNumber),
+  companyIdx: index("stock_counts_company_idx").on(table.companyId),
+  statusIdx: index("stock_counts_status_idx").on(table.status),
+}));
+
+// Stock Count Items
+export const stockCountItems = pgTable("stock_count_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  stockCountId: integer("stock_count_id").notNull().references(() => stockCounts.id),
+  productId: integer("product_id").notNull().references(() => products.id),
+  variantId: integer("variant_id").references(() => productVariants.id),
+  lotId: integer("lot_id").references(() => productLots.id),
+  expectedQuantity: integer("expected_quantity").default(0),
+  countedQuantity: integer("counted_quantity"),
+  variance: integer("variance").default(0),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  varianceValue: decimal("variance_value", { precision: 10, scale: 2 }).default("0.00"),
+  countedBy: integer("counted_by").references(() => users.id),
+  countedAt: timestamp("counted_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("stock_count_items_company_idx").on(table.companyId),
+  stockCountIdx: index("stock_count_items_count_idx").on(table.stockCountId),
+}));
+
+// Automatic Reorder Rules
+export const reorderRules = pgTable("reorder_rules", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  variantId: integer("variant_id").references(() => productVariants.id),
+  warehouseId: integer("warehouse_id").references(() => warehouses.id),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  reorderPoint: integer("reorder_point").notNull(),
+  reorderQuantity: integer("reorder_quantity").notNull(),
+  maxStockLevel: integer("max_stock_level"),
+  leadTimeDays: integer("lead_time_days").default(0),
+  isActive: boolean("is_active").default(true),
+  lastOrderDate: timestamp("last_order_date"),
+  nextReviewDate: timestamp("next_review_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyProductUnique: unique().on(table.companyId, table.productId, table.warehouseId, table.variantId),
+  companyIdx: index("reorder_rules_company_idx").on(table.companyId),
+  productIdx: index("reorder_rules_product_idx").on(table.productId),
+}));
+
+// Product Bundles/Kits
+export const productBundles = pgTable("product_bundles", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  bundleProductId: integer("bundle_product_id").notNull().references(() => products.id),
+  componentProductId: integer("component_product_id").notNull().references(() => products.id),
+  componentVariantId: integer("component_variant_id").references(() => productVariants.id),
+  quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  bundleComponentUnique: unique().on(table.bundleProductId, table.componentProductId, table.componentVariantId),
+  companyIdx: index("product_bundles_company_idx").on(table.companyId),
+  bundleIdx: index("product_bundles_bundle_idx").on(table.bundleProductId),
+}));
+
+// Enhanced Inventory Insert Schemas
+export const insertProductLotSchema = createInsertSchema(productLots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductSerialSchema = createInsertSchema(productSerials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStockCountSchema = createInsertSchema(stockCounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStockCountItemSchema = createInsertSchema(stockCountItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReorderRuleSchema = createInsertSchema(reorderRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductBundleSchema = createInsertSchema(productBundles).omit({
+  id: true,
+  createdAt: true,
+});
 
 // Email reminders table
 export const emailReminders = pgTable("email_reminders", {
@@ -3968,3 +4327,28 @@ export type DeliveryWithCustomer = Delivery & { customer: Customer };
 export type DeliveryWithItems = Delivery & { items: DeliveryItem[]; customer: Customer };
 export type CreditNoteWithCustomer = CreditNote & { customer: Customer };
 export type CreditNoteWithItems = CreditNote & { items: CreditNoteItem[]; customer: Customer };
+
+// Enhanced Inventory Management Types
+export type ProductLot = typeof productLots.$inferSelect;
+export type InsertProductLot = z.infer<typeof insertProductLotSchema>;
+
+export type ProductSerial = typeof productSerials.$inferSelect;
+export type InsertProductSerial = z.infer<typeof insertProductSerialSchema>;
+
+export type StockCount = typeof stockCounts.$inferSelect;
+export type InsertStockCount = z.infer<typeof insertStockCountSchema>;
+
+export type StockCountItem = typeof stockCountItems.$inferSelect;
+export type InsertStockCountItem = z.infer<typeof insertStockCountItemSchema>;
+
+export type ReorderRule = typeof reorderRules.$inferSelect;
+export type InsertReorderRule = z.infer<typeof insertReorderRuleSchema>;
+
+export type ProductBundle = typeof productBundles.$inferSelect;
+export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
+
+// Enhanced Inventory Extended Types for API responses
+export type StockCountWithItems = StockCount & { items: StockCountItem[] };
+export type ProductLotWithSerial = ProductLot & { serialNumbers: ProductSerial[] };
+export type ProductWithVariants = Product & { variants: ProductVariant[]; lots: ProductLot[]; bundles: ProductBundle[] };
+export type WarehouseWithStock = Warehouse & { inventory: InventoryTransaction[] };

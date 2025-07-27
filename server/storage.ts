@@ -71,6 +71,13 @@ import {
   approvalWorkflows,
   approvalRequests,
   bankIntegrations,
+  // Enhanced Inventory Module imports
+  productLots,
+  productSerials,
+  stockCounts,
+  stockCountItems,
+  reorderRules,
+  productBundles,
   // Enhanced Sales Module imports
   salesOrders,
   salesOrderItems,
@@ -304,6 +311,23 @@ import {
   type PosSaleWithItems,
   type PosShiftWithSales,
   type PosRefundWithItems,
+  // Enhanced Inventory Module type imports
+  type ProductLot,
+  type InsertProductLot,
+  type ProductSerial,
+  type InsertProductSerial,
+  type StockCount,
+  type InsertStockCount,
+  type StockCountItem,
+  type InsertStockCountItem,
+  type ReorderRule,
+  type InsertReorderRule,
+  type ProductBundle,
+  type InsertProductBundle,
+  type StockCountWithItems,
+  type ProductLotWithSerial,
+  type ProductWithVariants,
+  type WarehouseWithStock,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, or, isNull, inArray } from "drizzle-orm";
@@ -797,6 +821,65 @@ export interface IStorage {
   createDeliveryItem(item: InsertDeliveryItem): Promise<DeliveryItem>;
   updateDeliveryItem(id: number, item: Partial<InsertDeliveryItem>): Promise<DeliveryItem | undefined>;
   deleteDeliveryItem(id: number): Promise<boolean>;
+
+  // Enhanced Inventory Management - Lot/Batch Tracking
+  getProductLots(companyId: number, productId?: number): Promise<ProductLot[]>;
+  getProductLot(id: number): Promise<ProductLot | undefined>;
+  getProductLotByNumber(companyId: number, productId: number, lotNumber: string): Promise<ProductLot | undefined>;
+  createProductLot(lot: InsertProductLot): Promise<ProductLot>;
+  updateProductLot(id: number, lot: Partial<InsertProductLot>): Promise<ProductLot | undefined>;
+  deleteProductLot(id: number): Promise<boolean>;
+  getExpiringLots(companyId: number, daysAhead: number): Promise<ProductLot[]>;
+
+  // Enhanced Inventory Management - Serial Number Tracking
+  getProductSerials(companyId: number, productId?: number, status?: string): Promise<ProductSerial[]>;
+  getProductSerial(id: number): Promise<ProductSerial | undefined>;
+  getProductSerialByNumber(companyId: number, serialNumber: string): Promise<ProductSerial | undefined>;
+  createProductSerial(serial: InsertProductSerial): Promise<ProductSerial>;
+  updateProductSerial(id: number, serial: Partial<InsertProductSerial>): Promise<ProductSerial | undefined>;
+  deleteProductSerial(id: number): Promise<boolean>;
+  updateSerialStatus(id: number, status: string, customerInvoiceId?: number): Promise<ProductSerial | undefined>;
+
+  // Enhanced Inventory Management - Stock Counting/Physical Inventory
+  getStockCounts(companyId: number, status?: string): Promise<StockCount[]>;
+  getStockCount(id: number): Promise<StockCountWithItems | undefined>;
+  createStockCount(stockCount: InsertStockCount): Promise<StockCount>;
+  updateStockCount(id: number, stockCount: Partial<InsertStockCount>): Promise<StockCount | undefined>;
+  deleteStockCount(id: number): Promise<boolean>;
+  startStockCount(id: number, startedBy: number): Promise<StockCount | undefined>;
+  completeStockCount(id: number, completedBy: number): Promise<StockCount | undefined>;
+
+  // Enhanced Inventory Management - Stock Count Items
+  getStockCountItems(stockCountId: number): Promise<StockCountItem[]>;
+  createStockCountItem(item: InsertStockCountItem): Promise<StockCountItem>;
+  updateStockCountItem(id: number, item: Partial<InsertStockCountItem>): Promise<StockCountItem | undefined>;
+  deleteStockCountItem(id: number): Promise<boolean>;
+  recordPhysicalCount(id: number, countedQuantity: number, countedBy: number, notes?: string): Promise<StockCountItem | undefined>;
+
+  // Enhanced Inventory Management - Reorder Rules/Automatic Purchasing
+  getReorderRules(companyId: number, productId?: number): Promise<ReorderRule[]>;
+  getReorderRule(id: number): Promise<ReorderRule | undefined>;
+  createReorderRule(rule: InsertReorderRule): Promise<ReorderRule>;
+  updateReorderRule(id: number, rule: Partial<InsertReorderRule>): Promise<ReorderRule | undefined>;
+  deleteReorderRule(id: number): Promise<boolean>;
+  checkReorderPoints(companyId: number): Promise<ReorderRule[]>;
+  generateReorderSuggestions(companyId: number): Promise<any[]>;
+
+  // Enhanced Inventory Management - Product Bundles/Kits
+  getProductBundles(companyId: number, bundleProductId?: number): Promise<ProductBundle[]>;
+  getProductBundle(id: number): Promise<ProductBundle | undefined>;
+  createProductBundle(bundle: InsertProductBundle): Promise<ProductBundle>;
+  updateProductBundle(id: number, bundle: Partial<InsertProductBundle>): Promise<ProductBundle | undefined>;
+  deleteProductBundle(id: number): Promise<boolean>;
+  getBundleComponents(bundleProductId: number): Promise<ProductBundle[]>;
+  calculateBundleCost(bundleProductId: number): Promise<number>;
+
+  // Enhanced Inventory Analytics & Reports
+  getInventoryValuation(companyId: number, warehouseId?: number): Promise<any[]>;
+  getLowStockItems(companyId: number): Promise<any[]>;
+  getStockMovementReport(companyId: number, productId?: number, startDate?: Date, endDate?: Date): Promise<any[]>;
+  getExpiryReport(companyId: number, daysAhead: number): Promise<any[]>;
+  getSerialNumberReport(companyId: number, status?: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2697,6 +2780,901 @@ export class DatabaseStorage implements IStorage {
       .where(eq(currencyRates.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  // ============================================================================
+  // ENHANCED INVENTORY MANAGEMENT SYSTEM
+  // ============================================================================
+
+  // Product Brands Management
+  async getProductBrands(companyId: number): Promise<any[]> {
+    return await db.select().from(productBrands)
+      .where(and(eq(productBrands.companyId, companyId), eq(productBrands.isActive, true)))
+      .orderBy(productBrands.name);
+  }
+
+  async createProductBrand(brand: any): Promise<any> {
+    const [newBrand] = await db.insert(productBrands).values(brand).returning();
+    return newBrand;
+  }
+
+  async updateProductBrand(id: number, brand: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(productBrands)
+      .set(brand)
+      .where(eq(productBrands.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProductBrand(id: number): Promise<boolean> {
+    const result = await db.delete(productBrands).where(eq(productBrands.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Product Variants Management
+  async getProductVariants(companyId: number, parentProductId?: number): Promise<any[]> {
+    const query = db.select().from(productVariants)
+      .where(eq(productVariants.companyId, companyId));
+    
+    if (parentProductId) {
+      query.where(eq(productVariants.parentProductId, parentProductId));
+    }
+    
+    return await query.orderBy(productVariants.variantName);
+  }
+
+  async createProductVariant(variant: any): Promise<any> {
+    const [newVariant] = await db.insert(productVariants).values(variant).returning();
+    return newVariant;
+  }
+
+  async updateProductVariant(id: number, variant: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(productVariants)
+      .set({ ...variant, updatedAt: new Date() })
+      .where(eq(productVariants.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProductVariant(id: number): Promise<boolean> {
+    const result = await db.delete(productVariants).where(eq(productVariants.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Warehouse Management
+  async getWarehouses(companyId: number): Promise<any[]> {
+    return await db.select().from(warehouses)
+      .where(and(eq(warehouses.companyId, companyId), eq(warehouses.isActive, true)))
+      .orderBy(warehouses.name);
+  }
+
+  async getMainWarehouse(companyId: number): Promise<any | undefined> {
+    const [warehouse] = await db.select().from(warehouses)
+      .where(and(
+        eq(warehouses.companyId, companyId),
+        eq(warehouses.isMainWarehouse, true),
+        eq(warehouses.isActive, true)
+      ));
+    return warehouse || undefined;
+  }
+
+  async createWarehouse(warehouse: any): Promise<any> {
+    // If this is set as main warehouse, unset others
+    if (warehouse.isMainWarehouse) {
+      await db.update(warehouses)
+        .set({ isMainWarehouse: false })
+        .where(eq(warehouses.companyId, warehouse.companyId));
+    }
+    
+    const [newWarehouse] = await db.insert(warehouses).values(warehouse).returning();
+    return newWarehouse;
+  }
+
+  async updateWarehouse(id: number, warehouse: any): Promise<any | undefined> {
+    // If this is set as main warehouse, unset others
+    if (warehouse.isMainWarehouse) {
+      await db.update(warehouses)
+        .set({ isMainWarehouse: false })
+        .where(and(
+          eq(warehouses.companyId, warehouse.companyId),
+          ne(warehouses.id, id)
+        ));
+    }
+    
+    const [updated] = await db
+      .update(warehouses)
+      .set({ ...warehouse, updatedAt: new Date() })
+      .where(eq(warehouses.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteWarehouse(id: number): Promise<boolean> {
+    const result = await db.delete(warehouses).where(eq(warehouses.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Warehouse Stock Management
+  async getWarehouseStock(companyId: number, warehouseId?: number, productId?: number): Promise<any[]> {
+    let query = db.select({
+      warehouseStock: warehouseStock,
+      product: products,
+      warehouse: warehouses,
+      variant: productVariants
+    })
+    .from(warehouseStock)
+    .leftJoin(products, eq(warehouseStock.productId, products.id))
+    .leftJoin(warehouses, eq(warehouseStock.warehouseId, warehouses.id))
+    .leftJoin(productVariants, eq(warehouseStock.variantId, productVariants.id))
+    .where(eq(warehouseStock.companyId, companyId));
+
+    if (warehouseId) {
+      query = query.where(eq(warehouseStock.warehouseId, warehouseId));
+    }
+    
+    if (productId) {
+      query = query.where(eq(warehouseStock.productId, productId));
+    }
+
+    return await query;
+  }
+
+  async updateWarehouseStock(productId: number, warehouseId: number, quantity: number, companyId: number): Promise<any> {
+    // Try to update existing stock record
+    const [existing] = await db.select()
+      .from(warehouseStock)
+      .where(and(
+        eq(warehouseStock.productId, productId),
+        eq(warehouseStock.warehouseId, warehouseId),
+        eq(warehouseStock.companyId, companyId)
+      ));
+
+    if (existing) {
+      const [updated] = await db
+        .update(warehouseStock)
+        .set({ 
+          quantity: existing.quantity + quantity,
+          availableQuantity: (existing.quantity + quantity) - existing.reservedQuantity,
+          updatedAt: new Date()
+        })
+        .where(eq(warehouseStock.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new stock record
+      const [newStock] = await db.insert(warehouseStock).values({
+        companyId,
+        productId,
+        warehouseId,
+        quantity,
+        reservedQuantity: 0,
+        availableQuantity: quantity
+      }).returning();
+      return newStock;
+    }
+  }
+
+  // Product Lot/Batch Management
+  async getProductLots(companyId: number, productId?: number): Promise<any[]> {
+    let query = db.select({
+      lot: productLots,
+      product: products,
+      variant: productVariants
+    })
+    .from(productLots)
+    .leftJoin(products, eq(productLots.productId, products.id))
+    .leftJoin(productVariants, eq(productLots.variantId, productVariants.id))
+    .where(and(eq(productLots.companyId, companyId), eq(productLots.isActive, true)));
+
+    if (productId) {
+      query = query.where(eq(productLots.productId, productId));
+    }
+
+    return await query.orderBy(productLots.expiryDate);
+  }
+
+  async createProductLot(lot: any): Promise<any> {
+    const [newLot] = await db.insert(productLots).values(lot).returning();
+    return newLot;
+  }
+
+  async updateProductLot(id: number, lot: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(productLots)
+      .set({ ...lot, updatedAt: new Date() })
+      .where(eq(productLots.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Serial Number Management
+  async getProductSerials(companyId: number, productId?: number): Promise<any[]> {
+    let query = db.select({
+      serial: productSerials,
+      product: products,
+      variant: productVariants,
+      lot: productLots,
+      warehouse: warehouses
+    })
+    .from(productSerials)
+    .leftJoin(products, eq(productSerials.productId, products.id))
+    .leftJoin(productVariants, eq(productSerials.variantId, productVariants.id))
+    .leftJoin(productLots, eq(productSerials.lotId, productLots.id))
+    .leftJoin(warehouses, eq(productSerials.warehouseId, warehouses.id))
+    .where(and(eq(productSerials.companyId, companyId), eq(productSerials.isActive, true)));
+
+    if (productId) {
+      query = query.where(eq(productSerials.productId, productId));
+    }
+
+    return await query.orderBy(productSerials.serialNumber);
+  }
+
+  async createProductSerial(serial: any): Promise<any> {
+    const [newSerial] = await db.insert(productSerials).values(serial).returning();
+    return newSerial;
+  }
+
+  async updateProductSerial(id: number, serial: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(productSerials)
+      .set({ ...serial, updatedAt: new Date() })
+      .where(eq(productSerials.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async reserveSerial(serialNumber: string, companyId: number): Promise<boolean> {
+    const result = await db
+      .update(productSerials)
+      .set({ status: 'reserved', updatedAt: new Date() })
+      .where(and(
+        eq(productSerials.serialNumber, serialNumber),
+        eq(productSerials.companyId, companyId),
+        eq(productSerials.status, 'available')
+      ));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Enhanced Inventory Transactions with full enterprise features
+  async createEnhancedInventoryTransaction(transaction: any): Promise<any> {
+    // Start transaction
+    const [newTransaction] = await db.insert(inventoryTransactions).values(transaction).returning();
+    
+    // Update product stock quantities
+    if (transaction.productId) {
+      await this.updateProductStockQuantities(transaction.productId, transaction.companyId);
+    }
+    
+    // Update warehouse stock if specified
+    if (transaction.warehouseId) {
+      await this.updateWarehouseStock(
+        transaction.productId,
+        transaction.warehouseId,
+        transaction.transactionType === 'in' ? transaction.quantity : -transaction.quantity,
+        transaction.companyId
+      );
+    }
+    
+    // Create journal entry for accounting integration
+    if (transaction.unitCost && transaction.quantity) {
+      await this.createInventoryJournalEntry(newTransaction);
+    }
+    
+    // Update lot quantities if lot tracking is enabled
+    if (transaction.lotId) {
+      await this.updateLotQuantities(transaction.lotId, transaction.quantity, transaction.transactionType);
+    }
+    
+    return newTransaction;
+  }
+
+  async updateProductStockQuantities(productId: number, companyId: number): Promise<void> {
+    // Calculate total stock from all warehouses
+    const stockSummary = await db.select({
+      totalStock: sql<number>`COALESCE(SUM(${warehouseStock.quantity}), 0)`,
+      totalReserved: sql<number>`COALESCE(SUM(${warehouseStock.reservedQuantity}), 0)`
+    })
+    .from(warehouseStock)
+    .where(and(
+      eq(warehouseStock.productId, productId),
+      eq(warehouseStock.companyId, companyId)
+    ));
+
+    const totalStock = stockSummary[0]?.totalStock || 0;
+    const totalReserved = stockSummary[0]?.totalReserved || 0;
+
+    // Update product totals
+    await db.update(products)
+      .set({
+        stockQuantity: totalStock,
+        reservedQuantity: totalReserved,
+        availableQuantity: totalStock - totalReserved,
+        updatedAt: new Date()
+      })
+      .where(eq(products.id, productId));
+  }
+
+  async createInventoryJournalEntry(transaction: any): Promise<void> {
+    const product = await this.getProduct(transaction.productId);
+    if (!product || !product.inventoryAccountId) return;
+
+    const totalCost = parseFloat(transaction.totalCost) || 0;
+    if (totalCost === 0) return;
+
+    // Create journal entry for inventory movement
+    const journalEntry = await this.createJournalEntry({
+      companyId: transaction.companyId,
+      entryNumber: `INV-${transaction.id}`,
+      description: `Inventory ${transaction.movementType} - ${product.name}`,
+      entryDate: new Date(),
+      reference: transaction.reference,
+      totalAmount: Math.abs(totalCost).toString(),
+      userId: transaction.userId
+    });
+
+    // Add journal entry lines based on transaction type
+    if (transaction.transactionType === 'in') {
+      // Debit Inventory Asset, Credit based on movement type
+      await this.createJournalEntryLine({
+        companyId: transaction.companyId,
+        journalEntryId: journalEntry.id,
+        accountId: product.inventoryAccountId,
+        description: `Inventory increase - ${product.name}`,
+        debitAmount: totalCost.toString(),
+        creditAmount: "0.00"
+      });
+
+      // Credit account depends on movement type
+      let creditAccountId = product.expenseAccountId; // Default to COGS
+      if (transaction.movementType === 'purchase') {
+        // Find Accounts Payable or similar
+        const apAccount = await this.getChartOfAccountByCode(transaction.companyId, "2100");
+        creditAccountId = apAccount?.id || product.expenseAccountId;
+      }
+
+      if (creditAccountId) {
+        await this.createJournalEntryLine({
+          companyId: transaction.companyId,
+          journalEntryId: journalEntry.id,
+          accountId: creditAccountId,
+          description: `Inventory ${transaction.movementType} - ${product.name}`,
+          debitAmount: "0.00",
+          creditAmount: totalCost.toString()
+        });
+      }
+    } else if (transaction.transactionType === 'out') {
+      // Credit Inventory Asset, Debit COGS or other account
+      await this.createJournalEntryLine({
+        companyId: transaction.companyId,
+        journalEntryId: journalEntry.id,
+        accountId: product.inventoryAccountId,
+        description: `Inventory decrease - ${product.name}`,
+        debitAmount: "0.00",
+        creditAmount: totalCost.toString()
+      });
+
+      // Debit COGS or other account
+      const debitAccountId = product.expenseAccountId;
+      if (debitAccountId) {
+        await this.createJournalEntryLine({
+          companyId: transaction.companyId,
+          journalEntryId: journalEntry.id,
+          accountId: debitAccountId,
+          description: `COGS - ${product.name}`,
+          debitAmount: totalCost.toString(),
+          creditAmount: "0.00"
+        });
+      }
+    }
+
+    // Link the journal entry to the transaction
+    await db.update(inventoryTransactions)
+      .set({ journalEntryId: journalEntry.id })
+      .where(eq(inventoryTransactions.id, transaction.id));
+  }
+
+  async updateLotQuantities(lotId: number, quantity: number, transactionType: string): Promise<void> {
+    const lot = await db.select().from(productLots).where(eq(productLots.id, lotId));
+    if (!lot[0]) return;
+
+    let newQuantity = lot[0].quantity || 0;
+    if (transactionType === 'in') {
+      newQuantity += quantity;
+    } else if (transactionType === 'out') {
+      newQuantity -= quantity;
+    } else if (transactionType === 'adjustment') {
+      newQuantity = quantity;
+    }
+
+    await db.update(productLots)
+      .set({
+        quantity: newQuantity,
+        availableQuantity: Math.max(0, newQuantity - (lot[0].reservedQuantity || 0)),
+        updatedAt: new Date()
+      })
+      .where(eq(productLots.id, lotId));
+  }
+
+  // Stock Count Management
+  async getStockCounts(companyId: number): Promise<any[]> {
+    return await db.select({
+      stockCount: stockCounts,
+      warehouse: warehouses,
+      startedByUser: users,
+      completedByUser: users
+    })
+    .from(stockCounts)
+    .leftJoin(warehouses, eq(stockCounts.warehouseId, warehouses.id))
+    .leftJoin(users, eq(stockCounts.startedBy, users.id))
+    .leftJoin(users, eq(stockCounts.completedBy, users.id))
+    .where(eq(stockCounts.companyId, companyId))
+    .orderBy(desc(stockCounts.createdAt));
+  }
+
+  async createStockCount(stockCount: any): Promise<any> {
+    const [newStockCount] = await db.insert(stockCounts).values(stockCount).returning();
+    return newStockCount;
+  }
+
+  async updateStockCount(id: number, stockCount: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(stockCounts)
+      .set({ ...stockCount, updatedAt: new Date() })
+      .where(eq(stockCounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getStockCountItems(stockCountId: number): Promise<any[]> {
+    return await db.select({
+      item: stockCountItems,
+      product: products,
+      variant: productVariants,
+      lot: productLots,
+      countedByUser: users
+    })
+    .from(stockCountItems)
+    .leftJoin(products, eq(stockCountItems.productId, products.id))
+    .leftJoin(productVariants, eq(stockCountItems.variantId, productVariants.id))
+    .leftJoin(productLots, eq(stockCountItems.lotId, productLots.id))
+    .leftJoin(users, eq(stockCountItems.countedBy, users.id))
+    .where(eq(stockCountItems.stockCountId, stockCountId));
+  }
+
+  async createStockCountItem(item: any): Promise<any> {
+    const [newItem] = await db.insert(stockCountItems).values(item).returning();
+    return newItem;
+  }
+
+  // Reorder Rules Management
+  async getReorderRules(companyId: number): Promise<any[]> {
+    return await db.select({
+      rule: reorderRules,
+      product: products,
+      variant: productVariants,
+      warehouse: warehouses,
+      supplier: suppliers
+    })
+    .from(reorderRules)
+    .leftJoin(products, eq(reorderRules.productId, products.id))
+    .leftJoin(productVariants, eq(reorderRules.variantId, productVariants.id))
+    .leftJoin(warehouses, eq(reorderRules.warehouseId, warehouses.id))
+    .leftJoin(suppliers, eq(reorderRules.supplierId, suppliers.id))
+    .where(and(eq(reorderRules.companyId, companyId), eq(reorderRules.isActive, true)));
+  }
+
+  async createReorderRule(rule: any): Promise<any> {
+    const [newRule] = await db.insert(reorderRules).values(rule).returning();
+    return newRule;
+  }
+
+  async updateReorderRule(id: number, rule: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(reorderRules)
+      .set({ ...rule, updatedAt: new Date() })
+      .where(eq(reorderRules.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Product Bundles Management
+  async getProductBundles(companyId: number, bundleProductId?: number): Promise<any[]> {
+    let query = db.select({
+      bundle: productBundles,
+      bundleProduct: products,
+      componentProduct: products,
+      componentVariant: productVariants
+    })
+    .from(productBundles)
+    .leftJoin(products, eq(productBundles.bundleProductId, products.id))
+    .leftJoin(products, eq(productBundles.componentProductId, products.id))
+    .leftJoin(productVariants, eq(productBundles.componentVariantId, productVariants.id))
+    .where(and(eq(productBundles.companyId, companyId), eq(productBundles.isActive, true)));
+
+    if (bundleProductId) {
+      query = query.where(eq(productBundles.bundleProductId, bundleProductId));
+    }
+
+    return await query.orderBy(productBundles.sortOrder);
+  }
+
+  async createProductBundle(bundle: any): Promise<any> {
+    const [newBundle] = await db.insert(productBundles).values(bundle).returning();
+    return newBundle;
+  }
+
+  async updateProductBundle(id: number, bundle: any): Promise<any | undefined> {
+    const [updated] = await db
+      .update(productBundles)
+      .set(bundle)
+      .where(eq(productBundles.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteProductBundle(id: number): Promise<boolean> {
+    const result = await db.delete(productBundles).where(eq(productBundles.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Inventory Reports and Analytics
+  async getInventoryValuation(companyId: number, warehouseId?: number): Promise<any[]> {
+    let query = db.select({
+      product: products,
+      category: productCategories,
+      warehouse: warehouses,
+      totalQuantity: sql<number>`COALESCE(SUM(${warehouseStock.quantity}), ${products.stockQuantity})`,
+      totalValue: sql<number>`COALESCE(SUM(${warehouseStock.quantity} * ${products.costPrice}), ${products.stockQuantity} * ${products.costPrice})`
+    })
+    .from(products)
+    .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
+    .leftJoin(warehouseStock, eq(products.id, warehouseStock.productId))
+    .leftJoin(warehouses, eq(warehouseStock.warehouseId, warehouses.id))
+    .where(and(
+      eq(products.companyId, companyId),
+      eq(products.isService, false),
+      eq(products.trackInventory, true)
+    ));
+
+    if (warehouseId) {
+      query = query.where(eq(warehouseStock.warehouseId, warehouseId));
+    }
+
+    return await query
+      .groupBy(products.id, productCategories.id, warehouses.id)
+      .orderBy(products.name);
+  }
+
+  async getLowStockItems(companyId: number): Promise<any[]> {
+    return await db.select({
+      product: products,
+      category: productCategories,
+      warehouse: warehouses,
+      currentStock: warehouseStock.quantity,
+      minLevel: warehouseStock.minStockLevel
+    })
+    .from(products)
+    .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
+    .leftJoin(warehouseStock, eq(products.id, warehouseStock.productId))
+    .leftJoin(warehouses, eq(warehouseStock.warehouseId, warehouses.id))
+    .where(and(
+      eq(products.companyId, companyId),
+      eq(products.isService, false),
+      eq(products.trackInventory, true),
+      sql`${warehouseStock.quantity} <= ${warehouseStock.minStockLevel}`
+    ))
+    .orderBy(products.name);
+  }
+
+  async getExpiringLots(companyId: number, days: number = 30): Promise<any[]> {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + days);
+
+    return await db.select({
+      lot: productLots,
+      product: products,
+      variant: productVariants
+    })
+    .from(productLots)
+    .leftJoin(products, eq(productLots.productId, products.id))
+    .leftJoin(productVariants, eq(productLots.variantId, productVariants.id))
+    .where(and(
+      eq(productLots.companyId, companyId),
+      eq(productLots.isActive, true),
+      lte(productLots.expiryDate, futureDate),
+      gt(productLots.quantity, 0)
+    ))
+    .orderBy(productLots.expiryDate);
+  }
+
+  // Missing Enhanced Inventory Methods Implementation
+
+  // Product Lot/Batch Management - Missing Methods
+  async getProductLot(id: number): Promise<ProductLot | undefined> {
+    const [lot] = await db.select().from(productLots).where(eq(productLots.id, id));
+    return lot || undefined;
+  }
+
+  async getProductLotByNumber(companyId: number, productId: number, lotNumber: string): Promise<ProductLot | undefined> {
+    const [lot] = await db.select()
+      .from(productLots)
+      .where(and(
+        eq(productLots.companyId, companyId),
+        eq(productLots.productId, productId),
+        eq(productLots.lotNumber, lotNumber)
+      ));
+    return lot || undefined;
+  }
+
+  async deleteProductLot(id: number): Promise<boolean> {
+    const result = await db
+      .update(productLots)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(productLots.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Product Serial Management - Missing Methods
+  async getProductSerial(id: number): Promise<ProductSerial | undefined> {
+    const [serial] = await db.select().from(productSerials).where(eq(productSerials.id, id));
+    return serial || undefined;
+  }
+
+  async getProductSerialByNumber(companyId: number, serialNumber: string): Promise<ProductSerial | undefined> {
+    const [serial] = await db.select()
+      .from(productSerials)
+      .where(and(
+        eq(productSerials.companyId, companyId),
+        eq(productSerials.serialNumber, serialNumber)
+      ));
+    return serial || undefined;
+  }
+
+  async deleteProductSerial(id: number): Promise<boolean> {
+    const result = await db
+      .update(productSerials)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(productSerials.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async updateSerialStatus(id: number, status: string, customerInvoiceId?: number): Promise<ProductSerial | undefined> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    if (customerInvoiceId) {
+      updateData.customerInvoiceId = customerInvoiceId;
+    }
+
+    const [updated] = await db
+      .update(productSerials)
+      .set(updateData)
+      .where(eq(productSerials.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Stock Count Management - Missing Methods
+  async getStockCounts(companyId: number, status?: string): Promise<StockCount[]> {
+    let query = db.select().from(stockCounts).where(eq(stockCounts.companyId, companyId));
+    
+    if (status) {
+      query = query.where(eq(stockCounts.status, status));
+    }
+    
+    return await query.orderBy(desc(stockCounts.createdAt));
+  }
+
+  async getStockCount(id: number): Promise<StockCountWithItems | undefined> {
+    const [stockCount] = await db.select().from(stockCounts).where(eq(stockCounts.id, id));
+    if (!stockCount) return undefined;
+
+    const items = await this.getStockCountItems(id);
+    return {
+      ...stockCount,
+      items
+    };
+  }
+
+  async createStockCount(stockCount: InsertStockCount): Promise<StockCount> {
+    const [newStockCount] = await db.insert(stockCounts).values(stockCount).returning();
+    return newStockCount;
+  }
+
+  async updateStockCount(id: number, stockCount: Partial<InsertStockCount>): Promise<StockCount | undefined> {
+    const [updated] = await db
+      .update(stockCounts)
+      .set({ ...stockCount, updatedAt: new Date() })
+      .where(eq(stockCounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteStockCount(id: number): Promise<boolean> {
+    const result = await db.delete(stockCounts).where(eq(stockCounts.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async startStockCount(id: number, startedBy: number): Promise<StockCount | undefined> {
+    const [updated] = await db
+      .update(stockCounts)
+      .set({ 
+        status: 'in-progress',
+        startedAt: new Date(),
+        startedBy,
+        updatedAt: new Date()
+      })
+      .where(eq(stockCounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async completeStockCount(id: number, completedBy: number): Promise<StockCount | undefined> {
+    const [updated] = await db
+      .update(stockCounts)
+      .set({ 
+        status: 'completed',
+        completedAt: new Date(),
+        completedBy,
+        updatedAt: new Date()
+      })
+      .where(eq(stockCounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Stock Count Items - Missing Methods
+  async updateStockCountItem(id: number, item: Partial<InsertStockCountItem>): Promise<StockCountItem | undefined> {
+    const [updated] = await db
+      .update(stockCountItems)
+      .set({ ...item, updatedAt: new Date() })
+      .where(eq(stockCountItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteStockCountItem(id: number): Promise<boolean> {
+    const result = await db.delete(stockCountItems).where(eq(stockCountItems.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async recordPhysicalCount(id: number, countedQuantity: number, countedBy: number, notes?: string): Promise<StockCountItem | undefined> {
+    const [updated] = await db
+      .update(stockCountItems)
+      .set({ 
+        countedQuantity,
+        countedBy,
+        countedAt: new Date(),
+        notes,
+        updatedAt: new Date()
+      })
+      .where(eq(stockCountItems.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Reorder Rules - Missing Methods
+  async getReorderRule(id: number): Promise<ReorderRule | undefined> {
+    const [rule] = await db.select().from(reorderRules).where(eq(reorderRules.id, id));
+    return rule || undefined;
+  }
+
+  async deleteReorderRule(id: number): Promise<boolean> {
+    const result = await db
+      .update(reorderRules)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(reorderRules.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async checkReorderPoints(companyId: number): Promise<ReorderRule[]> {
+    return await db.select().from(reorderRules)
+      .leftJoin(products, eq(reorderRules.productId, products.id))
+      .where(and(
+        eq(reorderRules.companyId, companyId),
+        eq(reorderRules.isActive, true),
+        sql`${products.stockQuantity} <= ${reorderRules.reorderPoint}`
+      ));
+  }
+
+  async generateReorderSuggestions(companyId: number): Promise<any[]> {
+    const lowStockRules = await this.checkReorderPoints(companyId);
+    
+    return lowStockRules.map((rule: any) => ({
+      productId: rule.productId,
+      productName: rule.product?.name,
+      currentStock: rule.product?.stockQuantity || 0,
+      reorderPoint: rule.reorderPoint,
+      reorderQuantity: rule.reorderQuantity,
+      preferredSupplierId: rule.supplierId,
+      estimatedCost: (rule.product?.costPrice || 0) * rule.reorderQuantity
+    }));
+  }
+
+  // Product Bundles - Missing Methods
+  async getProductBundle(id: number): Promise<ProductBundle | undefined> {
+    const [bundle] = await db.select().from(productBundles).where(eq(productBundles.id, id));
+    return bundle || undefined;
+  }
+
+  async getBundleComponents(bundleProductId: number): Promise<ProductBundle[]> {
+    return await db.select().from(productBundles)
+      .where(and(
+        eq(productBundles.bundleProductId, bundleProductId),
+        eq(productBundles.isActive, true)
+      ))
+      .orderBy(productBundles.sortOrder);
+  }
+
+  async calculateBundleCost(bundleProductId: number): Promise<number> {
+    const components = await this.getBundleComponents(bundleProductId);
+    let totalCost = 0;
+
+    for (const component of components) {
+      const product = await this.getProduct(component.componentProductId);
+      if (product) {
+        totalCost += (parseFloat(product.costPrice) || 0) * component.quantity;
+      }
+    }
+
+    return totalCost;
+  }
+
+  // Enhanced Analytics & Reports - Missing Methods
+  async getStockMovementReport(companyId: number, productId?: number, startDate?: Date, endDate?: Date): Promise<any[]> {
+    let query = db.select({
+      transaction: inventoryTransactions,
+      product: products,
+      user: users
+    })
+    .from(inventoryTransactions)
+    .leftJoin(products, eq(inventoryTransactions.productId, products.id))
+    .leftJoin(users, eq(inventoryTransactions.userId, users.id))
+    .where(eq(inventoryTransactions.companyId, companyId));
+
+    if (productId) {
+      query = query.where(eq(inventoryTransactions.productId, productId));
+    }
+    
+    if (startDate) {
+      query = query.where(gte(inventoryTransactions.createdAt, startDate));
+    }
+    
+    if (endDate) {
+      query = query.where(lte(inventoryTransactions.createdAt, endDate));
+    }
+
+    return await query.orderBy(desc(inventoryTransactions.createdAt));
+  }
+
+  async getExpiryReport(companyId: number, daysAhead: number): Promise<any[]> {
+    return await this.getExpiringLots(companyId, daysAhead);
+  }
+
+  async getSerialNumberReport(companyId: number, status?: string): Promise<any[]> {
+    let query = db.select({
+      serial: productSerials,
+      product: products,
+      warehouse: warehouses
+    })
+    .from(productSerials)
+    .leftJoin(products, eq(productSerials.productId, products.id))
+    .leftJoin(warehouses, eq(productSerials.warehouseId, warehouses.id))
+    .where(and(
+      eq(productSerials.companyId, companyId),
+      eq(productSerials.isActive, true)
+    ));
+
+    if (status) {
+      query = query.where(eq(productSerials.status, status));
+    }
+
+    return await query.orderBy(productSerials.serialNumber);
   }
 
   // Chart of Accounts Implementation
