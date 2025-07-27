@@ -111,9 +111,12 @@ export default function UnifiedUserManagement() {
   });
 
   // Fetch active company modules
-  const { data: activeModules = [] } = useQuery<any[]>({
+  const { data: moduleData } = useQuery<any>({
     queryKey: ["/api/modules/company"],
   });
+  
+  // Extract active module IDs from the API response
+  const activeModules = moduleData?.modules?.filter((module: any) => module.isActive)?.map((module: any) => module.id) || [];
 
   // Mutations
   const toggleUserStatusMutation = useMutation({
@@ -143,7 +146,7 @@ export default function UnifiedUserManagement() {
 
   const toggleModuleMutation = useMutation({
     mutationFn: async ({ module, enabled }: { module: string; enabled: boolean }) => {
-      return apiRequest(`/api/modules/${module}/toggle`, "POST", { enabled });
+      return apiRequest(`/api/modules/${module}/toggle`, "POST", { isActive: enabled, reason: "Module toggled via admin interface" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
