@@ -380,6 +380,27 @@ export default function UnifiedUserManagement() {
     },
   });
 
+  // Initialize form when selectedUser changes
+  React.useEffect(() => {
+    if (selectedUser && isUserDialogOpen) {
+      userForm.reset({
+        username: selectedUser.username || "",
+        email: selectedUser.email || "",
+        name: selectedUser.name || "",
+        role: selectedUser.role || "",
+        status: selectedUser.status || "active",
+      });
+    } else if (!selectedUser && isUserDialogOpen) {
+      userForm.reset({
+        username: "",
+        email: "",
+        name: "",
+        role: "",
+        status: "active",
+      });
+    }
+  }, [selectedUser, isUserDialogOpen, userForm]);
+
   // Role form
   const roleForm = useForm<RoleFormData>({
     resolver: zodResolver(roleFormSchema),
@@ -545,7 +566,6 @@ export default function UnifiedUserManagement() {
                         size="sm"
                         onClick={() => {
                           setSelectedUser(user);
-                          userForm.reset(user);
                           setIsUserDialogOpen(true);
                         }}
                       >
@@ -1307,7 +1327,7 @@ export default function UnifiedUserManagement() {
                     <FormLabel>Role</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -1317,7 +1337,12 @@ export default function UnifiedUserManagement() {
                       <SelectContent>
                         {systemRoles.map((role: any) => (
                           <SelectItem key={role.id} value={role.name}>
-                            {role.displayName}
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline" className="text-xs">
+                                Level {role.level || "N/A"}
+                              </Badge>
+                              <span>{role.displayName}</span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1420,8 +1445,6 @@ export default function UnifiedUserManagement() {
         onClose={hideSuccess}
         title={modalOptions.title}
         description={modalOptions.description}
-        confirmText={modalOptions.confirmText}
-        onConfirm={modalOptions.onConfirm}
       />
     </div>
   );
