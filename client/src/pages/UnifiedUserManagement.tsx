@@ -162,6 +162,10 @@ export default function UnifiedUserManagement() {
   // Fetch active company modules
   const { data: moduleData } = useQuery<any>({
     queryKey: ["/api/modules/company"],
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   // Extract active module IDs from the API response
@@ -307,8 +311,8 @@ export default function UnifiedUserManagement() {
       return { previousModuleData };
     },
     onSuccess: (_, variables) => {
-      // Invalidate and refetch the modules data immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
+      // Don't invalidate immediately to prevent overwriting optimistic updates
+      // The optimistic update has already set the correct state
       showSuccess({
         title: "Module Status Updated",
         description: `${variables.module.replace(/_/g, ' ')} module has been ${variables.enabled ? "activated" : "deactivated"} successfully`,
