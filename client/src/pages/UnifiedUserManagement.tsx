@@ -110,6 +110,11 @@ export default function UnifiedUserManagement() {
     queryKey: ["/api/admin/role-history"],
   });
 
+  // Fetch active company modules
+  const { data: activeModules = [] } = useQuery<any[]>({
+    queryKey: ["/api/modules/company"],
+  });
+
   // Mutations
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: number; status: string }) => {
@@ -480,7 +485,7 @@ export default function UnifiedUserManagement() {
                   {module.replace(/_/g, " ")}
                 </CardTitle>
                 <Switch
-                  checked={true} // This would come from module activation status
+                  checked={activeModules.includes(module)}
                   onCheckedChange={(checked) => {
                     toggleModuleMutation.mutate({ module, enabled: checked });
                   }}

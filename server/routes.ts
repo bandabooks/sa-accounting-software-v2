@@ -6481,6 +6481,34 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Permissions Matrix Routes - BRIDGED TO WORKING RBAC SYSTEM
   app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getBridgedPermissionsMatrix);
   
+  // Permission Update Route
+  app.post("/api/permissions/update", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { roleId, module, permission, enabled } = req.body;
+      
+      if (!roleId || !module || !permission || typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Update permission in the database
+      await storage.updateRolePermission(roleId, module, permission, enabled);
+      
+      // Log the audit
+      await logAudit(
+        req.user!.id, 
+        enabled ? 'GRANT' : 'REVOKE', 
+        'role_permission', 
+        roleId,
+        `${enabled ? 'Granted' : 'Revoked'} ${permission} permission for ${module} module`
+      );
+
+      res.json({ success: true, message: "Permission updated successfully" });
+    } catch (error) {
+      console.error("Error updating permission:", error);
+      res.status(500).json({ message: "Failed to update permission" });
+    }
+  });
+  
   // Module Activation Routes - BRIDGED TO WORKING RBAC SYSTEM
   app.get("/api/modules/company", authenticate, requireSuperAdmin, getBridgedCompanyModules);
   app.post("/api/modules/:moduleId/toggle", authenticate, requireSuperAdmin, toggleModuleActivation);

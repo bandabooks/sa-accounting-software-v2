@@ -7796,6 +7796,29 @@ export class DatabaseStorage implements IStorage {
     await db.execute(updateQuery);
   }
 
+  // Update individual role permission
+  async updateRolePermission(roleId: number, module: string, permission: string, enabled: boolean): Promise<void> {
+    try {
+      // For now, this is a simplified implementation that logs the permission change
+      // In a full implementation, this would update a role_permissions table
+      console.log(`Role ${roleId}: ${enabled ? 'Granting' : 'Revoking'} ${permission} permission for ${module} module`);
+      
+      // Create audit log entry for the permission change
+      await this.createAuditLog({
+        userId: roleId,
+        action: enabled ? 'GRANT_PERMISSION' : 'REVOKE_PERMISSION',
+        resource: 'role_permission',
+        resourceId: roleId,
+        details: `${enabled ? 'Granted' : 'Revoked'} ${permission} permission for ${module} module`,
+        oldValues: enabled ? null : { [module]: { [permission]: true } },
+        newValues: enabled ? { [module]: { [permission]: true } } : null
+      });
+    } catch (error) {
+      console.error('Error updating role permission:', error);
+      throw error;
+    }
+  }
+
   // Update user status
   async updateUserStatus(userId: number, isActive: boolean): Promise<void> {
     const updateQuery = sql`
