@@ -8124,13 +8124,13 @@ export class DatabaseStorage implements IStorage {
     const userCompanies = await db
       .select({
         user: users,
-        role: userCompanyMemberships.role
+        role: companyUsers.role
       })
       .from(users)
-      .leftJoin(userCompanyMemberships, eq(users.id, userCompanyMemberships.userId))
+      .leftJoin(companyUsers, eq(users.id, companyUsers.userId))
       .where(or(
         eq(users.role, role),
-        eq(userCompanyMemberships.role, role)
+        eq(companyUsers.role, role)
       ));
 
     return userCompanies.map(uc => uc.user);
@@ -8141,12 +8141,12 @@ export class DatabaseStorage implements IStorage {
       .select({
         user: users
       })
-      .from(userCompanyMemberships)
-      .innerJoin(users, eq(users.id, userCompanyMemberships.userId))
+      .from(companyUsers)
+      .innerJoin(users, eq(users.id, companyUsers.userId))
       .where(
         and(
-          eq(userCompanyMemberships.companyId, companyId),
-          eq(userCompanyMemberships.role, 'company_admin')
+          eq(companyUsers.companyId, companyId),
+          eq(companyUsers.role, 'company_admin')
         )
       );
 
@@ -8160,13 +8160,13 @@ export class DatabaseStorage implements IStorage {
   }>> {
     const memberships = await db
       .select({
-        companyId: userCompanyMemberships.companyId,
+        companyId: companyUsers.companyId,
         companyName: companies.name,
-        role: userCompanyMemberships.role
+        role: companyUsers.role
       })
-      .from(userCompanyMemberships)
-      .innerJoin(companies, eq(companies.id, userCompanyMemberships.companyId))
-      .where(eq(userCompanyMemberships.userId, userId));
+      .from(companyUsers)
+      .innerJoin(companies, eq(companies.id, companyUsers.companyId))
+      .where(eq(companyUsers.userId, userId));
 
     return memberships;
   }
@@ -8177,11 +8177,11 @@ export class DatabaseStorage implements IStorage {
       .from(auditLogs)
       .where(
         and(
-          sql`${auditLogs.action} = ANY(${actions})`,
-          sql`${auditLogs.createdAt} >= ${startDate}`
+          inArray(auditLogs.action, actions),
+          gte(auditLogs.timestamp, startDate)
         )
       )
-      .orderBy(desc(auditLogs.createdAt));
+      .orderBy(desc(auditLogs.timestamp));
   }
 
   // Module activation management
