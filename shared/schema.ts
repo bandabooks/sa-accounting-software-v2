@@ -3701,21 +3701,3 @@ export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
 
 export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
 export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;
-
-// Company Modules Management
-export const companyModules = pgTable("company_modules", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  moduleId: varchar("module_id", { length: 50 }).notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
-  activatedAt: timestamp("activated_at"),
-  deactivatedAt: timestamp("deactivated_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("company_modules_company_idx").on(table.companyId),
-  index("company_modules_module_idx").on(table.moduleId),
-]);
-
-export type CompanyModule = typeof companyModules.$inferSelect;
-export type InsertCompanyModule = typeof companyModules.$inferInsert;

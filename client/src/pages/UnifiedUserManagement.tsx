@@ -222,7 +222,11 @@ export default function UnifiedUserManagement() {
     onSuccess: () => {
       // Invalidate and refetch to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
-      // Silent update - no modal for this page to avoid toggle state disruption
+      queryClient.refetchQueries({ queryKey: ["/api/super-admin/users"] });
+      showSuccess({
+        title: "User Status Updated",
+        description: "User status has been successfully updated.",
+      });
     },
   });
 

@@ -100,7 +100,6 @@ import {
   posShifts,
   posRefunds,
   posRefundItems,
-  companyModules,
   type Customer, 
   type InsertCustomer,
   type Invoice,
