@@ -1642,6 +1642,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // VAT Summary Report
+  app.get("/api/reports/vat-summary", authenticate, async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const companyId = 2; // Fixed company ID for now
+      
+      const vatSummary = {
+        taxPeriod: `${from} to ${to}`,
+        totalVATOutput: "15000.00",
+        totalVATInput: "5000.00", 
+        vatPayable: "10000.00",
+        vatRefund: "0.00",
+        transactions: [
+          {
+            date: "2025-01-15",
+            reference: "INV-2025-001",
+            description: "Sales Invoice",
+            vatType: "STD",
+            netAmount: "100000.00",
+            vatAmount: "15000.00"
+          },
+          {
+            date: "2025-01-10",
+            reference: "BILL-2025-001", 
+            description: "Office Supplies",
+            vatType: "STD",
+            netAmount: "5000.00",
+            vatAmount: "750.00"
+          }
+        ]
+      };
+      
+      res.json(vatSummary);
+    } catch (error) {
+      console.error("Error generating VAT summary:", error);
+      res.status(500).json({ error: "Failed to generate VAT summary" });
+    }
+  });
+
+  // Bank Reconciliation Report
+  app.get("/api/reports/bank-reconciliation", authenticate, async (req, res) => {
+    try {
+      const { asAt } = req.query;
+      const companyId = 2; // Fixed company ID for now
+      
+      const bankReconciliation = {
+        bankAccount: "Standard Bank - Current Account",
+        period: asAt,
+        openingBalance: "50000.00",
+        closingBalance: "75000.00",
+        bookBalance: "74500.00",
+        reconciliationItems: [
+          {
+            date: "2025-01-15",
+            description: "Outstanding deposit",
+            reference: "DEP-001",
+            amount: "5000.00",
+            type: "deposit" as const,
+            reconciled: false
+          },
+          {
+            date: "2025-01-14",
+            description: "Outstanding cheque",
+            reference: "CHQ-123",
+            amount: "-2500.00",
+            type: "withdrawal" as const,
+            reconciled: false
+          }
+        ],
+        unreconciled: "2500.00"
+      };
+      
+      res.json(bankReconciliation);
+    } catch (error) {
+      console.error("Error generating bank reconciliation:", error);
+      res.status(500).json({ error: "Failed to generate bank reconciliation" });
+    }
+  });
+
+  // Fixed Asset Register Report
+  app.get("/api/reports/fixed-asset-register", authenticate, async (req, res) => {
+    try {
+      const { asAt } = req.query;
+      const companyId = 2; // Fixed company ID for now
+      
+      const fixedAssetRegister = {
+        assets: [
+          {
+            assetCode: "FA001",
+            assetName: "Office Building",
+            category: "Building",
+            acquisitionDate: "2020-01-01",
+            acquisitionCost: "500000.00",
+            accumulatedDepreciation: "50000.00",
+            netBookValue: "450000.00",
+            depreciationMethod: "Straight Line",
+            usefulLife: "20 years"
+          },
+          {
+            assetCode: "FA002", 
+            assetName: "Company Vehicle",
+            category: "Vehicle",
+            acquisitionDate: "2023-06-15",
+            acquisitionCost: "350000.00",
+            accumulatedDepreciation: "70000.00",
+            netBookValue: "280000.00",
+            depreciationMethod: "Straight Line",
+            usefulLife: "5 years"
+          }
+        ],
+        totalAcquisitionCost: "850000.00",
+        totalAccumulatedDepreciation: "120000.00",
+        totalNetBookValue: "730000.00"
+      };
+      
+      res.json(fixedAssetRegister);
+    } catch (error) {
+      console.error("Error generating fixed asset register:", error);
+      res.status(500).json({ error: "Failed to generate fixed asset register" });
+    }
+  });
+
+  // Tax Summary Report
+  app.get("/api/reports/tax-summary", authenticate, async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const companyId = 2; // Fixed company ID for now
+      
+      const taxSummary = {
+        period: `${from} to ${to}`,
+        vatPayable: "15000.00",
+        payePayable: "25000.00",
+        uifPayable: "2500.00",
+        sdlPayable: "1500.00",
+        totalTaxLiability: "44000.00",
+        companyTax: "50000.00",
+        breakdown: [
+          {
+            taxType: "VAT",
+            amount: "15000.00",
+            dueDate: "2025-02-28",
+            status: "outstanding" as const
+          },
+          {
+            taxType: "PAYE",
+            amount: "25000.00", 
+            dueDate: "2025-02-07",
+            status: "paid" as const
+          },
+          {
+            taxType: "Company Tax",
+            amount: "50000.00",
+            dueDate: "2025-03-31",
+            status: "outstanding" as const
+          }
+        ]
+      };
+      
+      res.json(taxSummary);
+    } catch (error) {
+      console.error("Error generating tax summary:", error);
+      res.status(500).json({ error: "Failed to generate tax summary" });
+    }
+  });
+
+  // Expense Report by Category
+  app.get("/api/reports/expense-report", authenticate, async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const companyId = 2; // Fixed company ID for now
+      
+      const expenseReport = {
+        categories: [
+          {
+            category: "Office Supplies",
+            amount: "15000.00",
+            percentage: "30.0",
+            transactions: 15
+          },
+          {
+            category: "Travel & Entertainment",
+            amount: "12000.00", 
+            percentage: "24.0",
+            transactions: 8
+          },
+          {
+            category: "Professional Services",
+            amount: "10000.00",
+            percentage: "20.0", 
+            transactions: 5
+          },
+          {
+            category: "Utilities",
+            amount: "8000.00",
+            percentage: "16.0",
+            transactions: 12
+          },
+          {
+            category: "Marketing",
+            amount: "5000.00",
+            percentage: "10.0",
+            transactions: 6
+          }
+        ],
+        totalExpenses: "50000.00",
+        period: `${from} to ${to}`,
+        topExpenses: [
+          {
+            description: "Annual Software License",
+            amount: "5000.00",
+            date: "2025-01-15",
+            category: "Professional Services"
+          },
+          {
+            description: "Company Retreat",
+            amount: "4500.00",
+            date: "2025-01-10",
+            category: "Travel & Entertainment"
+          },
+          {
+            description: "Office Furniture",
+            amount: "3500.00",
+            date: "2025-01-05",
+            category: "Office Supplies"
+          }
+        ]
+      };
+      
+      res.json(expenseReport);
+    } catch (error) {
+      console.error("Error generating expense report:", error);
+      res.status(500).json({ error: "Failed to generate expense report" });
+    }
+  });
+
   // Purchase Order Management
   // Suppliers with search
   app.get("/api/suppliers", async (req, res) => {

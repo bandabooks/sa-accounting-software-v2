@@ -1,0 +1,77 @@
+1. Financial Reports
+Prompt:
+Review the Financial Reports module. Ensure all standard accounting reports required for compliance and management are available and up to date.
+Include (if not already implemented):
+
+Income Statement (Profit & Loss)
+
+Balance Sheet
+
+Cash Flow Statement
+
+Trial Balance
+
+General Ledger
+
+Accounts Receivable Aging
+
+Accounts Payable Aging
+
+VAT/GST Summary & Detail Reports
+
+Bank Reconciliation Report
+
+Fixed Asset Register
+
+Tax Summary Reports
+
+Expense Reports by category
+
+All reports must allow date filtering, exporting (PDF/Excel/CSV), drill-down to source transactions, and be integrated with the chart of accounts. Before implementation, always check for existing features to avoid duplication. Add only missing or enhanced features.
+
+2. Business Reports
+Prompt:
+Review and enhance the Business Reports module to ensure it covers the full scope of operational and management analytics for the business.
+Include (if not already implemented):
+
+Sales by Product/Category/Region/Rep
+
+Customer Reports (top customers, sales by customer, AR analysis)
+
+Supplier Reports (purchases, AP analysis)
+
+Inventory Stock Movement/Valuation
+
+Profitability by segment, customer, or product
+
+Employee Performance Reports
+
+KPI Dashboards (e.g., gross margin %, days sales outstanding, etc.)
+
+Budget vs Actual Reports
+
+POS Reports (sales, cash-up, shift summary)
+
+Custom Report Builder for ad-hoc analysis
+
+Reports must be filterable, exportable, and support charts/visualizations where appropriate. Integrate with all core modules and avoid duplicating reports.
+
+3. General Report Module Enhancements
+Prompt:
+Ensure the Reports module provides:
+
+Real-time data refresh
+
+Multi-company, branch, and department support
+
+User role-based access to sensitive reports
+
+Audit trail for report generation/export
+
+Bookmarking/Favorites for commonly used reports
+
+Scheduled/automated email delivery of reports
+
+Custom branding (logo, company details on exported reports)
+
+Integrate all report data with the main chart of accounts and master data. Before any new report implementation, first verify if the feature is already present.

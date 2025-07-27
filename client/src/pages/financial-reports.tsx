@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Download, TrendingUp, Calculator, BarChart3, PieChart, Activity, DollarSign, Building, FileBarChart, RefreshCw, CalendarIcon, AlertCircle } from "lucide-react";
+import { FileText, Download, TrendingUp, Calculator, BarChart3, PieChart, Activity, DollarSign, Building, FileBarChart, RefreshCw, CalendarIcon, AlertCircle, Receipt, ShieldCheck, Truck, PiggyBank, FolderOpen } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -112,6 +112,89 @@ interface AgedPayablesData {
   };
 }
 
+interface VATSummaryData {
+  taxPeriod: string;
+  totalVATOutput: string;
+  totalVATInput: string;
+  vatPayable: string;
+  vatRefund: string;
+  transactions: Array<{
+    date: string;
+    reference: string;
+    description: string;
+    vatType: string;
+    netAmount: string;
+    vatAmount: string;
+  }>;
+}
+
+interface BankReconciliationData {
+  bankAccount: string;
+  period: string;
+  openingBalance: string;
+  closingBalance: string;
+  bookBalance: string;
+  reconciliationItems: Array<{
+    date: string;
+    description: string;
+    reference: string;
+    amount: string;
+    type: 'deposit' | 'withdrawal' | 'adjustment';
+    reconciled: boolean;
+  }>;
+  unreconciled: string;
+}
+
+interface FixedAssetRegisterData {
+  assets: Array<{
+    assetCode: string;
+    assetName: string;
+    category: string;
+    acquisitionDate: string;
+    acquisitionCost: string;
+    accumulatedDepreciation: string;
+    netBookValue: string;
+    depreciationMethod: string;
+    usefulLife: string;
+  }>;
+  totalAcquisitionCost: string;
+  totalAccumulatedDepreciation: string;
+  totalNetBookValue: string;
+}
+
+interface TaxSummaryData {
+  period: string;
+  vatPayable: string;
+  payePayable: string;
+  uifPayable: string;
+  sdlPayable: string;
+  totalTaxLiability: string;
+  companyTax: string;
+  breakdown: Array<{
+    taxType: string;
+    amount: string;
+    dueDate: string;
+    status: 'paid' | 'outstanding' | 'overdue';
+  }>;
+}
+
+interface ExpenseReportData {
+  categories: Array<{
+    category: string;
+    amount: string;
+    percentage: string;
+    transactions: number;
+  }>;
+  totalExpenses: string;
+  period: string;
+  topExpenses: Array<{
+    description: string;
+    amount: string;
+    date: string;
+    category: string;
+  }>;
+}
+
 export default function FinancialReports() {
   const [dateFrom, setDateFrom] = useState(format(new Date(new Date().getFullYear(), 0, 1), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -160,6 +243,36 @@ export default function FinancialReports() {
     enabled: activeTab === "aged-payables"
   });
 
+  // VAT Summary Query
+  const { data: vatSummary, isLoading: vatSummaryLoading } = useQuery<VATSummaryData>({
+    queryKey: ["/api/reports/vat-summary", dateFrom, dateTo],
+    enabled: activeTab === "vat-summary"
+  });
+
+  // Bank Reconciliation Query
+  const { data: bankReconciliation, isLoading: bankReconciliationLoading } = useQuery<BankReconciliationData>({
+    queryKey: ["/api/reports/bank-reconciliation", dateTo],
+    enabled: activeTab === "bank-reconciliation"
+  });
+
+  // Fixed Asset Register Query
+  const { data: fixedAssetRegister, isLoading: fixedAssetRegisterLoading } = useQuery<FixedAssetRegisterData>({
+    queryKey: ["/api/reports/fixed-asset-register", dateTo],
+    enabled: activeTab === "fixed-asset-register"
+  });
+
+  // Tax Summary Query
+  const { data: taxSummary, isLoading: taxSummaryLoading } = useQuery<TaxSummaryData>({
+    queryKey: ["/api/reports/tax-summary", dateFrom, dateTo],
+    enabled: activeTab === "tax-summary"
+  });
+
+  // Expense Report Query
+  const { data: expenseReport, isLoading: expenseReportLoading } = useQuery<ExpenseReportData>({
+    queryKey: ["/api/reports/expense-report", dateFrom, dateTo],
+    enabled: activeTab === "expense-report"
+  });
+
   const reportTabs = [
     { 
       id: "balance-sheet", 
@@ -202,6 +315,36 @@ export default function FinancialReports() {
       label: "Aged Payables", 
       icon: <FileBarChart className="h-4 w-4" />,
       description: "Outstanding supplier balances by age"
+    },
+    { 
+      id: "vat-summary", 
+      label: "VAT Summary", 
+      icon: <Receipt className="h-4 w-4" />,
+      description: "VAT returns and compliance summary"
+    },
+    { 
+      id: "bank-reconciliation", 
+      label: "Bank Reconciliation", 
+      icon: <PiggyBank className="h-4 w-4" />,
+      description: "Bank statement reconciliation"
+    },
+    { 
+      id: "fixed-asset-register", 
+      label: "Fixed Asset Register", 
+      icon: <Building className="h-4 w-4" />,
+      description: "Asset register with depreciation"
+    },
+    { 
+      id: "tax-summary", 
+      label: "Tax Summary", 
+      icon: <ShieldCheck className="h-4 w-4" />,
+      description: "Tax liability and compliance summary"
+    },
+    { 
+      id: "expense-report", 
+      label: "Expense Reports", 
+      icon: <FolderOpen className="h-4 w-4" />,
+      description: "Expense analysis by category"
     }
   ];
 
@@ -265,7 +408,7 @@ export default function FinancialReports() {
 
       {/* Financial Reports Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6 xl:grid-cols-12">
           {reportTabs.map((tab) => (
             <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
               {tab.icon}
@@ -845,6 +988,390 @@ export default function FinancialReports() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   No aged payables data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* VAT Summary */}
+        <TabsContent value="vat-summary" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                VAT Summary & Detail Report
+              </CardTitle>
+              <CardDescription>
+                VAT analysis for {format(new Date(dateFrom), "dd MMM yyyy")} to {format(new Date(dateTo), "dd MMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {vatSummaryLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : vatSummary ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">VAT Output</div>
+                        <div className="text-2xl font-bold text-green-600">{formatCurrency(parseFloat(vatSummary.totalVATOutput))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">VAT Input</div>
+                        <div className="text-2xl font-bold text-blue-600">{formatCurrency(parseFloat(vatSummary.totalVATInput))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">VAT Payable</div>
+                        <div className="text-2xl font-bold text-red-600">{formatCurrency(parseFloat(vatSummary.vatPayable))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">VAT Refund</div>
+                        <div className="text-2xl font-bold text-orange-600">{formatCurrency(parseFloat(vatSummary.vatRefund))}</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 text-sm font-medium">Date</th>
+                          <th className="text-left py-2 text-sm font-medium">Reference</th>
+                          <th className="text-left py-2 text-sm font-medium">Description</th>
+                          <th className="text-left py-2 text-sm font-medium">VAT Type</th>
+                          <th className="text-right py-2 text-sm font-medium">Net Amount</th>
+                          <th className="text-right py-2 text-sm font-medium">VAT Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vatSummary.transactions.map((transaction, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="py-2 text-sm">{format(new Date(transaction.date), "dd/MM/yyyy")}</td>
+                            <td className="py-2 text-sm">{transaction.reference}</td>
+                            <td className="py-2 text-sm">{transaction.description}</td>
+                            <td className="py-2 text-sm">{transaction.vatType}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(transaction.netAmount))}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(transaction.vatAmount))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No VAT data available for the selected period
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Bank Reconciliation */}
+        <TabsContent value="bank-reconciliation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PiggyBank className="h-5 w-5" />
+                Bank Reconciliation Report
+              </CardTitle>
+              <CardDescription>
+                Bank reconciliation as at {format(new Date(dateTo), "dd MMMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {bankReconciliationLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : bankReconciliation ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">Opening Balance</div>
+                        <div className="text-xl font-bold">{formatCurrency(parseFloat(bankReconciliation.openingBalance))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">Book Balance</div>
+                        <div className="text-xl font-bold">{formatCurrency(parseFloat(bankReconciliation.bookBalance))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">Bank Balance</div>
+                        <div className="text-xl font-bold">{formatCurrency(parseFloat(bankReconciliation.closingBalance))}</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 text-sm font-medium">Date</th>
+                          <th className="text-left py-2 text-sm font-medium">Description</th>
+                          <th className="text-left py-2 text-sm font-medium">Reference</th>
+                          <th className="text-left py-2 text-sm font-medium">Type</th>
+                          <th className="text-right py-2 text-sm font-medium">Amount</th>
+                          <th className="text-center py-2 text-sm font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bankReconciliation.reconciliationItems.map((item, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="py-2 text-sm">{format(new Date(item.date), "dd/MM/yyyy")}</td>
+                            <td className="py-2 text-sm">{item.description}</td>
+                            <td className="py-2 text-sm">{item.reference}</td>
+                            <td className="py-2 text-sm capitalize">{item.type}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(item.amount))}</td>
+                            <td className="py-2 text-sm text-center">
+                              <Badge variant={item.reconciled ? "default" : "destructive"}>
+                                {item.reconciled ? "Reconciled" : "Outstanding"}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No bank reconciliation data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Fixed Asset Register */}
+        <TabsContent value="fixed-asset-register" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Fixed Asset Register
+              </CardTitle>
+              <CardDescription>
+                Fixed assets and depreciation as at {format(new Date(dateTo), "dd MMMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {fixedAssetRegisterLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : fixedAssetRegister ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">Total Cost</div>
+                        <div className="text-xl font-bold">{formatCurrency(parseFloat(fixedAssetRegister.totalAcquisitionCost))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">Accumulated Depreciation</div>
+                        <div className="text-xl font-bold text-red-600">{formatCurrency(parseFloat(fixedAssetRegister.totalAccumulatedDepreciation))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">Net Book Value</div>
+                        <div className="text-xl font-bold text-green-600">{formatCurrency(parseFloat(fixedAssetRegister.totalNetBookValue))}</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 text-sm font-medium">Asset Code</th>
+                          <th className="text-left py-2 text-sm font-medium">Asset Name</th>
+                          <th className="text-left py-2 text-sm font-medium">Category</th>
+                          <th className="text-left py-2 text-sm font-medium">Acquisition Date</th>
+                          <th className="text-right py-2 text-sm font-medium">Cost</th>
+                          <th className="text-right py-2 text-sm font-medium">Depreciation</th>
+                          <th className="text-right py-2 text-sm font-medium">Net Book Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fixedAssetRegister.assets.map((asset, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="py-2 text-sm">{asset.assetCode}</td>
+                            <td className="py-2 text-sm">{asset.assetName}</td>
+                            <td className="py-2 text-sm">{asset.category}</td>
+                            <td className="py-2 text-sm">{format(new Date(asset.acquisitionDate), "dd/MM/yyyy")}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(asset.acquisitionCost))}</td>
+                            <td className="py-2 text-sm text-right font-mono text-red-600">{formatCurrency(parseFloat(asset.accumulatedDepreciation))}</td>
+                            <td className="py-2 text-sm text-right font-mono font-semibold">{formatCurrency(parseFloat(asset.netBookValue))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No fixed assets data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tax Summary */}
+        <TabsContent value="tax-summary" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5" />
+                Tax Summary Report
+              </CardTitle>
+              <CardDescription>
+                Tax liability summary for {format(new Date(dateFrom), "dd MMM yyyy")} to {format(new Date(dateTo), "dd MMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {taxSummaryLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : taxSummary ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">VAT Payable</div>
+                        <div className="text-xl font-bold text-red-600">{formatCurrency(parseFloat(taxSummary.vatPayable))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">PAYE Payable</div>
+                        <div className="text-xl font-bold text-orange-600">{formatCurrency(parseFloat(taxSummary.payePayable))}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">Company Tax</div>
+                        <div className="text-xl font-bold text-purple-600">{formatCurrency(parseFloat(taxSummary.companyTax))}</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 text-sm font-medium">Tax Type</th>
+                          <th className="text-right py-2 text-sm font-medium">Amount</th>
+                          <th className="text-left py-2 text-sm font-medium">Due Date</th>
+                          <th className="text-center py-2 text-sm font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {taxSummary.breakdown.map((tax, index) => (
+                          <tr key={index} className="border-b border-gray-100">
+                            <td className="py-2 text-sm">{tax.taxType}</td>
+                            <td className="py-2 text-sm text-right font-mono">{formatCurrency(parseFloat(tax.amount))}</td>
+                            <td className="py-2 text-sm">{format(new Date(tax.dueDate), "dd/MM/yyyy")}</td>
+                            <td className="py-2 text-sm text-center">
+                              <Badge variant={tax.status === 'paid' ? "default" : tax.status === 'overdue' ? "destructive" : "secondary"}>
+                                {tax.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No tax summary data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Expense Reports */}
+        <TabsContent value="expense-report" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Expense Report by Category
+              </CardTitle>
+              <CardDescription>
+                Expense analysis for {format(new Date(dateFrom), "dd MMM yyyy")} to {format(new Date(dateTo), "dd MMM yyyy")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {expenseReportLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : expenseReport ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Expenses by Category</h3>
+                      <div className="space-y-3">
+                        {expenseReport.categories.map((category, index) => (
+                          <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
+                            <div>
+                              <div className="font-medium">{category.category}</div>
+                              <div className="text-sm text-muted-foreground">{category.transactions} transactions</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-mono font-semibold">{formatCurrency(parseFloat(category.amount))}</div>
+                              <div className="text-sm text-muted-foreground">{category.percentage}%</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Top Expenses</h3>
+                      <div className="space-y-2">
+                        {expenseReport.topExpenses.map((expense, index) => (
+                          <div key={index} className="flex justify-between items-center p-2 border rounded">
+                            <div>
+                              <div className="font-medium text-sm">{expense.description}</div>
+                              <div className="text-xs text-muted-foreground">{expense.category} • {format(new Date(expense.date), "dd/MM/yyyy")}</div>
+                            </div>
+                            <div className="font-mono font-semibold">{formatCurrency(parseFloat(expense.amount))}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-muted-foreground">Total Expenses</div>
+                    <div className="text-2xl font-bold">{formatCurrency(parseFloat(expenseReport.totalExpenses))}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No expense data available for the selected period
                 </div>
               )}
             </CardContent>
