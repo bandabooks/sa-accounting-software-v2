@@ -3004,16 +3004,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/users", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const users = await storage.getAllUsers();
-      // Remove sensitive data
+      // Remove sensitive data but preserve all user status fields
       const sanitizedUsers = users.map(user => ({
-        ...user,
-        password: undefined,
-        twoFactorSecret: undefined
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status || 'active', // Ensure status is always present
+        isActive: user.isActive !== undefined ? user.isActive : true, // Ensure isActive is always present
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        twoFactorEnabled: user.twoFactorEnabled,
+        lastActiveAt: user.lastActiveAt,
+        emailVerified: user.emailVerified
       }));
       res.json(sanitizedUsers);
     } catch (error) {
       console.error("Failed to fetch all users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // User Status Update (Super Admin)
+  app.patch("/api/super-admin/users/:id/status", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      console.log(`Updating user ${userId} status to: ${status}`);
+      
+      if (!status || !['active', 'inactive'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be 'active' or 'inactive'" });
+      }
+      
+      // Update user status in database
+      const updatedUser = await storage.updateUser(userId, { 
+        status: status,
+        isActive: status === 'active'
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      await logAudit(req.user!.id, 'UPDATE', 'user', userId, `Updated user status to ${status}`);
+      
+      console.log(`Successfully updated user ${userId} status to: ${status}`);
+      
+      // Return the updated user with all necessary fields
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        isActive: updatedUser.isActive,
+        lastLogin: updatedUser.lastLogin,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      });
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
     }
   });
 
