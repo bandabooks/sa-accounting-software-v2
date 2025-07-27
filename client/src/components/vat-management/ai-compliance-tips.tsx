@@ -35,19 +35,11 @@ const AIComplianceTips: React.FC<AIComplianceTipsProps> = ({
     setError(null);
 
     try {
-      const response = await apiRequest('/api/vat/ai-compliance-tips', {
-        method: 'POST',
-        body: JSON.stringify({
-          companyId,
-          vatSettings,
-          transactionData
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const data = await apiRequest('/api/vat/ai-compliance-tips', 'POST', {
+        companyId,
+        vatSettings,
+        transactionData
       });
-
-      const data = await response.json();
       setTips(data.tips || []);
       
       toast({

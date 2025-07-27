@@ -4118,6 +4118,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced VAT Management Routes
+  app.post("/api/vat-types/custom", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const data = { ...req.body, companyId, isSystemType: false };
+      const vatType = await storage.createVatType(data);
+      
+      await logAudit(req.user!.id, 'CREATE', 'vat_type', vatType.id, 'Created custom VAT type');
+      
+      res.json(vatType);
+    } catch (error) {
+      console.error("Error creating custom VAT type:", error);
+      res.status(500).json({ message: "Failed to create custom VAT type" });
+    }
+  });
+
+  app.get("/api/vat/reports/summary", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const { startDate, endDate, format } = req.query;
+      
+      const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
+      
+      if (format === 'pdf' || format === 'excel' || format === 'csv') {
+        // Generate and send file based on format
+        res.setHeader('Content-Type', format === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${Date.now()}.${format}`);
+        // File generation logic would go here
+        res.send('Generated file content');
+      } else {
+        res.json(summary);
+      }
+    } catch (error) {
+      console.error("Error generating VAT summary report:", error);
+      res.status(500).json({ message: "Failed to generate VAT summary report" });
+    }
+  });
+
+  app.get("/api/vat/reports/transactions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const { startDate, endDate, format } = req.query;
+      
+      const transactions = await storage.getVatTransactionReport(companyId, startDate as string, endDate as string);
+      
+      if (format === 'csv' || format === 'excel') {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${Date.now()}.${format}`);
+        res.send('Generated file content');
+      } else {
+        res.json(transactions);
+      }
+    } catch (error) {
+      console.error("Error generating VAT transaction report:", error);
+      res.status(500).json({ message: "Failed to generate VAT transaction report" });
+    }
+  });
+
+  app.get("/api/vat/reports/reconciliation", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const { period, format } = req.query;
+      
+      const reconciliation = await storage.getVatReconciliationReport(companyId, period as string);
+      
+      if (format === 'pdf' || format === 'excel') {
+        res.setHeader('Content-Type', format === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-reconciliation-${Date.now()}.${format}`);
+        res.send('Generated file content');
+      } else {
+        res.json(reconciliation);
+      }
+    } catch (error) {
+      console.error("Error generating VAT reconciliation report:", error);
+      res.status(500).json({ message: "Failed to generate VAT reconciliation report" });
+    }
+  });
+
+  app.post("/api/vat/vat201/create", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const data = { ...req.body, companyId };
+      const vat201 = await storage.createVat201Return(data);
+      
+      await logAudit(req.user!.id, 'CREATE', 'vat201_return', vat201.id, 'Created VAT201 return');
+      
+      res.json(vat201);
+    } catch (error) {
+      console.error("Error creating VAT201 return:", error);
+      res.status(500).json({ message: "Failed to create VAT201 return" });
+    }
+  });
+
+  app.post("/api/vat/vat201/:id/submit", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      
+      const result = await storage.submitVat201ToSars(Number(id), companyId);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'vat201_return', Number(id), 'Submitted VAT201 to SARS');
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error submitting VAT201 to SARS:", error);
+      res.status(500).json({ message: "Failed to submit VAT201 to SARS" });
+    }
+  });
+
+  app.get("/api/sars/integration/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const status = await storage.getSarsIntegrationStatus(companyId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching SARS integration status:", error);
+      res.status(500).json({ message: "Failed to fetch SARS integration status" });
+    }
+  });
+
+  app.post("/api/sars/integration/sync", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const result = await storage.syncWithSars(companyId);
+      
+      await logAudit(req.user!.id, 'ACTION', 'sars_integration', companyId, 'Manual SARS sync performed');
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error syncing with SARS:", error);
+      res.status(500).json({ message: "Failed to sync with SARS" });
+    }
+  });
+
+  app.post("/api/vat/ai-compliance-tips", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { companyId, vatSettings, transactionData } = req.body;
+      const tips = await storage.generateAIVatComplianceTips(companyId, vatSettings, transactionData);
+      
+      await logAudit(req.user!.id, 'ACTION', 'ai_compliance_tips', companyId, 'Generated AI VAT compliance tips');
+      
+      res.json({ tips });
+    } catch (error) {
+      console.error("Error generating AI compliance tips:", error);
+      res.status(500).json({ message: "Failed to generate AI compliance tips" });
+    }
+  });
+
   app.post("/api/vat-reports", authenticate, requirePermission(PERMISSIONS.MANAGE_FINANCIAL_REPORTS), async (req: AuthenticatedRequest, res) => {
     try {
       const data = insertVatReportSchema.parse({

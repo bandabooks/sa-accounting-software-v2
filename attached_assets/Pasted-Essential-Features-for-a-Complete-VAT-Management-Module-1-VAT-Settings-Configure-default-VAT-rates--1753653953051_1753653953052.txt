@@ -1,0 +1,85 @@
+Essential Features for a Complete VAT Management Module
+1. VAT Settings
+Configure default VAT rates (standard, zero-rated, exempt)
+
+Set up company VAT registration details (number, start date, SARS profile, etc.)
+
+Map VAT accounts in the Chart of Accounts (input, output, control accounts)
+
+Customizable VAT period settings (monthly, bi-monthly, quarterly)
+
+Multi-company and multi-branch VAT settings (if supported)
+
+2. VAT Types
+Define and manage unlimited VAT types (standard, reduced, exempt, out-of-scope, import/export)
+
+Assign VAT types to products, services, expense categories, and customers/suppliers
+
+Automated VAT type detection based on transaction, item, or customer type
+
+3. VAT Returns (VAT201)
+Automated VAT calculation and pre-population of VAT201 (or relevant) forms
+
+Support for input VAT (purchases/expenses) and output VAT (sales/income)
+
+Support for reverse charge, import VAT, and mixed supplies
+
+Electronic filing and submission to SARS eFiling API
+
+Track VAT return status: Draft, Submitted, Paid, Audited, Rejected, etc.
+
+Generate VAT liability/refund journal entries automatically
+
+Audit trail of all VAT return submissions and amendments
+
+4. VAT Transaction Capture & Journals
+Automatic VAT split on all sales, purchases, and adjustments
+
+Correct journal entries for each VAT event (linked to COA)
+
+Manual adjustment option for VAT corrections
+
+Support for foreign currency and cross-border VAT handling
+
+5. VAT Reporting
+VAT Detailed Report:
+
+Lists every transaction with VAT amount, type, date, invoice/reference, customer/supplier, status
+
+Filter by VAT type, period, status, or branch/company
+
+VAT Summary Report:
+
+Total input/output VAT per period, net liability, prior period adjustments, payments, refunds
+
+Reconciliation Report:
+
+VAT control account reconciliation with ledger and bank
+
+Exception Report:
+
+Lists mismatched, missing, or suspicious VAT entries for compliance/audit
+
+6. SARS Integration
+eFiling integration:
+
+Pull SARS obligations, pre-populate forms, submit electronically
+
+Retrieve submission/assessment status
+
+Compliance checks:
+
+SARS rule validation before submission (required fields, document uploads, etc.)
+
+Submission receipts and audit log
+
+7. Advanced & Miscellaneous
+Multi-country VAT support (if needed)
+
+Vendor/Customer VAT validation (lookup against VAT registry/SARS)
+
+VAT certificate management (for proof/audit purposes)
+
+Role-based access to VAT configuration and returns
+
+User notifications/reminders for upcoming returns
