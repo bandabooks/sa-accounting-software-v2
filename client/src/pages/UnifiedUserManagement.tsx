@@ -94,20 +94,16 @@ const roleFormSchema = z.object({
 type UserFormData = z.infer<typeof userFormSchema>;
 type RoleFormData = z.infer<typeof roleFormSchema>;
 
-// Module permissions mapping
+// Module permissions mapping - Updated to match exact API module IDs
 const modulePermissions = {
   dashboard: ["VIEW", "CREATE", "EDIT"],
   invoicing: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  expense_management: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  inventory: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  accounting: ["VIEW", "CREATE", "EDIT", "DELETE"],
+  expenses: ["VIEW", "CREATE", "EDIT", "DELETE"],
+  inventory_management: ["VIEW", "CREATE", "EDIT", "DELETE"],
+  chart_of_accounts: ["VIEW", "CREATE", "EDIT", "DELETE"],
   vat_management: ["VIEW", "CREATE", "EDIT"],
   financial_reports: ["VIEW", "EXPORT"],
-  multi_company: ["VIEW", "CREATE", "EDIT", "DELETE", "MANAGE"],
-  advanced_analytics: ["VIEW", "CREATE", "EDIT", "DELETE", "MANAGE"],
-  point_of_sale: ["VIEW", "CREATE", "EDIT", "DELETE", "MANAGE"],
   payroll: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  compliance: ["VIEW", "CREATE", "EDIT"],
 };
 
 export default function UnifiedUserManagement() {
