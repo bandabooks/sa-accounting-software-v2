@@ -107,6 +107,9 @@ import Warehouses from "@/pages/warehouses";
 import LotBatchTracking from "@/pages/lot-batch-tracking";
 import SerialNumbers from "@/pages/serial-numbers";
 import StockCounts from "@/pages/stock-counts";
+import ReorderRules from "@/pages/reorder-rules";
+import ProductBundles from "@/pages/product-bundles";
+import InventoryReports from "@/pages/inventory-reports";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -336,6 +339,21 @@ function AuthenticatedApp() {
         <Route path="/stock-counts">
           <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
             <StockCounts />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/reorder-rules">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <ReorderRules />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/product-bundles">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <ProductBundles />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/inventory-reports">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <InventoryReports />
           </ProtectedRoute>
         </Route>
         <Route path="/pos">
