@@ -472,10 +472,24 @@ export default function SuperAdminUserDetail() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="accountant">Accountant</SelectItem>
-                          <SelectItem value="employee">Employee</SelectItem>
+                          {rolesLoading ? (
+                            <div className="p-2 text-center text-sm text-gray-500">Loading roles...</div>
+                          ) : systemRoles.length === 0 ? (
+                            <div className="p-2 text-center text-sm text-gray-500">No roles found</div>
+                          ) : (
+                            systemRoles.map((role) => (
+                              <SelectItem key={role.id} value={role.name}>
+                                <div className="flex items-center space-x-2">
+                                  <Badge 
+                                    className={`bg-gradient-to-r ${getRoleColor(role.level)} text-white text-xs`}
+                                  >
+                                    Level {role.level}
+                                  </Badge>
+                                  <span>{role.displayName}</span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
