@@ -1,11 +1,29 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Users, UserPlus, Shield, Eye, EyeOff, Key, 
-  Activity, Settings, ToggleLeft, ToggleRight,
-  CheckCircle, XCircle, Edit, Trash2, Save,
-  UserCheck, UserX, Clock, Search, Filter,
-  AlertCircle, AlertTriangle, Crown
+import {
+  Users,
+  UserPlus,
+  Shield,
+  Eye,
+  EyeOff,
+  Key,
+  Activity,
+  Settings,
+  ToggleLeft,
+  ToggleRight,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Trash2,
+  Save,
+  UserCheck,
+  UserX,
+  Clock,
+  Search,
+  Filter,
+  AlertCircle,
+  AlertTriangle,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -14,13 +32,40 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { CardDescription } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -117,44 +162,66 @@ export default function UnifiedUserManagement() {
   const { data: moduleData } = useQuery<any>({
     queryKey: ["/api/modules/company"],
   });
-  
+
   // Extract active module IDs from the API response
-  const activeModules = moduleData?.modules?.filter((module: any) => module.isActive)?.map((module: any) => module.id) || [];
-  
+  const activeModules =
+    moduleData?.modules
+      ?.filter((module: any) => module.isActive)
+      ?.map((module: any) => module.id) || [];
+
   // Create a map for quick lookup of module states
-  const moduleStates = moduleData?.modules?.reduce((acc: any, module: any) => {
-    acc[module.id] = module.isActive;
-    return acc;
-  }, {}) || {};
+  const moduleStates =
+    moduleData?.modules?.reduce((acc: any, module: any) => {
+      acc[module.id] = module.isActive;
+      return acc;
+    }, {}) || {};
 
   // Mutations
   const toggleUserStatusMutation = useMutation({
-    mutationFn: async ({ userId, status }: { userId: number; status: string }) => {
-      return apiRequest(`/api/super-admin/users/${userId}/status`, "PATCH", { status });
+    mutationFn: async ({
+      userId,
+      status,
+    }: {
+      userId: number;
+      status: string;
+    }) => {
+      return apiRequest(`/api/super-admin/users/${userId}/status`, "PATCH", {
+        status,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
       showSuccess({
         title: "User Status Updated",
-        description: "User status has been successfully updated."
+        description: "User status has been successfully updated.",
       });
     },
   });
 
   const updatePermissionMutation = useMutation({
-    mutationFn: async ({ roleId, module, permission, enabled }: { 
-      roleId: number; 
-      module: string; 
-      permission: string; 
-      enabled: boolean 
+    mutationFn: async ({
+      roleId,
+      module,
+      permission,
+      enabled,
+    }: {
+      roleId: number;
+      module: string;
+      permission: string;
+      enabled: boolean;
     }) => {
-      return apiRequest("/api/permissions/update", "POST", { roleId, module, permission, enabled });
+      return apiRequest("/api/permissions/update", "POST", {
+        roleId,
+        module,
+        permission,
+        enabled,
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
       showSuccess({
         title: "Permission Updated",
-        description: `${variables.enabled ? 'Granted' : 'Revoked'} ${variables.permission} permission for ${variables.module} module`
+        description: `${variables.enabled ? "Granted" : "Revoked"} ${variables.permission} permission for ${variables.module} module`,
       });
     },
     onError: (error) => {
@@ -163,45 +230,62 @@ export default function UnifiedUserManagement() {
         description: "Unable to update permission. Please try again.",
         variant: "destructive",
       });
-      console.error('Permission update error:', error);
+      console.error("Permission update error:", error);
     },
   });
 
   const toggleModuleMutation = useMutation({
-    mutationFn: async ({ module, enabled }: { module: string; enabled: boolean }) => {
-      console.log('Toggling module:', { module, enabled }); // Debug log
-      return apiRequest(`/api/modules/${module}/toggle`, "POST", { 
-        isActive: enabled, 
-        reason: "Module toggled via admin interface" 
+    mutationFn: async ({
+      module,
+      enabled,
+    }: {
+      module: string;
+      enabled: boolean;
+    }) => {
+      return apiRequest(`/api/modules/${module}/toggle`, "POST", {
+        isActive: enabled,
+        reason: "Module toggled via admin interface",
       });
     },
     onSuccess: (_, variables) => {
+      // Invalidate and refetch the modules data immediately
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
+      queryClient.refetchQueries({ queryKey: ["/api/modules/company"] });
       showSuccess({
         title: "Module Status Updated",
-        description: `${variables.module} module has been ${variables.enabled ? 'activated' : 'deactivated'} successfully`
+        description: `${variables.module.replace(/_/g, ' ')} module has been ${variables.enabled ? "activated" : "deactivated"} successfully`,
       });
     },
     onError: (error) => {
-      console.error('Module toggle error:', error);
       toast({
-        title: "Module Update Failed", 
-        description: `Unable to update module status. Error: ${error.message || 'Unknown error'}`,
+        title: "Module Update Failed",
+        description: `Unable to update module status. Error: ${error.message || "Unknown error"}`,
         variant: "destructive",
       });
     },
   });
 
   const resolveDuplicateMutation = useMutation({
-    mutationFn: async ({ userId, reason }: { userId: number; reason: string }) => {
-      return apiRequest("/api/admin/resolve-duplicate", "POST", { userId, reason });
+    mutationFn: async ({
+      userId,
+      reason,
+    }: {
+      userId: number;
+      reason: string;
+    }) => {
+      return apiRequest("/api/admin/resolve-duplicate", "POST", {
+        userId,
+        reason,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/audit-duplicates"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/admin/audit-duplicates"],
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
       showSuccess({
         title: "Duplicate Resolved",
-        description: "Duplicate admin user has been successfully resolved."
+        description: "Duplicate admin user has been successfully resolved.",
       });
     },
   });
@@ -214,13 +298,14 @@ export default function UnifiedUserManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
       showSuccess({
         title: "Default Permissions Initialized",
-        description: `Default permissions set for ${data?.updatedCount || 0} roles`
+        description: `Default permissions set for ${data?.updatedCount || 0} roles`,
       });
     },
     onError: (error) => {
       toast({
         title: "Initialization Failed",
-        description: "Unable to initialize default permissions. Please try again.",
+        description:
+          "Unable to initialize default permissions. Please try again.",
         variant: "destructive",
       });
     },
@@ -250,10 +335,12 @@ export default function UnifiedUserManagement() {
 
   // Filter users
   const filteredUsers = users.filter((user: any) => {
-    const matchesSearch = user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter;
+    const matchesSearch =
+      user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || user.status === statusFilter;
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesStatus && matchesRole;
   });
@@ -265,9 +352,11 @@ export default function UnifiedUserManagement() {
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">User Directory</h2>
-          <p className="text-gray-600">Manage users, roles, and access permissions</p>
+          <p className="text-gray-600">
+            Manage users, roles, and access permissions
+          </p>
         </div>
-        <Button 
+        <Button
           onClick={() => {
             setSelectedUser(null);
             userForm.reset();
@@ -283,7 +372,10 @@ export default function UnifiedUserManagement() {
       {/* Search and Filters */}
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            size={16}
+          />
           <Input
             placeholder="Search users by name, email, or username..."
             value={searchTerm}
@@ -338,29 +430,44 @@ export default function UnifiedUserManagement() {
                         {user.name?.[0] || user.username?.[0] || "U"}
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{user.name || user.username}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="font-medium text-gray-900">
+                          {user.name || user.username}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {user.email}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {systemRoles.find((role: any) => role.name === user.role)?.displayName || user.role}
+                      {systemRoles.find((role: any) => role.name === user.role)
+                        ?.displayName || user.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.status === "active" ? "default" : "secondary"}>
+                    <Badge
+                      variant={
+                        user.status === "active" ? "default" : "secondary"
+                      }
+                    >
                       {user.status === "active" ? (
-                        <><CheckCircle size={12} className="mr-1" /> Active</>
+                        <>
+                          <CheckCircle size={12} className="mr-1" /> Active
+                        </>
                       ) : (
-                        <><XCircle size={12} className="mr-1" /> Inactive</>
+                        <>
+                          <XCircle size={12} className="mr-1" /> Inactive
+                        </>
                       )}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center text-sm text-gray-500">
                       <Clock size={12} className="mr-1" />
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
+                      {user.lastLogin
+                        ? new Date(user.lastLogin).toLocaleDateString()
+                        : "Never"}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -379,14 +486,20 @@ export default function UnifiedUserManagement() {
                       <Switch
                         checked={user.status === "active"}
                         onCheckedChange={(checked) => {
-                          if (user.username !== "sysadmin_7f3a2b8e" && user.email !== "accounts@thinkmybiz.com") {
+                          if (
+                            user.username !== "sysadmin_7f3a2b8e" &&
+                            user.email !== "accounts@thinkmybiz.com"
+                          ) {
                             toggleUserStatusMutation.mutate({
                               userId: user.id,
-                              status: checked ? "active" : "inactive"
+                              status: checked ? "active" : "inactive",
                             });
                           }
                         }}
-                        disabled={user.username === "sysadmin_7f3a2b8e" || user.email === "accounts@thinkmybiz.com"}
+                        disabled={
+                          user.username === "sysadmin_7f3a2b8e" ||
+                          user.email === "accounts@thinkmybiz.com"
+                        }
                       />
                     </div>
                   </TableCell>
@@ -405,9 +518,11 @@ export default function UnifiedUserManagement() {
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Role Management</h2>
-          <p className="text-gray-600">Create and manage business roles with module access</p>
+          <p className="text-gray-600">
+            Create and manage business roles with module access
+          </p>
         </div>
-        <Button 
+        <Button
           onClick={() => {
             setSelectedRole(null);
             roleForm.reset();
@@ -435,7 +550,10 @@ export default function UnifiedUserManagement() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Users with this role:</span>
                   <span className="font-medium">
-                    {users.filter((user: any) => user.role === role.name).length}
+                    {
+                      users.filter((user: any) => user.role === role.name)
+                        .length
+                    }
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -470,10 +588,14 @@ export default function UnifiedUserManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Permission Matrix</h2>
-          <p className="text-gray-600">Visual grid to manage role permissions across all modules</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Permission Matrix
+          </h2>
+          <p className="text-gray-600">
+            Visual grid to manage role permissions across all modules
+          </p>
         </div>
-        <Button 
+        <Button
           onClick={() => initializeDefaultPermissionsMutation.mutate()}
           disabled={initializeDefaultPermissionsMutation.isPending}
           variant="outline"
@@ -496,57 +618,76 @@ export default function UnifiedUserManagement() {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="text-left p-3 border-b font-medium text-gray-900">Module</th>
+                  <th className="text-left p-3 border-b font-medium text-gray-900">
+                    Module
+                  </th>
                   {systemRoles.map((role: any) => (
-                    <th key={role.id} className="text-center p-3 border-b font-medium text-gray-900 min-w-24">
+                    <th
+                      key={role.id}
+                      className="text-center p-3 border-b font-medium text-gray-900 min-w-24"
+                    >
                       {role.displayName}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(modulePermissions).map(([module, permissions]) => (
-                  <tr key={module} className="border-b">
-                    <td className="p-3 font-medium text-gray-900 capitalize">
-                      {module.replace(/_/g, " ")}
-                    </td>
-                    {systemRoles.map((role: any) => (
-                      <td key={role.id} className="p-3 text-center">
-                        <div className="flex flex-col space-y-1">
-                          {permissions.map((permission: string) => {
-                            const roleData = permissionsMatrix?.roles?.find((r: any) => r.id === role.id);
-                            // Parse permissions JSON string or use empty object
-                            let rolePermissions = {};
-                            try {
-                              rolePermissions = roleData?.permissions ? JSON.parse(roleData.permissions) : {};
-                            } catch (e) {
-                              rolePermissions = {};
-                            }
-                            const hasPermission = (rolePermissions as any)?.[module]?.[permission] === true;
-                            
-                            return (
-                              <div key={permission} className="flex items-center justify-center">
-                                <Switch
-                                  checked={hasPermission}
-                                  onCheckedChange={(checked) => {
-                                    updatePermissionMutation.mutate({
-                                      roleId: role.id,
-                                      module,
-                                      permission,
-                                      enabled: checked
-                                    });
-                                  }}
-                                  disabled={role.name === "super_admin"}
-                                />
-                                <span className="text-xs text-gray-500 ml-1">{permission}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                {Object.entries(modulePermissions).map(
+                  ([module, permissions]) => (
+                    <tr key={module} className="border-b">
+                      <td className="p-3 font-medium text-gray-900 capitalize">
+                        {module.replace(/_/g, " ")}
                       </td>
-                    ))}
-                  </tr>
-                ))}
+                      {systemRoles.map((role: any) => (
+                        <td key={role.id} className="p-3 text-center">
+                          <div className="flex flex-col space-y-1">
+                            {permissions.map((permission: string) => {
+                              const roleData = permissionsMatrix?.roles?.find(
+                                (r: any) => r.id === role.id,
+                              );
+                              // Parse permissions JSON string or use empty object
+                              let rolePermissions = {};
+                              try {
+                                rolePermissions = roleData?.permissions
+                                  ? JSON.parse(roleData.permissions)
+                                  : {};
+                              } catch (e) {
+                                rolePermissions = {};
+                              }
+                              const hasPermission =
+                                (rolePermissions as any)?.[module]?.[
+                                  permission
+                                ] === true;
+
+                              return (
+                                <div
+                                  key={permission}
+                                  className="flex items-center justify-center"
+                                >
+                                  <Switch
+                                    checked={hasPermission}
+                                    onCheckedChange={(checked) => {
+                                      updatePermissionMutation.mutate({
+                                        roleId: role.id,
+                                        module,
+                                        permission,
+                                        enabled: checked,
+                                      });
+                                    }}
+                                    disabled={role.name === "super_admin"}
+                                  />
+                                  <span className="text-xs text-gray-500 ml-1">
+                                    {permission}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>
@@ -559,8 +700,12 @@ export default function UnifiedUserManagement() {
   const ModuleAccessTab = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Module Access Control</h2>
-        <p className="text-gray-600">Activate/deactivate modules based on subscription plans</p>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Module Access Control
+        </h2>
+        <p className="text-gray-600">
+          Activate/deactivate modules based on subscription plans
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -582,11 +727,19 @@ export default function UnifiedUserManagement() {
             <CardContent>
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">
-                  Available in: {subscriptionPlans.map((plan: any) => plan.displayName).join(", ")}
+                  Available in:{" "}
+                  {subscriptionPlans
+                    .map((plan: any) => plan.displayName)
+                    .join(", ")}
                 </p>
                 <div className="flex items-center space-x-2">
                   <Badge variant="outline" className="text-xs">
-                    {modulePermissions[module as keyof typeof modulePermissions].length} permissions
+                    {
+                      modulePermissions[
+                        module as keyof typeof modulePermissions
+                      ].length
+                    }{" "}
+                    permissions
                   </Badge>
                 </div>
               </div>
@@ -601,8 +754,12 @@ export default function UnifiedUserManagement() {
   const ActivityLogTab = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Activity & Audit Log</h2>
-        <p className="text-gray-600">Track user activities and prevent duplicate admin roles</p>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Activity & Audit Log
+        </h2>
+        <p className="text-gray-600">
+          Track user activities and prevent duplicate admin roles
+        </p>
       </div>
 
       {/* Duplicate Admin Prevention Alert */}
@@ -612,8 +769,9 @@ export default function UnifiedUserManagement() {
           <AlertDescription className="text-red-800">
             <div className="flex items-center justify-between">
               <span>
-                <strong>Warning:</strong> {duplicateAudit.totalDuplicateUsers} duplicate admin roles detected. 
-                Click "View Duplicates" to resolve them.
+                <strong>Warning:</strong> {duplicateAudit.totalDuplicateUsers}{" "}
+                duplicate admin roles detected. Click "View Duplicates" to
+                resolve them.
               </span>
               <Dialog>
                 <DialogTrigger asChild>
@@ -625,72 +783,98 @@ export default function UnifiedUserManagement() {
                   <DialogHeader>
                     <DialogTitle>Duplicate Admin Roles Detected</DialogTitle>
                     <DialogDescription>
-                      The following duplicate admin roles have been found in the system. 
-                      Only one admin per role/email should exist for security reasons.
+                      The following duplicate admin roles have been found in the
+                      system. Only one admin per role/email should exist for
+                      security reasons.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    {duplicateAudit.duplicates.map((duplicate: any, index: number) => (
-                      <Card key={index} className="border-orange-200">
-                        <CardHeader>
-                          <CardTitle className="text-lg text-orange-800">
-                            {duplicate.role}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            {duplicate.users.map((user: any) => (
-                              <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                  <p className="font-medium">{user.username}</p>
-                                  <p className="text-sm text-gray-600">{user.email}</p>
-                                  {user.companyName && (
-                                    <p className="text-xs text-gray-500">Company: {user.companyName}</p>
-                                  )}
+                    {duplicateAudit.duplicates.map(
+                      (duplicate: any, index: number) => (
+                        <Card key={index} className="border-orange-200">
+                          <CardHeader>
+                            <CardTitle className="text-lg text-orange-800">
+                              {duplicate.role}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-3">
+                              {duplicate.users.map((user: any) => (
+                                <div
+                                  key={user.id}
+                                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                >
+                                  <div>
+                                    <p className="font-medium">
+                                      {user.username}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {user.email}
+                                    </p>
+                                    {user.companyName && (
+                                      <p className="text-xs text-gray-500">
+                                        Company: {user.companyName}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="destructive" size="sm">
+                                        <UserX className="h-4 w-4 mr-2" />
+                                        Resolve
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>
+                                          Resolve Duplicate Admin
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                          This will deactivate the duplicate
+                                          admin user: {user.username}
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <div>
+                                          <Label htmlFor="reason">
+                                            Reason for Resolution
+                                          </Label>
+                                          <Textarea
+                                            id="reason"
+                                            placeholder="Explain why this duplicate is being resolved..."
+                                          />
+                                        </div>
+                                        <div className="flex justify-end space-x-2">
+                                          <Button variant="outline">
+                                            Cancel
+                                          </Button>
+                                          <Button
+                                            variant="destructive"
+                                            onClick={() => {
+                                              const reason = (
+                                                document.getElementById(
+                                                  "reason",
+                                                ) as HTMLTextAreaElement
+                                              )?.value;
+                                              resolveDuplicateMutation.mutate({
+                                                userId: user.id,
+                                                reason,
+                                              });
+                                            }}
+                                          >
+                                            Resolve Duplicate
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
                                 </div>
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="destructive" size="sm">
-                                      <UserX className="h-4 w-4 mr-2" />
-                                      Resolve
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Resolve Duplicate Admin</DialogTitle>
-                                      <DialogDescription>
-                                        This will deactivate the duplicate admin user: {user.username}
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="space-y-4">
-                                      <div>
-                                        <Label htmlFor="reason">Reason for Resolution</Label>
-                                        <Textarea 
-                                          id="reason"
-                                          placeholder="Explain why this duplicate is being resolved..."
-                                        />
-                                      </div>
-                                      <div className="flex justify-end space-x-2">
-                                        <Button variant="outline">Cancel</Button>
-                                        <Button 
-                                          variant="destructive"
-                                          onClick={() => {
-                                            const reason = (document.getElementById('reason') as HTMLTextAreaElement)?.value;
-                                            resolveDuplicateMutation.mutate({ userId: user.id, reason });
-                                          }}
-                                        >
-                                          Resolve Duplicate
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ),
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
@@ -713,18 +897,34 @@ export default function UnifiedUserManagement() {
         <CardContent>
           <div className="space-y-4">
             {adminHistory.slice(0, 10).map((entry: any, index: number) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-full ${
-                    entry.action === 'role_assigned' ? 'bg-green-100' :
-                    entry.action === 'role_removed' ? 'bg-red-100' :
-                    entry.action === 'admin_duplicate_resolved' ? 'bg-orange-100' :
-                    'bg-blue-100'
-                  }`}>
-                    {entry.action === 'role_assigned' && <CheckCircle className="h-4 w-4 text-green-600" />}
-                    {entry.action === 'role_removed' && <XCircle className="h-4 w-4 text-red-600" />}
-                    {entry.action === 'admin_duplicate_resolved' && <AlertTriangle className="h-4 w-4 text-orange-600" />}
-                    {entry.action === 'user_created' && <UserPlus className="h-4 w-4 text-blue-600" />}
+                  <div
+                    className={`p-2 rounded-full ${
+                      entry.action === "role_assigned"
+                        ? "bg-green-100"
+                        : entry.action === "role_removed"
+                          ? "bg-red-100"
+                          : entry.action === "admin_duplicate_resolved"
+                            ? "bg-orange-100"
+                            : "bg-blue-100"
+                    }`}
+                  >
+                    {entry.action === "role_assigned" && (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    )}
+                    {entry.action === "role_removed" && (
+                      <XCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    {entry.action === "admin_duplicate_resolved" && (
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    )}
+                    {entry.action === "user_created" && (
+                      <UserPlus className="h-4 w-4 text-blue-600" />
+                    )}
                   </div>
                   <div>
                     <p className="font-medium">{entry.username}</p>
@@ -732,7 +932,7 @@ export default function UnifiedUserManagement() {
                     <div className="flex items-center space-x-2 text-xs text-gray-500">
                       <Badge variant="outline">{entry.role}</Badge>
                       <span>•</span>
-                      <span>{entry.action.replace(/_/g, ' ')}</span>
+                      <span>{entry.action.replace(/_/g, " ")}</span>
                       <span>•</span>
                       <span>by {entry.performedBy}</span>
                     </div>
@@ -744,7 +944,9 @@ export default function UnifiedUserManagement() {
               </div>
             ))}
             {adminHistory.length === 0 && (
-              <p className="text-center text-gray-500 py-4">No admin role history found.</p>
+              <p className="text-center text-gray-500 py-4">
+                No admin role history found.
+              </p>
             )}
           </div>
         </CardContent>
@@ -778,7 +980,9 @@ export default function UnifiedUserManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{log.username || log.userId}</div>
+                    <div className="font-medium">
+                      {log.username || log.userId}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{log.action}</Badge>
@@ -802,14 +1006,20 @@ export default function UnifiedUserManagement() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="border-b border-gray-200 pb-6">
-        <h1 className="text-3xl font-bold text-gray-900">User Management Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          User Management Dashboard
+        </h1>
         <p className="text-gray-600 mt-2">
           Centralized control for users, roles, permissions, and module access
         </p>
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users size={16} />
@@ -884,7 +1094,11 @@ export default function UnifiedUserManagement() {
                   <FormItem>
                     <FormLabel>Email Address</FormLabel>
                     <FormControl>
-                      <Input {...field} type="email" placeholder="Enter email address" />
+                      <Input
+                        {...field}
+                        type="email"
+                        placeholder="Enter email address"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -909,7 +1123,10 @@ export default function UnifiedUserManagement() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
@@ -928,7 +1145,11 @@ export default function UnifiedUserManagement() {
                 )}
               />
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsUserDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">
@@ -971,7 +1192,10 @@ export default function UnifiedUserManagement() {
                   <FormItem>
                     <FormLabel>System Name</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Enter system name (lowercase_with_underscores)" />
+                      <Input
+                        {...field}
+                        placeholder="Enter system name (lowercase_with_underscores)"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -991,7 +1215,11 @@ export default function UnifiedUserManagement() {
                 )}
               />
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsRoleDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">
@@ -1016,3 +1244,4 @@ export default function UnifiedUserManagement() {
     </div>
   );
 }
+
