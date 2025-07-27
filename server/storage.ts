@@ -40,6 +40,7 @@ import {
   industryTemplates,
   companyChartOfAccounts,
   companyUsers,
+  companyModules,
   subscriptionPlans,
   companySubscriptions,
   subscriptionPayments,

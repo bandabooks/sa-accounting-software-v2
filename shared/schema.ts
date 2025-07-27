@@ -125,6 +125,24 @@ export const companyUsers = pgTable("company_users", {
   userIdx: index("company_users_user_idx").on(table.userId),
 }));
 
+// Company Module Activation Table
+export const companyModules = pgTable("company_modules", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  moduleId: text("module_id").notNull(), // invoicing, accounting, pos, etc.
+  isActive: boolean("is_active").default(true),
+  activatedAt: timestamp("activated_at"),
+  deactivatedAt: timestamp("deactivated_at"),
+  activatedBy: integer("activated_by"), // User ID who activated
+  deactivatedBy: integer("deactivated_by"), // User ID who deactivated
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyModuleUnique: unique().on(table.companyId, table.moduleId),
+  companyIdx: index("company_modules_company_idx").on(table.companyId),
+  moduleIdx: index("company_modules_module_idx").on(table.moduleId),
+}));
+
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
