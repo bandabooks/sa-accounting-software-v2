@@ -73,6 +73,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import { SuccessModal } from "@/components/ui/success-modal";
 
 // Types and Schemas
@@ -189,8 +190,39 @@ export default function UnifiedUserManagement() {
         status,
       });
     },
+    onMutate: async ({ userId, status }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["/api/super-admin/users"] });
+
+      // Snapshot the previous value
+      const previousUsers = queryClient.getQueryData(["/api/super-admin/users"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["/api/super-admin/users"], (old: any) => {
+        if (!old) return old;
+        return old.map((user: any) => 
+          user.id === userId ? { ...user, status } : user
+        );
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousUsers };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousUsers) {
+        queryClient.setQueryData(["/api/super-admin/users"], context.previousUsers);
+      }
+      toast({
+        title: "Update Failed",
+        description: "Unable to update user status. Please try again.",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
+      // Invalidate and refetch to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      queryClient.refetchQueries({ queryKey: ["/api/super-admin/users"] });
       showSuccess({
         title: "User Status Updated",
         description: "User status has been successfully updated.",
@@ -486,6 +518,7 @@ export default function UnifiedUserManagement() {
                       <Switch
                         checked={user.status === "active"}
                         onCheckedChange={(checked) => {
+                          console.log(`Toggle user ${user.id} status from ${user.status} to ${checked ? "active" : "inactive"}`);
                           if (
                             user.username !== "sysadmin_7f3a2b8e" &&
                             user.email !== "accounts@thinkmybiz.com"
@@ -497,6 +530,7 @@ export default function UnifiedUserManagement() {
                           }
                         }}
                         disabled={
+                          toggleUserStatusMutation.isPending ||
                           user.username === "sysadmin_7f3a2b8e" ||
                           user.email === "accounts@thinkmybiz.com"
                         }
