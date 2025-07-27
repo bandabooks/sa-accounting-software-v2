@@ -199,6 +199,28 @@ export default function SuperAdminUserDetail() {
   
   const confirmationTemplates = useConfirmationModal();
 
+  // Edit user form
+  const editForm = useForm({
+    defaultValues: {
+      name: user?.name || '',
+      email: user?.email || '',
+      role: user?.role || '',
+      isActive: user?.isActive || false,
+    },
+  });
+
+  // Update form values when user data changes
+  useEffect(() => {
+    if (user) {
+      editForm.reset({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      });
+    }
+  }, [user, editForm]);
+
   // Role change form
   const roleChangeForm = useForm<RoleChangeData>({
     resolver: zodResolver(roleChangeSchema),
@@ -456,59 +478,97 @@ export default function SuperAdminUserDetail() {
               </CardHeader>
               <CardContent>
                 {editMode ? (
-                  <form action={handleUpdateUser} className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input id="name" name="name" defaultValue={user.name} />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" name="email" type="email" defaultValue={user.email} />
-                    </div>
-                    <div>
-                      <Label htmlFor="role">Role</Label>
-                      <Select name="role" defaultValue={user.role}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {rolesLoading ? (
-                            <div className="p-2 text-center text-sm text-gray-500">Loading roles...</div>
-                          ) : systemRoles.length === 0 ? (
-                            <div className="p-2 text-center text-sm text-gray-500">No roles found</div>
-                          ) : (
-                            systemRoles.map((role) => (
-                              <SelectItem key={role.id} value={role.name}>
-                                <div className="flex items-center space-x-2">
-                                  <Badge 
-                                    className={`bg-gradient-to-r ${getRoleColor(role.level)} text-white text-xs`}
-                                  >
-                                    Level {role.level}
-                                  </Badge>
-                                  <span>{role.displayName}</span>
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="isActive">Status</Label>
-                      <Select name="isActive" defaultValue={user.isActive ? "true" : "false"}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">Active</SelectItem>
-                          <SelectItem value="false">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button type="submit" disabled={updateUserMutation.isPending}>
-                      {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </form>
+                  <Form {...editForm}>
+                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                      <FormField
+                        control={editForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {rolesLoading ? (
+                                  <div className="p-2 text-center text-sm text-gray-500">Loading roles...</div>
+                                ) : systemRoles.length === 0 ? (
+                                  <div className="p-2 text-center text-sm text-gray-500">No roles found</div>
+                                ) : (
+                                  systemRoles.map((role) => (
+                                    <SelectItem key={role.id} value={role.name}>
+                                      <div className="flex items-center space-x-2">
+                                        <Badge 
+                                          className={`bg-gradient-to-r ${getRoleColor(role.level)} text-white text-xs`}
+                                        >
+                                          Level {role.level}
+                                        </Badge>
+                                        <span>{role.displayName}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(value === "true")} value={field.value ? "true" : "false"}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="true">Active</SelectItem>
+                                <SelectItem value="false">Inactive</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" disabled={updateUserMutation.isPending}>
+                        {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </form>
+                  </Form>
                 ) : (
                   <div className="space-y-3">
                     <div>
