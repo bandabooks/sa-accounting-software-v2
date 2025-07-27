@@ -110,6 +110,11 @@ import {
   insertPaymentExceptionSchema,
   insertExceptionEscalationSchema,
   insertExceptionAlertSchema,
+  // Enhanced Sales Module schema imports  
+  insertSalesOrderSchema,
+  insertSalesOrderItemSchema,
+  insertDeliverySchema,
+  insertDeliveryItemSchema,
   type LoginRequest,
   type TrialSignupRequest,
   type ChangePasswordRequest
@@ -2019,6 +2024,551 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting product:", error);
       res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // =============================================
+  // ENHANCED SALES MODULE API ROUTES
+  // =============================================
+
+  // Sales Orders Management
+  app.get("/api/sales-orders", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const salesOrders = await storage.getSalesOrders(companyId);
+      res.json(salesOrders);
+    } catch (error) {
+      console.error("Error fetching sales orders:", error);
+      res.status(500).json({ message: "Failed to fetch sales orders" });
+    }
+  });
+
+  app.get("/api/sales-orders/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const salesOrder = await storage.getSalesOrderWithItems(id);
+      
+      if (!salesOrder) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      // Verify sales order belongs to user's company
+      if (salesOrder.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      res.json(salesOrder);
+    } catch (error) {
+      console.error("Error fetching sales order:", error);
+      res.status(500).json({ message: "Failed to fetch sales order" });
+    }
+  });
+
+  app.get("/api/sales-orders/customer/:customerId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const salesOrders = await storage.getSalesOrdersByCustomer(customerId);
+      res.json(salesOrders);
+    } catch (error) {
+      console.error("Error fetching customer sales orders:", error);
+      res.status(500).json({ message: "Failed to fetch customer sales orders" });
+    }
+  });
+
+  app.get("/api/sales-orders/status/:status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const status = req.params.status;
+      const salesOrders = await storage.getSalesOrdersByStatus(companyId, status);
+      res.json(salesOrders);
+    } catch (error) {
+      console.error("Error fetching sales orders by status:", error);
+      res.status(500).json({ message: "Failed to fetch sales orders by status" });
+    }
+  });
+
+  const createSalesOrderSchema = z.object({
+    salesOrder: insertSalesOrderSchema,
+    items: z.array(insertSalesOrderItemSchema.omit({ salesOrderId: true }))
+  });
+
+  app.post("/api/sales-orders", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedData = createSalesOrderSchema.parse(req.body);
+      const companyId = req.user.companyId;
+      
+      // Ensure sales order belongs to user's company
+      const salesOrderData = {
+        ...validatedData.salesOrder,
+        companyId,
+        createdBy: req.user.id
+      };
+
+      const salesOrder = await storage.createSalesOrder(salesOrderData, validatedData.items);
+      await logAudit(req.user.id, 'CREATE', 'sales_order', salesOrder.id);
+      res.status(201).json(salesOrder);
+    } catch (error) {
+      console.error("Error creating sales order:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create sales order" });
+    }
+  });
+
+  app.put("/api/sales-orders/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertSalesOrderSchema.partial().parse(req.body);
+      
+      // Verify ownership
+      const existingSalesOrder = await storage.getSalesOrder(id);
+      if (!existingSalesOrder || existingSalesOrder.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      const salesOrder = await storage.updateSalesOrder(id, validatedData);
+      if (!salesOrder) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'sales_order', id);
+      res.json(salesOrder);
+    } catch (error) {
+      console.error("Error updating sales order:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update sales order" });
+    }
+  });
+
+  app.put("/api/sales-orders/:id/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      const validStatuses = ['draft', 'confirmed', 'shipped', 'delivered', 'completed', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      // Verify ownership
+      const existingSalesOrder = await storage.getSalesOrder(id);
+      if (!existingSalesOrder || existingSalesOrder.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+
+      const salesOrder = await storage.updateSalesOrderStatus(id, status, req.user.id);
+      if (!salesOrder) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'sales_order_status', id, `Status changed to ${status}`);
+      res.json(salesOrder);
+    } catch (error) {
+      console.error("Error updating sales order status:", error);
+      res.status(500).json({ message: "Failed to update sales order status" });
+    }
+  });
+
+  app.post("/api/sales-orders/:id/convert-to-invoice", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const salesOrderId = parseInt(req.params.id);
+      
+      // Verify ownership
+      const existingSalesOrder = await storage.getSalesOrder(salesOrderId);
+      if (!existingSalesOrder || existingSalesOrder.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      const invoice = await storage.convertSalesOrderToInvoice(salesOrderId, req.user.id);
+      await logAudit(req.user.id, 'CREATE', 'invoice_from_sales_order', invoice.id, `Converted from Sales Order ${existingSalesOrder.orderNumber}`);
+      res.status(201).json(invoice);
+    } catch (error) {
+      console.error("Error converting sales order to invoice:", error);
+      res.status(500).json({ message: "Failed to convert sales order to invoice" });
+    }
+  });
+
+  app.delete("/api/sales-orders/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verify ownership
+      const existingSalesOrder = await storage.getSalesOrder(id);
+      if (!existingSalesOrder || existingSalesOrder.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      const deleted = await storage.deleteSalesOrder(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      await logAudit(req.user.id, 'DELETE', 'sales_order', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting sales order:", error);
+      res.status(500).json({ message: "Failed to delete sales order" });
+    }
+  });
+
+  // Sales Order Items Management
+  app.get("/api/sales-orders/:salesOrderId/items", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const salesOrderId = parseInt(req.params.salesOrderId);
+      
+      // Verify ownership
+      const salesOrder = await storage.getSalesOrder(salesOrderId);
+      if (!salesOrder || salesOrder.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      const items = await storage.getSalesOrderItems(salesOrderId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching sales order items:", error);
+      res.status(500).json({ message: "Failed to fetch sales order items" });
+    }
+  });
+
+  app.post("/api/sales-orders/:salesOrderId/items", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const salesOrderId = parseInt(req.params.salesOrderId);
+      const validatedData = insertSalesOrderItemSchema.parse({
+        ...req.body,
+        salesOrderId,
+        companyId: req.user.companyId
+      });
+      
+      // Verify ownership
+      const salesOrder = await storage.getSalesOrder(salesOrderId);
+      if (!salesOrder || salesOrder.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Sales order not found" });
+      }
+      
+      const item = await storage.createSalesOrderItem(validatedData);
+      await logAudit(req.user.id, 'CREATE', 'sales_order_item', item.id);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating sales order item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create sales order item" });
+    }
+  });
+
+  app.put("/api/sales-order-items/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertSalesOrderItemSchema.partial().parse(req.body);
+      
+      const item = await storage.updateSalesOrderItem(id, validatedData);
+      if (!item) {
+        return res.status(404).json({ message: "Sales order item not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'sales_order_item', id);
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating sales order item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update sales order item" });
+    }
+  });
+
+  app.delete("/api/sales-order-items/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteSalesOrderItem(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Sales order item not found" });
+      }
+      
+      await logAudit(req.user.id, 'DELETE', 'sales_order_item', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting sales order item:", error);
+      res.status(500).json({ message: "Failed to delete sales order item" });
+    }
+  });
+
+  // Deliveries Management
+  app.get("/api/deliveries", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const deliveries = await storage.getDeliveries(companyId);
+      res.json(deliveries);
+    } catch (error) {
+      console.error("Error fetching deliveries:", error);
+      res.status(500).json({ message: "Failed to fetch deliveries" });
+    }
+  });
+
+  app.get("/api/deliveries/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const delivery = await storage.getDeliveryWithItems(id);
+      
+      if (!delivery) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      // Verify delivery belongs to user's company
+      if (delivery.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      res.json(delivery);
+    } catch (error) {
+      console.error("Error fetching delivery:", error);
+      res.status(500).json({ message: "Failed to fetch delivery" });
+    }
+  });
+
+  app.get("/api/deliveries/customer/:customerId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const deliveries = await storage.getDeliveriesByCustomer(customerId);
+      res.json(deliveries);
+    } catch (error) {
+      console.error("Error fetching customer deliveries:", error);
+      res.status(500).json({ message: "Failed to fetch customer deliveries" });
+    }
+  });
+
+  app.get("/api/deliveries/status/:status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const status = req.params.status;
+      const deliveries = await storage.getDeliveriesByStatus(companyId, status);
+      res.json(deliveries);
+    } catch (error) {
+      console.error("Error fetching deliveries by status:", error);
+      res.status(500).json({ message: "Failed to fetch deliveries by status" });
+    }
+  });
+
+  const createDeliverySchema = z.object({
+    delivery: insertDeliverySchema,
+    items: z.array(insertDeliveryItemSchema.omit({ deliveryId: true }))
+  });
+
+  app.post("/api/deliveries", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedData = createDeliverySchema.parse(req.body);
+      const companyId = req.user.companyId;
+      
+      // Ensure delivery belongs to user's company
+      const deliveryData = {
+        ...validatedData.delivery,
+        companyId,
+        createdBy: req.user.id
+      };
+
+      const delivery = await storage.createDelivery(deliveryData, validatedData.items);
+      await logAudit(req.user.id, 'CREATE', 'delivery', delivery.id);
+      res.status(201).json(delivery);
+    } catch (error) {
+      console.error("Error creating delivery:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create delivery" });
+    }
+  });
+
+  app.put("/api/deliveries/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertDeliverySchema.partial().parse(req.body);
+      
+      // Verify ownership
+      const existingDelivery = await storage.getDelivery(id);
+      if (!existingDelivery || existingDelivery.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      const delivery = await storage.updateDelivery(id, validatedData);
+      if (!delivery) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'delivery', id);
+      res.json(delivery);
+    } catch (error) {
+      console.error("Error updating delivery:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update delivery" });
+    }
+  });
+
+  app.put("/api/deliveries/:id/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      const validStatuses = ['pending', 'in_transit', 'delivered', 'failed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      // Verify ownership
+      const existingDelivery = await storage.getDelivery(id);
+      if (!existingDelivery || existingDelivery.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+
+      const delivery = await storage.updateDeliveryStatus(id, status, req.user.id);
+      if (!delivery) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'delivery_status', id, `Status changed to ${status}`);
+      res.json(delivery);
+    } catch (error) {
+      console.error("Error updating delivery status:", error);
+      res.status(500).json({ message: "Failed to update delivery status" });
+    }
+  });
+
+  app.post("/api/deliveries/:id/complete", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { deliveredBy, signature } = req.body;
+      
+      if (!deliveredBy) {
+        return res.status(400).json({ message: "deliveredBy is required" });
+      }
+      
+      // Verify ownership
+      const existingDelivery = await storage.getDelivery(id);
+      if (!existingDelivery || existingDelivery.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      const delivery = await storage.markDeliveryComplete(id, deliveredBy, signature);
+      if (!delivery) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'delivery_complete', id, `Marked as delivered by ${deliveredBy}`);
+      res.json(delivery);
+    } catch (error) {
+      console.error("Error completing delivery:", error);
+      res.status(500).json({ message: "Failed to complete delivery" });
+    }
+  });
+
+  app.delete("/api/deliveries/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verify ownership
+      const existingDelivery = await storage.getDelivery(id);
+      if (!existingDelivery || existingDelivery.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      const deleted = await storage.deleteDelivery(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      await logAudit(req.user.id, 'DELETE', 'delivery', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting delivery:", error);
+      res.status(500).json({ message: "Failed to delete delivery" });
+    }
+  });
+
+  // Delivery Items Management
+  app.get("/api/deliveries/:deliveryId/items", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const deliveryId = parseInt(req.params.deliveryId);
+      
+      // Verify ownership
+      const delivery = await storage.getDelivery(deliveryId);
+      if (!delivery || delivery.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      const items = await storage.getDeliveryItems(deliveryId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching delivery items:", error);
+      res.status(500).json({ message: "Failed to fetch delivery items" });
+    }
+  });
+
+  app.post("/api/deliveries/:deliveryId/items", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const deliveryId = parseInt(req.params.deliveryId);
+      const validatedData = insertDeliveryItemSchema.parse({
+        ...req.body,
+        deliveryId,
+        companyId: req.user.companyId
+      });
+      
+      // Verify ownership
+      const delivery = await storage.getDelivery(deliveryId);
+      if (!delivery || delivery.companyId !== req.user.companyId) {
+        return res.status(404).json({ message: "Delivery not found" });
+      }
+      
+      const item = await storage.createDeliveryItem(validatedData);
+      await logAudit(req.user.id, 'CREATE', 'delivery_item', item.id);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating delivery item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create delivery item" });
+    }
+  });
+
+  app.put("/api/delivery-items/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertDeliveryItemSchema.partial().parse(req.body);
+      
+      const item = await storage.updateDeliveryItem(id, validatedData);
+      if (!item) {
+        return res.status(404).json({ message: "Delivery item not found" });
+      }
+      
+      await logAudit(req.user.id, 'UPDATE', 'delivery_item', id);
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating delivery item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update delivery item" });
+    }
+  });
+
+  app.delete("/api/delivery-items/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteDeliveryItem(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Delivery item not found" });
+      }
+      
+      await logAudit(req.user.id, 'DELETE', 'delivery_item', id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting delivery item:", error);
+      res.status(500).json({ message: "Failed to delete delivery item" });
     }
   });
 

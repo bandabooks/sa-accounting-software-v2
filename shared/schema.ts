@@ -252,6 +252,103 @@ export const estimateItems = pgTable("estimate_items", {
   companyIdx: index("estimate_items_company_idx").on(table.companyId),
 }));
 
+// Sales Orders - Track orders before invoicing
+export const salesOrders = pgTable("sales_orders", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  orderNumber: text("order_number").notNull(),
+  customerId: integer("customer_id").notNull(),
+  estimateId: integer("estimate_id").references(() => estimates.id), // Optional link to estimate
+  orderDate: timestamp("order_date").notNull(),
+  requiredDate: timestamp("required_date"),
+  status: text("status").notNull().default("draft"), // draft, confirmed, in_production, ready_to_ship, shipped, delivered, completed, cancelled
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  // Status tracking timestamps
+  confirmedAt: timestamp("confirmed_at"),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  completedAt: timestamp("completed_at"),
+  // Action tracking
+  confirmedBy: integer("confirmed_by").references(() => users.id),
+  shippedBy: integer("shipped_by").references(() => users.id),
+  deliveredBy: integer("delivered_by").references(() => users.id),
+  completedBy: integer("completed_by").references(() => users.id),
+  // Created/updated fields
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyOrderUnique: unique().on(table.companyId, table.orderNumber),
+  companyIdx: index("sales_orders_company_idx").on(table.companyId),
+  customerIdx: index("sales_orders_customer_idx").on(table.customerId),
+  statusIdx: index("sales_orders_status_idx").on(table.status),
+  estimateIdx: index("sales_orders_estimate_idx").on(table.estimateId),
+}));
+
+export const salesOrderItems = pgTable("sales_order_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  salesOrderId: integer("sales_order_id").notNull(),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatInclusive: boolean("vat_inclusive").default(false),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sales_order_items_company_idx").on(table.companyId),
+}));
+
+// Deliveries - Track fulfillment and delivery
+export const deliveries = pgTable("deliveries", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  deliveryNumber: text("delivery_number").notNull(),
+  salesOrderId: integer("sales_order_id").references(() => salesOrders.id),
+  invoiceId: integer("invoice_id").references(() => invoices.id),
+  customerId: integer("customer_id").notNull(),
+  deliveryDate: timestamp("delivery_date").notNull(),
+  deliveryMethod: text("delivery_method").notNull().default("courier"), // courier, pickup, own_delivery
+  trackingNumber: text("tracking_number"),
+  deliveryAddress: text("delivery_address"),
+  status: text("status").notNull().default("pending"), // pending, in_transit, delivered, failed, cancelled
+  notes: text("notes"),
+  // Delivery confirmation
+  deliveredAt: timestamp("delivered_at"),
+  deliveredBy: text("delivered_by"), // Person who received delivery
+  deliverySignature: text("delivery_signature"), // Base64 encoded signature
+  // Created/updated fields
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyDeliveryUnique: unique().on(table.companyId, table.deliveryNumber),
+  companyIdx: index("deliveries_company_idx").on(table.companyId),
+  customerIdx: index("deliveries_customer_idx").on(table.customerId),
+  salesOrderIdx: index("deliveries_sales_order_idx").on(table.salesOrderId),
+  statusIdx: index("deliveries_status_idx").on(table.status),
+}));
+
+export const deliveryItems = pgTable("delivery_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  deliveryId: integer("delivery_id").notNull(),
+  description: text("description").notNull(),
+  quantityOrdered: decimal("quantity_ordered", { precision: 10, scale: 2 }).notNull(),
+  quantityDelivered: decimal("quantity_delivered", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("delivery_items_company_idx").on(table.companyId),
+}));
+
+
+
 // Auto-numbering sequence table
 export const numberSequences = pgTable("number_sequences", {
   id: serial("id").primaryKey(),
@@ -927,7 +1024,12 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   }),
   invoices: many(invoices),
   estimates: many(estimates),
+  salesOrders: many(salesOrders),
+  deliveries: many(deliveries),
+  creditNotes: many(creditNotes),
 }));
+
+
 
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   company: one(companies, {
@@ -2847,6 +2949,29 @@ export const insertCreditNoteItemSchema = createInsertSchema(creditNoteItems).om
   id: true,
 });
 
+// Enhanced Sales Module Insert Schemas
+export const insertSalesOrderSchema = createInsertSchema(salesOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSalesOrderItemSchema = createInsertSchema(salesOrderItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDeliverySchema = createInsertSchema(deliveries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDeliveryItemSchema = createInsertSchema(deliveryItems).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertInvoiceReminderSchema = createInsertSchema(invoiceReminders).omit({
   id: true,
   createdAt: true,
@@ -2875,6 +3000,8 @@ export const insertBankIntegrationSchema = createInsertSchema(bankIntegrations).
   createdAt: true,
   updatedAt: true,
 });
+
+
 
 // Smart Spending Wizard - AI-powered financial advice system
 export const spendingWizardProfiles = pgTable("spending_wizard_profiles", {
@@ -3810,3 +3937,34 @@ export type ExceptionAlert = typeof exceptionAlerts.$inferSelect;
 export type InsertExceptionAlert = z.infer<typeof insertExceptionAlertSchema>;
 export type VendorMasterValidation = typeof vendorMasterValidation.$inferSelect;
 export type InsertVendorMasterValidation = z.infer<typeof insertVendorMasterValidationSchema>;
+
+// === ENHANCED SALES MODULE TYPE EXPORTS ===
+
+// Sales Orders
+export type SalesOrder = typeof salesOrders.$inferSelect;
+export type InsertSalesOrder = z.infer<typeof insertSalesOrderSchema>;
+
+export type SalesOrderItem = typeof salesOrderItems.$inferSelect;
+export type InsertSalesOrderItem = z.infer<typeof insertSalesOrderItemSchema>;
+
+// Deliveries
+export type Delivery = typeof deliveries.$inferSelect;
+export type InsertDelivery = z.infer<typeof insertDeliverySchema>;
+
+export type DeliveryItem = typeof deliveryItems.$inferSelect;
+export type InsertDeliveryItem = z.infer<typeof insertDeliveryItemSchema>;
+
+// Credit Notes (existing, but adding for completeness)
+export type CreditNote = typeof creditNotes.$inferSelect;
+export type InsertCreditNote = z.infer<typeof insertCreditNoteSchema>;
+
+export type CreditNoteItem = typeof creditNoteItems.$inferSelect;
+export type InsertCreditNoteItem = z.infer<typeof insertCreditNoteItemSchema>;
+
+// Extended Sales module types for API responses
+export type SalesOrderWithCustomer = SalesOrder & { customer: Customer };
+export type SalesOrderWithItems = SalesOrder & { items: SalesOrderItem[]; customer: Customer };
+export type DeliveryWithCustomer = Delivery & { customer: Customer };
+export type DeliveryWithItems = Delivery & { items: DeliveryItem[]; customer: Customer };
+export type CreditNoteWithCustomer = CreditNote & { customer: Customer };
+export type CreditNoteWithItems = CreditNote & { items: CreditNoteItem[]; customer: Customer };

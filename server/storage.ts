@@ -71,6 +71,11 @@ import {
   approvalWorkflows,
   approvalRequests,
   bankIntegrations,
+  // Enhanced Sales Module imports
+  salesOrders,
+  salesOrderItems,
+  deliveries,
+  deliveryItems,
   spendingWizardProfiles,
   spendingWizardConversations,
   paymentExceptions,
@@ -244,6 +249,19 @@ import {
   type InsertApprovalRequest,
   type BankIntegration,
   type InsertBankIntegration,
+  // Enhanced Sales Module type imports
+  type SalesOrder,
+  type InsertSalesOrder,
+  type SalesOrderItem,
+  type InsertSalesOrderItem,
+  type Delivery,
+  type InsertDelivery,
+  type DeliveryItem,
+  type InsertDeliveryItem,
+  type SalesOrderWithCustomer,
+  type SalesOrderWithItems,
+  type DeliveryWithCustomer,
+  type DeliveryWithItems,
   type PaymentException,
   type InsertPaymentException,
   type ExceptionEscalation,
@@ -741,6 +759,44 @@ export interface IStorage {
   detectAmountMismatches(companyId: number): Promise<PaymentException[]>;
   detectDuplicateSuppliers(companyId: number): Promise<PaymentException[]>;
   runAutomatedExceptionDetection(companyId: number): Promise<PaymentException[]>;
+
+  // === ENHANCED SALES MODULE METHODS ===
+
+  // Sales Orders Management
+  getSalesOrders(companyId: number): Promise<SalesOrder[]>;
+  getSalesOrder(id: number): Promise<SalesOrderWithCustomer | undefined>;
+  getSalesOrderWithItems(id: number): Promise<SalesOrderWithItems | undefined>;
+  createSalesOrder(salesOrder: InsertSalesOrder, items: Omit<InsertSalesOrderItem, 'salesOrderId'>[]): Promise<SalesOrderWithItems>;
+  updateSalesOrder(id: number, salesOrder: Partial<InsertSalesOrder>): Promise<SalesOrder | undefined>;
+  updateSalesOrderStatus(id: number, status: string, userId?: number): Promise<SalesOrder | undefined>;
+  deleteSalesOrder(id: number): Promise<boolean>;
+  getSalesOrdersByCustomer(customerId: number): Promise<SalesOrder[]>;
+  getSalesOrdersByStatus(companyId: number, status: string): Promise<SalesOrder[]>;
+  convertSalesOrderToInvoice(salesOrderId: number, userId: number): Promise<InvoiceWithItems>;
+
+  // Sales Order Items Management
+  getSalesOrderItems(salesOrderId: number): Promise<SalesOrderItem[]>;
+  createSalesOrderItem(item: InsertSalesOrderItem): Promise<SalesOrderItem>;
+  updateSalesOrderItem(id: number, item: Partial<InsertSalesOrderItem>): Promise<SalesOrderItem | undefined>;
+  deleteSalesOrderItem(id: number): Promise<boolean>;
+
+  // Deliveries Management  
+  getDeliveries(companyId: number): Promise<Delivery[]>;
+  getDelivery(id: number): Promise<DeliveryWithCustomer | undefined>;
+  getDeliveryWithItems(id: number): Promise<DeliveryWithItems | undefined>;
+  createDelivery(delivery: InsertDelivery, items: Omit<InsertDeliveryItem, 'deliveryId'>[]): Promise<DeliveryWithItems>;
+  updateDelivery(id: number, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined>;
+  updateDeliveryStatus(id: number, status: string, userId?: number): Promise<Delivery | undefined>;
+  deleteDelivery(id: number): Promise<boolean>;
+  getDeliveriesByCustomer(customerId: number): Promise<Delivery[]>;
+  getDeliveriesByStatus(companyId: number, status: string): Promise<Delivery[]>;
+  markDeliveryComplete(id: number, deliveredBy: string, signature?: string): Promise<Delivery | undefined>;
+
+  // Delivery Items Management
+  getDeliveryItems(deliveryId: number): Promise<DeliveryItem[]>;
+  createDeliveryItem(item: InsertDeliveryItem): Promise<DeliveryItem>;
+  updateDeliveryItem(id: number, item: Partial<InsertDeliveryItem>): Promise<DeliveryItem | undefined>;
+  deleteDeliveryItem(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -8755,6 +8811,471 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date()
         }
       });
+  }
+
+  // === ENHANCED SALES MODULE IMPLEMENTATION ===
+
+  // Sales Orders Management
+  async getSalesOrders(companyId: number): Promise<SalesOrder[]> {
+    return await db
+      .select()
+      .from(salesOrders)
+      .where(eq(salesOrders.companyId, companyId))
+      .orderBy(desc(salesOrders.createdAt));
+  }
+
+  async getSalesOrder(id: number): Promise<SalesOrderWithCustomer | undefined> {
+    const [salesOrder] = await db
+      .select({
+        ...salesOrders,
+        customer: customers
+      })
+      .from(salesOrders)
+      .innerJoin(customers, eq(customers.id, salesOrders.customerId))
+      .where(eq(salesOrders.id, id));
+    return salesOrder;
+  }
+
+  async getSalesOrderWithItems(id: number): Promise<SalesOrderWithItems | undefined> {
+    const [salesOrder] = await db
+      .select({
+        ...salesOrders,
+        customer: customers
+      })
+      .from(salesOrders)
+      .innerJoin(customers, eq(customers.id, salesOrders.customerId))
+      .where(eq(salesOrders.id, id));
+
+    if (!salesOrder) return undefined;
+
+    const items = await db
+      .select()
+      .from(salesOrderItems)
+      .where(eq(salesOrderItems.salesOrderId, id));
+
+    return {
+      ...salesOrder,
+      items
+    };
+  }
+
+  async createSalesOrder(salesOrder: InsertSalesOrder, items: Omit<InsertSalesOrderItem, 'salesOrderId'>[]): Promise<SalesOrderWithItems> {
+    // Generate order number
+    const orderNumber = await this.generateNextOrderNumber(salesOrder.companyId);
+    
+    const [newSalesOrder] = await db
+      .insert(salesOrders)
+      .values({
+        ...salesOrder,
+        orderNumber
+      })
+      .returning();
+
+    // Create order items
+    const orderItems = await Promise.all(
+      items.map(item =>
+        db.insert(salesOrderItems)
+          .values({
+            ...item,
+            salesOrderId: newSalesOrder.id,
+            companyId: salesOrder.companyId
+          })
+          .returning()
+      )
+    );
+
+    // Get customer info
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, salesOrder.customerId));
+
+    return {
+      ...newSalesOrder,
+      customer,
+      items: orderItems.map(([item]) => item)
+    };
+  }
+
+  async updateSalesOrder(id: number, salesOrder: Partial<InsertSalesOrder>): Promise<SalesOrder | undefined> {
+    const [updatedSalesOrder] = await db
+      .update(salesOrders)
+      .set({ ...salesOrder, updatedAt: new Date() })
+      .where(eq(salesOrders.id, id))
+      .returning();
+    return updatedSalesOrder;
+  }
+
+  async updateSalesOrderStatus(id: number, status: string, userId?: number): Promise<SalesOrder | undefined> {
+    const updates: any = { status, updatedAt: new Date() };
+    
+    // Set appropriate timestamp and user based on status
+    if (status === 'confirmed' && userId) {
+      updates.confirmedAt = new Date();
+      updates.confirmedBy = userId;
+    } else if (status === 'shipped' && userId) {
+      updates.shippedAt = new Date();
+      updates.shippedBy = userId;
+    } else if (status === 'delivered' && userId) {
+      updates.deliveredAt = new Date();
+      updates.deliveredBy = userId;
+    } else if (status === 'completed' && userId) {
+      updates.completedAt = new Date();
+      updates.completedBy = userId;
+    }
+
+    const [updatedSalesOrder] = await db
+      .update(salesOrders)
+      .set(updates)
+      .where(eq(salesOrders.id, id))
+      .returning();
+    return updatedSalesOrder;
+  }
+
+  async deleteSalesOrder(id: number): Promise<boolean> {
+    // Delete items first
+    await db.delete(salesOrderItems).where(eq(salesOrderItems.salesOrderId, id));
+    
+    // Delete sales order
+    const result = await db.delete(salesOrders).where(eq(salesOrders.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getSalesOrdersByCustomer(customerId: number): Promise<SalesOrder[]> {
+    return await db
+      .select()
+      .from(salesOrders)
+      .where(eq(salesOrders.customerId, customerId))
+      .orderBy(desc(salesOrders.createdAt));
+  }
+
+  async getSalesOrdersByStatus(companyId: number, status: string): Promise<SalesOrder[]> {
+    return await db
+      .select()
+      .from(salesOrders)
+      .where(and(
+        eq(salesOrders.companyId, companyId),
+        eq(salesOrders.status, status)
+      ))
+      .orderBy(desc(salesOrders.createdAt));
+  }
+
+  async convertSalesOrderToInvoice(salesOrderId: number, userId: number): Promise<InvoiceWithItems> {
+    const salesOrderWithItems = await this.getSalesOrderWithItems(salesOrderId);
+    if (!salesOrderWithItems) {
+      throw new Error('Sales order not found');
+    }
+
+    // Generate invoice number
+    const invoiceNumber = await this.generateNextInvoiceNumber(salesOrderWithItems.companyId);
+
+    // Create invoice
+    const [newInvoice] = await db
+      .insert(invoices)
+      .values({
+        companyId: salesOrderWithItems.companyId,
+        customerId: salesOrderWithItems.customerId,
+        invoiceNumber,
+        issueDate: new Date(),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        subtotal: salesOrderWithItems.subtotal,
+        vatAmount: salesOrderWithItems.vatAmount,
+        total: salesOrderWithItems.total,
+        status: 'draft',
+        notes: `Generated from Sales Order ${salesOrderWithItems.orderNumber}`,
+        createdBy: userId
+      })
+      .returning();
+
+    // Create invoice items from sales order items
+    const invoiceItems = await Promise.all(
+      salesOrderWithItems.items.map(item =>
+        db.insert(invoiceItems)
+          .values({
+            invoiceId: newInvoice.id,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            vatRate: item.vatRate,
+            vatInclusive: item.vatInclusive,
+            vatAmount: item.vatAmount,
+            total: item.total
+          })
+          .returning()
+      )
+    );
+
+    // Update sales order status to converted
+    await this.updateSalesOrderStatus(salesOrderId, 'completed', userId);
+
+    return {
+      ...newInvoice,
+      customer: salesOrderWithItems.customer,
+      items: invoiceItems.map(([item]) => item)
+    };
+  }
+
+  // Sales Order Items Management
+  async getSalesOrderItems(salesOrderId: number): Promise<SalesOrderItem[]> {
+    return await db
+      .select()
+      .from(salesOrderItems)
+      .where(eq(salesOrderItems.salesOrderId, salesOrderId));
+  }
+
+  async createSalesOrderItem(item: InsertSalesOrderItem): Promise<SalesOrderItem> {
+    const [newItem] = await db
+      .insert(salesOrderItems)
+      .values(item)
+      .returning();
+    
+    // Update sales order totals
+    await this.recalculateSalesOrderTotals(item.salesOrderId);
+    
+    return newItem;
+  }
+
+  async updateSalesOrderItem(id: number, item: Partial<InsertSalesOrderItem>): Promise<SalesOrderItem | undefined> {
+    const [updatedItem] = await db
+      .update(salesOrderItems)
+      .set({ ...item, updatedAt: new Date() })
+      .where(eq(salesOrderItems.id, id))
+      .returning();
+    
+    if (updatedItem) {
+      // Update sales order totals
+      await this.recalculateSalesOrderTotals(updatedItem.salesOrderId);
+    }
+    
+    return updatedItem;
+  }
+
+  async deleteSalesOrderItem(id: number): Promise<boolean> {
+    const [item] = await db
+      .select()
+      .from(salesOrderItems)
+      .where(eq(salesOrderItems.id, id));
+    
+    const result = await db.delete(salesOrderItems).where(eq(salesOrderItems.id, id));
+    
+    if ((result.rowCount || 0) > 0 && item) {
+      // Update sales order totals
+      await this.recalculateSalesOrderTotals(item.salesOrderId);
+      return true;
+    }
+    
+    return false;
+  }
+
+  // Deliveries Management  
+  async getDeliveries(companyId: number): Promise<Delivery[]> {
+    return await db
+      .select()
+      .from(deliveries)
+      .where(eq(deliveries.companyId, companyId))
+      .orderBy(desc(deliveries.createdAt));
+  }
+
+  async getDelivery(id: number): Promise<DeliveryWithCustomer | undefined> {
+    const [delivery] = await db
+      .select({
+        ...deliveries,
+        customer: customers
+      })
+      .from(deliveries)
+      .innerJoin(customers, eq(customers.id, deliveries.customerId))
+      .where(eq(deliveries.id, id));
+    return delivery;
+  }
+
+  async getDeliveryWithItems(id: number): Promise<DeliveryWithItems | undefined> {
+    const [delivery] = await db
+      .select({
+        ...deliveries,
+        customer: customers
+      })
+      .from(deliveries)
+      .innerJoin(customers, eq(customers.id, deliveries.customerId))
+      .where(eq(deliveries.id, id));
+
+    if (!delivery) return undefined;
+
+    const items = await db
+      .select()
+      .from(deliveryItems)
+      .where(eq(deliveryItems.deliveryId, id));
+
+    return {
+      ...delivery,
+      items
+    };
+  }
+
+  async createDelivery(delivery: InsertDelivery, items: Omit<InsertDeliveryItem, 'deliveryId'>[]): Promise<DeliveryWithItems> {
+    // Generate delivery number
+    const deliveryNumber = await this.generateNextDeliveryNumber(delivery.companyId);
+    
+    const [newDelivery] = await db
+      .insert(deliveries)
+      .values({
+        ...delivery,
+        deliveryNumber
+      })
+      .returning();
+
+    // Create delivery items
+    const deliveryItems = await Promise.all(
+      items.map(item =>
+        db.insert(deliveryItems)
+          .values({
+            ...item,
+            deliveryId: newDelivery.id,
+            companyId: delivery.companyId
+          })
+          .returning()
+      )
+    );
+
+    // Get customer info
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, delivery.customerId));
+
+    return {
+      ...newDelivery,
+      customer,
+      items: deliveryItems.map(([item]) => item)
+    };
+  }
+
+  async updateDelivery(id: number, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined> {
+    const [updatedDelivery] = await db
+      .update(deliveries)
+      .set({ ...delivery, updatedAt: new Date() })
+      .where(eq(deliveries.id, id))
+      .returning();
+    return updatedDelivery;
+  }
+
+  async updateDeliveryStatus(id: number, status: string, userId?: number): Promise<Delivery | undefined> {
+    const updates: any = { status, updatedAt: new Date() };
+    
+    if (status === 'delivered') {
+      updates.deliveredAt = new Date();
+    }
+
+    const [updatedDelivery] = await db
+      .update(deliveries)
+      .set(updates)
+      .where(eq(deliveries.id, id))
+      .returning();
+    return updatedDelivery;
+  }
+
+  async deleteDelivery(id: number): Promise<boolean> {
+    // Delete items first
+    await db.delete(deliveryItems).where(eq(deliveryItems.deliveryId, id));
+    
+    // Delete delivery
+    const result = await db.delete(deliveries).where(eq(deliveries.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getDeliveriesByCustomer(customerId: number): Promise<Delivery[]> {
+    return await db
+      .select()
+      .from(deliveries)
+      .where(eq(deliveries.customerId, customerId))
+      .orderBy(desc(deliveries.createdAt));
+  }
+
+  async getDeliveriesByStatus(companyId: number, status: string): Promise<Delivery[]> {
+    return await db
+      .select()
+      .from(deliveries)
+      .where(and(
+        eq(deliveries.companyId, companyId),
+        eq(deliveries.status, status)
+      ))
+      .orderBy(desc(deliveries.createdAt));
+  }
+
+  async markDeliveryComplete(id: number, deliveredBy: string, signature?: string): Promise<Delivery | undefined> {
+    const [updatedDelivery] = await db
+      .update(deliveries)
+      .set({
+        status: 'delivered',
+        deliveredAt: new Date(),
+        deliveredBy,
+        deliverySignature: signature,
+        updatedAt: new Date()
+      })
+      .where(eq(deliveries.id, id))
+      .returning();
+    return updatedDelivery;
+  }
+
+  // Delivery Items Management
+  async getDeliveryItems(deliveryId: number): Promise<DeliveryItem[]> {
+    return await db
+      .select()
+      .from(deliveryItems)
+      .where(eq(deliveryItems.deliveryId, deliveryId));
+  }
+
+  async createDeliveryItem(item: InsertDeliveryItem): Promise<DeliveryItem> {
+    const [newItem] = await db
+      .insert(deliveryItems)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+
+  async updateDeliveryItem(id: number, item: Partial<InsertDeliveryItem>): Promise<DeliveryItem | undefined> {
+    const [updatedItem] = await db
+      .update(deliveryItems)
+      .set({ ...item, updatedAt: new Date() })
+      .where(eq(deliveryItems.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  async deleteDeliveryItem(id: number): Promise<boolean> {
+    const result = await db.delete(deliveryItems).where(eq(deliveryItems.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Helper methods for Sales module
+  private async generateNextOrderNumber(companyId: number): Promise<string> {
+    const year = new Date().getFullYear();
+    const sequence = await this.getNextSequenceNumber(companyId, 'sales_order');
+    return `SO-${year}-${sequence.toString().padStart(4, '0')}`;
+  }
+
+  private async generateNextDeliveryNumber(companyId: number): Promise<string> {
+    const year = new Date().getFullYear();
+    const sequence = await this.getNextSequenceNumber(companyId, 'delivery');
+    return `DEL-${year}-${sequence.toString().padStart(4, '0')}`;
+  }
+
+  private async recalculateSalesOrderTotals(salesOrderId: number): Promise<void> {
+    const items = await this.getSalesOrderItems(salesOrderId);
+    
+    const subtotal = items.reduce((sum, item) => 
+      sum + (parseFloat(item.quantity.toString()) * parseFloat(item.unitPrice.toString())), 0);
+    const vatAmount = items.reduce((sum, item) => sum + parseFloat(item.vatAmount.toString()), 0);
+    const total = subtotal + vatAmount;
+
+    await db
+      .update(salesOrders)
+      .set({
+        subtotal: subtotal.toFixed(2),
+        vatAmount: vatAmount.toFixed(2),
+        total: total.toFixed(2),
+        updatedAt: new Date()
+      })
+      .where(eq(salesOrders.id, salesOrderId));
   }
 }
 

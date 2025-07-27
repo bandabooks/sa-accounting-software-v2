@@ -1,0 +1,119 @@
+Ideal Sales Module Structure & Features
+Sidebar Menu Structure
+Sales
+
+Invoices
+
+Estimates / Quotes
+
+Customers
+
+Orders (Sales Orders)
+
+Deliveries (if you want to track fulfillment)
+
+Receipts / Payments Received
+
+Returns & Credit Notes (for refunds or product returns)
+
+Sales Reports (summary, aging, top customers, etc.)
+
+Essential Sales Flow Features
+Sales Orders
+
+Create/track customer sales orders before invoice is issued.
+
+Convert Sales Order to Invoice.
+
+Estimates/Quotes
+
+Prepare and send quotes.
+
+Convert Estimate → Sales Order or Invoice.
+
+Invoices
+
+Issue invoices to customers.
+
+Link to Sales Orders or Estimates.
+
+Include due dates, payment status, partial payments.
+
+Customers
+
+Full customer directory.
+
+Credit limits, contact details, statement of accounts.
+
+Receipts/Payments
+
+Record payments against invoices.
+
+Support for partial/advance payments.
+
+Receipt generation and auto-matching with bank feed if integrated.
+
+Deliveries / Fulfillment
+
+Track product delivery or service completion (optional but very professional).
+
+Generate Delivery Notes (DNs).
+
+Returns & Credit Notes
+
+Process sales returns or issue credit notes.
+
+Auto-apply to customer account/invoice.
+
+Sales Reports
+
+Sales summary by period
+
+Top customers/products
+
+Aged receivables (customer statements)
+
+Sales vs. targets
+
+UI/UX Recommendations
+Each feature should have its own tab/page.
+
+Sales Dashboard can show:
+
+Total sales this month
+
+Outstanding invoices
+
+Top 5 customers
+
+Quick links: New Invoice, New Quote, New Customer
+
+Table/list views should allow quick search, filters, and export to PDF/Excel.
+
+Every flow (estimate → order → invoice → payment) should be possible with as few clicks as possible.
+
+Sample Sidebar Flow
+css
+Copy
+Edit
+Sales
+├─ Dashboard (summary KPIs)
+├─ Invoices
+├─ Estimates/Quotes
+├─ Sales Orders
+├─ Deliveries
+├─ Customers
+├─ Payments/Receipts
+├─ Returns & Credit Notes
+├─ Sales Reports
+What to Build Next?
+Add “Sales Orders” and “Payments/Receipts” as sidebar items.
+
+Link Estimates > Sales Orders > Invoices > Payments (flow).
+
+Add “Returns/Credit Notes” for completeness.
+
+Build a “Sales Dashboard” tab with key sales KPIs and shortcuts.
+
+Prompt for Developer
+“Enhance the Sales module to include Sales Orders, Deliveries, Payments/Receipts, and Returns/Credit Notes. Ensure Estimates, Orders, Invoices, and Payments can be created and linked in a seamless workflow. Add a Sales Dashboard tab to show key sales metrics and quick actions.”

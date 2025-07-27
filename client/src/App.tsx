@@ -95,6 +95,8 @@ import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
 import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
+import SalesOrders from "@/pages/sales-orders";
+import Deliveries from "@/pages/deliveries";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -106,6 +108,10 @@ const PERMISSIONS = {
   INVOICES_CREATE: 'invoices:create',
   ESTIMATES_VIEW: 'estimates:view',
   ESTIMATES_CREATE: 'estimates:create',
+  SALES_ORDERS_VIEW: 'sales_orders:view',
+  SALES_ORDERS_CREATE: 'sales_orders:create',
+  DELIVERIES_VIEW: 'deliveries:view',
+  DELIVERIES_CREATE: 'deliveries:create',
   FINANCIAL_VIEW: 'financial:view',
   EXPENSES_VIEW: 'expenses:view',
   SUPPLIERS_VIEW: 'suppliers:view',
@@ -200,6 +206,16 @@ function AuthenticatedApp() {
         <Route path="/estimates/:id">
           <ProtectedRoute permission={PERMISSIONS.ESTIMATES_VIEW}>
             <EstimateDetail />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/sales-orders">
+          <ProtectedRoute permission={PERMISSIONS.SALES_ORDERS_VIEW}>
+            <SalesOrders />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/deliveries">
+          <ProtectedRoute permission={PERMISSIONS.DELIVERIES_VIEW}>
+            <Deliveries />
           </ProtectedRoute>
         </Route>
         <Route path="/suppliers">
