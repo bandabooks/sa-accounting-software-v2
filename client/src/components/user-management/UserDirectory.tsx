@@ -139,7 +139,7 @@ export default function UserDirectory({
     onError: (error) => {
       console.error('Failed to toggle user status:', error);
     },
-    onSettled: ({ userId }) => {
+    onSettled: (data, error, { userId }) => {
       setProcessingUsers(prev => {
         const newSet = new Set(prev);
         newSet.delete(userId);

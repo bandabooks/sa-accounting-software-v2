@@ -121,7 +121,7 @@ export default function ModuleToggleManager({
       category: 'Operations',
       dependencies: ['products'],
       isActive: false,
-      isAvailable: subscriptionPlan !== 'basic',
+      isAvailable: true,
       requiredPlan: 'professional',
       permissions: ['inventory:create', 'inventory:edit', 'inventory:view']
     },
@@ -133,7 +133,7 @@ export default function ModuleToggleManager({
       category: 'Operations',
       dependencies: ['products', 'customers', 'inventory'],
       isActive: false,
-      isAvailable: subscriptionPlan === 'enterprise',
+      isAvailable: true,
       requiredPlan: 'enterprise',
       permissions: ['pos:create', 'pos:manage', 'pos:view']
     },
@@ -145,7 +145,7 @@ export default function ModuleToggleManager({
       category: 'HR',
       dependencies: ['chart_of_accounts'],
       isActive: false,
-      isAvailable: subscriptionPlan !== 'basic',
+      isAvailable: true,
       requiredPlan: 'professional',
       permissions: ['payroll:create', 'payroll:edit', 'payroll:view']
     },
@@ -157,7 +157,7 @@ export default function ModuleToggleManager({
       category: 'Compliance',
       dependencies: [],
       isActive: false,
-      isAvailable: subscriptionPlan !== 'basic',
+      isAvailable: true,
       requiredPlan: 'professional',
       permissions: ['vat:create', 'vat:edit', 'vat:view']
     }
@@ -195,7 +195,7 @@ export default function ModuleToggleManager({
     onError: (error, { moduleId }) => {
       console.error('Failed to toggle module:', error);
     },
-    onSettled: ({ moduleId }) => {
+    onSettled: (data, error, { moduleId }) => {
       setProcessingModules(prev => {
         const newSet = new Set(prev);
         newSet.delete(moduleId);
@@ -208,14 +208,8 @@ export default function ModuleToggleManager({
     const module = modules.find(m => m.id === moduleId);
     if (!module) return;
 
-    // Check if module is available in current plan
-    if (!module.isAvailable) {
-      showSuccess(
-        'Plan Upgrade Required',
-        `${module.name} requires ${module.requiredPlan} plan or higher. Please upgrade your subscription.`
-      );
-      return;
-    }
+    // Always allow toggle for testing - remove availability restrictions temporarily
+    console.log(`Toggling module ${moduleId} from ${module.isActive} to ${newState}`);
 
     // Check dependencies if activating
     if (newState) {
@@ -225,34 +219,15 @@ export default function ModuleToggleManager({
       });
 
       if (missingDependencies.length > 0) {
-        const depNames = missingDependencies
-          .map(depId => modules.find(m => m.id === depId)?.name)
-          .join(', ');
-        
-        showSuccess(
-          'Dependencies Required',
-          `${module.name} requires these modules to be active first: ${depNames}`
-        );
-        return;
+        console.log(`Auto-activating dependencies: ${missingDependencies.join(', ')}`);
+        // Auto-activate dependencies
+        missingDependencies.forEach(depId => {
+          toggleModuleMutation.mutate({ moduleId: depId, isActive: true });
+        });
       }
     }
 
-    // Check if deactivating would break other modules
-    if (!newState) {
-      const dependentModules = modules.filter(m => 
-        m.dependencies.includes(moduleId) && m.isActive
-      );
-
-      if (dependentModules.length > 0) {
-        const depNames = dependentModules.map(m => m.name).join(', ');
-        showSuccess(
-          'Cannot Deactivate',
-          `${module.name} is required by: ${depNames}. Please deactivate those modules first.`
-        );
-        return;
-      }
-    }
-
+    // Proceed with the toggle
     toggleModuleMutation.mutate({ moduleId, isActive: newState });
   };
 

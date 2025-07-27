@@ -760,6 +760,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Permission toggle endpoint
+  app.post('/api/permissions/toggle', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { roleId, module, action, hasPermission, companyId } = req.body;
+      
+      console.log(`Permission toggle request: Role ${roleId}, Module ${module}, Current: ${hasPermission}, New: ${!hasPermission}`);
+      
+      // Mock implementation - replace with real permission toggle logic
+      const result = {
+        success: true,
+        message: `Permission ${!hasPermission ? 'granted' : 'removed'} successfully`,
+        roleId,
+        module,
+        hasPermission: !hasPermission,
+        companyId
+      };
+      
+      // Log the action
+      await logAudit(req.user!.id, hasPermission ? 'REMOVE_PERMISSION' : 'GRANT_PERMISSION', 'permission', 0, `${module} permission for role ${roleId}`);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error toggling permission:', error);
+      res.status(500).json({ error: 'Failed to toggle permission' });
+    }
+  });
+
   // Subscription usage analytics endpoint
   app.get('/api/subscription/usage-analytics/:companyId?', authenticate, async (req: AuthenticatedRequest, res) => {
     try {

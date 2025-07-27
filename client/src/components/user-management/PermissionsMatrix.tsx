@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Shield, Download, Filter } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSuccessModal } from "@/hooks/useSuccessModal";
+import { apiRequest } from "@/lib/queryClient";
+import { CheckCircle, XCircle, Shield, Download, Filter, Settings } from "lucide-react";
 
 interface PermissionMatrix {
   roles: string[];
@@ -24,6 +28,9 @@ export default function PermissionsMatrix({
   className = ""
 }: PermissionsMatrixProps) {
   const [selectedModule, setSelectedModule] = useState<string>('all');
+  const [processingPermissions, setProcessingPermissions] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
+  const { showSuccess } = useSuccessModal();
 
   // Fetch permissions matrix
   const { data: matrix, isLoading } = useQuery({
@@ -168,11 +175,80 @@ export default function PermissionsMatrix({
     return matchesSearch && matchesFilter;
   });
 
-  const getPermissionIcon = (hasPermission: boolean) => {
-    return hasPermission ? (
-      <CheckCircle className="h-4 w-4 text-green-500" />
-    ) : (
-      <XCircle className="h-4 w-4 text-red-500" />
+  // Toggle permission mutation
+  const togglePermissionMutation = useMutation({
+    mutationFn: async ({ roleId, module, action, hasPermission }: { 
+      roleId: string; 
+      module: string; 
+      action: string; 
+      hasPermission: boolean; 
+    }) => {
+      return apiRequest('/api/permissions/toggle', {
+        method: 'POST',
+        body: {
+          roleId,
+          module,
+          action,
+          hasPermission: !hasPermission, // Toggle the permission
+          companyId
+        }
+      });
+    },
+    onMutate: ({ roleId, module }) => {
+      const key = `${roleId}-${module}`;
+      setProcessingPermissions(prev => new Set(prev).add(key));
+    },
+    onSuccess: (data, { roleId, module, hasPermission }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+      showSuccess(
+        'Permission Updated',
+        `Permission has been ${!hasPermission ? 'granted' : 'removed'} successfully.`
+      );
+    },
+    onError: (error) => {
+      console.error('Failed to toggle permission:', error);
+    },
+    onSettled: (data, error, { roleId, module }) => {
+      const key = `${roleId}-${module}`;
+      setProcessingPermissions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }
+  });
+
+  const handlePermissionToggle = (roleId: string, module: string, hasPermission: boolean) => {
+    togglePermissionMutation.mutate({
+      roleId,
+      module,
+      action: 'toggle',
+      hasPermission
+    });
+  };
+
+  const getPermissionToggle = (role: string, module: string, hasPermission: boolean) => {
+    const key = `${role}-${module}`;
+    const isProcessing = processingPermissions.has(key);
+    
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center justify-center">
+              <Switch
+                checked={hasPermission}
+                onCheckedChange={() => handlePermissionToggle(role, module, hasPermission)}
+                disabled={isProcessing}
+                size="sm"
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{hasPermission ? 'Remove' : 'Grant'} {module} access for {role}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
@@ -262,7 +338,7 @@ export default function PermissionsMatrix({
                     </TableCell>
                     {matrixData.roles.map(role => (
                       <TableCell key={`${module}-${role}`} className="text-center">
-                        {getPermissionIcon(matrixData.permissions[module]?.[role] || false)}
+                        {getPermissionToggle(role, module, matrixData.permissions[module]?.[role] || false)}
                       </TableCell>
                     ))}
                   </TableRow>
