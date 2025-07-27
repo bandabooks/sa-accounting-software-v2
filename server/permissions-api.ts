@@ -196,11 +196,23 @@ export async function toggleModuleActivation(req: PermissionsMatrixRequest, res:
     }
 
     try {
-      // Update module activation status - simplified approach
+      // Update module activation status in database
       console.log('Updating module activation:', { moduleId, isActive });
       
-      // For now, just return success to test UI
-      // TODO: Implement actual module activation storage
+      // Get the current user's company ID
+      const companyId = currentUser.companyId || 2; // Default company
+      
+      // Update the module activation status
+      await storage.updateModuleActivation(companyId, moduleId, isActive);
+      
+      // Create audit log
+      await storage.createAuditLog({
+        userId: currentUser.id,
+        action: `module_${isActive ? 'activated' : 'deactivated'}`,
+        resource: moduleId,
+        details: { moduleId, isActive, reason },
+        companyId: companyId
+      });
       
       res.json({ 
         success: true, 

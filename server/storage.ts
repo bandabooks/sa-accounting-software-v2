@@ -8139,6 +8139,30 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(auditLogs.createdAt));
   }
+
+  // Module activation management
+  async updateModuleActivation(companyId: number, moduleId: string, isActive: boolean): Promise<void> {
+    // Update or insert module activation status for the company
+    await db
+      .insert(companyModules)
+      .values({
+        companyId,
+        moduleId,
+        isActive,
+        activatedAt: isActive ? new Date() : null,
+        deactivatedAt: isActive ? null : new Date(),
+        updatedAt: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [companyModules.companyId, companyModules.moduleId],
+        set: {
+          isActive,
+          activatedAt: isActive ? new Date() : companyModules.activatedAt,
+          deactivatedAt: isActive ? companyModules.deactivatedAt : new Date(),
+          updatedAt: new Date()
+        }
+      });
+  }
 }
 
 export const storage = new DatabaseStorage();
