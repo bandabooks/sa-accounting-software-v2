@@ -26,12 +26,12 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
 
   const { data: vatSettings } = useQuery({
     queryKey: ["/api/companies", companyId, "vat-settings"],
-  });
+  }) as { data?: { isVatRegistered: boolean; vatNumber?: string; vatRegistrationDate?: string; vatPeriodMonths: number; vatSubmissionDay: number; } };
 
   const { data: vatTypes } = useQuery({
     queryKey: ["/api/companies", companyId, "vat-types"],
     enabled: !!vatSettings?.isVatRegistered,
-  });
+  }) as { data?: Array<{ id: number; code: string; name: string; description: string; rate: number; isActive: boolean; isSystemType: boolean; }> };
 
   const { data: vatReports } = useQuery({
     queryKey: ["/api/vat-reports"],
