@@ -64,33 +64,44 @@ export async function createDefaultUserPermissions(): Promise<void> {
         const existingPermission = await storage.getUserPermission(user.id, company.id);
         
         if (!existingPermission) {
-          // Determine role based on strict criteria
-          let roleId = companyAdminRole.id; // Default to Company Admin for all users
-          let roleName = 'Company Admin';
-          
-          // Only specific system admin accounts get Super Admin role
-          if (user.username === 'sysadmin_7f3a2b8e' || 
-              user.username === 'admin' || 
-              user.email === 'accounts@thinkmybiz.com') {
-            roleId = superAdminRole.id;
-            roleName = 'Super Admin';
+          try {
+            // Determine role based on strict criteria
+            let roleId = companyAdminRole.id; // Default to Company Admin for all users
+            let roleName = 'Company Admin';
+            
+            // Only specific system admin accounts get Super Admin role
+            if (user.username === 'sysadmin_7f3a2b8e' || 
+                user.username === 'admin' || 
+                user.email === 'accounts@thinkmybiz.com') {
+              roleId = superAdminRole.id;
+              roleName = 'Super Admin';
+            }
+            // All other legitimate business users get Company Admin to access modules based on subscriptions
+            // This ensures trial signups and business users can access their subscribed modules
+            
+            // Create user permission with error handling
+            await storage.createUserPermission({
+              userId: user.id,
+              companyId: company.id,
+              systemRoleId: roleId,
+              companyRoleId: null,
+              customPermissions: [],
+              deniedPermissions: [],
+              isActive: true,
+              grantedBy: user.id, // Self-granted for initial setup
+            });
+            
+            console.log(`✓ Created permissions for ${user.username} in ${company.name} (${roleName})`);
+          } catch (permissionError: any) {
+            // Skip if permission already exists (duplicate key error)
+            if (permissionError.code === '23505') {
+              console.log(`→ Permissions already exist for ${user.username} in ${company.name}`);
+            } else {
+              console.error(`Error creating permission for ${user.username}:`, permissionError.message);
+            }
           }
-          // All other legitimate business users get Company Admin to access modules based on subscriptions
-          // This ensures trial signups and business users can access their subscribed modules
-          
-          // Create user permission
-          await storage.createUserPermission({
-            userId: user.id,
-            companyId: company.id,
-            systemRoleId: roleId,
-            companyRoleId: null,
-            customPermissions: [],
-            deniedPermissions: [],
-            isActive: true,
-            grantedBy: user.id, // Self-granted for initial setup
-          });
-          
-          console.log(`✓ Created permissions for ${user.username} in ${company.name} (${roleName})`);
+        } else {
+          console.log(`→ Permissions already exist for ${user.username} in ${company.name}`);
         }
       }
     }

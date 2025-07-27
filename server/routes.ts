@@ -6514,28 +6514,46 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Initialize default permissions for all roles
   app.post("/api/permissions/initialize-defaults", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
     try {
-      // Get all roles
-      const roles = await storage.getAllSystemRoles();
+      console.log('Starting permission initialization...');
+      
+      // Get all roles with timeout
+      const roles = await Promise.race([
+        storage.getAllSystemRoles(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+      ]) as any[];
       
       let updatedCount = 0;
       for (const role of roles) {
-        // Check if role already has permissions
-        const hasPermissions = role.permissions && role.permissions !== '{}';
-        
-        if (!hasPermissions) {
-          await storage.setDefaultPermissionsForRole(role.id, role.name);
-          updatedCount++;
+        try {
+          // Check if role already has permissions
+          const hasPermissions = role.permissions && role.permissions !== '{}' && role.permissions !== null;
+          
+          if (!hasPermissions) {
+            console.log(`Setting permissions for role: ${role.name}`);
+            await Promise.race([
+              storage.setDefaultPermissionsForRole(role.id, role.name),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Permission timeout')), 5000))
+            ]);
+            updatedCount++;
+            console.log(`✓ Updated permissions for role: ${role.name}`);
+          } else {
+            console.log(`→ Role ${role.name} already has permissions`);
+          }
+        } catch (roleError: any) {
+          console.error(`Error updating role ${role.name}:`, roleError.message);
+          // Continue with other roles instead of failing completely
         }
       }
       
+      console.log(`Permission initialization completed. Updated ${updatedCount} roles.`);
       res.json({ 
         success: true, 
         message: `Default permissions initialized for ${updatedCount} roles`,
         updatedCount 
       });
-    } catch (error) {
-      console.error("Error initializing default permissions:", error);
-      res.status(500).json({ message: "Failed to initialize default permissions" });
+    } catch (error: any) {
+      console.error("Error initializing default permissions:", error.message);
+      res.status(500).json({ message: `Failed to initialize default permissions: ${error.message}` });
     }
   });
   
