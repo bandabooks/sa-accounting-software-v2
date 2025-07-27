@@ -95,18 +95,8 @@ const roleFormSchema = z.object({
 type UserFormData = z.infer<typeof userFormSchema>;
 type RoleFormData = z.infer<typeof roleFormSchema>;
 
-// Module permissions mapping - Complete set matching API module IDs  
-const modulePermissions = {
-  dashboard: ["VIEW", "CREATE", "EDIT"],
-  invoicing: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  expenses: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  inventory_management: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  chart_of_accounts: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  vat_management: ["VIEW", "CREATE", "EDIT"],
-  financial_reports: ["VIEW", "EXPORT"],
-  payroll: ["VIEW", "CREATE", "EDIT", "DELETE"],
-  pos_sales: ["VIEW", "CREATE", "EDIT", "DELETE", "MANAGE"], // Point of Sale - 9th module
-};
+// Note: Module access is now managed through subscription plans
+// See super-admin-plan-edit.tsx for the comprehensive 19-module system
 
 export default function UnifiedUserManagement() {
   const { user } = useAuth();
@@ -157,32 +147,8 @@ export default function UnifiedUserManagement() {
     queryKey: ["/api/admin/role-history"],
   });
 
-  // Fetch active company modules
-  const { data: moduleData } = useQuery<any>({
-    queryKey: ["/api/modules/company"],
-    refetchInterval: false,
-    refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-  });
-
-  // Extract active module IDs from the API response
-  const activeModules =
-    moduleData?.modules
-      ?.filter((module: any) => module.isActive)
-      ?.map((module: any) => module.id) || [];
-
-  // Create a map for quick lookup of module states
-  const moduleStates =
-    moduleData?.modules?.reduce((acc: any, module: any) => {
-      acc[module.id] = module.isActive;
-      return acc;
-    }, {}) || {};
-
-  // Debug logging for troubleshooting
-  console.log("Module data:", moduleData);
-  console.log("Module states:", moduleStates);
-  console.log("Module permissions keys:", Object.keys(modulePermissions));
+  // Module access is now managed through subscription plans
+  // See Super Admin Panel > Subscription Plans for comprehensive module management
 
   // Mutations
   const toggleUserStatusMutation = useMutation({
@@ -264,63 +230,7 @@ export default function UnifiedUserManagement() {
     },
   });
 
-  const toggleModuleMutation = useMutation({
-    mutationFn: async ({
-      module,
-      enabled,
-    }: {
-      module: string;
-      enabled: boolean;
-    }) => {
-      return apiRequest(`/api/modules/${module}/toggle`, "POST", {
-        isActive: enabled,
-        reason: "Module toggled via admin interface",
-      });
-    },
-    onMutate: async ({ module, enabled }) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries({ queryKey: ["/api/modules/company"] });
-
-      // Snapshot the previous value
-      const previousModuleData = queryClient.getQueryData(["/api/modules/company"]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(["/api/modules/company"], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          modules: old.modules.map((mod: any) => 
-            mod.id === module ? { 
-              ...mod, 
-              isActive: enabled 
-            } : mod
-          )
-        };
-      });
-
-      // Return a context object with the snapshotted value
-      return { previousModuleData };
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate and refetch the module data to ensure persistence
-      queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
-      showSuccess({
-        title: "Module Status Updated",
-        description: `${variables.module.replace(/_/g, ' ')} module has been ${variables.enabled ? "activated" : "deactivated"} successfully`,
-      });
-    },
-    onError: (error, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      if (context?.previousModuleData) {
-        queryClient.setQueryData(["/api/modules/company"], context.previousModuleData);
-      }
-      toast({
-        title: "Module Update Failed",
-        description: `Unable to update module status. Error: ${error.message || "Unknown error"}`,
-        variant: "destructive",
-      });
-    },
-  });
+  // Module toggle functionality moved to subscription plan management
 
   const resolveDuplicateMutation = useMutation({
     mutationFn: async ({
@@ -649,7 +559,7 @@ export default function UnifiedUserManagement() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Modules access:</span>
                   <span className="font-medium">
-                    {Object.keys(modulePermissions).length} modules
+                    Role-based access
                   </span>
                 </div>
                 <Button
@@ -898,59 +808,7 @@ export default function UnifiedUserManagement() {
     </div>
   );
 
-  // Module Access Tab
-  const ModuleAccessTab = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">
-          Module Access Control
-        </h2>
-        <p className="text-gray-600">
-          Activate/deactivate modules based on subscription plans
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Object.keys(modulePermissions).map((module) => (
-          <Card key={module}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg capitalize">
-                  {module.replace(/_/g, " ")}
-                </CardTitle>
-                <Switch
-                  checked={moduleStates[module] === true}
-                  onCheckedChange={(checked) => {
-                    toggleModuleMutation.mutate({ module, enabled: checked });
-                  }}
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600">
-                  Available in:{" "}
-                  {subscriptionPlans
-                    .map((plan: any) => plan.displayName)
-                    .join(", ")}
-                </p>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="text-xs">
-                    {
-                      modulePermissions[
-                        module as keyof typeof modulePermissions
-                      ].length
-                    }{" "}
-                    permissions
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
 
   // Activity Log Tab with Duplicate Admin Prevention
   const ActivityLogTab = () => (
@@ -1212,8 +1070,22 @@ export default function UnifiedUserManagement() {
           User Management Dashboard
         </h1>
         <p className="text-gray-600 mt-2">
-          Centralized control for users, roles, permissions, and module access
+          Centralized control for users, roles, and permissions
         </p>
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <Package className="h-5 w-5 text-blue-600 mt-0.5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">Module Management</h3>
+              <p className="mt-1 text-sm text-blue-700">
+                Module access is now managed through <strong>Super Admin Panel → Subscription Plans</strong> with all 19 modules available.
+                This provides a unified, comprehensive interface for managing module permissions across different subscription tiers.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Tabs */}
@@ -1222,7 +1094,7 @@ export default function UnifiedUserManagement() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users size={16} />
             Users
@@ -1234,10 +1106,6 @@ export default function UnifiedUserManagement() {
           <TabsTrigger value="permissions" className="flex items-center gap-2">
             <Key size={16} />
             Permissions
-          </TabsTrigger>
-          <TabsTrigger value="modules" className="flex items-center gap-2">
-            <Settings size={16} />
-            Modules
           </TabsTrigger>
           <TabsTrigger value="activity" className="flex items-center gap-2">
             <Activity size={16} />
@@ -1257,9 +1125,7 @@ export default function UnifiedUserManagement() {
           <PermissionMatrixTab />
         </TabsContent>
 
-        <TabsContent value="modules">
-          <ModuleAccessTab />
-        </TabsContent>
+
 
         <TabsContent value="activity">
           <ActivityLogTab />
