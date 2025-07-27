@@ -97,6 +97,10 @@ import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
 import SalesOrders from "@/pages/sales-orders";
 import Deliveries from "@/pages/deliveries";
+import SalesDashboard from "@/pages/sales-dashboard";
+import CreditNotes from "@/pages/credit-notes";
+import CustomerPayments from "@/pages/customer-payments";
+import SalesReports from "@/pages/sales-reports";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -208,6 +212,11 @@ function AuthenticatedApp() {
             <EstimateDetail />
           </ProtectedRoute>
         </Route>
+        <Route path="/sales-dashboard">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <SalesDashboard />
+          </ProtectedRoute>
+        </Route>
         <Route path="/sales-orders">
           <ProtectedRoute permission={PERMISSIONS.SALES_ORDERS_VIEW}>
             <SalesOrders />
@@ -216,6 +225,21 @@ function AuthenticatedApp() {
         <Route path="/deliveries">
           <ProtectedRoute permission={PERMISSIONS.DELIVERIES_VIEW}>
             <Deliveries />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/credit-notes">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <CreditNotes />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customer-payments">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <CustomerPayments />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/sales-reports">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <SalesReports />
           </ProtectedRoute>
         </Route>
         <Route path="/suppliers">
