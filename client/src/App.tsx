@@ -94,6 +94,7 @@ import ComplianceDocuments from "@/pages/compliance-documents";
 import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
 import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
+import ExceptionDashboard from "@/pages/exception-dashboard";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -134,6 +135,9 @@ const PERMISSIONS = {
   ROLES_CREATE: 'roles:create',
   USERS_ASSIGN_ROLES: 'users:assign_roles',
   PERMISSIONS_GRANT: 'permissions:grant',
+  // Exception handling permissions
+  EXCEPTIONS_VIEW: 'exceptions:view',
+  EXCEPTIONS_MANAGE: 'exceptions:manage',
 } as const;
 
 function AuthenticatedApp() {
@@ -216,6 +220,11 @@ function AuthenticatedApp() {
         <Route path="/three-way-matching">
           <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
             <ThreeWayMatching />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/exception-dashboard">
+          <ProtectedRoute permission={PERMISSIONS.EXCEPTIONS_VIEW}>
+            <ExceptionDashboard />
           </ProtectedRoute>
         </Route>
         <Route path="/products">

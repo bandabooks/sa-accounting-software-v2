@@ -73,6 +73,10 @@ import {
   bankIntegrations,
   spendingWizardProfiles,
   spendingWizardConversations,
+  paymentExceptions,
+  exceptionEscalations,
+  exceptionAlerts,
+  vendorMasterValidation,
   spendingWizardMessages,
   spendingWizardInsights,
   spendingWizardTips,
@@ -240,6 +244,14 @@ import {
   type InsertApprovalRequest,
   type BankIntegration,
   type InsertBankIntegration,
+  type PaymentException,
+  type InsertPaymentException,
+  type ExceptionEscalation,
+  type InsertExceptionEscalation,
+  type ExceptionAlert,
+  type InsertExceptionAlert,
+  type VendorMasterValidation,
+  type InsertVendorMasterValidation,
   type SpendingWizardProfile,
   type InsertSpendingWizardProfile,
   type SpendingWizardConversation,
@@ -716,6 +728,19 @@ export interface IStorage {
   createPermissionAuditLog(log: InsertPermissionAuditLog): Promise<PermissionAuditLog>;
   getPermissionAuditLogs(companyId: number, limit?: number): Promise<PermissionAuditLog[]>;
   getUserPermissionAuditLogs(userId: number, companyId: number, limit?: number): Promise<PermissionAuditLog[]>;
+
+  // Exception Handling System
+  createPaymentException(exception: InsertPaymentException): Promise<PaymentException>;
+  getPaymentExceptions(companyId: number, filters?: any): Promise<any[]>;
+  updatePaymentException(id: number, updates: Partial<PaymentException>): Promise<PaymentException>;
+  resolvePaymentException(id: number, resolution: string, resolvedBy: number): Promise<PaymentException>;
+  escalatePaymentException(exceptionId: number, escalation: InsertExceptionEscalation): Promise<ExceptionEscalation>;
+  createExceptionAlert(alert: InsertExceptionAlert): Promise<ExceptionAlert>;
+  getExceptionAlerts(companyId: number, userId?: number): Promise<ExceptionAlert[]>;
+  markAlertAsRead(alertId: number): Promise<void>;
+  detectAmountMismatches(companyId: number): Promise<PaymentException[]>;
+  detectDuplicateSuppliers(companyId: number): Promise<PaymentException[]>;
+  runAutomatedExceptionDetection(companyId: number): Promise<PaymentException[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -8242,6 +8267,329 @@ export class DatabaseStorage implements IStorage {
       default:
         return false;
     }
+  }
+
+  // Exception Handling Methods
+  async createPaymentException(exception: InsertPaymentException): Promise<PaymentException> {
+    const [newException] = await db.insert(paymentExceptions).values(exception).returning();
+    
+    // Create audit log entry
+    await this.createAuditLog({
+      companyId: exception.companyId,
+      userId: exception.detectedBy || 1,
+      action: 'create',
+      resource: 'payment_exception',
+      resourceId: newException.id.toString(),
+      details: `Exception created: ${exception.title}`,
+      metadata: {
+        exceptionType: exception.exceptionType,
+        severity: exception.severity,
+        entityType: exception.entityType,
+        entityId: exception.entityId
+      }
+    });
+
+    return newException;
+  }
+
+  async getPaymentExceptions(companyId: number, filters?: any): Promise<any[]> {
+    let query = db
+      .select({
+        id: paymentExceptions.id,
+        exceptionType: paymentExceptions.exceptionType,
+        severity: paymentExceptions.severity,
+        status: paymentExceptions.status,
+        entityType: paymentExceptions.entityType,
+        entityId: paymentExceptions.entityId,
+        title: paymentExceptions.title,
+        description: paymentExceptions.description,
+        detectedAmount: paymentExceptions.detectedAmount,
+        expectedAmount: paymentExceptions.expectedAmount,
+        varianceAmount: paymentExceptions.varianceAmount,
+        autoDetected: paymentExceptions.autoDetected,
+        paymentHold: paymentExceptions.paymentHold,
+        requiresApproval: paymentExceptions.requiresApproval,
+        assignedTo: paymentExceptions.assignedTo,
+        resolvedBy: paymentExceptions.resolvedBy,
+        resolution: paymentExceptions.resolution,
+        dueDate: paymentExceptions.dueDate,
+        resolvedAt: paymentExceptions.resolvedAt,
+        createdAt: paymentExceptions.createdAt,
+        updatedAt: paymentExceptions.updatedAt,
+        detectedByUser: {
+          id: sql<number>`detected_user.id`,
+          name: sql<string>`COALESCE(detected_user.full_name, detected_user.username)`
+        },
+        assignedToUser: {
+          id: sql<number>`assigned_user.id`,
+          name: sql<string>`COALESCE(assigned_user.full_name, assigned_user.username)`
+        },
+        resolvedByUser: {
+          id: sql<number>`resolved_user.id`,
+          name: sql<string>`COALESCE(resolved_user.full_name, resolved_user.username)`
+        }
+      })
+      .from(paymentExceptions)
+      .leftJoin(users.as('detected_user'), eq(paymentExceptions.detectedBy, users.id))
+      .leftJoin(users.as('assigned_user'), eq(paymentExceptions.assignedTo, users.id))
+      .leftJoin(users.as('resolved_user'), eq(paymentExceptions.resolvedBy, users.id))
+      .where(eq(paymentExceptions.companyId, companyId));
+
+    if (filters?.status) {
+      query = query.where(eq(paymentExceptions.status, filters.status));
+    }
+    if (filters?.severity) {
+      query = query.where(eq(paymentExceptions.severity, filters.severity));
+    }
+    if (filters?.exceptionType) {
+      query = query.where(eq(paymentExceptions.exceptionType, filters.exceptionType));
+    }
+
+    return await query.orderBy(desc(paymentExceptions.createdAt));
+  }
+
+  async updatePaymentException(id: number, updates: Partial<PaymentException>): Promise<PaymentException> {
+    const [updated] = await db
+      .update(paymentExceptions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(paymentExceptions.id, id))
+      .returning();
+
+    return updated;
+  }
+
+  async resolvePaymentException(id: number, resolution: string, resolvedBy: number): Promise<PaymentException> {
+    const [resolved] = await db
+      .update(paymentExceptions)
+      .set({
+        status: 'resolved',
+        resolution,
+        resolvedBy,
+        resolvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(paymentExceptions.id, id))
+      .returning();
+
+    // Create audit log
+    await this.createAuditLog({
+      companyId: resolved.companyId,
+      userId: resolvedBy,
+      action: 'resolve',
+      resource: 'payment_exception',
+      resourceId: id.toString(),
+      details: `Exception resolved: ${resolution}`,
+      metadata: { resolution }
+    });
+
+    return resolved;
+  }
+
+  async escalatePaymentException(exceptionId: number, escalation: InsertExceptionEscalation): Promise<ExceptionEscalation> {
+    const [newEscalation] = await db.insert(exceptionEscalations).values(escalation).returning();
+
+    // Update exception status
+    await db
+      .update(paymentExceptions)
+      .set({
+        status: 'escalated',
+        escalatedTo: escalation.toUserId,
+        escalationReason: escalation.escalationReason,
+        updatedAt: new Date()
+      })
+      .where(eq(paymentExceptions.id, exceptionId));
+
+    return newEscalation;
+  }
+
+  async createExceptionAlert(alert: InsertExceptionAlert): Promise<ExceptionAlert> {
+    const [newAlert] = await db.insert(exceptionAlerts).values(alert).returning();
+    return newAlert;
+  }
+
+  async getExceptionAlerts(companyId: number, userId?: number): Promise<ExceptionAlert[]> {
+    let query = db
+      .select()
+      .from(exceptionAlerts)
+      .where(eq(exceptionAlerts.companyId, companyId));
+
+    if (userId) {
+      query = query.where(eq(exceptionAlerts.recipientId, userId));
+    }
+
+    return await query.orderBy(desc(exceptionAlerts.createdAt));
+  }
+
+  async markAlertAsRead(alertId: number): Promise<void> {
+    await db
+      .update(exceptionAlerts)
+      .set({ readAt: new Date() })
+      .where(eq(exceptionAlerts.id, alertId));
+  }
+
+  // Automated Exception Detection Methods
+  async detectAmountMismatches(companyId: number): Promise<PaymentException[]> {
+    const detectedExceptions: PaymentException[] = [];
+
+    // Get purchase orders with their payments
+    const purchaseOrdersWithPayments = await db
+      .select({
+        po: purchaseOrders,
+        payments: sql<any[]>`COALESCE(json_agg(sp.*) FILTER (WHERE sp.id IS NOT NULL), '[]'::json)`
+      })
+      .from(purchaseOrders)
+      .leftJoin(supplierPayments, eq(purchaseOrders.id, supplierPayments.purchaseOrderId))
+      .where(eq(purchaseOrders.companyId, companyId))
+      .groupBy(purchaseOrders.id);
+
+    for (const row of purchaseOrdersWithPayments) {
+      const po = row.po;
+      const payments = Array.isArray(row.payments) ? row.payments : [];
+      
+      const totalPaid = payments.reduce((sum: number, payment: any) => 
+        sum + parseFloat(payment.amount || '0'), 0);
+      const poAmount = parseFloat(po.totalAmount);
+      const variance = Math.abs(totalPaid - poAmount);
+
+      // Check for significant variance (more than 1% or R100)
+      if (variance > Math.max(poAmount * 0.01, 100) && payments.length > 0) {
+        const exception = await this.createPaymentException({
+          companyId,
+          exceptionType: 'amount_mismatch',
+          severity: variance > poAmount * 0.1 ? 'high' : 'medium',
+          status: 'open',
+          entityType: 'purchase_order',
+          entityId: po.id,
+          title: `Amount mismatch detected for PO ${po.orderNumber}`,
+          description: `Expected amount: R${poAmount.toFixed(2)}, Paid amount: R${totalPaid.toFixed(2)}, Variance: R${variance.toFixed(2)}`,
+          detectedAmount: totalPaid.toString(),
+          expectedAmount: poAmount.toString(),
+          varianceAmount: variance.toString(),
+          autoDetected: true,
+          paymentHold: variance > poAmount * 0.05, // Hold payment if variance > 5%
+          requiresApproval: true,
+          detectedBy: 1 // System user
+        });
+
+        detectedExceptions.push(exception);
+      }
+    }
+
+    return detectedExceptions;
+  }
+
+  async detectDuplicateSuppliers(companyId: number): Promise<PaymentException[]> {
+    const detectedExceptions: PaymentException[] = [];
+
+    // Find suppliers with similar names or bank details
+    const suppliers = await db
+      .select()
+      .from(suppliers)
+      .where(eq(suppliers.companyId, companyId));
+
+    for (let i = 0; i < suppliers.length; i++) {
+      for (let j = i + 1; j < suppliers.length; j++) {
+        const supplier1 = suppliers[i];
+        const supplier2 = suppliers[j];
+
+        // Check for similar names (basic similarity check)
+        const nameSimilarity = this.calculateStringSimilarity(
+          supplier1.name.toLowerCase(),
+          supplier2.name.toLowerCase()
+        );
+
+        if (nameSimilarity > 0.8) {
+          const exception = await this.createPaymentException({
+            companyId,
+            exceptionType: 'duplicate_supplier',
+            severity: 'medium',
+            status: 'open',
+            entityType: 'supplier',
+            entityId: supplier1.id,
+            title: `Potential duplicate supplier detected`,
+            description: `Supplier "${supplier1.name}" appears similar to "${supplier2.name}". Please review for potential duplicates.`,
+            autoDetected: true,
+            requiresApproval: true,
+            detectedBy: 1
+          });
+
+          detectedExceptions.push(exception);
+        }
+      }
+    }
+
+    return detectedExceptions;
+  }
+
+  private calculateStringSimilarity(str1: string, str2: string): number {
+    // Simple Levenshtein distance-based similarity
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) return 1.0;
+    
+    const editDistance = this.levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  }
+
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  }
+
+  async runAutomatedExceptionDetection(companyId: number): Promise<PaymentException[]> {
+    const allExceptions: PaymentException[] = [];
+
+    try {
+      // Run all automated detection methods
+      const amountMismatches = await this.detectAmountMismatches(companyId);
+      const duplicateSuppliers = await this.detectDuplicateSuppliers(companyId);
+
+      allExceptions.push(...amountMismatches, ...duplicateSuppliers);
+
+      // Create alerts for high-severity exceptions
+      for (const exception of allExceptions) {
+        if (exception.severity === 'high' || exception.severity === 'critical') {
+          await this.createExceptionAlert({
+            companyId: exception.companyId,
+            exceptionId: exception.id,
+            alertType: 'in_app',
+            recipientId: exception.assignedTo || 1,
+            alertTitle: `High Priority Exception: ${exception.title}`,
+            alertMessage: exception.description,
+            actionRequired: true
+          });
+        }
+      }
+
+    } catch (error) {
+      console.error('Error running automated exception detection:', error);
+    }
+
+    return allExceptions;
   }
 
   async getUserPermissionAuditLogs(userId: number, companyId: number, limit: number = 50): Promise<PermissionAuditLog[]> {

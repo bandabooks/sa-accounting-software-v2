@@ -3719,3 +3719,94 @@ export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
 
 export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
 export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;
+
+// Exception Handling System Tables
+export const paymentExceptions = pgTable("payment_exceptions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  exceptionType: varchar("exception_type", { length: 50 }).notNull(), // 'amount_mismatch', 'duplicate_supplier', 'missing_docs', etc.
+  severity: varchar("severity", { length: 20 }).notNull().default("medium"), // 'low', 'medium', 'high', 'critical'
+  status: varchar("status", { length: 20 }).notNull().default("open"), // 'open', 'resolved', 'escalated', 'closed'
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // 'purchase_order', 'supplier_payment', 'invoice'
+  entityId: integer("entity_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  detectedAmount: decimal("detected_amount", { precision: 15, scale: 2 }),
+  expectedAmount: decimal("expected_amount", { precision: 15, scale: 2 }),
+  varianceAmount: decimal("variance_amount", { precision: 15, scale: 2 }),
+  autoDetected: boolean("auto_detected").default(true),
+  paymentHold: boolean("payment_hold").default(false),
+  requiresApproval: boolean("requires_approval").default(false),
+  detectedBy: integer("detected_by").references(() => users.id),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  resolution: text("resolution"),
+  escalatedTo: integer("escalated_to").references(() => users.id),
+  escalationReason: text("escalation_reason"),
+  dueDate: timestamp("due_date"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+export const exceptionEscalations = pgTable("exception_escalations", {
+  id: serial("id").primaryKey(),
+  exceptionId: integer("exception_id").references(() => paymentExceptions.id).notNull(),
+  fromUserId: integer("from_user_id").references(() => users.id).notNull(),
+  toUserId: integer("to_user_id").references(() => users.id).notNull(),
+  escalationReason: text("escalation_reason").notNull(),
+  urgencyLevel: varchar("urgency_level", { length: 20 }).notNull().default("normal"), // 'low', 'normal', 'high', 'urgent'
+  requiresResponse: boolean("requires_response").default(true),
+  responseDeadline: timestamp("response_deadline"),
+  respondedAt: timestamp("responded_at"),
+  responseAction: varchar("response_action", { length: 50 }), // 'approved', 'rejected', 'reassigned', 'escalated_further'
+  responseComments: text("response_comments"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const exceptionAlerts = pgTable("exception_alerts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  exceptionId: integer("exception_id").references(() => paymentExceptions.id).notNull(),
+  alertType: varchar("alert_type", { length: 50 }).notNull(), // 'email', 'in_app', 'sms'
+  recipientId: integer("recipient_id").references(() => users.id).notNull(),
+  alertTitle: varchar("alert_title", { length: 200 }).notNull(),
+  alertMessage: text("alert_message").notNull(),
+  sent: boolean("sent").default(false),
+  sentAt: timestamp("sent_at"),
+  readAt: timestamp("read_at"),
+  actionRequired: boolean("action_required").default(false),
+  actionTaken: boolean("action_taken").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const vendorMasterValidation = pgTable("vendor_master_validation", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  validationType: varchar("validation_type", { length: 50 }).notNull(), // 'bank_details', 'vat_number', 'bee_status'
+  validationStatus: varchar("validation_status", { length: 20 }).notNull().default("pending"), // 'pending', 'verified', 'failed', 'manual_review'
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  validationNotes: text("validation_notes"),
+  validatedBy: integer("validated_by").references(() => users.id),
+  validatedAt: timestamp("validated_at"),
+  alertGenerated: boolean("alert_generated").default(false),
+  requiresReview: boolean("requires_review").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+export const insertPaymentExceptionSchema = createInsertSchema(paymentExceptions);
+export const insertExceptionEscalationSchema = createInsertSchema(exceptionEscalations);
+export const insertExceptionAlertSchema = createInsertSchema(exceptionAlerts);
+export const insertVendorMasterValidationSchema = createInsertSchema(vendorMasterValidation);
+
+export type PaymentException = typeof paymentExceptions.$inferSelect;
+export type InsertPaymentException = z.infer<typeof insertPaymentExceptionSchema>;
+export type ExceptionEscalation = typeof exceptionEscalations.$inferSelect;
+export type InsertExceptionEscalation = z.infer<typeof insertExceptionEscalationSchema>;
+export type ExceptionAlert = typeof exceptionAlerts.$inferSelect;
+export type InsertExceptionAlert = z.infer<typeof insertExceptionAlertSchema>;
+export type VendorMasterValidation = typeof vendorMasterValidation.$inferSelect;
+export type InsertVendorMasterValidation = z.infer<typeof insertVendorMasterValidationSchema>;

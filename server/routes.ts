@@ -107,6 +107,9 @@ import {
   insertPosShiftSchema,
   insertPosRefundSchema,
   insertPosRefundItemSchema,
+  insertPaymentExceptionSchema,
+  insertExceptionEscalationSchema,
+  insertExceptionAlertSchema,
   type LoginRequest,
   type TrialSignupRequest,
   type ChangePasswordRequest
@@ -2822,6 +2825,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching VAT transactions:", error);
       res.status(500).json({ message: "Failed to fetch VAT transactions" });
+    }
+  });
+
+  // Exception Handling System API Routes
+  
+  // Get payment exceptions for a company
+  app.get("/api/payment-exceptions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const filters = {
+        status: req.query.status as string,
+        severity: req.query.severity as string,
+        exceptionType: req.query.exceptionType as string
+      };
+      
+      const exceptions = await storage.getPaymentExceptions(companyId, filters);
+      res.json(exceptions);
+    } catch (error) {
+      console.error("Error fetching payment exceptions:", error);
+      res.status(500).json({ message: "Failed to fetch payment exceptions" });
+    }
+  });
+
+  // Create a payment exception
+  app.post("/api/payment-exceptions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = insertPaymentExceptionSchema.parse({
+        ...req.body,
+        companyId: req.user.companyId,
+        detectedBy: req.user.id
+      });
+      
+      const exception = await storage.createPaymentException(data);
+      
+      await logAudit(req.user.id, 'CREATE', 'payment_exception', exception.id, `Created exception: ${exception.title}`);
+      
+      res.json(exception);
+    } catch (error) {
+      console.error("Error creating payment exception:", error);
+      res.status(500).json({ message: "Failed to create payment exception" });
+    }
+  });
+
+  // Update a payment exception
+  app.put("/api/payment-exceptions/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const exceptionId = parseInt(req.params.id);
+      if (isNaN(exceptionId)) {
+        return res.status(400).json({ message: "Invalid exception ID" });
+      }
+
+      const updates = req.body;
+      const exception = await storage.updatePaymentException(exceptionId, updates);
+      
+      await logAudit(req.user.id, 'UPDATE', 'payment_exception', exceptionId, 'Updated payment exception');
+      
+      res.json(exception);
+    } catch (error) {
+      console.error("Error updating payment exception:", error);
+      res.status(500).json({ message: "Failed to update payment exception" });
+    }
+  });
+
+  // Resolve a payment exception
+  app.post("/api/payment-exceptions/:id/resolve", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const exceptionId = parseInt(req.params.id);
+      if (isNaN(exceptionId)) {
+        return res.status(400).json({ message: "Invalid exception ID" });
+      }
+
+      const { resolution } = req.body;
+      if (!resolution) {
+        return res.status(400).json({ message: "Resolution is required" });
+      }
+
+      const exception = await storage.resolvePaymentException(exceptionId, resolution, req.user.id);
+      
+      await logAudit(req.user.id, 'RESOLVE', 'payment_exception', exceptionId, `Resolved exception: ${resolution}`);
+      
+      res.json(exception);
+    } catch (error) {
+      console.error("Error resolving payment exception:", error);
+      res.status(500).json({ message: "Failed to resolve payment exception" });
+    }
+  });
+
+  // Escalate a payment exception
+  app.post("/api/payment-exceptions/:id/escalate", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const exceptionId = parseInt(req.params.id);
+      if (isNaN(exceptionId)) {
+        return res.status(400).json({ message: "Invalid exception ID" });
+      }
+
+      const escalationData = insertExceptionEscalationSchema.parse({
+        ...req.body,
+        exceptionId,
+        fromUserId: req.user.id
+      });
+
+      const escalation = await storage.escalatePaymentException(exceptionId, escalationData);
+      
+      await logAudit(req.user.id, 'ESCALATE', 'payment_exception', exceptionId, `Escalated exception: ${escalationData.escalationReason}`);
+      
+      res.json(escalation);
+    } catch (error) {
+      console.error("Error escalating payment exception:", error);
+      res.status(500).json({ message: "Failed to escalate payment exception" });
+    }
+  });
+
+  // Get exception alerts
+  app.get("/api/exception-alerts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : req.user.id;
+      
+      const alerts = await storage.getExceptionAlerts(companyId, userId);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching exception alerts:", error);
+      res.status(500).json({ message: "Failed to fetch exception alerts" });
+    }
+  });
+
+  // Mark alert as read
+  app.put("/api/exception-alerts/:id/read", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const alertId = parseInt(req.params.id);
+      if (isNaN(alertId)) {
+        return res.status(400).json({ message: "Invalid alert ID" });
+      }
+
+      await storage.markAlertAsRead(alertId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking alert as read:", error);
+      res.status(500).json({ message: "Failed to mark alert as read" });
+    }
+  });
+
+  // Run automated exception detection
+  app.post("/api/payment-exceptions/detect", authenticate, requirePermission(PERMISSIONS.MANAGE_FINANCE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      
+      const detectedExceptions = await storage.runAutomatedExceptionDetection(companyId);
+      
+      await logAudit(req.user.id, 'CREATE', 'automated_detection', 0, `Detected ${detectedExceptions.length} exceptions`);
+      
+      res.json({
+        success: true,
+        detectedException: detectedExceptions.length,
+        exceptions: detectedExceptions
+      });
+    } catch (error) {
+      console.error("Error running automated exception detection:", error);
+      res.status(500).json({ message: "Failed to run automated exception detection" });
     }
   });
 
