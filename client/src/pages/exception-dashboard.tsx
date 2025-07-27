@@ -59,15 +59,17 @@ export default function ExceptionDashboard() {
   const queryClient = useQueryClient();
 
   // Fetch payment exceptions
-  const { data: exceptions = [], isLoading: exceptionsLoading } = useQuery({
+  const { data: exceptions = [], isLoading: exceptionsLoading, error: exceptionsError } = useQuery({
     queryKey: ["/api/payment-exceptions"],
     refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+    retry: 3
   });
 
   // Fetch exception alerts
-  const { data: alerts = [], isLoading: alertsLoading } = useQuery({
+  const { data: alerts = [], isLoading: alertsLoading, error: alertsError } = useQuery({
     queryKey: ["/api/exception-alerts"],
     refetchInterval: 15000, // Refresh every 15 seconds for real-time alerts
+    retry: 3
   });
 
   // Run automated detection mutation
@@ -158,7 +160,8 @@ export default function ExceptionDashboard() {
   });
 
   const getSeverityColor = (severity: string) => {
-    switch (severity.toLowerCase()) {
+    const severityLower = severity?.toLowerCase() || '';
+    switch (severityLower) {
       case "critical": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "high": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
       case "medium": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
@@ -168,7 +171,8 @@ export default function ExceptionDashboard() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    const statusLower = status?.toLowerCase() || '';
+    switch (statusLower) {
       case "open": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "investigating": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "escalated": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
@@ -179,7 +183,8 @@ export default function ExceptionDashboard() {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
+    const statusLower = status?.toLowerCase() || '';
+    switch (statusLower) {
       case "open": return <AlertTriangle className="h-4 w-4" />;
       case "investigating": return <Clock className="h-4 w-4" />;
       case "escalated": return <ArrowUp className="h-4 w-4" />;
@@ -192,8 +197,8 @@ export default function ExceptionDashboard() {
   const safeAlerts = Array.isArray(alerts) ? alerts : [];
   const unreadAlertsCount = safeAlerts.filter((alert: ExceptionAlert) => alert && !alert.isRead).length;
 
-  // Show loading state
-  if (exceptionsLoading || alertsLoading) {
+  // Show loading state only on initial load
+  if (exceptionsLoading && alertsLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
@@ -202,6 +207,14 @@ export default function ExceptionDashboard() {
         </div>
       </div>
     );
+  }
+
+  // Log errors for debugging but don't block rendering
+  if (exceptionsError) {
+    console.error("Exception data error:", exceptionsError);
+  }
+  if (alertsError) {
+    console.error("Alerts data error:", alertsError);
   }
 
   return (
