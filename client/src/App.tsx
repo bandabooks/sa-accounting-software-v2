@@ -103,6 +103,10 @@ import CustomerPayments from "@/pages/customer-payments";
 import SalesReports from "@/pages/sales-reports";
 import PurchaseDashboard from "@/pages/purchase-dashboard";
 import PurchaseReports from "@/pages/purchase-reports";
+import Warehouses from "@/pages/warehouses";
+import LotBatchTracking from "@/pages/lot-batch-tracking";
+import SerialNumbers from "@/pages/serial-numbers";
+import StockCounts from "@/pages/stock-counts";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -313,6 +317,26 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/inventory">
           <Inventory />
+        </Route>
+        <Route path="/warehouses">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <Warehouses />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/lot-batch-tracking">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <LotBatchTracking />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/serial-numbers">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <SerialNumbers />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/stock-counts">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <StockCounts />
+          </ProtectedRoute>
         </Route>
         <Route path="/pos">
           <ProtectedRoute permission={PERMISSIONS.POS_VIEW}>

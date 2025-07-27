@@ -55,7 +55,14 @@ const navigationGroups = [
     module: "inventory",
     items: [
       { path: "/products", label: "Products", icon: Package, permission: "PRODUCT_VIEW", module: "inventory" },
-      { path: "/inventory", label: "Inventory", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" }
+      { path: "/inventory", label: "Inventory", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/warehouses", label: "Warehouses", icon: Building2, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/product-lots", label: "Lot/Batch Tracking", icon: ReceiptText, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/product-serials", label: "Serial Numbers", icon: CheckSquare, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/stock-counts", label: "Stock Counts", icon: CheckCircle, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/reorder-rules", label: "Reorder Rules", icon: TrendingUp, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/product-bundles", label: "Product Bundles", icon: FolderOpen, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/inventory-reports", label: "Inventory Reports", icon: BarChart3, permission: "INVENTORY_VIEW", module: "inventory" }
     ]
   },
   {
