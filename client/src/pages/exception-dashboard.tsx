@@ -60,7 +60,7 @@ export default function ExceptionDashboard() {
 
   // Fetch payment exceptions
   const { data: exceptions = [], isLoading: exceptionsLoading } = useQuery({
-    queryKey: ["/api/payment-exceptions", { status: statusFilter, severity: severityFilter, exceptionType: typeFilter }],
+    queryKey: ["/api/payment-exceptions"],
     refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
   });
 
@@ -141,11 +141,14 @@ export default function ExceptionDashboard() {
     },
   });
 
-  // Filter exceptions based on search and filters
-  const filteredExceptions = (exceptions as PaymentException[]).filter((exception: PaymentException) => {
+  // Ensure exceptions is always an array and filter based on search and filters
+  const safeExceptions = Array.isArray(exceptions) ? exceptions : [];
+  const filteredExceptions = safeExceptions.filter((exception: PaymentException) => {
+    if (!exception) return false;
+    
     const matchesSearch = searchQuery === "" || 
-      exception.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exception.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (exception.title && exception.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (exception.description && exception.description.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || statusFilter === "" || exception.status === statusFilter;
     const matchesSeverity = severityFilter === "all" || severityFilter === "" || exception.severity === severityFilter;
@@ -186,7 +189,20 @@ export default function ExceptionDashboard() {
     }
   };
 
-  const unreadAlertsCount = (alerts as ExceptionAlert[]).filter((alert: ExceptionAlert) => !alert.isRead).length;
+  const safeAlerts = Array.isArray(alerts) ? alerts : [];
+  const unreadAlertsCount = safeAlerts.filter((alert: ExceptionAlert) => alert && !alert.isRead).length;
+
+  // Show loading state
+  if (exceptionsLoading || alertsLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="animate-spin h-8 w-8 text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading exception data...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -228,7 +244,7 @@ export default function ExceptionDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {(exceptions as PaymentException[]).filter((e: PaymentException) => e.status === "open").length}
+              {safeExceptions.filter((e: PaymentException) => e && e.status === "open").length}
             </div>
           </CardContent>
         </Card>
@@ -240,7 +256,7 @@ export default function ExceptionDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {(exceptions as PaymentException[]).filter((e: PaymentException) => e.severity === "critical").length}
+              {safeExceptions.filter((e: PaymentException) => e && e.severity === "critical").length}
             </div>
           </CardContent>
         </Card>
@@ -252,7 +268,7 @@ export default function ExceptionDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {(exceptions as PaymentException[]).filter((e: PaymentException) => e.status === "investigating").length}
+              {safeExceptions.filter((e: PaymentException) => e && e.status === "investigating").length}
             </div>
           </CardContent>
         </Card>
@@ -523,7 +539,7 @@ export default function ExceptionDashboard() {
           <div className="space-y-4">
             {alertsLoading ? (
               <div className="text-center py-8">Loading alerts...</div>
-            ) : (alerts as ExceptionAlert[]).length === 0 ? (
+            ) : safeAlerts.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -531,7 +547,7 @@ export default function ExceptionDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              (alerts as ExceptionAlert[]).map((alert: ExceptionAlert) => (
+              safeAlerts.map((alert: ExceptionAlert) => (
                 <Card key={alert.id} className={`hover:shadow-md transition-shadow ${!alert.isRead ? 'ring-2 ring-blue-200' : ''}`}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
