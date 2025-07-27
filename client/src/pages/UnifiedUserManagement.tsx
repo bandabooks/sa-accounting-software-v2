@@ -4,7 +4,8 @@ import {
   Users, UserPlus, Shield, Eye, EyeOff, Key, 
   Activity, Settings, ToggleLeft, ToggleRight,
   CheckCircle, XCircle, Edit, Trash2, Save,
-  UserCheck, UserX, Clock, Search, Filter
+  UserCheck, UserX, Clock, Search, Filter,
+  AlertCircle, AlertTriangle, Crown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -15,7 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
+import { CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -109,10 +113,7 @@ export default function UnifiedUserManagement() {
   // Mutations
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: number; status: string }) => {
-      return apiRequest(`/api/super-admin/users/${userId}/status`, {
-        method: "PATCH",
-        body: { status },
-      });
+      return apiRequest(`/api/super-admin/users/${userId}/status`, "PATCH", { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
@@ -127,10 +128,7 @@ export default function UnifiedUserManagement() {
       permission: string; 
       enabled: boolean 
     }) => {
-      return apiRequest("/api/permissions/update", {
-        method: "POST",
-        body: { roleId, module, permission, enabled },
-      });
+      return apiRequest("/api/permissions/update", "POST", { roleId, module, permission, enabled });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
@@ -140,10 +138,7 @@ export default function UnifiedUserManagement() {
 
   const toggleModuleMutation = useMutation({
     mutationFn: async ({ module, enabled }: { module: string; enabled: boolean }) => {
-      return apiRequest(`/api/modules/${module}/toggle`, {
-        method: "POST",
-        body: { enabled },
-      });
+      return apiRequest(`/api/modules/${module}/toggle`, "POST", { enabled });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
@@ -153,10 +148,7 @@ export default function UnifiedUserManagement() {
 
   const resolveDuplicateMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: number; reason: string }) => {
-      return apiRequest("/api/admin/resolve-duplicate", {
-        method: "POST",
-        body: { userId, reason },
-      });
+      return apiRequest("/api/admin/resolve-duplicate", "POST", { userId, reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/audit-duplicates"] });
