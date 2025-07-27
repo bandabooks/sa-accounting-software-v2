@@ -12,9 +12,10 @@ import { SuccessModal } from "@/components/ui/success-modal";
 import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, CreditCard, Settings2, Code } from "lucide-react";
+import { ArrowLeft, CreditCard, Settings2 } from "lucide-react";
 import { Link } from "wouter";
 import ModulePermissionSelector from "@/components/subscription/ModulePermissionSelector";
+import LimitConfigurationPanel from "@/components/subscription/LimitConfigurationPanel";
 
 export default function SuperAdminPlanEdit() {
   const [, params] = useRoute("/super-admin/plans/:id");
@@ -144,8 +145,8 @@ export default function SuperAdminPlanEdit() {
             <span>Modules & Permissions</span>
           </TabsTrigger>
           <TabsTrigger value="advanced" className="flex items-center space-x-2">
-            <Code className="h-4 w-4" />
-            <span>Advanced Settings</span>
+            <Settings2 className="h-4 w-4" />
+            <span>Limits & Features</span>
           </TabsTrigger>
         </TabsList>
 
@@ -259,41 +260,11 @@ export default function SuperAdminPlanEdit() {
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Advanced Configuration</CardTitle>
-                <CardDescription>Legacy JSON configuration and advanced settings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label htmlFor="features-json">Features (JSON Array) - Read Only</Label>
-                  <Textarea 
-                    id="features-json" 
-                    value={JSON.stringify(selectedFeatures, null, 2)}
-                    readOnly
-                    rows={8}
-                    className="bg-gray-50 text-gray-600"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Auto-generated from Module Selection tab. Use the Modules tab to make changes.
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="limits-json">Limits (JSON Object) - Read Only</Label>
-                  <Textarea 
-                    id="limits-json" 
-                    value={JSON.stringify(selectedLimits, null, 2)}
-                    readOnly
-                    rows={6}
-                    className="bg-gray-50 text-gray-600"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Auto-generated from Module Selection tab. Use the Modules tab to configure limits.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <LimitConfigurationPanel
+              selectedLimits={selectedLimits}
+              onLimitsChange={setSelectedLimits}
+              planName={plan.displayName}
+            />
           </TabsContent>
 
           <div className="flex justify-between items-center pt-6 border-t">
