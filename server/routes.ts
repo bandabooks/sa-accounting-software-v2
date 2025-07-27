@@ -2966,7 +2966,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/super-admin/subscription-plans/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const planId = parseInt(req.params.id);
-      const updates = insertSubscriptionPlanSchema.partial().parse(req.body);
+      
+      // Remove null values from the update data
+      const cleanedBody = Object.fromEntries(
+        Object.entries(req.body).filter(([key, value]) => value !== null && value !== undefined)
+      );
+      
+      console.log("Subscription plan update request:", cleanedBody);
+      
+      const updates = insertSubscriptionPlanSchema.partial().parse(cleanedBody);
       const plan = await storage.updateSubscriptionPlan(planId, updates);
       
       if (!plan) {

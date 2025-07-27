@@ -37,7 +37,14 @@ export default function SuperAdminPlanEdit() {
   // Initialize features and limits from plan data
   useEffect(() => {
     if (plan) {
-      setSelectedFeatures(Array.isArray(plan.features) ? plan.features : []);
+      // Handle both old array format and new object format
+      if (Array.isArray(plan.features)) {
+        setSelectedFeatures(plan.features);
+      } else if (plan.features?.included_modules) {
+        setSelectedFeatures(plan.features.included_modules);
+      } else {
+        setSelectedFeatures([]);
+      }
       setSelectedLimits(typeof plan.limits === 'object' ? plan.limits : {});
     }
   }, [plan]);
@@ -77,15 +84,18 @@ export default function SuperAdminPlanEdit() {
       }
 
       const data = {
-        name: formData.get("name"),
-        displayName: formData.get("displayName"),
-        description: formData.get("description"),
-        monthlyPrice: parseFloat(formData.get("monthlyPrice") as string),
-        annualPrice: parseFloat(formData.get("annualPrice") as string),
-        features: selectedFeatures,
+        name: formData.get("name") || plan.name,
+        displayName: formData.get("displayName") || plan.displayName,
+        description: formData.get("description") || plan.description,
+        monthlyPrice: formData.get("monthlyPrice") ? parseFloat(formData.get("monthlyPrice") as string) : parseFloat(plan.monthlyPrice),
+        annualPrice: formData.get("annualPrice") ? parseFloat(formData.get("annualPrice") as string) : parseFloat(plan.annualPrice),
+        features: {
+          included_modules: selectedFeatures,
+          core_features: Array.isArray(plan.features) ? plan.features : (plan.features?.core_features || [])
+        },
         limits: selectedLimits,
-        sortOrder: parseInt(formData.get("sortOrder") as string),
-        isActive: formData.get("isActive") === "on",
+        sortOrder: formData.get("sortOrder") ? parseInt(formData.get("sortOrder") as string) : plan.sortOrder,
+        isActive: formData.get("isActive") !== null ? formData.get("isActive") === "on" : plan.isActive,
       };
       
       updatePlanMutation.mutate(data);
