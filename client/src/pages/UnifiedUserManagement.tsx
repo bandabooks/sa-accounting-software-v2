@@ -155,16 +155,16 @@ export default function UnifiedUserManagement() {
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({
       userId,
-      status,
+      isActive,
     }: {
       userId: number;
-      status: string;
+      isActive: boolean;
     }) => {
       return apiRequest(`/api/super-admin/users/${userId}/status`, "PATCH", {
-        status,
+        isActive,
       });
     },
-    onMutate: async ({ userId, status }) => {
+    onMutate: async ({ userId, isActive }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["/api/super-admin/users"] });
 
@@ -299,7 +299,7 @@ export default function UnifiedUserManagement() {
         email: selectedUser.email || "",
         name: selectedUser.name || "",
         role: selectedUser.role || "",
-        status: selectedUser.status || "active",
+        status: selectedUser.isActive ? "active" : "inactive",
       });
     } else if (!selectedUser && isUserDialogOpen) {
       userForm.reset({
@@ -340,7 +340,9 @@ export default function UnifiedUserManagement() {
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" || user.status === statusFilter;
+      statusFilter === "all" || 
+      (statusFilter === "active" && user.isActive) ||
+      (statusFilter === "inactive" && !user.isActive);
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesStatus && matchesRole;
   });
@@ -448,10 +450,10 @@ export default function UnifiedUserManagement() {
                   <TableCell>
                     <Badge
                       variant={
-                        user.status === "active" ? "default" : "secondary"
+                        user.isActive ? "default" : "secondary"
                       }
                     >
-                      {user.status === "active" ? (
+                      {user.isActive ? (
                         <>
                           <CheckCircle size={12} className="mr-1" /> Active
                         </>
@@ -483,16 +485,16 @@ export default function UnifiedUserManagement() {
                         <Edit size={14} />
                       </Button>
                       <Switch
-                        checked={user.status === "active"}
+                        checked={user.isActive}
                         onCheckedChange={(checked) => {
-                          console.log(`Toggle user ${user.id} status from ${user.status} to ${checked ? "active" : "inactive"}`);
+                          console.log(`Toggle user ${user.id} status from ${user.isActive ? "active" : "inactive"} to ${checked ? "active" : "inactive"}`);
                           if (
                             user.username !== "sysadmin_7f3a2b8e" &&
                             user.email !== "accounts@thinkmybiz.com"
                           ) {
                             toggleUserStatusMutation.mutate({
                               userId: user.id,
-                              status: checked ? "active" : "inactive",
+                              isActive: checked,
                             });
                           }
                         }}
