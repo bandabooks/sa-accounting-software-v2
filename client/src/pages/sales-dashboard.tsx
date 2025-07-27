@@ -22,15 +22,15 @@ export default function SalesDashboard() {
 
   // Fetch recent sales activities
   const { data: recentSalesOrders = [], isLoading: ordersLoading } = useQuery<any[]>({
-    queryKey: ["/api/sales-orders", { limit: 5 }],
+    queryKey: ["/api/sales-orders"],
   });
 
   const { data: recentInvoices = [], isLoading: invoicesLoading } = useQuery<any[]>({
-    queryKey: ["/api/invoices", { limit: 5 }],
+    queryKey: ["/api/invoices"],
   });
 
   const { data: recentEstimates = [], isLoading: estimatesLoading } = useQuery<any[]>({
-    queryKey: ["/api/estimates", { limit: 5 }],
+    queryKey: ["/api/estimates"],
   });
 
   const formatCurrency = (amount: string | number) => {
