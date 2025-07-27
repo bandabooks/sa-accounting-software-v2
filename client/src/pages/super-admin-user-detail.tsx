@@ -32,16 +32,42 @@ const roleChangeSchema = z.object({
 
 type RoleChangeData = z.infer<typeof roleChangeSchema>;
 
-// Available roles for assignment
-const AVAILABLE_ROLES = [
-  { id: 'super_admin', name: 'Super Administrator', description: 'Full system access', level: 10, color: 'from-red-500 to-red-700' },
-  { id: 'company_admin', name: 'Company Administrator', description: 'Company-wide access', level: 8, color: 'from-blue-500 to-blue-700' },
-  { id: 'accountant', name: 'Accountant', description: 'Financial management access', level: 6, color: 'from-green-500 to-green-700' },
-  { id: 'bookkeeper', name: 'Bookkeeper', description: 'Basic bookkeeping access', level: 4, color: 'from-yellow-500 to-yellow-700' },
-  { id: 'manager', name: 'Manager', description: 'Department management access', level: 5, color: 'from-purple-500 to-purple-700' },
-  { id: 'employee', name: 'Employee', description: 'Basic employee access', level: 2, color: 'from-gray-500 to-gray-700' },
-  { id: 'viewer', name: 'Viewer', description: 'Read-only access', level: 1, color: 'from-slate-500 to-slate-700' }
-];
+// User type definition
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  username: string;
+  role: string;
+  isActive: boolean;
+  lastLogin: string | null;
+  createdAt: string;
+  updatedAt: string;
+  failedLoginAttempts: number;
+  isLocked: boolean;
+  permissions?: string[];
+}
+
+// System Role type definition
+interface SystemRole {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string;
+  level: number;
+  permissions: string[];
+  isSystemRole: boolean;
+  isActive: boolean;
+}
+
+// Helper function to get role color based on level
+const getRoleColor = (level: number) => {
+  if (level >= 9) return 'from-red-500 to-red-700';
+  if (level >= 7) return 'from-blue-500 to-blue-700';
+  if (level >= 5) return 'from-green-500 to-green-700';
+  if (level >= 3) return 'from-yellow-500 to-yellow-700';
+  return 'from-gray-500 to-gray-700';
+};
 
 // Audit Logs Component
 function UserAuditLogs({ userId }: { userId: number }) {
@@ -185,9 +211,14 @@ export default function SuperAdminUserDetail() {
   });
 
   // Fetch user details
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/super-admin/users", userId],
     enabled: !!userId,
+  });
+
+  // Fetch system roles for role assignment dropdown
+  const { data: systemRoles = [], isLoading: rolesLoading } = useQuery<SystemRole[]>({
+    queryKey: ["/api/rbac/system-roles"],
   });
 
   // Update user mutation
@@ -726,21 +757,27 @@ export default function SuperAdminUserDetail() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {AVAILABLE_ROLES.map(role => (
-                          <SelectItem key={role.id} value={role.id}>
-                            <div className="flex items-center space-x-2">
-                              <Badge 
-                                className={`bg-gradient-to-r ${role.color} text-white text-xs`}
-                              >
-                                Level {role.level}
-                              </Badge>
-                              <div>
-                                <div className="font-medium">{role.name}</div>
-                                <div className="text-xs text-muted-foreground">{role.description}</div>
+                        {rolesLoading ? (
+                          <div className="p-2 text-center text-sm text-gray-500">Loading roles...</div>
+                        ) : systemRoles.length === 0 ? (
+                          <div className="p-2 text-center text-sm text-gray-500">No roles found</div>
+                        ) : (
+                          systemRoles.map((role) => (
+                            <SelectItem key={role.id} value={role.id.toString()}>
+                              <div className="flex items-center space-x-2">
+                                <Badge 
+                                  className={`bg-gradient-to-r ${getRoleColor(role.level)} text-white text-xs`}
+                                >
+                                  Level {role.level}
+                                </Badge>
+                                <div>
+                                  <div className="font-medium">{role.displayName}</div>
+                                  <div className="text-xs text-muted-foreground">{role.description}</div>
+                                </div>
                               </div>
-                            </div>
-                          </SelectItem>
-                        ))}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -286,8 +286,8 @@ export default function SuperAdminDashboard() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">R 45,231</div>
-                <p className="text-xs text-muted-foreground">Monthly recurring revenue</p>
+                <div className="text-2xl font-bold">R {analytics?.totalRevenue || '0.00'}</div>
+                <p className="text-xs text-muted-foreground">Total system revenue</p>
               </CardContent>
             </Card>
 
