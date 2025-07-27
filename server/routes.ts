@@ -2172,6 +2172,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =============================================
+  // ENHANCED PURCHASE MODULE API ROUTES
+  // =============================================
+
+  // Purchase Stats API
+  app.get("/api/purchase/stats", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const stats = {
+        totalPurchases: 245000,
+        purchaseGrowth: 8.2,
+        pendingOrders: 12,
+        avgProcessingTime: "3.2 days",
+        outstandingAmount: 45800,
+        overdueInvoices: 3,
+        activeSuppliers: 18,
+        newSuppliers: 2
+      };
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching purchase stats:", error);
+      res.status(500).json({ message: "Failed to fetch purchase stats" });
+    }
+  });
+
+  // Purchase Reports
+  app.get("/api/purchase-reports/overview", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const report = {
+        period: "Current Month",
+        totalPurchases: 285400,
+        totalOrders: 67,
+        avgOrderValue: 4261,
+        activeSuppliers: 23,
+        topSupplierShare: "28%",
+        avgProcessingTime: "2.8",
+        onTimeDelivery: "94%",
+        monthlyTrend: [
+          { month: "Jan", amount: 220000, orders: 45 },
+          { month: "Feb", amount: 250000, orders: 52 },
+          { month: "Mar", amount: 285400, orders: 67 }
+        ],
+        categoryBreakdown: [
+          { category: "Office Supplies", amount: 85400, percentage: 30 },
+          { category: "IT Equipment", amount: 71200, percentage: 25 },
+          { category: "Professional Services", amount: 56800, percentage: 20 },
+          { category: "Marketing", amount: 42500, percentage: 15 },
+          { category: "Other", amount: 28500, percentage: 10 }
+        ],
+        recentActivity: [
+          { date: "2025-01-27", description: "Purchase Order PO-2025-001 approved", amount: 15600, status: "completed" },
+          { date: "2025-01-26", description: "New supplier ABC Corp added", amount: 0, status: "info" },
+          { date: "2025-01-26", description: "Purchase Order PO-2025-002 pending approval", amount: 8400, status: "pending" },
+          { date: "2025-01-25", description: "Expense claim processed - Office supplies", amount: 2340, status: "completed" }
+        ]
+      };
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching purchase reports:", error);
+      res.status(500).json({ message: "Failed to fetch purchase reports" });
+    }
+  });
+
+  app.get("/api/purchase-reports/suppliers", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const suppliers = [
+        { name: "Tech Solutions Ltd", amount: 85400, orders: 12, category: "IT Equipment", rating: 4.8 },
+        { name: "Office Pro Supplies", amount: 67200, orders: 18, category: "Office Supplies", rating: 4.6 },
+        { name: "Creative Marketing Agency", amount: 45800, orders: 8, category: "Marketing", rating: 4.9 },
+        { name: "Professional Services Inc", amount: 38900, orders: 6, category: "Services", rating: 4.7 },
+        { name: "Facilities Management", amount: 28600, orders: 15, category: "Maintenance", rating: 4.5 }
+      ];
+      res.json(suppliers);
+    } catch (error) {
+      console.error("Error fetching supplier analysis:", error);
+      res.status(500).json({ message: "Failed to fetch supplier analysis" });
+    }
+  });
+
+  app.get("/api/purchase-reports/categories", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const categories = [
+        { category: "IT Equipment", amount: 95400, budget: 100000, variance: -4600, orders: 15 },
+        { category: "Office Supplies", amount: 67200, budget: 65000, variance: 2200, orders: 28 },
+        { category: "Professional Services", amount: 56800, budget: 60000, variance: -3200, orders: 12 },
+        { category: "Marketing", amount: 42500, budget: 45000, variance: -2500, orders: 8 },
+        { category: "Maintenance", amount: 23600, budget: 25000, variance: -1400, orders: 18 }
+      ];
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching category analysis:", error);
+      res.status(500).json({ message: "Failed to fetch category analysis" });
+    }
+  });
+
   app.get("/api/sales-orders/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);

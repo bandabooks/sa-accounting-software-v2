@@ -101,6 +101,8 @@ import SalesDashboard from "@/pages/sales-dashboard";
 import CreditNotes from "@/pages/credit-notes";
 import CustomerPayments from "@/pages/customer-payments";
 import SalesReports from "@/pages/sales-reports";
+import PurchaseDashboard from "@/pages/purchase-dashboard";
+import PurchaseReports from "@/pages/purchase-reports";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -242,6 +244,11 @@ function AuthenticatedApp() {
             <SalesReports />
           </ProtectedRoute>
         </Route>
+        <Route path="/purchase-dashboard">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <PurchaseDashboard />
+          </ProtectedRoute>
+        </Route>
         <Route path="/suppliers">
           <ProtectedRoute permission={PERMISSIONS.SUPPLIERS_VIEW}>
             <Suppliers />
@@ -265,6 +272,11 @@ function AuthenticatedApp() {
         <Route path="/exception-dashboard">
           <ProtectedRoute permission={PERMISSIONS.EXCEPTIONS_VIEW}>
             <ExceptionDashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/purchase-reports">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <PurchaseReports />
           </ProtectedRoute>
         </Route>
         <Route path="/products">
