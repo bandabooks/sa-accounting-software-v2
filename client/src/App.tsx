@@ -61,6 +61,7 @@ import VatManagement from "@/pages/vat-management";
 import VATSettings from "@/pages/vat-settings";
 import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
+import VATReportsPage from "@/pages/vat-reports";
 import POS from "@/pages/pos";
 import POSTerminal from "@/pages/pos-terminal";
 import POSShifts from "@/pages/pos-shifts";
@@ -463,6 +464,11 @@ function AuthenticatedApp() {
         <Route path="/vat-returns">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <VATReturns />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-reports">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <VATReportsPage />
           </ProtectedRoute>
         </Route>
         <Route path="/enterprise-settings">
