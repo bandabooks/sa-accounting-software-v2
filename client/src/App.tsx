@@ -110,6 +110,8 @@ import StockCounts from "@/pages/stock-counts";
 import ReorderRules from "@/pages/reorder-rules";
 import ProductBundles from "@/pages/product-bundles";
 import InventoryReports from "@/pages/inventory-reports";
+import ProductLots from "@/pages/product-lots";
+import ProductSerials from "@/pages/product-serials";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -354,6 +356,16 @@ function AuthenticatedApp() {
         <Route path="/inventory-reports">
           <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
             <InventoryReports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/product-lots">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <ProductLots />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/product-serials">
+          <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
+            <ProductSerials />
           </ProtectedRoute>
         </Route>
         <Route path="/pos">
