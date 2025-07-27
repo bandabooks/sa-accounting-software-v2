@@ -27,6 +27,8 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useSuccessModal } from "@/hooks/useSuccessModal";
+import { useToast } from "@/hooks/use-toast";
+import { SuccessModal } from "@/components/ui/success-modal";
 
 // Types and Schemas
 const userFormSchema = z.object({
@@ -65,7 +67,8 @@ const modulePermissions = {
 export default function UnifiedUserManagement() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { showSuccess } = useSuccessModal();
+  const { showSuccess, isOpen, hideSuccess, modalOptions } = useSuccessModal();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -125,7 +128,10 @@ export default function UnifiedUserManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
-      showSuccess("User Status Updated", "User status has been successfully updated.");
+      showSuccess({
+        title: "User Status Updated",
+        description: "User status has been successfully updated."
+      });
     },
   });
 
@@ -140,7 +146,10 @@ export default function UnifiedUserManagement() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
-      showSuccess("Permission Updated", `${variables.enabled ? 'Granted' : 'Revoked'} ${variables.permission} permission for ${variables.module} module`);
+      showSuccess({
+        title: "Permission Updated",
+        description: `${variables.enabled ? 'Granted' : 'Revoked'} ${variables.permission} permission for ${variables.module} module`
+      });
     },
     onError: (error) => {
       toast({
@@ -162,7 +171,10 @@ export default function UnifiedUserManagement() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
-      showSuccess("Module Status Updated", `${variables.module} module has been ${variables.enabled ? 'activated' : 'deactivated'} successfully`);
+      showSuccess({
+        title: "Module Status Updated",
+        description: `${variables.module} module has been ${variables.enabled ? 'activated' : 'deactivated'} successfully`
+      });
     },
     onError: (error) => {
       console.error('Module toggle error:', error);
@@ -181,7 +193,10 @@ export default function UnifiedUserManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/audit-duplicates"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
-      showSuccess("Duplicate Resolved", "Duplicate admin user has been successfully resolved.");
+      showSuccess({
+        title: "Duplicate Resolved",
+        description: "Duplicate admin user has been successfully resolved."
+      });
     },
   });
 
@@ -189,9 +204,12 @@ export default function UnifiedUserManagement() {
     mutationFn: async () => {
       return apiRequest("/api/permissions/initialize-defaults", "POST", {});
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
-      showSuccess("Default Permissions Initialized", `Default permissions set for ${data.updatedCount} roles`);
+      showSuccess({
+        title: "Default Permissions Initialized",
+        description: `Default permissions set for ${data?.updatedCount || 0} roles`
+      });
     },
     onError: (error) => {
       toast({
@@ -498,7 +516,7 @@ export default function UnifiedUserManagement() {
                             } catch (e) {
                               rolePermissions = {};
                             }
-                            const hasPermission = rolePermissions[module]?.[permission] === true;
+                            const hasPermission = (rolePermissions as any)?.[module]?.[permission] === true;
                             
                             return (
                               <div key={permission} className="flex items-center justify-center">
@@ -979,6 +997,16 @@ export default function UnifiedUserManagement() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={isOpen}
+        onClose={hideSuccess}
+        title={modalOptions.title}
+        description={modalOptions.description}
+        confirmText={modalOptions.confirmText}
+        onConfirm={modalOptions.onConfirm}
+      />
     </div>
   );
 }
