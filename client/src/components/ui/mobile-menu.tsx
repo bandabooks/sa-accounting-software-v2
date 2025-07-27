@@ -43,6 +43,8 @@ const navigationGroups = [
     items: [
       { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "expense_management" },
       { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "expense_management" },
+      { path: "/payment-flows", label: "Payment Flows", icon: CreditCard, permission: "PURCHASE_ORDER_VIEW", module: "expense_management" },
+      { path: "/three-way-matching", label: "3-Way Matching", icon: CheckCircle, permission: "PURCHASE_ORDER_VIEW", module: "expense_management" },
       { path: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSE_VIEW", module: "expense_management" }
     ]
   },

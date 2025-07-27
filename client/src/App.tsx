@@ -92,6 +92,8 @@ import ComplianceTasks from "@/pages/compliance-tasks";
 import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
 import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
+import PaymentFlows from "@/pages/payment-flows";
+import ThreeWayMatching from "@/pages/three-way-matching";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -204,6 +206,16 @@ function AuthenticatedApp() {
         <Route path="/purchase-orders">
           <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
             <PurchaseOrders />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/payment-flows">
+          <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
+            <PaymentFlows />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/three-way-matching">
+          <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
+            <ThreeWayMatching />
           </ProtectedRoute>
         </Route>
         <Route path="/products">

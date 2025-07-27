@@ -41,6 +41,8 @@ const navigationGroups = [
     items: [
       { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" },
       { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/payment-flows", label: "Payment Flows", icon: CreditCard, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/three-way-matching", label: "3-Way Matching", icon: CheckCircle, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
       { path: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSE_VIEW", module: "purchases" }
     ]
   },

@@ -1,0 +1,64 @@
+ Supplier & Client Payment Flow Integrity
+Prompt:
+
+Verify and Enhance Payment and Receipt Flow Modules for Accounting Standards Compliance
+
+Please conduct a comprehensive verification of the system’s supplier payments (Accounts Payable) and client receipts (Accounts Receivable) flows to ensure they fully comply with recognized accounting software standards. Enhance the existing modules as needed, and where any feature is not available, implement it accordingly.
+
+Key Verification Points:
+
+1. Supplier Payments (Accounts Payable)
+Confirm that every supplier invoice can be:
+
+Created and linked to purchase orders and/or goods receipts.
+
+Matched (3-way) to received inventory/services and purchase orders.
+
+Approved through an internal approval workflow.
+
+Paid via a “Pay Supplier” or “Record Payment” function, with clear tracking of paid and outstanding invoices.
+
+Reflected in both the Accounts Payable ledger and the bank/cash ledger upon payment.
+
+Matched and reconciled with actual bank transactions.
+
+Ensure that the supplier account balances update in real time after each transaction.
+
+2. Client Receipts (Accounts Receivable)
+Confirm that client invoices can be:
+
+Generated and sent after sales or services.
+
+Accurately recorded in Accounts Receivable and the correct income account.
+
+Tracked as open, partially paid, or paid.
+
+Linked to incoming payments (via “Receive Payment” or equivalent).
+
+Automatically update the client’s balance and the bank/cash account upon receipt.
+
+Reflected in financial reports and reconciled with the bank.
+
+Ensure that overpayments, partial payments, and outstanding balances are handled properly.
+
+3. Audit Trail & Reporting
+Confirm that every payment and receipt has a clear audit trail with timestamps, user actions, and linked documents/invoices.
+
+All payment and receipt actions should reflect accurately in financial reports (e.g., supplier ledger, customer ledger, aged payables/receivables).
+
+4. User Experience
+All workflows should be intuitive, accessible from relevant dashboards (e.g., Supplier Management, Customer Management, Purchase/Sales Modules).
+
+If any part of the flow (invoice creation, approval, payment, reconciliation) is missing or incomplete, enhance the existing module. Only create new features if not already available.
+
+5. Subscription & Permission Controls
+Make sure only users with proper permissions can perform, approve, or view payment and receipt actions, based on role and subscription plan.
+
+Summary:
+
+Test and verify the full workflow of both supplier payments and client receipts.
+
+Enhance existing modules to close any gaps.
+
+Ensure the system follows professional accounting software standards and best practices for South Africa and globally.
+

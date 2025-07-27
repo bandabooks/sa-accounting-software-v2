@@ -2925,6 +2925,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper functions for payment flow determination
+  function determinePaymentStep(po: any, payments: any[]): string {
+    const poPayments = payments.filter(p => p.purchaseOrderId === po.id);
+    const totalPaid = poPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const totalAmount = parseFloat(po.totalAmount);
+    
+    if (totalPaid >= totalAmount) return 'completed';
+    if (poPayments.length > 0) return 'payment';
+    if (po.status === 'confirmed') return 'matching';
+    if (po.status === 'sent') return 'approval';
+    return 'invoice_received';
+  }
+
+  function determineMatchingStatus(po: any): string {
+    // Simplified matching status
+    if (po.status === 'confirmed' || po.status === 'delivered') return 'matched';
+    return 'unmatched';
+  }
+
+  function determineApprovalStatus(po: any): string {
+    const amount = parseFloat(po.totalAmount);
+    if (amount > 10000 && po.status === 'draft') return 'pending';
+    if (po.status === 'confirmed') return 'approved';
+    return 'not_required';
+  }
+
+  // Enhanced Payment Flow Routes
+  app.get("/api/payment-flows", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      
+      // Get all purchase orders with their payment status
+      const purchaseOrders = await storage.getPurchaseOrdersByCompany(companyId);
+      const payments = await storage.getSupplierPaymentsByCompany(companyId);
+      
+      const paymentFlows = purchaseOrders.map(po => ({
+        id: po.id,
+        entityType: 'purchase_order',
+        entityId: po.id,
+        currentStep: determinePaymentStep(po, payments),
+        status: po.status,
+        totalAmount: po.totalAmount,
+        matchingStatus: determineMatchingStatus(po),
+        approvalStatus: determineApprovalStatus(po),
+        createdAt: po.createdAt,
+        entity: po
+      }));
+      
+      res.json(paymentFlows);
+    } catch (error) {
+      console.error("Failed to fetch payment flows:", error);
+      res.status(500).json({ message: "Failed to fetch payment flows" });
+    }
+  });
+
+  // 3-Way Matching Routes
+  app.get("/api/three-way-matches", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const matches = await storage.getThreeWayMatches(companyId);
+      res.json(matches);
+    } catch (error) {
+      console.error("Failed to fetch 3-way matches:", error);
+      res.status(500).json({ message: "Failed to fetch 3-way matches" });
+    }
+  });
+
+  app.post("/api/three-way-matches/:id/process", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { action, comments } = req.body;
+      
+      const result = await storage.processThreeWayMatch(parseInt(id), action, comments, req.user.id);
+      await logAudit(req.user!.id, 'UPDATE', 'three_way_match', parseInt(id), null, { action, comments });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to process 3-way match:", error);
+      res.status(500).json({ message: "Failed to process 3-way match" });
+    }
+  });
+
+  // Goods Receipt Routes
+  app.get("/api/goods-receipts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const receipts = await storage.getGoodsReceipts(companyId);
+      res.json(receipts);
+    } catch (error) {
+      console.error("Failed to fetch goods receipts:", error);
+      res.status(500).json({ message: "Failed to fetch goods receipts" });
+    }
+  });
+
+  app.post("/api/goods-receipts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const data = {
+        ...req.body,
+        companyId: req.user.companyId,
+        receiptNumber: await storage.generateDocumentNumber('GR', req.user.companyId),
+        createdBy: req.user.id
+      };
+      
+      const receipt = await storage.createGoodsReceipt(data);
+      await logAudit(req.user!.id, 'CREATE', 'goods_receipt', receipt.id, null, receipt);
+      
+      // Trigger 3-way matching process
+      await storage.triggerThreeWayMatching(receipt.purchaseOrderId);
+      
+      res.json(receipt);
+    } catch (error) {
+      console.error("Failed to create goods receipt:", error);
+      res.status(500).json({ message: "Failed to create goods receipt" });
+    }
+  });
+
+  // Enhanced Supplier Payment Routes with Approval Integration
+  app.get("/api/supplier-payments", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const payments = await storage.getSupplierPaymentsByCompany(companyId);
+      res.json(payments);
+    } catch (error) {
+      console.error("Failed to fetch supplier payments:", error);
+      res.status(500).json({ message: "Failed to fetch supplier payments" });
+    }
+  });
+
   // Super Admin Routes
   
   // System Analytics
