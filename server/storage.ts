@@ -7767,11 +7767,18 @@ export class DatabaseStorage implements IStorage {
         });
       });
 
-      // Define default modules that should be available
+      // Define all available modules from SYSTEM_MODULES
       const defaultModules = [
-        'dashboard', 'user_management', 'customers', 'invoicing', 
-        'products_services', 'expenses', 'suppliers', 'pos_sales',
-        'chart_of_accounts', 'journal_entries', 'banking', 'financial_reports'
+        'dashboard', 'user_management', 'system_settings', 'audit_logs',
+        'chart_of_accounts', 'journal_entries', 'banking', 'financial_reports',
+        'customers', 'invoicing', 'estimates', 'recurring_billing', 'credit_notes',
+        'suppliers', 'purchase_orders', 'bills', 'expenses', 'supplier_payments',
+        'products_services', 'inventory_management', 'stock_adjustments', 'product_categories',
+        'pos_terminals', 'pos_sales', 'pos_shifts', 'pos_reports', 'pos_loyalty',
+        'payroll', 'employees', 'time_tracking', 'leave_management', 'performance',
+        'vat_management', 'tax_returns', 'sars_integration', 'cipc_compliance', 'labour_compliance',
+        'project_management', 'fixed_assets', 'budgeting', 'cash_flow', 'bank_reconciliation',
+        'api_access', 'third_party_integrations', 'data_import_export'
       ];
 
       // Return modules with their actual database states or defaults
@@ -7779,12 +7786,14 @@ export class DatabaseStorage implements IStorage {
         if (settingsMap.has(moduleId)) {
           return settingsMap.get(moduleId);
         } else {
-          // Default state for modules not in database yet
+          // Default state for modules not in database yet (core modules active by default)
+          const coreModules = ['dashboard', 'user_management', 'system_settings'];
+          const isActiveByDefault = coreModules.includes(moduleId);
           return {
             id: moduleId,
-            is_active: moduleId === 'dashboard', // Only dashboard active by default
-            activated_date: moduleId === 'dashboard' ? new Date() : null,
-            activated_by: moduleId === 'dashboard' ? 1 : null
+            is_active: isActiveByDefault,
+            activated_date: isActiveByDefault ? new Date() : null,
+            activated_by: isActiveByDefault ? 1 : null
           };
         }
       });

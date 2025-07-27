@@ -30,6 +30,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -230,8 +231,9 @@ export default function UnifiedUserManagement() {
       });
     },
     onSuccess: () => {
-      // Only invalidate the cache - no immediate refetch to avoid race conditions
+      // Force a refetch to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      queryClient.refetchQueries({ queryKey: ["/api/super-admin/users"] });
       showSuccess({
         title: "User Status Updated", 
         description: "User status has been successfully updated.",
@@ -400,6 +402,17 @@ export default function UnifiedUserManagement() {
       description: "",
     },
   });
+
+  // Permission toggle handler for checkbox matrix
+  const handlePermissionToggle = (roleId: string, module: string, permission: string, enabled: boolean) => {
+    console.log('Permission toggle:', { roleId, module, permission, enabled });
+    updatePermissionMutation.mutate({
+      roleId: parseInt(roleId),
+      module,
+      permission,
+      enabled,
+    });
+  };
 
   // Filter users
   const filteredUsers = users.filter((user: any) => {
@@ -653,7 +666,7 @@ export default function UnifiedUserManagement() {
     </div>
   );
 
-  // Permission Matrix Tab
+  // Permission Matrix Tab - Checkbox Style
   const PermissionMatrixTab = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -662,7 +675,7 @@ export default function UnifiedUserManagement() {
             Permission Matrix
           </h2>
           <p className="text-gray-600">
-            Visual grid to manage role permissions across all modules
+            Configure role-based permissions using checkbox matrix (similar to QuickBooks/Xero style)
           </p>
         </div>
         <Button
@@ -685,81 +698,193 @@ export default function UnifiedUserManagement() {
       <Card>
         <CardContent className="p-6">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse border border-gray-200">
               <thead>
-                <tr>
-                  <th className="text-left p-3 border-b font-medium text-gray-900">
-                    Module
+                <tr className="bg-gray-50">
+                  <th className="text-left p-3 border border-gray-200 font-semibold text-gray-900">
+                    Role
                   </th>
-                  {systemRoles.map((role: any) => (
-                    <th
-                      key={role.id}
-                      className="text-center p-3 border-b font-medium text-gray-900 min-w-24"
-                    >
-                      {role.displayName}
-                    </th>
-                  ))}
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Dashboard</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Sales</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Purchases</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Products</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Accounting</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">POS</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Reports</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">User Management</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Settings</th>
+                  <th className="text-center p-3 border border-gray-200 font-semibold text-gray-900">Compliance</th>
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(modulePermissions).map(
-                  ([module, permissions]) => (
-                    <tr key={module} className="border-b">
-                      <td className="p-3 font-medium text-gray-900 capitalize">
-                        {module.replace(/_/g, " ")}
-                      </td>
-                      {systemRoles.map((role: any) => (
-                        <td key={role.id} className="p-3 text-center">
-                          <div className="flex flex-col space-y-1">
-                            {permissions.map((permission: string) => {
-                              const roleData = permissionsMatrix?.roles?.find(
-                                (r: any) => r.id === role.id,
-                              );
-                              // Parse permissions JSON string or use empty object
-                              let rolePermissions = {};
-                              try {
-                                rolePermissions = roleData?.permissions
-                                  ? JSON.parse(roleData.permissions)
-                                  : {};
-                              } catch (e) {
-                                rolePermissions = {};
-                              }
-                              const hasPermission =
-                                (rolePermissions as any)?.[module]?.[
-                                  permission
-                                ] === true;
+                {systemRoles.map((role: any) => {
+                  // Map role to standard permission categories
+                  const getDefaultPermissions = (roleName: string) => {
+                    switch(roleName) {
+                      case 'company_admin':
+                        return { dashboard: true, sales: true, purchases: true, products: true, accounting: true, pos: true, reports: true, user_management: true, settings: true, compliance: true };
+                      case 'manager':
+                        return { dashboard: true, sales: true, purchases: true, products: true, accounting: true, pos: true, reports: true, user_management: false, settings: false, compliance: true };
+                      case 'accountant':
+                        return { dashboard: true, sales: false, purchases: true, products: false, accounting: true, pos: false, reports: true, user_management: false, settings: false, compliance: true };
+                      case 'employee':
+                        return { dashboard: true, sales: false, purchases: false, products: false, accounting: false, pos: false, reports: false, user_management: false, settings: false, compliance: false };
+                      default:
+                        return { dashboard: false, sales: false, purchases: false, products: false, accounting: false, pos: false, reports: false, user_management: false, settings: false, compliance: false };
+                    }
+                  };
 
-                              return (
-                                <div
-                                  key={permission}
-                                  className="flex items-center justify-center"
-                                >
-                                  <Switch
-                                    checked={hasPermission}
-                                    onCheckedChange={(checked) => {
-                                      updatePermissionMutation.mutate({
-                                        roleId: role.id,
-                                        module,
-                                        permission,
-                                        enabled: checked,
-                                      });
-                                    }}
-                                    disabled={role.name === "super_admin"}
-                                  />
-                                  <span className="text-xs text-gray-500 ml-1">
-                                    {permission}
-                                  </span>
-                                </div>
-                              );
-                            })}
+                  const rolePermissions = getDefaultPermissions(role.name);
+
+                  return (
+                    <tr key={role.id} className="hover:bg-gray-50">
+                      <td className="p-3 border border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${
+                            role.name === 'super_admin' ? 'bg-red-500' :
+                            role.name === 'company_admin' ? 'bg-purple-500' :
+                            role.name === 'manager' ? 'bg-blue-500' :
+                            role.name === 'accountant' ? 'bg-green-500' :
+                            'bg-gray-500'
+                          }`}></div>
+                          <div>
+                            <div className="font-medium">{role.displayName}</div>
+                            <div className="text-sm text-gray-500">{role.description}</div>
                           </div>
-                        </td>
-                      ))}
+                        </div>
+                      </td>
+                      
+                      {/* Dashboard */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.dashboard}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'dashboard', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* Sales */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.sales}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'invoicing', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* Purchases */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.purchases}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'expenses', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* Products */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.products}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'inventory_management', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* Accounting */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.accounting}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'chart_of_accounts', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* POS */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.pos}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'pos_sales', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* Reports */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.reports}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'financial_reports', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* User Management */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.user_management}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'user_management', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* Settings */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.settings}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'system_settings', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
+                      
+                      {/* Compliance */}
+                      <td className="text-center p-3 border border-gray-200">
+                        <Checkbox
+                          checked={rolePermissions.compliance}
+                          onCheckedChange={(checked) => 
+                            handlePermissionToggle(role.id, 'vat_management', 'view', checked as boolean)
+                          }
+                          disabled={role.name === 'super_admin' || updatePermissionMutation.isPending}
+                        />
+                      </td>
                     </tr>
-                  ),
-                )}
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+          
+          {/* Legend */}
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+            <h4 className="font-semibold mb-2 text-sm">Permission Categories:</h4>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs text-gray-600">
+              <div><strong>Dashboard:</strong> Analytics, metrics</div>
+              <div><strong>Sales:</strong> Customers, invoicing</div>
+              <div><strong>Purchases:</strong> Suppliers, expenses</div>
+              <div><strong>Products:</strong> Inventory, catalog</div>
+              <div><strong>Accounting:</strong> Charts, journal entries</div>
+              <div><strong>POS:</strong> Point of sale operations</div>
+              <div><strong>Reports:</strong> Financial reports</div>
+              <div><strong>User Mgmt:</strong> User administration</div>
+              <div><strong>Settings:</strong> System configuration</div>
+              <div><strong>Compliance:</strong> VAT, tax management</div>
+            </div>
           </div>
         </CardContent>
       </Card>
