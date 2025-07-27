@@ -201,7 +201,11 @@ export default function UnifiedUserManagement() {
       queryClient.setQueryData(["/api/super-admin/users"], (old: any) => {
         if (!old) return old;
         return old.map((user: any) => 
-          user.id === userId ? { ...user, status } : user
+          user.id === userId ? { 
+            ...user, 
+            status, 
+            isActive: status === "active" 
+          } : user
         );
       });
 
@@ -220,11 +224,10 @@ export default function UnifiedUserManagement() {
       });
     },
     onSuccess: () => {
-      // Invalidate and refetch to ensure we have the latest data
+      // Only invalidate the cache - no immediate refetch to avoid race conditions
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
-      queryClient.refetchQueries({ queryKey: ["/api/super-admin/users"] });
       showSuccess({
-        title: "User Status Updated",
+        title: "User Status Updated", 
         description: "User status has been successfully updated.",
       });
     },
