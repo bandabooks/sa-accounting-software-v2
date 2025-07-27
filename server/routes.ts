@@ -659,6 +659,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Module management endpoints
+  app.get('/api/modules/configuration/:companyId?', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.params.companyId ? parseInt(req.params.companyId) : req.user?.companyId || 2;
+      
+      // Mock module configuration (replace with real implementation)
+      const moduleConfig = [
+        {
+          id: 'dashboard',
+          name: 'Dashboard',
+          description: 'Main business overview and analytics dashboard',
+          category: 'Core',
+          dependencies: [],
+          isActive: true,
+          isAvailable: true,
+          requiredPlan: 'basic',
+          permissions: ['dashboard:view']
+        },
+        {
+          id: 'invoices',
+          name: 'Invoicing',
+          description: 'Create and manage customer invoices',
+          category: 'Sales',
+          dependencies: ['customers'],
+          isActive: true,
+          isAvailable: true,
+          requiredPlan: 'basic',
+          permissions: ['invoices:create', 'invoices:edit', 'invoices:view']
+        }
+      ];
+      
+      res.json(moduleConfig);
+    } catch (error) {
+      console.error('Error fetching module configuration:', error);
+      res.status(500).json({ error: 'Failed to fetch module configuration' });
+    }
+  });
+
+  app.post('/api/modules/:moduleId/toggle', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { moduleId } = req.params;
+      const { companyId, isActive } = req.body;
+      
+      console.log(`Module ${moduleId} activation request for company ${companyId}: ${isActive}`);
+      
+      // Mock implementation - replace with real module activation logic
+      const result = {
+        success: true,
+        message: `Module ${moduleId} ${isActive ? 'activated' : 'deactivated'} successfully`,
+        moduleId,
+        isActive,
+        companyId
+      };
+      
+      // Log the action
+      await logAudit(req.user!.id, isActive ? 'ACTIVATE' : 'DEACTIVATE', 'module', 0, `Module ${moduleId}`);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error toggling module:', error);
+      res.status(500).json({ error: 'Failed to toggle module' });
+    }
+  });
+
+  // User stats endpoint
+  app.get('/api/users/stats/:companyId?', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.params.companyId ? parseInt(req.params.companyId) : req.user?.companyId || 2;
+      
+      // Mock user stats (replace with real implementation)
+      const stats = {
+        totalUsers: 12,
+        activeUsers: 10,
+        roles: 5,
+        activeModules: 8
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      res.status(500).json({ error: 'Failed to fetch user stats' });
+    }
+  });
+
+  // Industry-standard role permissions endpoint
+  app.get('/api/roles/industry-standard/:roleName?', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { roleName } = req.params;
+      
+      // Return industry-standard permissions for role(s)
+      const rolePermissions = roleName 
+        ? { roleName, permissions: [] } // getDefaultPermissionsForRole(roleName)
+        : []; // INDUSTRY_STANDARD_ROLE_PERMISSIONS
+      
+      res.json(rolePermissions);
+    } catch (error) {
+      console.error('Error fetching industry-standard permissions:', error);
+      res.status(500).json({ error: 'Failed to fetch role permissions' });
+    }
+  });
+
   // Subscription usage analytics endpoint
   app.get('/api/subscription/usage-analytics/:companyId?', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
