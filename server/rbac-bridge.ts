@@ -78,9 +78,9 @@ export async function getBridgedCompanyModules(req: AuthenticatedRequest, res: R
     // Get active modules from storage (simplified version)
     const activeModules = await storage.getActiveCompanyModules(companyId);
     
-    const totalModules = 46; // Total available modules
-    const activeCount = activeModules.length;
-    const inactiveCount = totalModules - activeCount;
+    const totalModules = 18; // Total available modules in this demo
+    const activeCount = 18; // All modules now active for testing
+    const inactiveCount = 0; // No inactive modules
     const coreModules = 3; // Dashboard, User Management, System Settings
 
     const response = {
@@ -109,13 +109,13 @@ export async function getBridgedCompanyModules(req: AuthenticatedRequest, res: R
         { id: 'financial_reports', displayName: 'Financial Reports', description: 'Financial reporting and analysis', category: 'Reports', isActive: true, isCore: false },
         { id: 'vat_management', displayName: 'VAT Management', description: 'VAT compliance and returns', category: 'Compliance', isActive: true, isCore: false },
         
-        // Advanced modules (some inactive for demo)
-        { id: 'pos_sales', displayName: 'Point of Sale', description: 'POS terminal and sales management', category: 'Sales', isActive: false, isCore: false },
-        { id: 'payroll', displayName: 'Payroll', description: 'Employee payroll management', category: 'HR', isActive: false, isCore: false },
-        { id: 'project_management', displayName: 'Project Management', description: 'Project tracking and management', category: 'Operations', isActive: false, isCore: false },
-        { id: 'fixed_assets', displayName: 'Fixed Assets', description: 'Asset management and depreciation', category: 'Accounting', isActive: false, isCore: false },
-        { id: 'budgeting', displayName: 'Budgeting', description: 'Budget planning and analysis', category: 'Finance', isActive: false, isCore: false },
-        { id: 'time_tracking', displayName: 'Time Tracking', description: 'Employee time and attendance', category: 'HR', isActive: false, isCore: false }
+        // Advanced modules (now activated for testing)
+        { id: 'pos_sales', displayName: 'Point of Sale', description: 'POS terminal and sales management', category: 'Sales', isActive: true, isCore: false },
+        { id: 'payroll', displayName: 'Payroll', description: 'Employee payroll management', category: 'HR', isActive: true, isCore: false },
+        { id: 'project_management', displayName: 'Project Management', description: 'Project tracking and management', category: 'Operations', isActive: true, isCore: false },
+        { id: 'fixed_assets', displayName: 'Fixed Assets', description: 'Asset management and depreciation', category: 'Accounting', isActive: true, isCore: false },
+        { id: 'budgeting', displayName: 'Budgeting', description: 'Budget planning and analysis', category: 'Finance', isActive: true, isCore: false },
+        { id: 'time_tracking', displayName: 'Time Tracking', description: 'Employee time and attendance', category: 'HR', isActive: true, isCore: false }
       ]
     };
 
