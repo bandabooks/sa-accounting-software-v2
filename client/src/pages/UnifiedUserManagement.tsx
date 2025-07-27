@@ -181,6 +181,11 @@ export default function UnifiedUserManagement() {
       return acc;
     }, {}) || {};
 
+  // Debug logging for troubleshooting
+  console.log("Module data:", moduleData);
+  console.log("Module states:", moduleStates);
+  console.log("Module permissions keys:", Object.keys(modulePermissions));
+
   // Mutations
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({
