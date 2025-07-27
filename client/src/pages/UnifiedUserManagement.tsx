@@ -313,8 +313,8 @@ export default function UnifiedUserManagement() {
       return { previousModuleData };
     },
     onSuccess: (_, variables) => {
-      // Don't invalidate immediately to prevent overwriting optimistic updates
-      // The optimistic update has already set the correct state
+      // Invalidate and refetch the module data to ensure persistence
+      queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
       showSuccess({
         title: "Module Status Updated",
         description: `${variables.module.replace(/_/g, ' ')} module has been ${variables.enabled ? "activated" : "deactivated"} successfully`,

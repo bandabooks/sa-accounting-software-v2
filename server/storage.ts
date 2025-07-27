@@ -7747,23 +7747,54 @@ export class DatabaseStorage implements IStorage {
     return result.rows || [];
   }
 
-  // Get active company modules - simplified version without complex tables
+  // Get active company modules - now reads from database
   async getActiveCompanyModules(companyId: number): Promise<any[]> {
-    // Return default active modules for all companies
-    return [
-      { id: 'dashboard', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'user_management', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'customers', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'invoicing', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'products_services', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'expenses', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'suppliers', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'pos_sales', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'chart_of_accounts', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'journal_entries', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'banking', is_active: true, activated_date: new Date(), activated_by: 1 },
-      { id: 'financial_reports', is_active: true, activated_date: new Date(), activated_by: 1 }
-    ];
+    try {
+      // Fetch from database first
+      const moduleSettings = await db
+        .select()
+        .from(companyModules)
+        .where(eq(companyModules.companyId, companyId));
+
+      // Create a lookup map of database settings
+      const settingsMap = new Map();
+      moduleSettings.forEach(setting => {
+        settingsMap.set(setting.moduleId, {
+          id: setting.moduleId,
+          is_active: setting.isActive,
+          activated_date: setting.activatedAt,
+          activated_by: setting.activatedBy
+        });
+      });
+
+      // Define default modules that should be available
+      const defaultModules = [
+        'dashboard', 'user_management', 'customers', 'invoicing', 
+        'products_services', 'expenses', 'suppliers', 'pos_sales',
+        'chart_of_accounts', 'journal_entries', 'banking', 'financial_reports'
+      ];
+
+      // Return modules with their actual database states or defaults
+      return defaultModules.map(moduleId => {
+        if (settingsMap.has(moduleId)) {
+          return settingsMap.get(moduleId);
+        } else {
+          // Default state for modules not in database yet
+          return {
+            id: moduleId,
+            is_active: moduleId === 'dashboard', // Only dashboard active by default
+            activated_date: moduleId === 'dashboard' ? new Date() : null,
+            activated_by: moduleId === 'dashboard' ? 1 : null
+          };
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching company modules from database:', error);
+      // Fallback to minimal default if database fails
+      return [
+        { id: 'dashboard', is_active: true, activated_date: new Date(), activated_by: 1 }
+      ];
+    }
   }
 
   // Get company module settings - simplified version
