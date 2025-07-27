@@ -154,19 +154,23 @@ export default function UnifiedUserManagement() {
 
   const toggleModuleMutation = useMutation({
     mutationFn: async ({ module, enabled }: { module: string; enabled: boolean }) => {
-      return apiRequest(`/api/modules/${module}/toggle`, "POST", { isActive: enabled, reason: "Module toggled via admin interface" });
+      console.log('Toggling module:', { module, enabled }); // Debug log
+      return apiRequest(`/api/modules/${module}/toggle`, "POST", { 
+        isActive: enabled, 
+        reason: "Module toggled via admin interface" 
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/modules/company"] });
       showSuccess("Module Status Updated", `${variables.module} module has been ${variables.enabled ? 'activated' : 'deactivated'} successfully`);
     },
     onError: (error) => {
+      console.error('Module toggle error:', error);
       toast({
         title: "Module Update Failed", 
-        description: "Unable to update module status. Please try again.",
+        description: `Unable to update module status. Error: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
-      console.error('Module toggle error:', error);
     },
   });
 
