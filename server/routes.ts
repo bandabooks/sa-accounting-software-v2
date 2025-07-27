@@ -3031,27 +3031,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/users/:id/status", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const { status } = req.body;
+      const { status, isActive } = req.body;
       
-      console.log(`Updating user ${userId} status to: ${status}`);
+      // Handle both status (string) and isActive (boolean) formats
+      let activeStatus: boolean;
+      let statusString: string;
       
-      if (!status || !['active', 'inactive'].includes(status)) {
-        return res.status(400).json({ message: "Invalid status. Must be 'active' or 'inactive'" });
+      if (isActive !== undefined) {
+        // Frontend sends isActive boolean
+        activeStatus = isActive;
+        statusString = isActive ? 'active' : 'inactive';
+      } else if (status !== undefined) {
+        // Frontend sends status string
+        if (!['active', 'inactive'].includes(status)) {
+          return res.status(400).json({ message: "Invalid status. Must be 'active' or 'inactive'" });
+        }
+        activeStatus = status === 'active';
+        statusString = status;
+      } else {
+        return res.status(400).json({ message: "Missing status or isActive parameter" });
       }
+      
+      console.log(`Updating user ${userId} status to: ${statusString} (isActive: ${activeStatus})`);
       
       // Update user status in database
       const updatedUser = await storage.updateUser(userId, { 
-        status: status,
-        isActive: status === 'active'
+        status: statusString,
+        isActive: activeStatus
       });
       
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      await logAudit(req.user!.id, 'UPDATE', 'user', userId, `Updated user status to ${status}`);
+      await logAudit(req.user!.id, 'UPDATE', 'user', userId, `Updated user status to ${statusString}`);
       
-      console.log(`Successfully updated user ${userId} status to: ${status}`);
+      console.log(`Successfully updated user ${userId} status to: ${statusString}`);
       
       // Return the updated user with all necessary fields
       res.json({
