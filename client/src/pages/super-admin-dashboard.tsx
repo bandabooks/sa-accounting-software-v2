@@ -49,7 +49,10 @@ interface SubscriptionPlan {
   description: string;
   monthlyPrice: string;
   annualPrice: string;
-  features: string[];
+  features: {
+    included_modules?: string[];
+    core_features?: string[];
+  } | string[];
   limits: Record<string, number>;
   isActive: boolean;
   sortOrder: number;
@@ -417,9 +420,14 @@ export default function SuperAdminDashboard() {
                     <div>
                       <h4 className="font-medium mb-2">Features:</h4>
                       <ul className="text-sm space-y-1">
-                        {plan.features.map((feature, index) => (
-                          <li key={index}>• {feature}</li>
-                        ))}
+                        {Array.isArray(plan.features) 
+                          ? plan.features.map((feature, index) => (
+                              <li key={index}>• {feature}</li>
+                            ))
+                          : plan.features?.core_features?.map((feature, index) => (
+                              <li key={index}>• {feature}</li>
+                            )) || [<li key="no-features">No features configured</li>]
+                        }
                       </ul>
                     </div>
                     <div className="flex space-x-2">
