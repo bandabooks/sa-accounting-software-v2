@@ -121,10 +121,11 @@ export default function UnifiedUserManagement() {
   // Extract active module IDs from the API response
   const activeModules = moduleData?.modules?.filter((module: any) => module.isActive)?.map((module: any) => module.id) || [];
   
-  // Debug logging
-  console.log('Module data:', moduleData);
-  console.log('Active modules:', activeModules);
-  console.log('Module permissions keys:', Object.keys(modulePermissions));
+  // Create a map for quick lookup of module states
+  const moduleStates = moduleData?.modules?.reduce((acc: any, module: any) => {
+    acc[module.id] = module.isActive;
+    return acc;
+  }, {}) || {};
 
   // Mutations
   const toggleUserStatusMutation = useMutation({
@@ -571,9 +572,8 @@ export default function UnifiedUserManagement() {
                   {module.replace(/_/g, " ")}
                 </CardTitle>
                 <Switch
-                  checked={activeModules.includes(module)}
+                  checked={moduleStates[module] === true}
                   onCheckedChange={(checked) => {
-                    console.log('Toggle clicked:', { module, checked, activeModules });
                     toggleModuleMutation.mutate({ module, enabled: checked });
                   }}
                 />
