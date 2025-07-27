@@ -92,6 +92,7 @@ import ComplianceTasks from "@/pages/compliance-tasks";
 import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
 import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
+import SubscriptionUsageDashboard from "@/pages/subscription-usage-dashboard";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -405,6 +406,13 @@ function AuthenticatedApp() {
         <Route path="/spending-wizard">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <SpendingWizard />
+          </ProtectedRoute>
+        </Route>
+
+        {/* Subscription Usage Dashboard */}
+        <Route path="/subscription/usage">
+          <ProtectedRoute>
+            <SubscriptionUsageDashboard />
           </ProtectedRoute>
         </Route>
 

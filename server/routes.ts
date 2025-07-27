@@ -659,6 +659,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Subscription usage analytics endpoint
+  app.get('/api/subscription/usage-analytics/:companyId?', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.params.companyId ? parseInt(req.params.companyId) : req.user?.companyId || 2;
+      const timeRange = req.query.timeRange as string || '30d';
+      
+      // Mock usage analytics data (replace with real implementation)
+      const usageAnalytics = {
+        metrics: [
+          {
+            id: 'users',
+            name: 'Active Users',
+            current: 8,
+            limit: 10,
+            percentage: 80,
+            trend: 'up',
+            trendPercentage: 15,
+            status: 'warning',
+            prediction: {
+              willExceedIn: 45,
+              projectedUsage: 12,
+              confidence: 85
+            }
+          },
+          {
+            id: 'invoices',
+            name: 'Monthly Invoices',
+            current: 127,
+            limit: 250,
+            percentage: 51,
+            trend: 'up',
+            trendPercentage: 23,
+            status: 'healthy',
+            prediction: {
+              willExceedIn: 90,
+              projectedUsage: 280,
+              confidence: 92
+            }
+          }
+        ],
+        timeRange,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      res.json(usageAnalytics);
+    } catch (error) {
+      console.error('Error fetching usage analytics:', error);
+      res.status(500).json({ error: 'Failed to fetch usage analytics' });
+    }
+  });
+
   // Admin Duplicate Prevention API Routes
   app.post("/api/admin/validate-creation", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
