@@ -198,25 +198,13 @@ export default function UnifiedUserManagement() {
       });
     },
     onMutate: async ({ userId, status }) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["/api/super-admin/users"] });
 
       // Snapshot the previous value
       const previousUsers = queryClient.getQueryData(["/api/super-admin/users"]);
 
-      // Optimistically update to the new value
-      queryClient.setQueryData(["/api/super-admin/users"], (old: any) => {
-        if (!old) return old;
-        return old.map((user: any) => 
-          user.id === userId ? { 
-            ...user, 
-            status, 
-            isActive: status === "active" 
-          } : user
-        );
-      });
-
-      // Return a context object with the snapshotted value
+      // Return context without optimistic update to prevent reversion
       return { previousUsers };
     },
     onError: (err, variables, context) => {
@@ -231,9 +219,8 @@ export default function UnifiedUserManagement() {
       });
     },
     onSuccess: () => {
-      // Force a refetch to ensure data consistency
+      // Only invalidate without immediate refetch to prevent race conditions
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
-      queryClient.refetchQueries({ queryKey: ["/api/super-admin/users"] });
       showSuccess({
         title: "User Status Updated", 
         description: "User status has been successfully updated.",

@@ -8126,9 +8126,12 @@ export class DatabaseStorage implements IStorage {
         user: users,
         role: userCompanyMemberships.role
       })
-      .from(userCompanyMemberships)
-      .innerJoin(users, eq(users.id, userCompanyMemberships.userId))
-      .where(eq(userCompanyMemberships.role, role));
+      .from(users)
+      .leftJoin(userCompanyMemberships, eq(users.id, userCompanyMemberships.userId))
+      .where(or(
+        eq(users.role, role),
+        eq(userCompanyMemberships.role, role)
+      ));
 
     return userCompanies.map(uc => uc.user);
   }
@@ -8174,8 +8177,8 @@ export class DatabaseStorage implements IStorage {
       .from(auditLogs)
       .where(
         and(
-          inArray(auditLogs.action, actions),
-          gte(auditLogs.createdAt, startDate)
+          sql`${auditLogs.action} = ANY(${actions})`,
+          sql`${auditLogs.createdAt} >= ${startDate}`
         )
       )
       .orderBy(desc(auditLogs.createdAt));
