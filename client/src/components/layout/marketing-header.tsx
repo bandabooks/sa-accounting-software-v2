@@ -45,13 +45,14 @@ export default function MarketingHeader() {
           <nav className="hidden md:flex space-x-8">
             {/* Features Dropdown */}
             <div className="relative group">
-              <button className={`flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors ${
+              <button className={`flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors py-2 ${
                 isActive('/features') ? 'text-blue-600 font-medium' : ''
               }`}>
                 <span>Features</span>
                 <ChevronDown size={16} className="group-hover:rotate-180 transition-transform" />
               </button>
-              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="absolute top-full left-0 w-64 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pt-1">
+                <div className="absolute -top-1 left-0 right-0 h-2 bg-transparent"></div>
                 <div className="py-2">
                   <Link href="/features" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600">
                     All Features
@@ -68,13 +69,14 @@ export default function MarketingHeader() {
 
             {/* Small Business Dropdown */}
             <div className="relative group">
-              <button className={`flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors ${
+              <button className={`flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors py-2 ${
                 isActive('/small-business') ? 'text-blue-600 font-medium' : ''
               }`}>
                 <span>Small Business</span>
                 <ChevronDown size={16} className="group-hover:rotate-180 transition-transform" />
               </button>
-              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="absolute top-full left-0 w-64 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pt-1">
+                <div className="absolute -top-1 left-0 right-0 h-2 bg-transparent"></div>
                 <div className="py-2">
                   <Link href="/small-business" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600">
                     All Industries
