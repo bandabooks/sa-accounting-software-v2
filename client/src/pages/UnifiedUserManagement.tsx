@@ -428,9 +428,9 @@ export default function UnifiedUserManagement() {
                       <td key={role.id} className="p-3 text-center">
                         <div className="flex flex-col space-y-1">
                           {permissions.map((permission: string) => {
-                            const hasPermission = permissionsMatrix?.roles
-                              ?.find((r: any) => r.id === role.id)
-                              ?.permissions?.some((p: any) => p.module === module && p.permission === permission);
+                            const roleData = permissionsMatrix?.roles?.find((r: any) => r.id === role.id);
+                            const rolePermissions = Array.isArray(roleData?.permissions) ? roleData.permissions : [];
+                            const hasPermission = rolePermissions.some((p: any) => p.module === module && p.permission === permission);
                             
                             return (
                               <div key={permission} className="flex items-center justify-center">
