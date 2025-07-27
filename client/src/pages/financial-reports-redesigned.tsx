@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { format, subDays } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Calendar, 
   Download, 
   FileText, 
   TrendingUp, 
+  DollarSign, 
   Activity,
   FileBarChart,
   Receipt,
@@ -27,10 +29,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function FinancialReports() {
+export default function FinancialReportsRedesigned() {
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
@@ -187,47 +190,8 @@ export default function FinancialReports() {
 
   const handleReportClick = (reportId: string) => {
     setSelectedReport(reportId);
-    // Navigate to specific report based on ID
-    switch(reportId) {
-      case 'balance-sheet':
-        window.open(`/financial-reports-detailed?tab=balance-sheet&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'profit-loss':
-        window.open(`/financial-reports-detailed?tab=profit-loss&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'cash-flow':
-        window.open(`/financial-reports-detailed?tab=cash-flow&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'trial-balance':
-        window.open(`/financial-reports-detailed?tab=trial-balance&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'general-ledger':
-        window.open(`/financial-reports-detailed?tab=general-ledger&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'aged-receivables':
-        window.open(`/financial-reports-detailed?tab=aged-receivables&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'aged-payables':
-        window.open(`/financial-reports-detailed?tab=aged-payables&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'vat-summary':
-        window.open(`/financial-reports-detailed?tab=vat-summary&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'bank-reconciliation':
-        window.open(`/financial-reports-detailed?tab=bank-reconciliation&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'fixed-asset-register':
-        window.open(`/financial-reports-detailed?tab=fixed-asset-register&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'tax-summary':
-        window.open(`/financial-reports-detailed?tab=tax-summary&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      case 'expense-report':
-        window.open(`/financial-reports-detailed?tab=expense-report&from=${dateFrom}&to=${dateTo}`, '_blank');
-        break;
-      default:
-        console.log(`Opening report: ${reportId}`);
-    }
+    // Here you would navigate to the specific report or open it in a modal
+    console.log(`Opening report: ${reportId}`);
   };
 
   return (

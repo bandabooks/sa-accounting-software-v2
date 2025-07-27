@@ -20,6 +20,7 @@ import EstimateCreate from "@/pages/estimate-create";
 import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
+import FinancialReportsDetailed from "@/pages/financial-reports-detailed";
 import Expenses from "@/pages/expenses";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
@@ -309,6 +310,11 @@ function AuthenticatedApp() {
         <Route path="/financial-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <FinancialReports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/financial-reports-detailed">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <FinancialReportsDetailed />
           </ProtectedRoute>
         </Route>
         <Route path="/expenses">
