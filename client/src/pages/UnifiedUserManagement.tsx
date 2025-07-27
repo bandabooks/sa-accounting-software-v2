@@ -437,8 +437,14 @@ export default function UnifiedUserManagement() {
                         <div className="flex flex-col space-y-1">
                           {permissions.map((permission: string) => {
                             const roleData = permissionsMatrix?.roles?.find((r: any) => r.id === role.id);
-                            const rolePermissions = Array.isArray(roleData?.permissions) ? roleData.permissions : [];
-                            const hasPermission = rolePermissions.some((p: any) => p.module === module && p.permission === permission);
+                            // Parse permissions JSON string or use empty object
+                            let rolePermissions = {};
+                            try {
+                              rolePermissions = roleData?.permissions ? JSON.parse(roleData.permissions) : {};
+                            } catch (e) {
+                              rolePermissions = {};
+                            }
+                            const hasPermission = rolePermissions[module]?.[permission] === true;
                             
                             return (
                               <div key={permission} className="flex items-center justify-center">

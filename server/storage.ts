@@ -7735,10 +7735,10 @@ export class DatabaseStorage implements IStorage {
         50 as max_users,
         'standard' as security_level,
         COUNT(DISTINCT up.user_id) as current_users,
-        '{}' as permissions
+        COALESCE(sr.permissions, '{}') as permissions
       FROM system_roles sr
       LEFT JOIN user_permissions up ON sr.id = up.system_role_id
-      GROUP BY sr.id, sr.name, sr.display_name, sr.description, sr.level, sr.is_system_role
+      GROUP BY sr.id, sr.name, sr.display_name, sr.description, sr.level, sr.is_system_role, sr.permissions
       ORDER BY sr.level DESC, sr.display_name
     `;
     
@@ -7799,9 +7799,37 @@ export class DatabaseStorage implements IStorage {
   // Update individual role permission
   async updateRolePermission(roleId: number, module: string, permission: string, enabled: boolean): Promise<void> {
     try {
-      // For now, this is a simplified implementation that logs the permission change
-      // In a full implementation, this would update a role_permissions table
       console.log(`Role ${roleId}: ${enabled ? 'Granting' : 'Revoking'} ${permission} permission for ${module} module`);
+      
+      // Get current role data
+      const [currentRole] = await db.select().from(systemRoles).where(eq(systemRoles.id, roleId));
+      
+      if (!currentRole) {
+        throw new Error(`Role with ID ${roleId} not found`);
+      }
+      
+      // Parse current permissions or initialize empty object
+      let permissions = {};
+      try {
+        permissions = currentRole.permissions ? JSON.parse(currentRole.permissions) : {};
+      } catch (e) {
+        permissions = {};
+      }
+      
+      // Update the specific permission
+      if (!permissions[module]) {
+        permissions[module] = {};
+      }
+      permissions[module][permission] = enabled;
+      
+      // Save updated permissions back to database
+      await db
+        .update(systemRoles)
+        .set({ 
+          permissions: JSON.stringify(permissions),
+          updatedAt: new Date()
+        })
+        .where(eq(systemRoles.id, roleId));
       
       // Create audit log entry for the permission change
       await this.createAuditLog({
