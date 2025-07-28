@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { CheckCircle, ArrowRight, Building, User, Mail, Lock, CreditCard, Zap, Shield, Users } from 'lucide-react';
-import MarketingLayout from '@/components/layout/marketing-layout';
+import { CheckCircle, ArrowRight, Building, User, Mail, Lock, CreditCard, Zap, Shield, Users, Calculator, Star, Award, FileText, TrendingUp, ArrowLeft, Check } from 'lucide-react';
 import { trialSignupSchema, type TrialSignupRequest } from '@shared/schema';
 
 type TrialSignupForm = TrialSignupRequest;
@@ -22,6 +21,7 @@ export default function TrialSignup() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<string>('professional');
+  const totalSteps = 3;
 
   // Get pre-selected plan from URL params
   const urlParams = new URLSearchParams(window.location.search);
@@ -163,55 +163,96 @@ export default function TrialSignup() {
   };
 
   return (
-    <MarketingLayout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Start Your 14-Day Free Trial
-            </h1>
-            <p className="text-xl text-gray-600">
-              No credit card required • Full access to all features • Cancel anytime
-            </p>
-          </div>
-
-          {/* Step Indicator */}
-          <div className="flex justify-center mb-8">
-            <div className="flex items-center space-x-4">
-              {[1, 2, 3].map((stepNumber) => (
-                <div key={stepNumber} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step >= stepNumber ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {step > stepNumber ? <CheckCircle size={16} /> : stepNumber}
-                  </div>
-                  {stepNumber < 3 && (
-                    <div className={`w-12 h-0.5 ${
-                      step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </div>
-              ))}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl">
+        {/* Header with Logo and Progress */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl">
+              <Calculator className="h-8 w-8 text-white" />
+            </div>
+            <div className="ml-4">
+              <h1 className="text-3xl font-bold text-gray-900">Taxnify</h1>
+              <p className="text-blue-600 text-sm font-medium">Unified Business, Accounting, Compliance Platform</p>
             </div>
           </div>
+          
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Start Your 30-Day Free Trial
+          </h2>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            Join 500+ South African businesses using our enterprise accounting platform
+          </p>
+          
+          {/* Trust Indicators */}
+          <div className="flex items-center justify-center mt-6 space-x-8">
+            <div className="flex items-center text-green-600">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              <span className="font-medium">No credit card required</span>
+            </div>
+            <div className="flex items-center text-green-600">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              <span className="font-medium">Full feature access</span>
+            </div>
+            <div className="flex items-center text-green-600">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              <span className="font-medium">Cancel anytime</span>
+            </div>
+          </div>
+          
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-center mt-8 space-x-4">
+            {[1, 2, 3].map((stepNumber) => (
+              <div key={stepNumber} className="flex items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 ${
+                  stepNumber < step 
+                    ? 'bg-green-500 text-white' 
+                    : stepNumber === step 
+                      ? 'bg-blue-600 text-white shadow-lg scale-110' 
+                      : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {stepNumber < step ? <Check className="h-5 w-5" /> : stepNumber}
+                </div>
+                {stepNumber < totalSteps && (
+                  <div className={`w-16 h-1 mx-2 rounded-full transition-all duration-300 ${
+                    stepNumber < step ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+          
+          {/* Step Labels */}
+          <div className="flex items-center justify-center mt-4 space-x-20">
+            <span className={`text-sm font-medium ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+              Choose Plan
+            </span>
+            <span className={`text-sm font-medium ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+              Account Details
+            </span>
+            <span className={`text-sm font-medium ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
+              Company Info
+            </span>
+          </div>
+        </div>
 
+        {/* Main Form Card */}
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl mx-auto max-w-3xl">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-8">
               
               {/* Step 1: Plan Selection */}
               {step === 1 && (
-                <Card className="shadow-lg">
-                  <CardHeader className="text-center">
-                    <CardTitle className="flex items-center justify-center gap-2">
-                      <Zap className="text-blue-600" size={24} />
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
+                      <Star className="text-blue-600" size={24} />
                       Choose Your Plan
-                    </CardTitle>
-                    <CardDescription>
+                    </h3>
+                    <p className="text-gray-600">
                       Select the plan that best fits your business needs. You can change this anytime during your trial.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                    </p>
+                  </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {plans.map((plan) => (
                         <div
