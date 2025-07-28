@@ -1,0 +1,65 @@
+Pre-Production Testing Checklist
+1. Full User Journey / Workflow Testing
+Test a full business workflow from onboarding → client creation → estimates → conversion to invoice → payment → reporting.
+
+Try alternate flows (e.g., editing/deleting an estimate, partial payments, voiding/cancelling invoices).
+
+2. Data Integrity & Consistency
+Confirm all CRUD (Create, Read, Update, Delete) actions reflect correctly in the database for:
+
+Estimates
+
+Invoices
+
+Customers
+
+Payments
+
+Check for duplicate records, orphaned data, and correct foreign key relationships.
+
+3. Role-Based Access & Security
+Test all user roles (admin, accountant, company user, etc.)—make sure permissions match expectations.
+
+Try accessing restricted endpoints as unauthorized roles—verify access is denied.
+
+4. Edge Case Handling
+Try importing/bulk entering large datasets (e.g., 100+ clients or invoices) to test performance and limits.
+
+Test form validation: empty fields, invalid formats, and extreme values (very large numbers, special characters).
+
+5. API & Endpoint Verification
+Test all key endpoints (CRUD for estimates, invoices, clients, etc.) using tools like Postman.
+
+Check for proper error messages, status codes, and payloads for failed and successful requests.
+
+6. UI/UX Responsiveness & Error Handling
+Resize the app across devices and browsers—ensure components render and function well.
+
+Try “breaking” forms: submit without required fields, network loss, invalid data, etc.
+
+Validate all modals, notifications, and popups appear/disappear as expected.
+
+7. Integration Verification
+If you have integrations (bank feeds, SARS/VAT, email, etc.), run real-world scenarios and ensure data flows correctly.
+
+Test authentication tokens (JWT) for expiration, refresh, and invalid token handling.
+
+8. Reporting & Analytics Accuracy
+Compare dashboard, summary, and detail reports with actual transactional data. Totals should match.
+
+Generate exports and verify the data matches in the system.
+
+9. Backup & Restore (Optional but Recommended)
+Test data backup and, if possible, restoration (especially if you’ll offer this to clients).
+
+10. Production Environment Dry Run
+Deploy on production-like infrastructure.
+
+Create new companies/clients from scratch, run through workflows, and watch for errors.
+
+Monitor logs for unexpected issues.
+
+Prompt for Your Team/AI:
+
+“We’re now in final system verification. Please systematically test full user journeys, edge cases, security, and data integrity. Ensure all reports and dashboards reflect actual data, not demo or cached values. Run production environment tests, confirm all integrations, and resolve any remaining TypeScript or UI warnings. Focus on clean UX and accuracy in all workflows. Flag any critical issues for immediate attention.”
+
