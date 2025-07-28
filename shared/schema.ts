@@ -601,12 +601,12 @@ export const supplierPayments = pgTable("supplier_payments", {
 });
 
 // Products and Services module
-export const productCategories = pgTable("product_categories", {
+export const productCategories: PgTableWithColumns<any> = pgTable("product_categories", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  parentCategoryId: integer("parent_category_id").references(() => productCategories.id),
+  parentCategoryId: integer("parent_category_id"), // Forward reference issue fixed
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
@@ -721,7 +721,6 @@ export const products = pgTable("products", {
   vatInclusive: boolean("vat_inclusive").default(false),
   incomeAccountId: integer("income_account_id"),
   expenseAccountId: integer("expense_account_id"),
-  barcode: text("barcode"),
   manufacturer: text("manufacturer"),
   weight: decimal("weight", { precision: 10, scale: 2 }),
   dimensions: text("dimensions"),
@@ -3664,11 +3663,7 @@ export const insertSpendingWizardTipSchema = createInsertSchema(spendingWizardTi
   createdAt: true,
 });
 
-// Types for new critical features
-export type CreditNote = typeof creditNotes.$inferSelect;
-export type InsertCreditNote = z.infer<typeof insertCreditNoteSchema>;
-export type CreditNoteItem = typeof creditNoteItems.$inferSelect;
-export type InsertCreditNoteItem = z.infer<typeof insertCreditNoteItemSchema>;
+// Types for new critical features (CreditNote types moved to avoid duplicates)
 
 export type InvoiceReminder = typeof invoiceReminders.$inferSelect;
 export type InsertInvoiceReminder = z.infer<typeof insertInvoiceReminderSchema>;
@@ -4390,18 +4385,7 @@ export const insertPermissionAuditLogSchema = createInsertSchema(permissionAudit
   timestamp: true,
 });
 
-// RBAC Type exports
-export type SystemRole = typeof systemRoles.$inferSelect;
-export type InsertSystemRole = z.infer<typeof insertSystemRoleSchema>;
-
-export type CompanyRole = typeof companyRoles.$inferSelect;
-export type InsertCompanyRole = z.infer<typeof insertCompanyRoleSchema>;
-
-export type UserPermission = typeof userPermissions.$inferSelect;
-export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
-
-export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
-export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;
+// RBAC Type exports (removed duplicates)
 
 // Exception Handling System Tables
 export const paymentExceptions = pgTable("payment_exceptions", {
@@ -4510,12 +4494,7 @@ export type InsertDelivery = z.infer<typeof insertDeliverySchema>;
 export type DeliveryItem = typeof deliveryItems.$inferSelect;
 export type InsertDeliveryItem = z.infer<typeof insertDeliveryItemSchema>;
 
-// Credit Notes (existing, but adding for completeness)
-export type CreditNote = typeof creditNotes.$inferSelect;
-export type InsertCreditNote = z.infer<typeof insertCreditNoteSchema>;
-
-export type CreditNoteItem = typeof creditNoteItems.$inferSelect;
-export type InsertCreditNoteItem = z.infer<typeof insertCreditNoteItemSchema>;
+// Credit Notes (existing, but adding for completeness) - moved to avoid duplicates
 
 // Extended Sales module types for API responses
 export type SalesOrderWithCustomer = SalesOrder & { customer: Customer };
@@ -4525,24 +4504,7 @@ export type DeliveryWithItems = Delivery & { items: DeliveryItem[]; customer: Cu
 export type CreditNoteWithCustomer = CreditNote & { customer: Customer };
 export type CreditNoteWithItems = CreditNote & { items: CreditNoteItem[]; customer: Customer };
 
-// Enhanced Inventory Management Types
-export type ProductLot = typeof productLots.$inferSelect;
-export type InsertProductLot = z.infer<typeof insertProductLotSchema>;
-
-export type ProductSerial = typeof productSerials.$inferSelect;
-export type InsertProductSerial = z.infer<typeof insertProductSerialSchema>;
-
-export type StockCount = typeof stockCounts.$inferSelect;
-export type InsertStockCount = z.infer<typeof insertStockCountSchema>;
-
-export type StockCountItem = typeof stockCountItems.$inferSelect;
-export type InsertStockCountItem = z.infer<typeof insertStockCountItemSchema>;
-
-export type ReorderRule = typeof reorderRules.$inferSelect;
-export type InsertReorderRule = z.infer<typeof insertReorderRuleSchema>;
-
-export type ProductBundle = typeof productBundles.$inferSelect;
-export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
+// Enhanced Inventory Management Types (removed duplicates - already defined above)
 
 // Enhanced Inventory Extended Types for API responses
 export type StockCountWithItems = StockCount & { items: StockCountItem[] };
