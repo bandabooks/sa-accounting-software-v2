@@ -22,6 +22,7 @@ import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
 import FinancialReportsDetailed from "@/pages/financial-reports-detailed";
 import BusinessReports from "@/pages/business-reports";
+import GeneralReports from "@/pages/general-reports";
 import Expenses from "@/pages/expenses";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
@@ -306,6 +307,11 @@ function AuthenticatedApp() {
         <Route path="/reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <Reports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/general-reports">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <GeneralReports />
           </ProtectedRoute>
         </Route>
         <Route path="/financial-reports">

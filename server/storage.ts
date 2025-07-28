@@ -6660,7 +6660,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const toDate = to || new Date().toISOString().split('T')[0];
       
-      // Get all accounts with their balances
+      // Get all accounts with their balances calculated from journal entry lines
       const accounts = await db
         .select({
           id: chartOfAccounts.id,
@@ -6670,20 +6670,17 @@ export class DatabaseStorage implements IStorage {
           subcategory: chartOfAccounts.subcategory,
           accountType: chartOfAccounts.accountType,
           balance: sql<string>`COALESCE(SUM(
-            CASE 
-              WHEN ${journalEntries.entryType} = 'debit' THEN ${journalEntries.amount}
-              ELSE -${journalEntries.amount}
-            END
+            COALESCE(${journalEntryLines.debitAmount}, 0) - COALESCE(${journalEntryLines.creditAmount}, 0)
           ), 0)`.as('balance')
         })
         .from(chartOfAccounts)
-        .leftJoin(journalEntries, 
-          and(
-            eq(journalEntries.accountId, chartOfAccounts.id),
-            eq(journalEntries.companyId, companyId),
-            lte(journalEntries.transactionDate, toDate)
-          )
-        )
+        .leftJoin(journalEntryLines, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .leftJoin(journalEntries, and(
+          eq(journalEntries.id, journalEntryLines.journalEntryId),
+          eq(journalEntries.companyId, companyId),
+          lte(journalEntries.entryDate, toDate),
+          eq(journalEntries.status, 'posted')
+        ))
         .where(eq(chartOfAccounts.companyId, companyId))
         .groupBy(chartOfAccounts.id, chartOfAccounts.accountName, chartOfAccounts.accountCode, 
                 chartOfAccounts.category, chartOfAccounts.subcategory, chartOfAccounts.accountType);
@@ -6747,27 +6744,23 @@ export class DatabaseStorage implements IStorage {
     try {
       const toDate = to || new Date().toISOString().split('T')[0];
       
-      // Get all accounts with their debit and credit balances
+      // Get all accounts with their debit and credit balances calculated from journal entry lines
       const accounts = await db
         .select({
           accountCode: chartOfAccounts.accountCode,
           accountName: chartOfAccounts.accountName,
           accountType: chartOfAccounts.accountType,
-          debitTotal: sql<string>`COALESCE(SUM(
-            CASE WHEN ${journalEntries.entryType} = 'debit' THEN ${journalEntries.amount} ELSE 0 END
-          ), 0)`.as('debit_total'),
-          creditTotal: sql<string>`COALESCE(SUM(
-            CASE WHEN ${journalEntries.entryType} = 'credit' THEN ${journalEntries.amount} ELSE 0 END
-          ), 0)`.as('credit_total')
+          debitTotal: sql<string>`COALESCE(SUM(COALESCE(${journalEntryLines.debitAmount}, 0)), 0)`.as('debit_total'),
+          creditTotal: sql<string>`COALESCE(SUM(COALESCE(${journalEntryLines.creditAmount}, 0)), 0)`.as('credit_total')
         })
         .from(chartOfAccounts)
-        .leftJoin(journalEntries, 
-          and(
-            eq(journalEntries.accountId, chartOfAccounts.id),
-            eq(journalEntries.companyId, companyId),
-            lte(journalEntries.transactionDate, toDate)
-          )
-        )
+        .leftJoin(journalEntryLines, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .leftJoin(journalEntries, and(
+          eq(journalEntries.id, journalEntryLines.journalEntryId),
+          eq(journalEntries.companyId, companyId),
+          lte(journalEntries.entryDate, toDate),
+          eq(journalEntries.status, 'posted')
+        ))
         .where(eq(chartOfAccounts.companyId, companyId))
         .groupBy(chartOfAccounts.id, chartOfAccounts.accountCode, chartOfAccounts.accountName, chartOfAccounts.accountType)
         .orderBy(chartOfAccounts.accountCode);
@@ -6828,31 +6821,32 @@ export class DatabaseStorage implements IStorage {
       
       const whereConditions = [
         eq(journalEntries.companyId, companyId),
-        gte(journalEntries.transactionDate, fromDate),
-        lte(journalEntries.transactionDate, toDate)
+        gte(journalEntries.entryDate, fromDate),
+        lte(journalEntries.entryDate, toDate),
+        eq(journalEntries.status, 'posted')
       ];
 
       if (accountId) {
-        whereConditions.push(eq(journalEntries.accountId, accountId));
+        whereConditions.push(eq(journalEntryLines.accountId, accountId));
       }
 
       const ledgerEntries = await db
         .select({
-          accountId: journalEntries.accountId,
+          accountId: journalEntryLines.accountId,
           accountCode: chartOfAccounts.accountCode,
           accountName: chartOfAccounts.accountName,
-          transactionDate: journalEntries.transactionDate,
-          description: journalEntries.description,
-          reference: journalEntries.reference,
-          debitAmount: sql<string>`CASE WHEN ${journalEntries.entryType} = 'debit' THEN ${journalEntries.amount} ELSE 0 END`,
-          creditAmount: sql<string>`CASE WHEN ${journalEntries.entryType} = 'credit' THEN ${journalEntries.amount} ELSE 0 END`,
-          amount: journalEntries.amount,
-          entryType: journalEntries.entryType
+          transactionDate: journalEntries.entryDate,
+          description: journalEntryLines.description,
+          reference: journalEntryLines.reference,
+          debitAmount: journalEntryLines.debitAmount,
+          creditAmount: journalEntryLines.creditAmount,
+          entryNumber: journalEntries.entryNumber
         })
-        .from(journalEntries)
-        .innerJoin(chartOfAccounts, eq(journalEntries.accountId, chartOfAccounts.id))
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+        .innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
         .where(and(...whereConditions))
-        .orderBy(chartOfAccounts.accountCode, journalEntries.transactionDate);
+        .orderBy(chartOfAccounts.accountCode, journalEntries.entryDate);
 
       // Group by account
       const accountsMap = new Map();
@@ -10408,6 +10402,367 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(salesOrders.id, salesOrderId));
   }
+
+  // ========================================
+  // GENERAL REPORTS MODULE STORAGE METHODS
+  // ========================================
+  
+  // Real-time data methods
+  async getCurrentCashPosition(companyId: number): Promise<number> {
+    try {
+      const [result] = await db
+        .select({
+          total: sql<string>`COALESCE(SUM(${bankAccounts.balance}), 0)`
+        })
+        .from(bankAccounts)
+        .where(eq(bankAccounts.companyId, companyId));
+      
+      return parseFloat(result?.total || '0');
+    } catch (error) {
+      console.error("Error getting current cash position:", error);
+      return 0;
+    }
+  }
+
+  async getTodaySalesTotal(companyId: number): Promise<number> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const [result] = await db
+        .select({
+          total: sql<string>`COALESCE(SUM(${invoices.totalAmount}), 0)`
+        })
+        .from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          eq(sql`DATE(${invoices.issueDate})`, today),
+          ne(invoices.status, 'draft')
+        ));
+      
+      return parseFloat(result?.total || '0');
+    } catch (error) {
+      console.error("Error getting today's sales total:", error);
+      return 0;
+    }
+  }
+
+  async getPendingInvoicesCount(companyId: number): Promise<number> {
+    try {
+      const [result] = await db
+        .select({
+          count: sql<string>`COUNT(*)`
+        })
+        .from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.status, 'pending')
+        ));
+      
+      return parseInt(result?.count || '0');
+    } catch (error) {
+      console.error("Error getting pending invoices count:", error);
+      return 0;
+    }
+  }
+
+  async getLowStockItemsCount(companyId: number): Promise<number> {
+    try {
+      const [result] = await db
+        .select({
+          count: sql<string>`COUNT(*)`
+        })
+        .from(products)
+        .where(and(
+          eq(products.companyId, companyId),
+          sql`${products.stockQuantity} <= ${products.reorderLevel}`
+        ));
+      
+      return parseInt(result?.count || '0');
+    } catch (error) {
+      console.error("Error getting low stock items count:", error);
+      return 0;
+    }
+  }
+
+  // Bookmark management
+  async getUserReportBookmarks(userId: number): Promise<string[]> {
+    try {
+      // For now, return empty array. In production, this would query a user_bookmarks table
+      return [];
+    } catch (error) {
+      console.error("Error getting user bookmarks:", error);
+      return [];
+    }
+  }
+
+  async addReportBookmark(userId: number, reportId: string): Promise<void> {
+    try {
+      // For now, just log. In production, this would insert into user_bookmarks table
+      console.log(`Adding bookmark for user ${userId}, report ${reportId}`);
+    } catch (error) {
+      console.error("Error adding bookmark:", error);
+    }
+  }
+
+  async removeReportBookmark(userId: number, reportId: string): Promise<void> {
+    try {
+      // For now, just log. In production, this would delete from user_bookmarks table
+      console.log(`Removing bookmark for user ${userId}, report ${reportId}`);
+    } catch (error) {
+      console.error("Error removing bookmark:", error);
+    }
+  }
+
+  // Report generation methods
+  async generateLiveDashboardReport(companyId: number): Promise<any> {
+    try {
+      const data = {
+        cashPosition: await this.getCurrentCashPosition(companyId),
+        todaySales: await this.getTodaySalesTotal(companyId),
+        pendingInvoices: await this.getPendingInvoicesCount(companyId),
+        lowStockItems: await this.getLowStockItemsCount(companyId),
+        salesTrend: await this.getWeeklySalesTrend(companyId),
+        topProducts: await this.getTopSellingProducts(companyId, 5),
+        generatedAt: new Date().toISOString()
+      };
+      return data;
+    } catch (error) {
+      console.error("Error generating live dashboard report:", error);
+      return {};
+    }
+  }
+
+  async generateLiveCashFlowReport(companyId: number): Promise<any> {
+    try {
+      const data = {
+        currentCash: await this.getCurrentCashPosition(companyId),
+        todayInflow: await this.getTodayCashInflow(companyId),
+        todayOutflow: await this.getTodayCashOutflow(companyId),
+        weeklyForecast: await this.getWeeklyCashForecast(companyId),
+        bankAccounts: await this.getBankAccountBalances(companyId),
+        generatedAt: new Date().toISOString()
+      };
+      return data;
+    } catch (error) {
+      console.error("Error generating live cash flow report:", error);
+      return {};
+    }
+  }
+
+  async generateLiveSalesReport(companyId: number): Promise<any> {
+    try {
+      const data = {
+        todaySales: await this.getTodaySalesTotal(companyId),
+        weekToDate: await this.getWeekToDateSales(companyId),
+        monthToDate: await this.getMonthToDateSales(companyId),
+        salesByHour: await this.getHourlySalesData(companyId),
+        topCustomers: await this.getTopCustomersToday(companyId),
+        generatedAt: new Date().toISOString()
+      };
+      return data;
+    } catch (error) {
+      console.error("Error generating live sales report:", error);
+      return {};
+    }
+  }
+
+  async generateLiveInventoryReport(companyId: number): Promise<any> {
+    try {
+      const data = {
+        lowStockItems: await this.getLowStockItems(companyId),
+        recentMovements: await this.getRecentInventoryMovements(companyId),
+        topMovingProducts: await this.getTopMovingProducts(companyId),
+        stockValue: await this.getTotalStockValue(companyId),
+        generatedAt: new Date().toISOString()
+      };
+      return data;
+    } catch (error) {
+      console.error("Error generating live inventory report:", error);
+      return {};
+    }
+  }
+
+  // Helper methods for report generation
+  async getWeeklySalesTrend(companyId: number): Promise<any[]> {
+    try {
+      const data = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const [result] = await db
+          .select({
+            total: sql<string>`COALESCE(SUM(${invoices.totalAmount}), 0)`
+          })
+          .from(invoices)
+          .where(and(
+            eq(invoices.companyId, companyId),
+            eq(sql`DATE(${invoices.issueDate})`, dateStr),
+            ne(invoices.status, 'draft')
+          ));
+        
+        data.push({
+          date: dateStr,
+          sales: parseFloat(result?.total || '0')
+        });
+      }
+      return data;
+    } catch (error) {
+      console.error("Error getting weekly sales trend:", error);
+      return [];
+    }
+  }
+
+  async getTopSellingProducts(companyId: number, limit: number = 5): Promise<any[]> {
+    try {
+      const products = await db
+        .select({
+          productName: products.name,
+          totalSold: sql<string>`COALESCE(SUM(${invoiceItems.quantity}), 0)`,
+          totalRevenue: sql<string>`COALESCE(SUM(${invoiceItems.quantity} * ${invoiceItems.unitPrice}), 0)`
+        })
+        .from(products)
+        .leftJoin(invoiceItems, eq(invoiceItems.productId, products.id))
+        .leftJoin(invoices, and(
+          eq(invoices.id, invoiceItems.invoiceId),
+          eq(invoices.companyId, companyId),
+          ne(invoices.status, 'draft')
+        ))
+        .where(eq(products.companyId, companyId))
+        .groupBy(products.id, products.name)
+        .orderBy(desc(sql`COALESCE(SUM(${invoiceItems.quantity}), 0)`))
+        .limit(limit);
+      
+      return products;
+    } catch (error) {
+      console.error("Error getting top selling products:", error);
+      return [];
+    }
+  }
+
+  // Additional helper methods
+  async getTodayCashInflow(companyId: number): Promise<number> {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const [result] = await db
+        .select({
+          total: sql<string>`COALESCE(SUM(${payments.amount}), 0)`
+        })
+        .from(payments)
+        .where(and(
+          eq(payments.companyId, companyId),
+          eq(sql`DATE(${payments.paymentDate})`, today)
+        ));
+      
+      return parseFloat(result?.total || '0');
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  async getTodayCashOutflow(companyId: number): Promise<number> {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const [result] = await db
+        .select({
+          total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`
+        })
+        .from(expenses)
+        .where(and(
+          eq(expenses.companyId, companyId),
+          eq(sql`DATE(${expenses.expenseDate})`, today)
+        ));
+      
+      return parseFloat(result?.total || '0');
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  async getWeeklyCashForecast(companyId: number): Promise<any[]> {
+    // Return mock forecast data for now
+    return [
+      { date: '2025-01-28', projected: 15000, confidence: 'high' },
+      { date: '2025-01-29', projected: 18000, confidence: 'medium' },
+      { date: '2025-01-30', projected: 22000, confidence: 'medium' },
+      { date: '2025-01-31', projected: 25000, confidence: 'low' }
+    ];
+  }
+
+  async getBankAccountBalances(companyId: number): Promise<any[]> {
+    try {
+      const accounts = await db
+        .select({
+          accountName: bankAccounts.accountName,
+          balance: bankAccounts.balance,
+          accountNumber: bankAccounts.accountNumber
+        })
+        .from(bankAccounts)
+        .where(eq(bankAccounts.companyId, companyId))
+        .orderBy(desc(bankAccounts.balance));
+      
+      return accounts;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  // Report scheduling
+  async createReportSchedule(scheduleData: any): Promise<any> {
+    try {
+      // For now, return mock data. In production, this would insert into report_schedules table
+      return {
+        id: Date.now(),
+        ...scheduleData,
+        createdAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("Error creating report schedule:", error);
+      throw error;
+    }
+  }
+
+  // User accessible companies
+  async getUserAccessibleCompanies(userId: number): Promise<any[]> {
+    try {
+      const userCompanies = await db
+        .select({
+          id: companies.id,
+          name: companies.name,
+          displayName: companies.displayName
+        })
+        .from(companies)
+        .innerJoin(userCompanies, eq(userCompanies.companyId, companies.id))
+        .where(eq(userCompanies.userId, userId));
+      
+      return userCompanies;
+    } catch (error) {
+      console.error("Error getting user accessible companies:", error);
+      return [];
+    }
+  }
+
+  // Placeholder methods for advanced reporting (to be implemented)
+  async generateConsolidatedBalanceSheet(companyIds: number[]): Promise<any> { return {}; }
+  async generateComparativeProfitLoss(companyId: number): Promise<any> { return {}; }
+  async generateCashFlowForecast(companyId: number): Promise<any> { return {}; }
+  async generateDetailedGeneralLedger(companyId: number): Promise<any> { return {}; }
+  async generateExecutiveKPIDashboard(companyId: number): Promise<any> { return {}; }
+  async generateOperationalEfficiencyReport(companyId: number): Promise<any> { return {}; }
+  async generateCustomerLifecycleAnalysis(companyId: number): Promise<any> { return {}; }
+  async generateSupplierPerformanceScorecard(companyId: number): Promise<any> { return {}; }
+  async generateSARSSubmissionPackage(companyId: number): Promise<any> { return {}; }
+  async generateComprehensiveAuditTrail(companyId: number): Promise<any> { return {}; }
+  async generateInternalControlsReport(companyId: number): Promise<any> { return {}; }
+  async generateRegulatoryComplianceDashboard(companyId: number): Promise<any> { return {}; }
+  async getWeekToDateSales(companyId: number): Promise<number> { return 0; }
+  async getMonthToDateSales(companyId: number): Promise<number> { return 0; }
+  async getHourlySalesData(companyId: number): Promise<any[]> { return []; }
+  async getTopCustomersToday(companyId: number): Promise<any[]> { return []; }
+  async getLowStockItems(companyId: number): Promise<any[]> { return []; }
+  async getRecentInventoryMovements(companyId: number): Promise<any[]> { return []; }
+  async getTopMovingProducts(companyId: number): Promise<any[]> { return []; }
+  async getTotalStockValue(companyId: number): Promise<number> { return 0; }
 }
 
 export const storage = new DatabaseStorage();

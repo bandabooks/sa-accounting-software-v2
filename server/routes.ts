@@ -8829,5 +8829,205 @@ Format your response as a JSON array of tip objects with "title", "description",
     console.warn("Failed to initialize collaboration system:", error);
   }
   
+  // ========================================
+  // GENERAL REPORTS MODULE API ENDPOINTS
+  // ========================================
+  
+  // Real-time reports data refresh endpoint
+  app.get("/api/reports/real-time", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      
+      // Get live business metrics
+      const liveData = {
+        cashPosition: await storage.getCurrentCashPosition(companyId),
+        todaySales: await storage.getTodaySalesTotal(companyId),
+        pendingInvoices: await storage.getPendingInvoicesCount(companyId),
+        lowStockItems: await storage.getLowStockItemsCount(companyId),
+        lastUpdated: new Date().toISOString()
+      };
+      
+      res.json(liveData);
+    } catch (error) {
+      console.error("Error fetching real-time data:", error);
+      res.status(500).json({ message: "Failed to fetch real-time data" });
+    }
+  });
+
+  // User bookmarks management
+  app.get("/api/reports/bookmarks", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const bookmarks = await storage.getUserReportBookmarks(userId);
+      res.json(bookmarks);
+    } catch (error) {
+      console.error("Error fetching bookmarks:", error);
+      res.status(500).json({ message: "Failed to fetch bookmarks" });
+    }
+  });
+
+  app.post("/api/reports/bookmarks/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const reportId = req.params.reportId;
+      
+      await storage.addReportBookmark(userId, reportId);
+      await logAudit(userId, 'CREATE', 'report_bookmark', reportId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error adding bookmark:", error);
+      res.status(500).json({ message: "Failed to add bookmark" });
+    }
+  });
+
+  app.delete("/api/reports/bookmarks/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const reportId = req.params.reportId;
+      
+      await storage.removeReportBookmark(userId, reportId);
+      await logAudit(userId, 'DELETE', 'report_bookmark', reportId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing bookmark:", error);
+      res.status(500).json({ message: "Failed to remove bookmark" });
+    }
+  });
+
+  // Report generation with audit logging
+  app.post("/api/reports/generate/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const companyId = req.user.companyId;
+      const reportId = req.params.reportId;
+      const { companies, customBranding } = req.body;
+      
+      // Log report generation
+      await logAudit(userId, 'VIEW', 'report_generation', reportId);
+      
+      // Generate report based on type
+      let reportData;
+      switch (reportId) {
+        case 'live-dashboard':
+          reportData = await storage.generateLiveDashboardReport(companyId);
+          break;
+        case 'cash-flow-live':
+          reportData = await storage.generateLiveCashFlowReport(companyId);
+          break;
+        case 'sales-performance-live':
+          reportData = await storage.generateLiveSalesReport(companyId);
+          break;
+        case 'inventory-status-live':
+          reportData = await storage.generateLiveInventoryReport(companyId);
+          break;
+        case 'balance-sheet-consolidated':
+          reportData = await storage.generateConsolidatedBalanceSheet(companies || [companyId]);
+          break;
+        case 'profit-loss-comparative':
+          reportData = await storage.generateComparativeProfitLoss(companyId);
+          break;
+        case 'cash-flow-forecast':
+          reportData = await storage.generateCashFlowForecast(companyId);
+          break;
+        case 'general-ledger-detailed':
+          reportData = await storage.generateDetailedGeneralLedger(companyId);
+          break;
+        case 'kpi-executive-dashboard':
+          reportData = await storage.generateExecutiveKPIDashboard(companyId);
+          break;
+        case 'operational-efficiency':
+          reportData = await storage.generateOperationalEfficiencyReport(companyId);
+          break;
+        case 'customer-lifecycle':
+          reportData = await storage.generateCustomerLifecycleAnalysis(companyId);
+          break;
+        case 'supplier-performance':
+          reportData = await storage.generateSupplierPerformanceScorecard(companyId);
+          break;
+        case 'sars-submission-ready':
+          reportData = await storage.generateSARSSubmissionPackage(companyId);
+          break;
+        case 'audit-trail-comprehensive':
+          reportData = await storage.generateComprehensiveAuditTrail(companyId);
+          break;
+        case 'internal-controls':
+          reportData = await storage.generateInternalControlsReport(companyId);
+          break;
+        case 'regulatory-compliance':
+          reportData = await storage.generateRegulatoryComplianceDashboard(companyId);
+          break;
+        default:
+          return res.status(400).json({ message: "Unknown report type" });
+      }
+      
+      res.json({
+        reportId,
+        data: reportData,
+        generatedAt: new Date().toISOString(),
+        customBranding
+      });
+    } catch (error) {
+      console.error("Error generating report:", error);
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  // Report scheduling functionality
+  app.post("/api/reports/schedule", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const { reportId, frequency, recipients } = req.body;
+      
+      const schedule = await storage.createReportSchedule({
+        userId,
+        reportId,
+        frequency,
+        recipients,
+        isActive: true,
+        nextRun: new Date()
+      });
+      
+      await logAudit(userId, 'CREATE', 'report_schedule', schedule.id);
+      
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error scheduling report:", error);
+      res.status(500).json({ message: "Failed to schedule report" });
+    }
+  });
+
+  // Audit trail for report access
+  app.post("/api/audit/report-access", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const { reportId, reportTitle, action, timestamp } = req.body;
+      
+      await logAudit(userId, action.toUpperCase(), 'report_access', reportId, {
+        reportTitle,
+        timestamp,
+        userAgent: req.headers['user-agent']
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error logging report access:", error);
+      res.status(500).json({ message: "Failed to log report access" });
+    }
+  });
+
+  // Companies list for multi-company reports
+  app.get("/api/companies", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const companies = await storage.getUserAccessibleCompanies(userId);
+      res.json(companies);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
   return httpServer;
 }

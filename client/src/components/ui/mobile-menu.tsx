@@ -137,6 +137,7 @@ const navigationGroups = [
     icon: BarChart3,
     module: "reporting",
     items: [
+      { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reporting" },
       { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reporting" },
       { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reporting" }
     ]
