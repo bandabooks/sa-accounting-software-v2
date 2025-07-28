@@ -2027,7 +2027,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: invoices.id,
           invoiceNumber: invoices.invoiceNumber,
-          totalAmount: invoices.totalAmount,
+          total: invoices.total,
           status: invoices.status,
           createdAt: invoices.createdAt,
           customerName: customers.name
@@ -2043,7 +2043,7 @@ export class DatabaseStorage implements IStorage {
           id: invoice.id,
           type: 'invoice',
           description: `Invoice ${invoice.invoiceNumber} created`,
-          amount: invoice.totalAmount || '0.00',
+          amount: invoice.total || '0.00',
           date: invoice.createdAt,
           status: invoice.status,
           customerName: invoice.customerName || 'Unknown Customer'
