@@ -1,5 +1,6 @@
 import { ChartLine, Clock, Users, Receipt, TrendingUp, TrendingDown, Banknote, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
+import BankComplianceCard from "./bank-compliance-card";
 
 interface EnhancedStatsGridProps {
   stats: {
@@ -33,6 +34,12 @@ interface EnhancedStatsGridProps {
       accountName: string;
       balance: string;
       accountNumber: string;
+    }>;
+    complianceAlerts?: Array<{
+      type: string;
+      message: string;
+      severity: 'high' | 'medium' | 'low';
+      action: string;
     }>;
   };
 }
@@ -175,9 +182,8 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
         </div>
       )}
 
-      {/* Cash Flow & Bank Balances */}
-      {(stats.cashFlowSummary || stats.bankBalances) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Cash Flow & Bank/Compliance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Cash Flow Summary */}
           {stats.cashFlowSummary && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
@@ -220,38 +226,12 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
             </div>
           )}
 
-          {/* Bank Balances */}
-          {stats.bankBalances && stats.bankBalances.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Bank Balances</h3>
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
-                  <Banknote className="text-indigo-600 dark:text-indigo-400" size={24} />
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                {stats.bankBalances.slice(0, 4).map((account, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{account.accountName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">...{account.accountNumber.slice(-4)}</p>
-                    </div>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {formatCurrency(account.balance)}
-                    </span>
-                  </div>
-                ))}
-                {stats.bankBalances.length > 4 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center pt-2">
-                    +{stats.bankBalances.length - 4} more accounts
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Bank Accounts / Compliance Alerts Card */}
+          <BankComplianceCard 
+            bankBalances={stats.bankBalances || []}
+            complianceAlerts={stats.complianceAlerts || []}
+          />
         </div>
-      )}
     </div>
   );
 }

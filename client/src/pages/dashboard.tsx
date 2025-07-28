@@ -116,11 +116,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Bank Accounts / Compliance Alerts Card */}
-      <BankComplianceCard 
-        bankBalances={dashboardStats.bankBalances || []}
-        complianceAlerts={dashboardStats.complianceAlerts || []}
-      />
+
 
       {/* Compliance Alerts */}
       <ComplianceAlerts alerts={dashboardStats.complianceAlerts || []} />
