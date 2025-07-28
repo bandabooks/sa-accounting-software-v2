@@ -336,47 +336,42 @@ export default function TrialSignup() {
               {/* Step 2: Personal & Company Information */}
               {step === 2 && (
                 <div className="space-y-8">
-                  {/* Modern Header with Gradient */}
-                  <div className="text-center relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-100 via-purple-50 to-indigo-100 rounded-3xl opacity-30"></div>
-                    <div className="relative z-10 py-8">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-4">
-                        <User className="text-white" size={28} />
-                      </div>
-                      <h3 className="text-3xl font-bold text-gray-900 mb-3">Tell Us About You</h3>
-                      <p className="text-gray-600 text-lg max-w-md mx-auto leading-relaxed">
-                        We'll use this information to set up your account and company profile
-                      </p>
+                  {/* Compact Header */}
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg mb-3">
+                      <User className="text-white" size={20} />
                     </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Tell Us About You</h3>
+                    <p className="text-gray-600 text-sm max-w-md mx-auto">
+                      We'll use this information to set up your account and company profile
+                    </p>
                   </div>
                   
-                  <div className="space-y-8 bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+                  <div className="space-y-6 bg-white rounded-2xl p-6 shadow-xl border border-gray-100">
                     {/* Personal Information Section */}
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                          <User className="text-white" size={16} />
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                          <User className="text-white" size={14} />
                         </div>
-                        <h4 className="text-xl font-semibold text-gray-900">Personal Information</h4>
+                        <h4 className="text-lg font-semibold text-gray-900">Personal Information</h4>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="firstName"
                           render={({ field }) => (
-                            <FormItem className="space-y-3">
-                              <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <FormItem className="space-y-2">
+                              <FormLabel className="text-sm font-semibold text-gray-700">
                                 First Name *
                               </FormLabel>
                               <FormControl>
-                                <div className="relative group">
-                                  <Input 
-                                    placeholder="John" 
-                                    className="h-14 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-2xl pl-4 text-base font-medium transition-all duration-300 group-hover:border-blue-300" 
-                                    {...field} 
-                                  />
-                                </div>
+                                <Input 
+                                  placeholder="John" 
+                                  className="h-11 border-2 border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 rounded-xl pl-4 text-sm font-medium transition-all duration-300 hover:border-blue-300" 
+                                  {...field} 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -386,16 +381,14 @@ export default function TrialSignup() {
                           control={form.control}
                           name="lastName"
                           render={({ field }) => (
-                            <FormItem className="space-y-3">
+                            <FormItem className="space-y-2">
                               <FormLabel className="text-sm font-semibold text-gray-700">Last Name *</FormLabel>
                               <FormControl>
-                                <div className="relative group">
-                                  <Input 
-                                    placeholder="Smith" 
-                                    className="h-14 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-2xl pl-4 text-base font-medium transition-all duration-300 group-hover:border-blue-300" 
-                                    {...field} 
-                                  />
-                                </div>
+                                <Input 
+                                  placeholder="Smith" 
+                                  className="h-11 border-2 border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 rounded-xl pl-4 text-sm font-medium transition-all duration-300 hover:border-blue-300" 
+                                  {...field} 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -408,19 +401,19 @@ export default function TrialSignup() {
                       control={form.control}
                       name="email"
                       render={({ field }) => (
-                        <FormItem className="space-y-3">
+                        <FormItem className="space-y-2">
                           <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                            <Mail size={16} className="text-blue-500" />
+                            <Mail size={14} className="text-blue-500" />
                             Email Address *
                           </FormLabel>
                           <FormControl>
-                            <div className="relative group">
-                              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 p-2 bg-blue-50 rounded-xl group-focus-within:bg-blue-100 transition-colors">
-                                <Mail className="text-blue-500" size={20} />
+                            <div className="relative">
+                              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1 bg-blue-50 rounded-lg">
+                                <Mail className="text-blue-500" size={16} />
                               </div>
                               <Input 
                                 placeholder="john@company.com" 
-                                className="h-14 pl-16 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-2xl text-base font-medium transition-all duration-300 group-hover:border-blue-300" 
+                                className="h-11 pl-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 rounded-xl text-sm font-medium transition-all duration-300 hover:border-blue-300" 
                                 {...field} 
                               />
                             </div>
@@ -434,20 +427,20 @@ export default function TrialSignup() {
                       control={form.control}
                       name="password"
                       render={({ field }) => (
-                        <FormItem className="space-y-3">
+                        <FormItem className="space-y-2">
                           <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                            <Lock size={16} className="text-green-500" />
+                            <Lock size={14} className="text-green-500" />
                             Password *
                           </FormLabel>
                           <FormControl>
-                            <div className="relative group">
-                              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 p-2 bg-green-50 rounded-xl group-focus-within:bg-green-100 transition-colors">
-                                <Lock className="text-green-500" size={20} />
+                            <div className="relative">
+                              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1 bg-green-50 rounded-lg">
+                                <Lock className="text-green-500" size={16} />
                               </div>
                               <Input 
                                 type="password" 
                                 placeholder="Minimum 8 characters" 
-                                className="h-14 pl-16 border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 rounded-2xl text-base font-medium transition-all duration-300 group-hover:border-green-300" 
+                                className="h-11 pl-12 border-2 border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-xl text-sm font-medium transition-all duration-300 hover:border-green-300" 
                                 {...field} 
                               />
                             </div>
@@ -458,31 +451,31 @@ export default function TrialSignup() {
                     />
 
                     {/* Company Information Section */}
-                    <div className="space-y-6 pt-8 border-t-2 border-gray-100">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                          <Building className="text-white" size={16} />
+                    <div className="space-y-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-6 h-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                          <Building className="text-white" size={14} />
                         </div>
-                        <h4 className="text-xl font-semibold text-gray-900">Company Information</h4>
+                        <h4 className="text-lg font-semibold text-gray-900">Company Information</h4>
                       </div>
                       
                       <FormField
                         control={form.control}
                         name="companyName"
                         render={({ field }) => (
-                          <FormItem className="space-y-3">
+                          <FormItem className="space-y-2">
                             <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                              <Building size={16} className="text-orange-500" />
+                              <Building size={14} className="text-orange-500" />
                               Company Name *
                             </FormLabel>
                             <FormControl>
-                              <div className="relative group">
-                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 p-2 bg-orange-50 rounded-xl group-focus-within:bg-orange-100 transition-colors">
-                                  <Building className="text-orange-500" size={20} />
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 p-1 bg-orange-50 rounded-lg">
+                                  <Building className="text-orange-500" size={16} />
                                 </div>
                                 <Input 
                                   placeholder="Your Company Name" 
-                                  className="h-14 pl-16 border-2 border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 rounded-2xl text-base font-medium transition-all duration-300 group-hover:border-orange-300" 
+                                  className="h-11 pl-12 border-2 border-gray-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-200 rounded-xl text-sm font-medium transition-all duration-300 hover:border-orange-300" 
                                   {...field} 
                                 />
                               </div>
@@ -492,25 +485,25 @@ export default function TrialSignup() {
                         )}
                       />
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="companySize"
                           render={({ field }) => (
-                            <FormItem className="space-y-3">
+                            <FormItem className="space-y-2">
                               <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <Users size={16} className="text-purple-500" />
+                                <Users size={14} className="text-purple-500" />
                                 Company Size *
                               </FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="h-14 border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-2xl text-base font-medium transition-all duration-300 hover:border-purple-300">
-                                    <SelectValue placeholder="Select company size" />
+                                  <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-200 rounded-xl text-sm font-medium transition-all duration-300 hover:border-purple-300">
+                                    <SelectValue placeholder="Select size" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                   {companySizes.map((size) => (
-                                    <SelectItem key={size.value} value={size.value} className="text-base">
+                                    <SelectItem key={size.value} value={size.value} className="text-sm">
                                       {size.label}
                                     </SelectItem>
                                   ))}
@@ -525,20 +518,20 @@ export default function TrialSignup() {
                           control={form.control}
                           name="industry"
                           render={({ field }) => (
-                            <FormItem className="space-y-3">
+                            <FormItem className="space-y-2">
                               <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <TrendingUp size={16} className="text-indigo-500" />
+                                <TrendingUp size={14} className="text-indigo-500" />
                                 Industry *
                               </FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="h-14 border-2 border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-2xl text-base font-medium transition-all duration-300 hover:border-indigo-300">
-                                    <SelectValue placeholder="Select your industry" />
+                                  <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 rounded-xl text-sm font-medium transition-all duration-300 hover:border-indigo-300">
+                                    <SelectValue placeholder="Select industry" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                   {industries.map((industry) => (
-                                    <SelectItem key={industry.value} value={industry.value} className="text-base">
+                                    <SelectItem key={industry.value} value={industry.value} className="text-sm">
                                       {industry.label}
                                     </SelectItem>
                                   ))}
@@ -553,25 +546,23 @@ export default function TrialSignup() {
 
                   </div>
                   
-                  {/* Enhanced Action Buttons */}
-                  <div className="flex justify-between items-center pt-8">
+                  {/* Compact Action Buttons */}
+                  <div className="flex justify-between items-center pt-6">
                     <Button 
                       type="button" 
                       variant="outline" 
                       onClick={prevStep}
-                      className="h-14 px-8 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 rounded-2xl font-semibold text-base transition-all duration-300 transform hover:scale-105"
+                      className="h-11 px-6 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105"
                     >
-                      <ArrowLeft className="mr-3" size={20} />
+                      <ArrowLeft className="mr-2" size={16} />
                       Back
                     </Button>
                     <Button 
                       type="button"
                       onClick={nextStep} 
-                      className="h-14 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white font-bold px-12 shadow-2xl transition-all duration-300 transform hover:scale-105 rounded-2xl text-base"
+                      className="h-11 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white font-bold px-8 shadow-xl transition-all duration-300 transform hover:scale-105 rounded-xl text-sm"
                     >
-                      <Sparkles className="mr-3" size={20} />
-                      Continue to Final Step
-                      <ArrowRight className="ml-3" size={20} />
+                      Continue <ArrowRight className="ml-2" size={16} />
                     </Button>
                   </div>
                 </div>
