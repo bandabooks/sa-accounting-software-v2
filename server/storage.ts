@@ -348,7 +348,7 @@ import {
   type WarehouseWithStock,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sum, count, sql, and, gte, lte, or, isNull, inArray } from "drizzle-orm";
+import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, inArray, gt, asc, ne, like } from "drizzle-orm";
 
 export interface IStorage {
   // Users

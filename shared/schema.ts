@@ -984,15 +984,7 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = typeof users.$inferInsert;
 
-// RBAC Type exports
-export type SystemRole = typeof systemRoles.$inferSelect;
-export type InsertSystemRole = typeof systemRoles.$inferInsert;
-export type CompanyRole = typeof companyRoles.$inferSelect;
-export type InsertCompanyRole = typeof companyRoles.$inferInsert;
-export type UserPermission = typeof userPermissions.$inferSelect;
-export type InsertUserPermission = typeof userPermissions.$inferInsert;
-export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
-export type InsertPermissionAuditLog = typeof permissionAuditLog.$inferInsert;
+// RBAC Type exports (removed to avoid duplicates - defined later in file)
 
 // Authentication types
 export type UserSession = typeof userSessions.$inferSelect;
@@ -3663,7 +3655,11 @@ export const insertSpendingWizardTipSchema = createInsertSchema(spendingWizardTi
   createdAt: true,
 });
 
-// Types for new critical features (CreditNote types moved to avoid duplicates)
+// Types for new critical features
+export type CreditNote = typeof creditNotes.$inferSelect;
+export type InsertCreditNote = z.infer<typeof insertCreditNoteSchema>;
+export type CreditNoteItem = typeof creditNoteItems.$inferSelect;
+export type InsertCreditNoteItem = z.infer<typeof insertCreditNoteItemSchema>;
 
 export type InvoiceReminder = typeof invoiceReminders.$inferSelect;
 export type InsertInvoiceReminder = z.infer<typeof insertInvoiceReminderSchema>;
@@ -4385,7 +4381,15 @@ export const insertPermissionAuditLogSchema = createInsertSchema(permissionAudit
   timestamp: true,
 });
 
-// RBAC Type exports (removed duplicates)
+// RBAC Type exports
+export type SystemRole = typeof systemRoles.$inferSelect;
+export type InsertSystemRole = typeof systemRoles.$inferInsert;
+export type CompanyRole = typeof companyRoles.$inferSelect;
+export type InsertCompanyRole = typeof companyRoles.$inferInsert;
+export type UserPermission = typeof userPermissions.$inferSelect;
+export type InsertUserPermission = typeof userPermissions.$inferInsert;
+export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
+export type InsertPermissionAuditLog = typeof permissionAuditLog.$inferInsert;
 
 // Exception Handling System Tables
 export const paymentExceptions = pgTable("payment_exceptions", {
