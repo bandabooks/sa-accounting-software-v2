@@ -99,6 +99,7 @@ import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
 import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
+import BulkCapture from "@/pages/bulk-capture";
 import SalesOrders from "@/pages/sales-orders";
 import Deliveries from "@/pages/deliveries";
 import SalesDashboard from "@/pages/sales-dashboard";
@@ -297,6 +298,11 @@ function AuthenticatedApp() {
         <Route path="/exception-dashboard">
           <ProtectedRoute permission={PERMISSIONS.EXCEPTIONS_VIEW}>
             <ExceptionDashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/bulk-capture">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_CREATE}>
+            <BulkCapture />
           </ProtectedRoute>
         </Route>
         <Route path="/purchase-reports">

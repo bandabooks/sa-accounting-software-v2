@@ -115,6 +115,10 @@ import {
   insertSalesOrderItemSchema,
   insertDeliverySchema,
   insertDeliveryItemSchema,
+  // Bulk Capture schema imports
+  bulkCaptureSessions,
+  bulkExpenseEntries,
+  bulkIncomeEntries,
   type LoginRequest,
   type TrialSignupRequest,
   type ChangePasswordRequest
@@ -9059,6 +9063,118 @@ Format your response as a JSON array of tip objects with "title", "description",
     } catch (error) {
       console.error("Error fetching companies:", error);
       res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  // =============================================
+  // BULK CAPTURE SYSTEM API ROUTES
+  // =============================================
+
+  app.get("/api/bulk-capture/sessions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const sessions = await storage.getBulkCaptureSessions(companyId);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching bulk capture sessions:", error);
+      res.status(500).json({ message: "Failed to fetch sessions" });
+    }
+  });
+
+  app.post("/api/bulk-capture/sessions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const { sessionType, totalEntries, batchNotes, entries } = req.body;
+
+      // Create the session
+      const session = await storage.createBulkCaptureSession({
+        companyId,
+        userId,
+        sessionType,
+        totalEntries,
+        batchNotes,
+        status: 'draft',
+      });
+
+      // Create entries based on session type
+      if (sessionType === 'expense' && entries && entries.length > 0) {
+        const expenseEntries = entries.map((entry: any) => ({
+          ...entry,
+          companyId,
+          sessionId: session.id,
+          batchId: session.batchId,
+        }));
+        await storage.createBulkExpenseEntries(expenseEntries);
+      } else if (sessionType === 'income' && entries && entries.length > 0) {
+        const incomeEntries = entries.map((entry: any) => ({
+          ...entry,
+          companyId,
+          sessionId: session.id,
+          batchId: session.batchId,
+        }));
+        await storage.createBulkIncomeEntries(incomeEntries);
+      }
+
+      // Update session to processing status
+      await storage.updateBulkCaptureSession(session.id, companyId, {
+        status: 'processing',
+        userId,
+      });
+
+      await logAudit(userId, 'CREATE', 'bulk_capture_session', session.id, 
+        `Created ${sessionType} bulk capture session with ${entries?.length || 0} entries`);
+
+      res.json({ 
+        message: "Bulk capture session created successfully", 
+        session,
+        entriesCreated: entries?.length || 0 
+      });
+    } catch (error) {
+      console.error("Error creating bulk capture session:", error);
+      res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+
+  app.get("/api/bulk-capture/sessions/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const sessionId = parseInt(req.params.id);
+      
+      const session = await storage.getBulkCaptureSession(sessionId, companyId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      let entries = [];
+      if (session.sessionType === 'expense') {
+        entries = await storage.getBulkExpenseEntries(sessionId, companyId);
+      } else if (session.sessionType === 'income') {
+        entries = await storage.getBulkIncomeEntries(sessionId, companyId);
+      }
+
+      res.json({ session, entries });
+    } catch (error) {
+      console.error("Error fetching bulk capture session:", error);
+      res.status(500).json({ message: "Failed to fetch session" });
+    }
+  });
+
+  app.post("/api/bulk-capture/sessions/:id/process", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const sessionId = parseInt(req.params.id);
+      
+      const result = await storage.processBulkEntries(sessionId, companyId);
+      
+      await logAudit(userId, 'UPDATE', 'bulk_capture_session', sessionId, 
+        `Processed bulk entries: ${result.processedCount} successful, ${result.errors.length} errors`);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error processing bulk entries:", error);
+      res.status(500).json({ message: "Failed to process entries" });
     }
   });
 

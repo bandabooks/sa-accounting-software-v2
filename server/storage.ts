@@ -73,6 +73,12 @@ import {
   bankIntegrations,
   // Enhanced Inventory Module imports
   productLots,
+  // Bulk Capture Module imports
+  bulkCaptureSessions,
+  bulkExpenseEntries,
+  bulkIncomeEntries,
+  bankStatementUploads,
+  bankStatementTransactions,
   productSerials,
   stockCounts,
   stockCountItems,
@@ -11187,6 +11193,232 @@ export class DatabaseStorage implements IStorage {
   async getRecentInventoryMovements(companyId: number): Promise<any[]> { return []; }
   async getTopMovingProducts(companyId: number): Promise<any[]> { return []; }
   async getTotalStockValue(companyId: number): Promise<number> { return 0; }
+  // Bulk Capture System Methods
+  async createBulkCaptureSession(sessionData: any): Promise<any> {
+    const batchId = `BULK-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
+    const [session] = await db
+      .insert(bulkCaptureSessions)
+      .values({
+        ...sessionData,
+        batchId,
+      })
+      .returning();
+
+    await this.createAuditLog({
+      userId: sessionData.userId,
+      companyId: sessionData.companyId,
+      action: "create",
+      resource: "bulk_capture_session",
+      resourceId: session.id.toString(),
+      details: { batchId, sessionType: sessionData.sessionType },
+    });
+
+    return session;
+  }
+
+  async getBulkCaptureSessions(companyId: number): Promise<any[]> {
+    return await db
+      .select()
+      .from(bulkCaptureSessions)
+      .where(eq(bulkCaptureSessions.companyId, companyId))
+      .orderBy(desc(bulkCaptureSessions.createdAt));
+  }
+
+  async getBulkCaptureSession(id: number, companyId: number): Promise<any | undefined> {
+    const [session] = await db
+      .select()
+      .from(bulkCaptureSessions)
+      .where(
+        and(
+          eq(bulkCaptureSessions.id, id),
+          eq(bulkCaptureSessions.companyId, companyId)
+        )
+      );
+    return session;
+  }
+
+  async updateBulkCaptureSession(id: number, companyId: number, updates: any): Promise<any> {
+    const [session] = await db
+      .update(bulkCaptureSessions)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(bulkCaptureSessions.id, id),
+          eq(bulkCaptureSessions.companyId, companyId)
+        )
+      )
+      .returning();
+
+    await this.createAuditLog({
+      userId: updates.userId || 0,
+      companyId,
+      action: "update",
+      resource: "bulk_capture_session",
+      resourceId: id.toString(),
+      details: updates,
+    });
+
+    return session;
+  }
+
+  async createBulkExpenseEntries(entries: any[]): Promise<any[]> {
+    const insertedEntries = await db
+      .insert(bulkExpenseEntries)
+      .values(entries)
+      .returning();
+
+    for (const entry of insertedEntries) {
+      await this.createAuditLog({
+        userId: 0,
+        companyId: entry.companyId,
+        action: "create",
+        resource: "bulk_expense_entry",
+        resourceId: entry.id.toString(),
+        details: { batchId: entry.batchId, amount: entry.amount },
+      });
+    }
+
+    return insertedEntries;
+  }
+
+  async createBulkIncomeEntries(entries: any[]): Promise<any[]> {
+    const insertedEntries = await db
+      .insert(bulkIncomeEntries)
+      .values(entries)
+      .returning();
+
+    for (const entry of insertedEntries) {
+      await this.createAuditLog({
+        userId: 0,
+        companyId: entry.companyId,
+        action: "create",
+        resource: "bulk_income_entry",
+        resourceId: entry.id.toString(),
+        details: { batchId: entry.batchId, amount: entry.amount },
+      });
+    }
+
+    return insertedEntries;
+  }
+
+  async getBulkExpenseEntries(sessionId: number, companyId: number): Promise<any[]> {
+    return await db
+      .select()
+      .from(bulkExpenseEntries)
+      .where(
+        and(
+          eq(bulkExpenseEntries.sessionId, sessionId),
+          eq(bulkExpenseEntries.companyId, companyId)
+        )
+      )
+      .orderBy(desc(bulkExpenseEntries.transactionDate));
+  }
+
+  async getBulkIncomeEntries(sessionId: number, companyId: number): Promise<any[]> {
+    return await db
+      .select()
+      .from(bulkIncomeEntries)
+      .where(
+        and(
+          eq(bulkIncomeEntries.sessionId, sessionId),
+          eq(bulkIncomeEntries.companyId, companyId)
+        )
+      )
+      .orderBy(desc(bulkIncomeEntries.transactionDate));
+  }
+
+  async processBulkEntries(sessionId: number, companyId: number): Promise<{ success: boolean; processedCount: number; errors: any[] }> {
+    const session = await this.getBulkCaptureSession(sessionId, companyId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    let processedCount = 0;
+    const errors: any[] = [];
+
+    try {
+      if (session.sessionType === 'expense') {
+        const entries = await this.getBulkExpenseEntries(sessionId, companyId);
+        
+        for (const entry of entries) {
+          try {
+            // Create expense record
+            await this.createExpense({
+              companyId: entry.companyId,
+              date: entry.transactionDate,
+              categoryId: entry.categoryId,
+              description: entry.description,
+              amount: entry.amount,
+              supplierId: entry.supplierId,
+              reference: entry.reference,
+              notes: entry.notes,
+              vatAmount: entry.vatAmount,
+            });
+
+            processedCount++;
+          } catch (error) {
+            errors.push({ entryId: entry.id, error: error.message });
+          }
+        }
+      } else if (session.sessionType === 'income') {
+        const entries = await this.getBulkIncomeEntries(sessionId, companyId);
+        
+        for (const entry of entries) {
+          try {
+            // Create journal entry for income
+            await this.createJournalEntry({
+              companyId: entry.companyId,
+              date: entry.transactionDate,
+              description: `Bulk income: ${entry.description}`,
+              reference: entry.reference || session.batchId,
+              lines: [
+                {
+                  accountId: 1, // Bank or Cash account
+                  description: entry.description,
+                  debitAmount: entry.netAmount,
+                  creditAmount: '0.00',
+                },
+                {
+                  accountId: entry.incomeAccountId,
+                  description: entry.description,
+                  debitAmount: '0.00',
+                  creditAmount: entry.netAmount,
+                }
+              ]
+            });
+
+            processedCount++;
+          } catch (error) {
+            errors.push({ entryId: entry.id, error: error.message });
+          }
+        }
+      }
+
+      // Update session status
+      await this.updateBulkCaptureSession(sessionId, companyId, {
+        status: errors.length > 0 ? 'completed_with_errors' : 'completed',
+        processedEntries: processedCount,
+      });
+
+      return {
+        success: errors.length === 0,
+        processedCount,
+        errors,
+      };
+
+    } catch (error) {
+      await this.updateBulkCaptureSession(sessionId, companyId, {
+        status: 'error',
+        processedEntries: processedCount,
+      });
+
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

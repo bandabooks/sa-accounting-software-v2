@@ -1124,6 +1124,228 @@ export type InsertCompany = typeof companies.$inferInsert;
 export type CompanyUser = typeof companyUsers.$inferSelect;
 export type InsertCompanyUser = typeof companyUsers.$inferInsert;
 
+// Bulk Capture System Tables
+export const bulkCaptureSessions = pgTable("bulk_capture_sessions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  userId: integer("user_id").notNull(),
+  batchId: text("batch_id").notNull().unique(),
+  sessionType: text("session_type").notNull(), // 'income', 'expense', 'bank_import'
+  status: text("status").default("draft"), // draft, processing, completed, error
+  totalEntries: integer("total_entries").default(0),
+  processedEntries: integer("processed_entries").default(0),
+  batchNotes: text("batch_notes"),
+  metadata: jsonb("metadata").default({}), // Store session-specific data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bulk_capture_sessions_company_idx").on(table.companyId),
+  batchIdx: index("bulk_capture_sessions_batch_idx").on(table.batchId),
+}));
+
+export const bulkExpenseEntries = pgTable("bulk_expense_entries", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  sessionId: integer("session_id").notNull(),
+  batchId: text("batch_id").notNull(),
+  transactionDate: date("transaction_date").notNull(),
+  categoryId: integer("category_id").notNull(), // Reference to chart of accounts
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  supplierId: integer("supplier_id"),
+  vatTransactionType: text("vat_transaction_type").notNull().default("vat_inclusive"), // vat_inclusive, vat_exclusive, zero_rated, exempt, no_vat
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).default("15.00"),
+  vatAmount: decimal("vat_amount", { precision: 12, scale: 2 }).default("0.00"),
+  netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(),
+  bankAccountId: integer("bank_account_id"),
+  reference: text("reference"),
+  notes: text("notes"),
+  status: text("status").default("validated"), // draft, validated, processed, error
+  fromBankStatement: boolean("from_bank_statement").default(false),
+  confidence: integer("confidence"), // For AI matching confidence
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bulk_expense_entries_company_idx").on(table.companyId),
+  sessionIdx: index("bulk_expense_entries_session_idx").on(table.sessionId),
+  batchIdx: index("bulk_expense_entries_batch_idx").on(table.batchId),
+  dateIdx: index("bulk_expense_entries_date_idx").on(table.transactionDate),
+}));
+
+export const bulkIncomeEntries = pgTable("bulk_income_entries", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  sessionId: integer("session_id").notNull(),
+  batchId: text("batch_id").notNull(),
+  transactionDate: date("transaction_date").notNull(),
+  incomeAccountId: integer("income_account_id").notNull(), // Reference to chart of accounts
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  clientId: integer("client_id"), // Reference to customers table
+  vatTransactionType: text("vat_transaction_type").notNull().default("vat_inclusive"),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).default("15.00"),
+  vatAmount: decimal("vat_amount", { precision: 12, scale: 2 }).default("0.00"),
+  netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(),
+  bankAccountId: integer("bank_account_id"),
+  reference: text("reference"),
+  notes: text("notes"),
+  status: text("status").default("validated"),
+  fromBankStatement: boolean("from_bank_statement").default(false),
+  confidence: integer("confidence"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bulk_income_entries_company_idx").on(table.companyId),
+  sessionIdx: index("bulk_income_entries_session_idx").on(table.sessionId),
+  batchIdx: index("bulk_income_entries_batch_idx").on(table.batchId),
+  dateIdx: index("bulk_income_entries_date_idx").on(table.transactionDate),
+}));
+
+export const bankStatementUploads = pgTable("bank_statement_uploads", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  userId: integer("user_id").notNull(),
+  bankId: text("bank_id").notNull(), // fnb, absa, standard, nedbank, capitec, discovery
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  fileType: text("file_type"), // csv, xlsx, pdf
+  uploadDate: timestamp("upload_date").defaultNow(),
+  processedDate: timestamp("processed_date"),
+  status: text("status").default("processing"), // processing, completed, error
+  totalTransactions: integer("total_transactions").default(0),
+  matchedTransactions: integer("matched_transactions").default(0),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bank_statement_uploads_company_idx").on(table.companyId),
+  statusIdx: index("bank_statement_uploads_status_idx").on(table.status),
+}));
+
+export const bankStatementTransactions = pgTable("bank_statement_transactions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  uploadId: integer("upload_id").notNull(),
+  transactionDate: date("transaction_date").notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  balance: decimal("balance", { precision: 12, scale: 2 }),
+  reference: text("reference"),
+  transactionType: text("transaction_type").notNull(), // debit, credit
+  matched: boolean("matched").default(false),
+  suggestedCategoryId: integer("suggested_category_id"), // AI suggested category
+  confidence: integer("confidence"), // AI confidence score
+  matchedTransactionId: integer("matched_transaction_id"), // Link to created transaction
+  matchedTransactionType: text("matched_transaction_type"), // expense, income, journal
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bank_statement_transactions_company_idx").on(table.companyId),
+  uploadIdx: index("bank_statement_transactions_upload_idx").on(table.uploadId),
+  dateIdx: index("bank_statement_transactions_date_idx").on(table.transactionDate),
+  matchedIdx: index("bank_statement_transactions_matched_idx").on(table.matched),
+}));
+
+// Bulk Capture Relations
+export const bulkCaptureSessionsRelations = relations(bulkCaptureSessions, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [bulkCaptureSessions.companyId],
+    references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [bulkCaptureSessions.userId],
+    references: [users.id],
+  }),
+  expenseEntries: many(bulkExpenseEntries),
+  incomeEntries: many(bulkIncomeEntries),
+}));
+
+export const bulkExpenseEntriesRelations = relations(bulkExpenseEntries, ({ one }) => ({
+  company: one(companies, {
+    fields: [bulkExpenseEntries.companyId],
+    references: [companies.id],
+  }),
+  session: one(bulkCaptureSessions, {
+    fields: [bulkExpenseEntries.sessionId],
+    references: [bulkCaptureSessions.id],
+  }),
+  category: one(chartOfAccounts, {
+    fields: [bulkExpenseEntries.categoryId],
+    references: [chartOfAccounts.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [bulkExpenseEntries.supplierId],
+    references: [suppliers.id],
+  }),
+  bankAccount: one(bankAccounts, {
+    fields: [bulkExpenseEntries.bankAccountId],
+    references: [bankAccounts.id],
+  }),
+}));
+
+export const bulkIncomeEntriesRelations = relations(bulkIncomeEntries, ({ one }) => ({
+  company: one(companies, {
+    fields: [bulkIncomeEntries.companyId],
+    references: [companies.id],
+  }),
+  session: one(bulkCaptureSessions, {
+    fields: [bulkIncomeEntries.sessionId],
+    references: [bulkCaptureSessions.id],
+  }),
+  incomeAccount: one(chartOfAccounts, {
+    fields: [bulkIncomeEntries.incomeAccountId],
+    references: [chartOfAccounts.id],
+  }),
+  client: one(customers, {
+    fields: [bulkIncomeEntries.clientId],
+    references: [customers.id],
+  }),
+  bankAccount: one(bankAccounts, {
+    fields: [bulkIncomeEntries.bankAccountId],
+    references: [bankAccounts.id],
+  }),
+}));
+
+export const bankStatementUploadsRelations = relations(bankStatementUploads, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [bankStatementUploads.companyId],
+    references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [bankStatementUploads.userId],
+    references: [users.id],
+  }),
+  transactions: many(bankStatementTransactions),
+}));
+
+export const bankStatementTransactionsRelations = relations(bankStatementTransactions, ({ one }) => ({
+  company: one(companies, {
+    fields: [bankStatementTransactions.companyId],
+    references: [companies.id],
+  }),
+  upload: one(bankStatementUploads, {
+    fields: [bankStatementTransactions.uploadId],
+    references: [bankStatementUploads.id],
+  }),
+  suggestedCategory: one(chartOfAccounts, {
+    fields: [bankStatementTransactions.suggestedCategoryId],
+    references: [chartOfAccounts.id],
+  }),
+}));
+
+// Bulk Capture Types
+export type InsertBulkCaptureSession = typeof bulkCaptureSessions.$inferInsert;
+export type BulkCaptureSession = typeof bulkCaptureSessions.$inferSelect;
+export type InsertBulkExpenseEntry = typeof bulkExpenseEntries.$inferInsert;
+export type BulkExpenseEntry = typeof bulkExpenseEntries.$inferSelect;
+export type InsertBulkIncomeEntry = typeof bulkIncomeEntries.$inferInsert;
+export type BulkIncomeEntry = typeof bulkIncomeEntries.$inferSelect;
+export type InsertBankStatementUpload = typeof bankStatementUploads.$inferInsert;
+export type BankStatementUpload = typeof bankStatementUploads.$inferSelect;
+export type InsertBankStatementTransaction = typeof bankStatementTransactions.$inferInsert;
+export type BankStatementTransaction = typeof bankStatementTransactions.$inferSelect;
+
 // Subscription Types
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
