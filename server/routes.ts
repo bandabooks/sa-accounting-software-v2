@@ -4154,6 +4154,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create retroactive journal entries for existing invoices
+  app.post("/api/journal-entries/retroactive", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      
+      // Get all paid and partially_paid invoices that don't have journal entries
+      const invoices = await storage.getAllInvoices(companyId);
+      const paidInvoices = invoices.filter(inv => inv.status === 'paid' || inv.status === 'partially_paid');
+      
+      let created = 0;
+      for (const invoice of paidInvoices) {
+        // Check if journal entries already exist for this invoice
+        const existingEntries = await storage.getJournalEntriesBySource('invoice', invoice.id);
+        
+        if (existingEntries.length === 0) {
+          // Get invoice items for detailed journal entries
+          const items = await storage.getInvoiceItems(invoice.id);
+          
+          // Create invoice journal entries
+          await storage.createInvoiceJournalEntries(invoice, items);
+          
+          // Create payment journal entries for paid invoices
+          if (invoice.status === 'paid') {
+            await storage.updateInvoiceJournalEntriesForPayment(invoice);
+          }
+          
+          created++;
+        }
+      }
+      
+      // Manually trigger account balance updates
+      console.log(`Updating account balances for company ${companyId}...`);
+      await storage.updateAccountBalances(companyId);
+      console.log(`Account balance update completed`);
+      
+      res.json({ 
+        message: `Successfully created journal entries for ${created} invoices`,
+        invoicesProcessed: created,
+        totalPaidInvoices: paidInvoices.length
+      });
+    } catch (error) {
+      console.error("Error creating retroactive journal entries:", error);
+      res.status(500).json({ message: "Failed to create retroactive journal entries" });
+    }
+  });
+
   app.get("/api/journal-entries/:id", authenticate, async (req, res) => {
     try {
       const id = parseInt(req.params.id);

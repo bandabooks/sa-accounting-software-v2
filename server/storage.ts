@@ -1381,6 +1381,9 @@ export class DatabaseStorage implements IStorage {
       createdItems.push(invoiceItem);
     }
 
+    // Create journal entries when invoice is created (Draft status)
+    await this.createInvoiceJournalEntries(invoice, createdItems);
+
     const [customer] = await db.select().from(customers).where(eq(customers.id, invoice.customerId));
     return {
       ...invoice,
@@ -1398,8 +1401,15 @@ export class DatabaseStorage implements IStorage {
     return invoice || undefined;
   }
 
-  async updateInvoiceStatus(id: number, status: "draft" | "sent" | "paid" | "overdue"): Promise<Invoice | undefined> {
-    return this.updateInvoice(id, { status });
+  async updateInvoiceStatus(id: number, status: "draft" | "sent" | "paid" | "overdue" | "partially_paid"): Promise<Invoice | undefined> {
+    const invoice = await this.updateInvoice(id, { status });
+    
+    // Update journal entries when invoice status changes to paid
+    if (status === "paid" && invoice) {
+      await this.updateInvoiceJournalEntriesForPayment(invoice);
+    }
+    
+    return invoice;
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
@@ -1408,6 +1418,250 @@ export class DatabaseStorage implements IStorage {
     
     const result = await db.delete(invoices).where(eq(invoices.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Journal Entry Integration for Invoices
+  async createInvoiceJournalEntries(invoice: Invoice, items: InvoiceItem[]): Promise<void> {
+    try {
+      // Get the next journal entry number
+      const entryNumber = await this.getNextJournalEntryNumber(invoice.companyId);
+      
+      // Create journal entry header
+      const [journalEntry] = await db.insert(journalEntries).values({
+        companyId: invoice.companyId,
+        entryNumber,
+        transactionDate: new Date(invoice.issueDate),
+        description: `Sales Invoice ${invoice.invoiceNumber}`,
+        reference: invoice.invoiceNumber,
+        totalDebit: parseFloat(invoice.total.toString()),
+        totalCredit: parseFloat(invoice.total.toString()),
+        isPosted: true,
+        sourceModule: 'invoice',
+        sourceId: invoice.id,
+        createdBy: 1, // Default system user
+        vatRate: parseFloat(invoice.vatAmount.toString()) > 0 ? 15 : 0,
+        vatInclusive: false,
+        vatAmount: parseFloat(invoice.vatAmount.toString())
+      }).returning();
+
+      // Get relevant accounts
+      const [debtorsAccount] = await db.select().from(chartOfAccounts)
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1100')));
+      
+      const [salesRevenueAccount] = await db.select().from(chartOfAccounts)
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '4000')));
+      
+      const [vatOutputAccount] = await db.select().from(chartOfAccounts)
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '2200')));
+
+      // Create journal entry lines
+      const journalLines = [];
+
+      // Only create journal lines if we have valid accounts
+      if (!debtorsAccount || !salesRevenueAccount) {
+        console.error(`Missing required accounts for invoice ${invoice.invoiceNumber}:`, {
+          debtorsAccount: debtorsAccount?.id,
+          salesRevenueAccount: salesRevenueAccount?.id
+        });
+        return;
+      }
+
+      // Debit: Accounts Receivable (Debtors) - Full invoice total
+      journalLines.push({
+        journalEntryId: journalEntry.id,
+        accountId: debtorsAccount.id,
+        description: `Invoice ${invoice.invoiceNumber} - Customer: ${invoice.customerId}`,
+        debitAmount: parseFloat(invoice.total.toString()),
+        creditAmount: 0,
+        vatRate: 0,
+        vatAmount: 0,
+        reference: invoice.invoiceNumber
+      });
+
+      // Credit: Sales Revenue - Subtotal
+      journalLines.push({
+        journalEntryId: journalEntry.id,
+        accountId: salesRevenueAccount.id,
+        description: `Sales Revenue - Invoice ${invoice.invoiceNumber}`,
+        debitAmount: 0,
+        creditAmount: parseFloat(invoice.subtotal.toString()),
+        vatRate: 15,
+        vatAmount: 0,
+        reference: invoice.invoiceNumber
+      });
+
+      // Credit: VAT Output - VAT Amount (if applicable)
+      if (parseFloat(invoice.vatAmount.toString()) > 0 && vatOutputAccount) {
+        journalLines.push({
+          journalEntryId: journalEntry.id,
+          accountId: vatOutputAccount.id,
+          description: `VAT Output - Invoice ${invoice.invoiceNumber}`,
+          debitAmount: 0,
+          creditAmount: parseFloat(invoice.vatAmount.toString()),
+          vatRate: 15,
+          vatAmount: parseFloat(invoice.vatAmount.toString()),
+          reference: invoice.invoiceNumber
+        });
+      }
+
+      // Insert all journal entry lines
+      console.log(`Creating ${journalLines.length} journal lines for invoice ${invoice.invoiceNumber}:`, journalLines);
+      const insertedLines = await db.insert(journalEntryLines).values(journalLines).returning();
+      console.log(`Successfully inserted ${insertedLines.length} journal lines`);
+
+      // Update account balances
+      await this.updateAccountBalances(invoice.companyId);
+
+    } catch (error) {
+      console.error('Error creating invoice journal entries:', error);
+    }
+  }
+
+  async updateInvoiceJournalEntriesForPayment(invoice: Invoice): Promise<void> {
+    try {
+      // Get the next journal entry number for payment
+      const entryNumber = await this.getNextJournalEntryNumber(invoice.companyId);
+      
+      // Create journal entry for payment
+      const [journalEntry] = await db.insert(journalEntries).values({
+        companyId: invoice.companyId,
+        entryNumber,
+        transactionDate: new Date(),
+        description: `Payment Received - Invoice ${invoice.invoiceNumber}`,
+        reference: `PAY-${invoice.invoiceNumber}`,
+        totalDebit: parseFloat(invoice.total.toString()),
+        totalCredit: parseFloat(invoice.total.toString()),
+        isPosted: true,
+        sourceModule: 'payment',
+        sourceId: invoice.id,
+        createdBy: 1,
+        vatRate: 0,
+        vatInclusive: false,
+        vatAmount: 0
+      }).returning();
+
+      // Get relevant accounts
+      const [bankAccount] = await db.select().from(chartOfAccounts)
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1050')));
+      
+      const [debtorsAccount] = await db.select().from(chartOfAccounts)
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1100')));
+
+      // Only create payment lines if we have valid accounts
+      if (!bankAccount || !debtorsAccount) {
+        console.error(`Missing required accounts for payment ${invoice.invoiceNumber}:`, {
+          bankAccount: bankAccount?.id,
+          debtorsAccount: debtorsAccount?.id
+        });
+        return;
+      }
+
+      // Create payment journal entry lines
+      const paymentLines = [
+        {
+          journalEntryId: journalEntry.id,
+          accountId: bankAccount.id,
+          description: `Payment received - Invoice ${invoice.invoiceNumber}`,
+          debitAmount: parseFloat(invoice.total.toString()),
+          creditAmount: 0,
+          vatRate: 0,
+          vatAmount: 0,
+          reference: `PAY-${invoice.invoiceNumber}`
+        },
+        {
+          journalEntryId: journalEntry.id,
+          accountId: debtorsAccount.id,
+          description: `Payment applied - Invoice ${invoice.invoiceNumber}`,
+          debitAmount: 0,
+          creditAmount: parseFloat(invoice.total.toString()),
+          vatRate: 0,
+          vatAmount: 0,
+          reference: `PAY-${invoice.invoiceNumber}`
+        }
+      ];
+
+      console.log(`Creating ${paymentLines.length} payment journal lines for invoice ${invoice.invoiceNumber}:`, paymentLines);
+      const insertedPaymentLines = await db.insert(journalEntryLines).values(paymentLines).returning();
+      console.log(`Successfully inserted ${insertedPaymentLines.length} payment journal lines`);
+
+      // Update account balances
+      await this.updateAccountBalances(invoice.companyId);
+
+    } catch (error) {
+      console.error('Error creating payment journal entries:', error);
+    }
+  }
+
+  async getNextJournalEntryNumber(companyId: number): Promise<string> {
+    const year = new Date().getFullYear();
+    const latestEntry = await db.select()
+      .from(journalEntries)
+      .where(eq(journalEntries.companyId, companyId))
+      .orderBy(desc(journalEntries.id))
+      .limit(1);
+    
+    const nextNumber = latestEntry.length > 0 ? (latestEntry[0].id || 0) + 1 : 1;
+    return `JE-${year}-${nextNumber.toString().padStart(4, '0')}`;
+  }
+
+  async updateAccountBalances(companyId: number): Promise<void> {
+    try {
+      console.log(`Starting account balance update for company ${companyId}...`);
+      
+      // Update all account balances by recalculating from journal entries
+      const accounts = await db.select().from(chartOfAccounts)
+        .where(eq(chartOfAccounts.companyId, companyId));
+
+      console.log(`Found ${accounts.length} accounts to update`);
+
+      for (const account of accounts) {
+        const journalLines = await db.select()
+          .from(journalEntryLines)
+          .leftJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+          .where(and(
+            eq(journalEntryLines.accountId, account.id),
+            eq(journalEntries.companyId, companyId),
+            eq(journalEntries.isPosted, true)
+          ));
+
+        console.log(`Account ${account.accountCode} (${account.accountName}) has ${journalLines.length} journal lines`);
+
+        let balance = 0;
+        for (const line of journalLines) {
+          const debit = parseFloat(line.journal_entry_lines.debitAmount?.toString() || '0');
+          const credit = parseFloat(line.journal_entry_lines.creditAmount?.toString() || '0');
+          
+          console.log(`  Line: Debit ${debit}, Credit ${credit}, Normal Balance: ${account.normalBalance}`);
+          
+          // Calculate balance based on account normal balance
+          if (account.normalBalance === 'Debit') {
+            balance += (debit - credit);
+          } else {
+            balance += (credit - debit);
+          }
+        }
+
+        console.log(`Account ${account.accountCode} final balance: ${balance.toFixed(2)}`);
+
+        // Update account balance
+        await db.update(chartOfAccounts)
+          .set({ 
+            balance: balance.toFixed(2),
+            currentBalance: balance.toFixed(2)
+          })
+          .where(eq(chartOfAccounts.id, account.id));
+      }
+      
+      console.log(`Account balance update completed for company ${companyId}`);
+    } catch (error) {
+      console.error('Error updating account balances:', error);
+    }
+  }
+
+  // Helper method to get journal entries by source
+  async getJournalEntriesBySource(sourceModule: string, sourceId: number): Promise<JournalEntry[]> {
+    return await db.select().from(journalEntries)
+      .where(and(eq(journalEntries.sourceModule, sourceModule), eq(journalEntries.sourceId, sourceId)));
   }
 
   // Invoice Items
