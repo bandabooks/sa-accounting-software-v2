@@ -2888,6 +2888,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customers = await storage.getAllCustomers(companyId);
       const activeCustomers = customers.filter(customer => customer.isActive !== false).length;
       
+      // Get sales orders (check if endpoint exists, otherwise use 0)
+      let salesOrders = [];
+      try {
+        salesOrders = await storage.getAllSalesOrders(companyId);
+      } catch (error) {
+        console.log('Sales orders not implemented, using 0');
+        salesOrders = [];
+      }
+      
       // Calculate growth (compare with previous month)
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
