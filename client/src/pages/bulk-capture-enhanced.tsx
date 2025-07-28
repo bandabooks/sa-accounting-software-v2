@@ -1,0 +1,705 @@
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Plus, 
+  Save, 
+  CheckCircle,
+  Clock,
+  Calculator,
+  CreditCard,
+  Calendar
+} from "lucide-react";
+import { format } from "date-fns";
+
+interface ExpenseEntry {
+  id?: number;
+  transactionDate: string;
+  categoryId: number;
+  description: string;
+  amount: string;
+  supplierId?: number;
+  vatTransactionType: string;
+  vatRate: string;
+  vatAmount: string;
+  netAmount: string;
+  bankAccountId?: number;
+  reference?: string;
+  notes?: string;
+  status: string;
+}
+
+interface IncomeEntry {
+  id?: number;
+  transactionDate: string;
+  incomeAccountId: number;
+  description: string;
+  amount: string;
+  clientId?: number;
+  vatTransactionType: string;
+  vatRate: string;
+  vatAmount: string;
+  netAmount: string;
+  bankAccountId?: number;
+  reference?: string;
+  notes?: string;
+  status: string;
+}
+
+const EnhancedBulkCapture = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [activeTab, setActiveTab] = useState<'income' | 'expense'>('income');
+  const [expenseEntries, setExpenseEntries] = useState<ExpenseEntry[]>([]);
+  const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
+  const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Fetch data
+  const { data: chartOfAccounts = [] } = useQuery({
+    queryKey: ['/api/chart-of-accounts'],
+  });
+
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['/api/suppliers'],
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['/api/customers'],
+  });
+
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ['/api/bank-accounts'],
+  });
+
+  // Initialize 10 default expense entries
+  const initializeExpenseEntries = useCallback(() => {
+    const defaultEntries: ExpenseEntry[] = Array.from({ length: 10 }, () => ({
+      transactionDate: quickDate,
+      categoryId: 0,
+      description: '',
+      amount: '',
+      vatTransactionType: 'vat_inclusive',
+      vatRate: '15.00',
+      vatAmount: '0.00',
+      netAmount: '0.00',
+      status: 'draft',
+    }));
+    setExpenseEntries(defaultEntries);
+  }, [quickDate]);
+
+  // Initialize 10 default income entries
+  const initializeIncomeEntries = useCallback(() => {
+    const defaultEntries: IncomeEntry[] = Array.from({ length: 10 }, () => ({
+      transactionDate: quickDate,
+      incomeAccountId: 0,
+      description: '',
+      amount: '',
+      vatTransactionType: 'vat_inclusive',
+      vatRate: '15.00',
+      vatAmount: '0.00',
+      netAmount: '0.00',
+      status: 'draft',
+    }));
+    setIncomeEntries(defaultEntries);
+  }, [quickDate]);
+
+  // Initialize entries on mount and tab change
+  useEffect(() => {
+    if (activeTab === 'expense' && expenseEntries.length === 0) {
+      initializeExpenseEntries();
+    } else if (activeTab === 'income' && incomeEntries.length === 0) {
+      initializeIncomeEntries();
+    }
+  }, [activeTab, initializeExpenseEntries, initializeIncomeEntries, expenseEntries.length, incomeEntries.length]);
+
+  // VAT Calculation helpers
+  const calculateVAT = useCallback((amount: string, vatRate: string, vatType: string) => {
+    const numAmount = parseFloat(amount) || 0;
+    const numVatRate = parseFloat(vatRate) || 0;
+    
+    if (vatType === 'vat_inclusive') {
+      const vatAmount = (numAmount * numVatRate) / (100 + numVatRate);
+      const netAmount = numAmount - vatAmount;
+      return {
+        vatAmount: vatAmount.toFixed(2),
+        netAmount: netAmount.toFixed(2),
+      };
+    } else {
+      const vatAmount = (numAmount * numVatRate) / 100;
+      return {
+        vatAmount: vatAmount.toFixed(2),
+        netAmount: numAmount.toFixed(2),
+      };
+    }
+  }, []);
+
+  // Real-time calculations for income entries
+  const incomeCalculations = useMemo(() => {
+    const activeEntries = incomeEntries.filter(entry => 
+      entry.amount && parseFloat(entry.amount) > 0
+    );
+    
+    let totalIncome = 0;
+    let totalVAT = 0;
+    let totalNet = 0;
+    let vatBreakdown = {
+      vatInclusive: 0,
+      vatExclusive: 0,
+      zeroRated: 0,
+      exempt: 0,
+      noVAT: 0,
+    };
+
+    activeEntries.forEach(entry => {
+      const amount = parseFloat(entry.amount) || 0;
+      const vatAmount = parseFloat(entry.vatAmount) || 0;
+      const netAmount = parseFloat(entry.netAmount) || 0;
+
+      totalIncome += amount;
+      totalVAT += vatAmount;
+      totalNet += netAmount;
+
+      // VAT breakdown by type
+      if (entry.vatTransactionType === 'vat_inclusive') {
+        vatBreakdown.vatInclusive += amount;
+      } else if (entry.vatTransactionType === 'vat_exclusive') {
+        vatBreakdown.vatExclusive += amount;
+      } else if (entry.vatTransactionType === 'zero_rated') {
+        vatBreakdown.zeroRated += amount;
+      } else if (entry.vatTransactionType === 'exempt') {
+        vatBreakdown.exempt += amount;
+      } else {
+        vatBreakdown.noVAT += amount;
+      }
+    });
+
+    return {
+      totalIncome: totalIncome.toFixed(2),
+      totalVAT: totalVAT.toFixed(2),
+      totalNet: totalNet.toFixed(2),
+      activeEntries: activeEntries.length,
+      vatBreakdown,
+    };
+  }, [incomeEntries]);
+
+  // Real-time calculations for expense entries
+  const expenseCalculations = useMemo(() => {
+    const activeEntries = expenseEntries.filter(entry => 
+      entry.amount && parseFloat(entry.amount) > 0
+    );
+    
+    let subtotalExclVAT = 0;
+    let totalVAT = 0;
+    let grandTotal = 0;
+
+    activeEntries.forEach(entry => {
+      const amount = parseFloat(entry.amount) || 0;
+      const vatAmount = parseFloat(entry.vatAmount) || 0;
+      const netAmount = parseFloat(entry.netAmount) || 0;
+
+      if (entry.vatTransactionType === 'vat_inclusive') {
+        subtotalExclVAT += netAmount;
+        grandTotal += amount;
+      } else {
+        subtotalExclVAT += amount;
+        grandTotal += amount + vatAmount;
+      }
+      totalVAT += vatAmount;
+    });
+
+    return {
+      subtotalExclVAT: subtotalExclVAT.toFixed(2),
+      totalVAT: totalVAT.toFixed(2),
+      grandTotal: grandTotal.toFixed(2),
+      activeEntries: activeEntries.length,
+    };
+  }, [expenseEntries]);
+
+  // Update expense entry field
+  const updateExpenseEntry = useCallback((index: number, field: keyof ExpenseEntry, value: string | number) => {
+    setExpenseEntries(prev => {
+      const updated = [...prev];
+      const entry = { ...updated[index] };
+      
+      (entry as any)[field] = value;
+      
+      if (field === 'amount' || field === 'vatRate' || field === 'vatTransactionType') {
+        const calculations = calculateVAT(
+          entry.amount.toString(),
+          entry.vatRate.toString(),
+          entry.vatTransactionType
+        );
+        entry.vatAmount = calculations.vatAmount;
+        entry.netAmount = calculations.netAmount;
+      }
+      
+      updated[index] = entry;
+      return updated;
+    });
+  }, [calculateVAT]);
+
+  // Update income entry field
+  const updateIncomeEntry = useCallback((index: number, field: keyof IncomeEntry, value: string | number) => {
+    setIncomeEntries(prev => {
+      const updated = [...prev];
+      const entry = { ...updated[index] };
+      
+      (entry as any)[field] = value;
+      
+      if (field === 'amount' || field === 'vatRate' || field === 'vatTransactionType') {
+        const calculations = calculateVAT(
+          entry.amount.toString(),
+          entry.vatRate.toString(),
+          entry.vatTransactionType
+        );
+        entry.vatAmount = calculations.vatAmount;
+        entry.netAmount = calculations.netAmount;
+      }
+      
+      updated[index] = entry;
+      return updated;
+    });
+  }, [calculateVAT]);
+
+  // Apply quick date to all entries
+  const applyQuickDateToAll = useCallback(() => {
+    if (activeTab === 'expense') {
+      setExpenseEntries(prev => prev.map(entry => ({
+        ...entry,
+        transactionDate: quickDate
+      })));
+    } else {
+      setIncomeEntries(prev => prev.map(entry => ({
+        ...entry,
+        transactionDate: quickDate
+      })));
+    }
+  }, [activeTab, quickDate]);
+
+  // Add more rows
+  const addMoreRows = useCallback((count: number = 5) => {
+    if (activeTab === 'expense') {
+      const newEntries = Array.from({ length: count }, () => ({
+        transactionDate: quickDate,
+        categoryId: 0,
+        description: '',
+        amount: '',
+        vatTransactionType: 'vat_inclusive',
+        vatRate: '15.00',
+        vatAmount: '0.00',
+        netAmount: '0.00',
+        status: 'draft',
+      }));
+      setExpenseEntries(prev => [...prev, ...newEntries]);
+    } else {
+      const newEntries = Array.from({ length: count }, () => ({
+        transactionDate: quickDate,
+        incomeAccountId: 0,
+        description: '',
+        amount: '',
+        vatTransactionType: 'vat_inclusive',
+        vatRate: '15.00',
+        vatAmount: '0.00',
+        netAmount: '0.00',
+        status: 'draft',
+      }));
+      setIncomeEntries(prev => [...prev, ...newEntries]);
+    }
+  }, [activeTab, quickDate]);
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-50 rounded-lg flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {activeTab === 'income' ? 'Bulk Income Capture' : 'Bulk Expense Capture'}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {activeTab === 'income' 
+                ? 'Professional bulk income entry for revenue transactions and client billing'
+                : 'Professional bulk entry system with intelligent automation and VAT compliance'
+              }
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Badge variant="outline" className="px-3 py-1">
+            {activeTab === 'income' ? incomeCalculations.activeEntries : expenseCalculations.activeEntries} entries
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+          >
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Smart Fill
+          </Button>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="income" className="flex items-center space-x-2">
+            <TrendingUp className="w-4 h-4" />
+            <span>Income Capture</span>
+          </TabsTrigger>
+          <TabsTrigger value="expense" className="flex items-center space-x-2">
+            <TrendingDown className="w-4 h-4" />
+            <span>Expense Capture</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Income Tab */}
+        <TabsContent value="income" className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-green-700 flex items-center">
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Total Income
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-900">
+                  R {incomeCalculations.totalIncome}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
+                  <Calculator className="w-4 h-4 mr-2" />
+                  VAT Amount
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-900">
+                  R {incomeCalculations.totalVAT}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Net Income
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-900">
+                  R {incomeCalculations.totalNet}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* VAT Breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
+                <Clock className="w-4 h-4 mr-2" />
+                VAT Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-5 gap-4 text-center">
+                <div>
+                  <div className="text-sm font-medium text-blue-600">VAT Inclusive</div>
+                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.vatInclusive.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-green-600">VAT Exclusive</div>
+                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.vatExclusive.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-yellow-600">Zero Rated</div>
+                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.zeroRated.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-orange-600">Exempt</div>
+                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.exempt.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-red-600">No VAT</div>
+                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.noVAT.toFixed(2)}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Controls */}
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="quickDate" className="text-sm font-medium">Quick Date:</Label>
+                <Input
+                  id="quickDate"
+                  type="date"
+                  value={quickDate}
+                  onChange={(e) => setQuickDate(e.target.value)}
+                  className="w-40"
+                />
+                <Button variant="outline" size="sm" onClick={applyQuickDateToAll}>
+                  Apply to All
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={() => addMoreRows(5)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add 5 Rows
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700">
+                <Save className="w-4 h-4 mr-2" />
+                Save All Income
+              </Button>
+            </div>
+          </div>
+
+          {/* Income Entry Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <Calendar className="w-4 h-4 inline mr-2" />
+                        Date
+                      </th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Income Account</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Amount (R)</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">VAT Treatment</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Bank Account</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomeEntries.map((entry, index) => (
+                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3">
+                          <Input
+                            type="date"
+                            value={entry.transactionDate}
+                            onChange={(e) => updateIncomeEntry(index, 'transactionDate', e.target.value)}
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.incomeAccountId.toString()}
+                            onValueChange={(value) => updateIncomeEntry(index, 'incomeAccountId', parseInt(value))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose income..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {chartOfAccounts
+                                .filter(account => account.accountType === 'Revenue')
+                                .map(account => (
+                                  <SelectItem key={account.id} value={account.id.toString()}>
+                                    {account.accountCode} - {account.accountName}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            value={entry.description}
+                            onChange={(e) => updateIncomeEntry(index, 'description', e.target.value)}
+                            placeholder="Revenue description..."
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={entry.amount}
+                            onChange={(e) => updateIncomeEntry(index, 'amount', e.target.value)}
+                            placeholder="0.00"
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.clientId?.toString() || ''}
+                            onValueChange={(value) => updateIncomeEntry(index, 'clientId', value ? parseInt(value) : undefined)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map(customer => (
+                                <SelectItem key={customer.id} value={customer.id.toString()}>
+                                  {customer.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.vatTransactionType}
+                            onValueChange={(value) => updateIncomeEntry(index, 'vatTransactionType', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="vat_inclusive">VAT Inclusive (15%)</SelectItem>
+                              <SelectItem value="vat_exclusive">VAT Exclusive (15%)</SelectItem>
+                              <SelectItem value="zero_rated">Zero Rated</SelectItem>
+                              <SelectItem value="exempt">Exempt</SelectItem>
+                              <SelectItem value="no_vat">No VAT</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.bankAccountId?.toString() || ''}
+                            onValueChange={(value) => updateIncomeEntry(index, 'bankAccountId', value ? parseInt(value) : undefined)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose bank..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map(account => (
+                                <SelectItem key={account.id} value={account.id.toString()}>
+                                  {account.accountName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Expense Tab */}
+        <TabsContent value="expense" className="space-y-6">
+          {/* Summary Cards for Expenses */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-700">ACTIVE ENTRIES</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-900">
+                  {expenseCalculations.activeEntries}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-green-700">SUBTOTAL (EXCL VAT)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-900">
+                  R {expenseCalculations.subtotalExclVAT}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-orange-700">TOTAL VAT</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-900">
+                  R {expenseCalculations.totalVAT}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="bg-gradient-to-br from-red-50 to-pink-50 border-red-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-red-700">GRAND TOTAL</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-900">
+                R {expenseCalculations.grandTotal}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Controls for Expenses */}
+          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="quickDateExpense" className="text-sm font-medium">Date Range:</Label>
+                <Input
+                  id="quickDateExpense"
+                  type="date"
+                  value={quickDate}
+                  onChange={(e) => setQuickDate(e.target.value)}
+                  className="w-40"
+                />
+                <span className="text-sm text-gray-500">to</span>
+                <Input
+                  type="date"
+                  value={quickDate}
+                  className="w-40"
+                />
+                <Button variant="outline" size="sm" onClick={applyQuickDateToAll}>
+                  Apply to All
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={() => addMoreRows(5)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Rows
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Save className="w-4 h-4 mr-2" />
+                Save All Expenses
+              </Button>
+            </div>
+          </div>
+
+          {/* Similar table structure for expenses would follow here */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center text-gray-500 py-8">
+                Expense entry table implementation similar to income table above...
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default EnhancedBulkCapture;

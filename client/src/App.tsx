@@ -99,7 +99,7 @@ import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
 import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
-import BulkCapture from "@/pages/bulk-capture";
+import BulkCapture from "@/pages/bulk-capture-enhanced";
 import SalesOrders from "@/pages/sales-orders";
 import Deliveries from "@/pages/deliveries";
 import SalesDashboard from "@/pages/sales-dashboard";

@@ -1,0 +1,76 @@
+ Enhanced Bulk Capture Integration & UI Prompt
+Prompt:
+
+Enhance the existing bulk capture module to follow these specifications for both Income and Expense tabs:
+
+Default Entry Rows:
+
+When the user opens the bulk capture page, it must display 10 entry lines by default for efficient data entry.
+
+Dynamic Account Linking:
+
+Each row must include a dropdown to select the relevant account from the Chart of Accounts, ensuring every entry is mapped correctly.
+
+Client/Supplier Selection:
+
+In the Income tab, each line must have a client selection field (dropdown/autocomplete) as shown in the current UI/attachment.
+
+In the Expense tab, each line must have a supplier selection field.
+
+Real-Time Calculations:
+
+As amounts are entered, display and update in real time:
+
+Total Income (or Total Expenses)
+
+VAT Amount (calculated according to selected VAT type/rate for each entry)
+
+Net Income (Income minus VAT for income tab)
+
+Expenses tab must show:
+
+Subtotal (excluding VAT) per entry and total
+
+Total with VAT per entry and total
+
+Active Entry Management:
+
+Allow users to add or remove lines dynamically, but always start with 10 open by default.
+
+Entries should be “active” (ready to edit) by default for quick input.
+
+Data Integrity & Validation:
+
+Ensure all entries are validated before submission (required fields, account mapping, client/supplier selection, amount formats).
+
+On submission, all entries must update the related Chart of Accounts and trigger real-time metric updates.
+
+Consistency with Main Features:
+
+All bulk entries must integrate fully with:
+
+Dashboards (income, expense, VAT, etc.)
+
+Reports (summary, detailed, VAT, audit)
+
+All client/supplier and account balances
+
+User Experience:
+
+Layout and component styling should match the attached sample for visual consistency.
+
+Bulk capture interface should be simple, fast, and uncluttered, with all calculations clearly visible.
+
+Summary:
+
+Bulk capture opens with 10 editable lines by default.
+
+Each income entry includes client selection; each expense entry includes supplier selection.
+
+Chart of Accounts mapping, real-time VAT/net calculations, and subtotal/total logic must all be in place and visible as data is entered.
+
+Data is validated and integrated throughout the system for reporting and dashboards.
+
+(Optional: For Developers/AI)
+“Check the bulk capture module: ensure it opens with 10 editable rows, has client/supplier selection fields, real-time calculations for totals and VAT, and all data is mapped to the Chart of Accounts. Make sure the UI matches the sample and all data flows update dashboards and reports in real time.”
+
