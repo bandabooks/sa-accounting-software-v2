@@ -5313,20 +5313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update Subscription Plan (Super Admin)
-  app.put("/api/super-admin/subscription-plans/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
-    try {
-      const planId = parseInt(req.params.id);
-      const updatedPlan = await storage.updateSubscriptionPlan(planId, req.body);
-      
-      await logAudit(req.user!.id, 'UPDATE', 'subscription_plan', planId, 'Updated subscription plan');
-      
-      res.json(updatedPlan);
-    } catch (error) {
-      console.error("Failed to update subscription plan:", error);
-      res.status(500).json({ message: "Failed to update subscription plan" });
-    }
-  });
+
 
   // Company User Management (Super Admin)
   app.get("/api/super-admin/companies/:id/users", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
