@@ -141,7 +141,17 @@ function UserAuditLogs({ userId }: { userId: number }) {
                   </div>
                   <div className="flex items-center text-xs text-muted-foreground">
                     <Clock className="h-3 w-3 mr-1" />
-                    {new Date(log.createdAt).toLocaleString()}
+                    {log.createdAt ? 
+                      new Date(log.createdAt).toLocaleString('en-ZA', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      }) : 
+                      'Date unavailable'
+                    }
                   </div>
                 </div>
                 

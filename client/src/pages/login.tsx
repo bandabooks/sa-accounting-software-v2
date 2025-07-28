@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { loginSchema, type LoginRequest } from '@shared/schema';
-import { Lock, User, Building, AlertCircle } from 'lucide-react';
+import { Lock, User, Building, AlertCircle, CheckCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 export default function Login() {
@@ -19,6 +20,26 @@ export default function Login() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginSuccessModalOpen, setLoginSuccessModalOpen] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
+  const [showTrialSuccess, setShowTrialSuccess] = useState(false);
+  const [trialUserEmail, setTrialUserEmail] = useState('');
+
+  // Check for trial signup success
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTrialSuccess = urlParams.get('trial') === 'success';
+    const emailParam = urlParams.get('email');
+    
+    if (isTrialSuccess) {
+      setShowTrialSuccess(true);
+      if (emailParam) {
+        setTrialUserEmail(decodeURIComponent(emailParam));
+        form.setValue('username', decodeURIComponent(emailParam));
+      }
+      
+      // Clear the URL parameters
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   const form = useForm<LoginRequest>({
     resolver: zodResolver(loginSchema),
@@ -106,7 +127,7 @@ export default function Login() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-            Think Mybiz Accounting
+            Taxnify
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
             Sign in to your account to continue
@@ -115,6 +136,17 @@ export default function Login() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {showTrialSuccess && (
+                <Alert className="bg-green-50 border-green-200 text-green-800">
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Trial account created successfully!</strong><br />
+                    Your 14-day free trial has started. Please log in to access your new Taxnify account.
+                    {trialUserEmail && <><br />Email: <strong>{trialUserEmail}</strong></>}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {loginError && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4 flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />

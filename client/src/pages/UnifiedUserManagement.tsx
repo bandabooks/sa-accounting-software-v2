@@ -1039,7 +1039,17 @@ export default function UnifiedUserManagement() {
                 <TableRow key={log.id}>
                   <TableCell>
                     <div className="text-sm text-gray-600">
-                      {new Date(log.timestamp).toLocaleString()}
+                      {log.timestamp ? 
+                        new Date(log.timestamp).toLocaleString('en-ZA', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        }) : 
+                        'Date unavailable'
+                      }
                     </div>
                   </TableCell>
                   <TableCell>
