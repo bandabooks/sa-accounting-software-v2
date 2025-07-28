@@ -119,49 +119,97 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Softened Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-400 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-300 rounded-full blur-3xl opacity-30"></div>
-      </div>
-      
-      <div className="relative z-10 w-full max-w-md mx-auto">
-        {/* Top Content - Logo & Branding */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl">
-              <Calculator className="h-8 w-8 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex">
+      {/* Left Side - Professional Features & Branding */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 flex-col justify-center p-12 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-500 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative z-10">
+          {/* Logo & Main Heading */}
+          <div className="mb-12">
+            <div className="flex items-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl">
+                <Calculator className="h-8 w-8 text-white" />
+              </div>
+              <div className="ml-4">
+                <h1 className="text-4xl font-bold text-white">Taxnify</h1>
+                <p className="text-blue-200 text-lg">Unified Business, Accounting, Compliance Platform</p>
+              </div>
             </div>
-            <div className="ml-4 text-left">
-              <h1 className="text-3xl font-bold text-white">Taxnify</h1>
-              <p className="text-blue-200 text-sm">Unified Business, Accounting, Compliance Platform</p>
+            
+            <h2 className="text-3xl font-bold text-white mb-4">
+              South Africa's Premier
+              <span className="block text-blue-300">Business Management Platform</span>
+            </h2>
+            <p className="text-blue-100/90 text-lg leading-relaxed">
+              Trusted by over 500+ South African businesses for complete accounting, compliance, and business management solutions.
+            </p>
+          </div>
+
+          {/* Professional Features Grid */}
+          <div className="grid grid-cols-1 gap-4 mb-8">
+            <ProfessionalBadge
+              icon="shield"
+              title="SARS Compliant & Secure"
+              description="Full South African Revenue Service integration with enterprise-grade security"
+            />
+            <ProfessionalBadge
+              icon="award"
+              title="Industry Leading Features"
+              description="Advanced VAT management, multi-company support, and professional reporting"
+            />
+            <ProfessionalBadge
+              icon="building"
+              title="Enterprise Ready"
+              description="Scalable architecture supporting businesses from startups to enterprises"
+            />
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="flex items-center space-x-8 pt-8 border-t border-white/20">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">500+</div>
+              <div className="text-blue-200 text-sm">Active Businesses</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">99.9%</div>
+              <div className="text-blue-200 text-sm">Uptime SLA</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">24/7</div>
+              <div className="text-blue-200 text-sm">Expert Support</div>
             </div>
           </div>
-          
-          <h2 className="text-2xl font-bold text-white mb-2">
-            South Africa's Premier
-          </h2>
-          <h3 className="text-xl font-semibold text-blue-300 mb-4">
-            Business Management Platform
-          </h3>
-          <p className="text-blue-100/80 text-sm max-w-sm mx-auto leading-relaxed">
-            Trusted by over 500+ South African businesses for complete accounting, compliance, and business management solutions.
-          </p>
         </div>
+      </div>
 
-        {/* Centered Login Form */}
-        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl mb-8">
-          <CardHeader className="space-y-4 pb-6">
-            <div className="text-center">
-              <CardTitle className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</CardTitle>
-              <CardDescription className="text-gray-600">
-                Access your business management platform
-              </CardDescription>
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-8 bg-white">
+        <div className="w-full max-w-md mx-auto">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <Calculator className="h-6 w-6 text-white" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
+            <div className="ml-3">
+              <h1 className="text-2xl font-bold text-white">Taxnify</h1>
+            </div>
+          </div>
+
+          <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+            <CardHeader className="space-y-4 pb-8">
+              <div className="text-center">
+                <CardTitle className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Access your business management platform
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                   {showTrialSuccess && (
@@ -275,57 +323,8 @@ export default function Login() {
             </CardContent>
           </Card>
 
-        {/* Supporting Content Below Login Form */}
-        <div className="space-y-6">
-          {/* Professional Features */}
-          <div className="grid grid-cols-1 gap-3">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center text-white">
-                <Shield className="h-5 w-5 mr-3 text-blue-300" />
-                <div>
-                  <h4 className="font-semibold text-sm">SARS Compliant & Secure</h4>
-                  <p className="text-blue-200 text-xs">Full South African Revenue Service integration</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center text-white">
-                <Award className="h-5 w-5 mr-3 text-blue-300" />
-                <div>
-                  <h4 className="font-semibold text-sm">Industry Leading Features</h4>
-                  <p className="text-blue-200 text-xs">Advanced VAT management and professional reporting</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <div className="flex items-center text-white">
-                <Building className="h-5 w-5 mr-3 text-blue-300" />
-                <div>
-                  <h4 className="font-semibold text-sm">Enterprise Ready</h4>
-                  <p className="text-blue-200 text-xs">Scalable for businesses from startups to enterprises</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Trust Indicators */}
-          <div className="grid grid-cols-3 gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-            <div className="text-center">
-              <div className="text-xl font-bold text-white">500+</div>
-              <div className="text-blue-200 text-xs">Active Businesses</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-white">99.9%</div>
-              <div className="text-blue-200 text-xs">Uptime SLA</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-white">24/7</div>
-              <div className="text-blue-200 text-xs">Expert Support</div>
-            </div>
-          </div>
-
           {/* Footer Support */}
-          <div className="text-center text-sm text-blue-200/80">
+          <div className="text-center mt-6 text-sm text-blue-200/80">
             Need help? Contact our support team at{" "}
             <a href="mailto:support@taxnify.co.za" className="text-blue-300 hover:text-white underline">
               support@taxnify.co.za
