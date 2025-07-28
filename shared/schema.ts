@@ -212,21 +212,7 @@ export const estimates = pgTable("estimates", {
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
-  // Status tracking timestamps
-  sentAt: timestamp("sent_at"),
-  viewedAt: timestamp("viewed_at"),
-  acceptedAt: timestamp("accepted_at"),
-  rejectedAt: timestamp("rejected_at"),
-  expiredAt: timestamp("expired_at"),
-  // Action tracking
-  sentBy: integer("sent_by").references(() => users.id),
-  acceptedBy: integer("accepted_by").references(() => users.id),
-  rejectedBy: integer("rejected_by").references(() => users.id),
-  rejectionReason: text("rejection_reason"),
-  acceptanceNotes: text("acceptance_notes"),
-  // Created/updated fields
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyEstimateUnique: unique().on(table.companyId, table.estimateNumber),
   companyIdx: index("estimates_company_idx").on(table.companyId),
@@ -719,47 +705,33 @@ export const products = pgTable("products", {
   sku: text("sku").unique(),
   barcode: text("barcode").unique(),
   categoryId: integer("category_id").references(() => productCategories.id),
-  brandId: integer("brand_id").references(() => productBrands.id),
+  brand: text("brand"),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }).default("0.00"),
-  lastCost: decimal("last_cost", { precision: 10, scale: 2 }).default("0.00"),
-  averageCost: decimal("average_cost", { precision: 10, scale: 2 }).default("0.00"),
-  standardCost: decimal("standard_cost", { precision: 10, scale: 2 }).default("0.00"),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
-  incomeAccountId: integer("income_account_id").references(() => chartOfAccounts.id), // Account for revenue recording
-  expenseAccountId: integer("expense_account_id").references(() => chartOfAccounts.id), // Account for COGS/expense recording
-  inventoryAccountId: integer("inventory_account_id").references(() => chartOfAccounts.id), // Asset account for inventory valuation
   stockQuantity: integer("stock_quantity").default(0),
-  reservedQuantity: integer("reserved_quantity").default(0), // Stock reserved for orders
-  availableQuantity: integer("available_quantity").default(0), // Available for sale
   minStockLevel: integer("min_stock_level").default(0),
   maxStockLevel: integer("max_stock_level").default(0),
-  reorderPoint: integer("reorder_point").default(0),
-  reorderQuantity: integer("reorder_quantity").default(0),
-  leadTimeDays: integer("lead_time_days").default(0),
-  // Product characteristics
-  weight: decimal("weight", { precision: 10, scale: 3 }),
-  weightUnit: text("weight_unit").default("kg"), // kg, g, lb, oz
-  dimensions: text("dimensions"), // Length x Width x Height
-  dimensionUnit: text("dimension_unit").default("cm"), // cm, in, m
-  // Inventory management
   isActive: boolean("is_active").default(true),
-  isService: boolean("is_service").default(false), // true for services, false for products
-  trackInventory: boolean("track_inventory").default(true),
-  trackSerialNumbers: boolean("track_serial_numbers").default(false),
-  trackLotNumbers: boolean("track_lot_numbers").default(false),
-  hasExpiryDate: boolean("has_expiry_date").default(false),
-  costingMethod: text("costing_method").default("FIFO"), // FIFO, LIFO, Average, Standard
-  // Media and additional info
+  isService: boolean("is_service").default(false),
   imagePath: text("image_path"),
-  alternativeImagePaths: jsonb("alternative_image_paths").default([]),
-  tags: jsonb("tags").default([]),
   notes: text("notes"),
-  // Supplier info
-  preferredSupplierId: integer("preferred_supplier_id").references(() => suppliers.id),
-  // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  vatInclusive: boolean("vat_inclusive").default(false),
+  incomeAccountId: integer("income_account_id"),
+  expenseAccountId: integer("expense_account_id"),
+  barcode: text("barcode"),
+  manufacturer: text("manufacturer"),
+  weight: decimal("weight", { precision: 10, scale: 2 }),
+  dimensions: text("dimensions"),
+  warrantyPeriod: integer("warranty_period"),
+  location: text("location"),
+  supplierCode: text("supplier_code"),
+  bundleType: text("bundle_type"),
+  trackInventory: boolean("track_inventory").default(true),
+  trackSerials: boolean("track_serials").default(false),
+  trackLots: boolean("track_lots").default(false)
 }, (table) => ({
   companyIdx: index("products_company_idx").on(table.companyId),
   categoryIdx: index("products_category_idx").on(table.categoryId),
