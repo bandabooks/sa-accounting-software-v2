@@ -271,13 +271,7 @@ export default function PurchaseReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(categoryAnalysis.length > 0 ? categoryAnalysis : [
-                  { category: "IT Equipment", amount: 95400, budget: 100000, variance: -4600, orders: 15 },
-                  { category: "Office Supplies", amount: 67200, budget: 65000, variance: 2200, orders: 28 },
-                  { category: "Professional Services", amount: 56800, budget: 60000, variance: -3200, orders: 12 },
-                  { category: "Marketing", amount: 42500, budget: 45000, variance: -2500, orders: 8 },
-                  { category: "Maintenance", amount: 23600, budget: 25000, variance: -1400, orders: 18 }
-                ]).map((category: any) => (
+                {categoryAnalysis.map((category: any) => (
                   <div key={category.category} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="bg-purple-100 p-2 rounded-lg">
@@ -315,12 +309,7 @@ export default function PurchaseReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h4 className="font-medium">Monthly Trends</h4>
-                  {[
-                    { metric: "Average Order Value", current: "R 4,261", previous: "R 3,890", change: "+9.5%" },
-                    { metric: "Order Frequency", current: "2.3/week", previous: "2.1/week", change: "+9.5%" },
-                    { metric: "Processing Time", current: "2.8 days", previous: "3.2 days", change: "-12.5%" },
-                    { metric: "Supplier Response", current: "1.4 days", previous: "1.8 days", change: "-22.2%" }
-                  ].map((trend) => (
+                  {[].map((trend: any) => (
                     <div key={trend.metric} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <span className="text-sm font-medium">{trend.metric}</span>
                       <div className="text-right">
@@ -334,12 +323,7 @@ export default function PurchaseReportsPage() {
                 </div>
                 <div className="space-y-4">
                   <h4 className="font-medium">Performance Indicators</h4>
-                  {[
-                    { metric: "On-time Delivery", value: "94%", status: "excellent" },
-                    { metric: "Budget Adherence", value: "87%", status: "good" },
-                    { metric: "Supplier Satisfaction", value: "4.7/5", status: "excellent" },
-                    { metric: "Cost Savings", value: "12.5%", status: "good" }
-                  ].map((indicator) => (
+                  {[].map((indicator: any) => (
                     <div key={indicator.metric} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <span className="text-sm font-medium">{indicator.metric}</span>
                       <div className="text-right">
@@ -365,58 +349,12 @@ export default function PurchaseReportsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Efficiency Metrics</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Order Cycle Time</span>
-                      <span className="text-sm font-bold">2.8 days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Approval Time</span>
-                      <span className="text-sm font-bold">4.2 hours</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Invoice Processing</span>
-                      <span className="text-sm font-bold">1.6 days</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h4 className="font-medium">Quality Metrics</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Order Accuracy</span>
-                      <span className="text-sm font-bold">96.5%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Defect Rate</span>
-                      <span className="text-sm font-bold">2.1%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Return Rate</span>
-                      <span className="text-sm font-bold">1.8%</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h4 className="font-medium">Cost Metrics</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Cost per Order</span>
-                      <span className="text-sm font-bold">R 45</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Savings Achieved</span>
-                      <span className="text-sm font-bold">R 35,600</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Budget Variance</span>
-                      <span className="text-sm font-bold">-3.2%</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="text-center py-8">
+                <Target className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No performance data available</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Performance metrics will appear here once you have purchase order data.
+                </p>
               </div>
             </CardContent>
           </Card>

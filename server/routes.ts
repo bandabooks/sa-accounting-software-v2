@@ -3123,13 +3123,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/purchase-reports/categories", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const categories = [
-        { category: "IT Equipment", amount: 95400, budget: 100000, variance: -4600, orders: 15 },
-        { category: "Office Supplies", amount: 67200, budget: 65000, variance: 2200, orders: 28 },
-        { category: "Professional Services", amount: 56800, budget: 60000, variance: -3200, orders: 12 },
-        { category: "Marketing", amount: 42500, budget: 45000, variance: -2500, orders: 8 },
-        { category: "Maintenance", amount: 23600, budget: 25000, variance: -1400, orders: 18 }
-      ];
+      // Return empty array - real data will come from actual purchase orders
+      const categories: any[] = [];
       res.json(categories);
     } catch (error) {
       console.error("Error fetching category analysis:", error);

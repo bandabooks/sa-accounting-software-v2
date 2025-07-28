@@ -6,38 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter } from "lucide-react";
 
-const mockTasks = [
-  {
-    id: 1,
-    title: "Submit VAT201 Return - February 2025",
-    client: "ABC Manufacturing (Pty) Ltd",
-    type: "SARS",
-    priority: "high",
-    status: "pending",
-    dueDate: "2025-02-28",
-    assignedTo: "John Smith"
-  },
-  {
-    id: 2,
-    title: "Annual Return Filing - CoR9",
-    client: "XYZ Services CC",
-    type: "CIPC",
-    priority: "medium",
-    status: "in_progress",
-    dueDate: "2025-03-15",
-    assignedTo: "Sarah Johnson"
-  },
-  {
-    id: 3,
-    title: "Employment Equity Report - EE-2",
-    client: "Tech Solutions Ltd",
-    type: "Labour",
-    priority: "high",
-    status: "overdue",
-    dueDate: "2025-01-15",
-    assignedTo: "Mike Wilson"
-  }
-];
+// Real compliance tasks will be loaded from API - no mock data
+const tasks: any[] = [];
 
 export default function ComplianceTasks() {
   const [searchTerm, setSearchTerm] = useState("");
