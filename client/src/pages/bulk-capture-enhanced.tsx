@@ -67,19 +67,19 @@ const EnhancedBulkCapture = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch data
-  const { data: chartOfAccounts = [] } = useQuery({
+  const { data: chartOfAccounts = [] } = useQuery<any[]>({
     queryKey: ['/api/chart-of-accounts'],
   });
 
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliers = [] } = useQuery<any[]>({
     queryKey: ['/api/suppliers'],
   });
 
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [] } = useQuery<any[]>({
     queryKey: ['/api/customers'],
   });
 
-  const { data: bankAccounts = [] } = useQuery({
+  const { data: bankAccounts = [] } = useQuery<any[]>({
     queryKey: ['/api/bank-accounts'],
   });
 
@@ -547,7 +547,7 @@ const EnhancedBulkCapture = () => {
                         <td className="p-3">
                           <Select
                             value={entry.clientId?.toString() || ''}
-                            onValueChange={(value) => updateIncomeEntry(index, 'clientId', value ? parseInt(value) : undefined)}
+                            onValueChange={(value) => updateIncomeEntry(index, 'clientId', value ? parseInt(value) : 0)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Choose..." />
@@ -581,7 +581,7 @@ const EnhancedBulkCapture = () => {
                         <td className="p-3">
                           <Select
                             value={entry.bankAccountId?.toString() || ''}
-                            onValueChange={(value) => updateIncomeEntry(index, 'bankAccountId', value ? parseInt(value) : undefined)}
+                            onValueChange={(value) => updateIncomeEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Choose bank..." />

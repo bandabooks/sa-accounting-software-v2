@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,7 +71,7 @@ const getRoleColor = (level: number) => {
 
 // Audit Logs Component
 function UserAuditLogs({ userId }: { userId: number }) {
-  const { data: auditLogs, isLoading } = useQuery({
+  const { data: auditLogs = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/super-admin/audit-logs/user", userId],
   });
 
@@ -199,13 +199,19 @@ export default function SuperAdminUserDetail() {
   
   const confirmationTemplates = useConfirmationModal();
 
+  // Fetch user details first
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ["/api/super-admin/users", userId],
+    enabled: !!userId,
+  });
+
   // Edit user form
   const editForm = useForm({
     defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
-      role: user?.role || '',
-      isActive: user?.isActive || false,
+      name: '',
+      email: '',
+      role: '',
+      isActive: false,
     },
   });
 
@@ -230,12 +236,6 @@ export default function SuperAdminUserDetail() {
       reason: '',
       effectiveDate: new Date().toISOString().split('T')[0]
     }
-  });
-
-  // Fetch user details
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ["/api/super-admin/users", userId],
-    enabled: !!userId,
   });
 
   // Fetch system roles for role assignment dropdown
@@ -265,6 +265,11 @@ export default function SuperAdminUserDetail() {
       });
     },
   });
+
+  // Edit submit handler
+  const onEditSubmit = (data: any) => {
+    updateUserMutation.mutate(data);
+  };
 
   // Role change mutation
   const roleChangeMutation = useMutation({
