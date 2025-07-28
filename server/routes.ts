@@ -2858,7 +2858,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const invoices = await storage.getAllInvoices(companyId);
       const totalSales = invoices
         .filter(invoice => invoice.status === 'paid' || invoice.status === 'sent')
-        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+        .reduce((sum, invoice) => {
+          const amount = parseFloat(invoice.total || invoice.totalAmount || '0');
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
       
       // Get estimates/quotes
       const estimates = await storage.getAllEstimates(companyId);
@@ -2869,7 +2872,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoice.status === 'sent' || invoice.status === 'overdue'
       );
       const outstandingAmount = outstandingInvoices
-        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+        .reduce((sum, invoice) => {
+          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
       
       // Get overdue invoices
       const overdueInvoices = invoices.filter(invoice => {
@@ -2886,20 +2892,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       const currentMonthInvoices = invoices.filter(invoice => {
-        const invoiceDate = new Date(invoice.invoiceDate);
+        const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
         return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
       });
       const currentMonthSales = currentMonthInvoices
-        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+        .reduce((sum, invoice) => {
+          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
       
       const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
       const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
       const previousMonthInvoices = invoices.filter(invoice => {
-        const invoiceDate = new Date(invoice.invoiceDate);
+        const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
         return invoiceDate.getMonth() === previousMonth && invoiceDate.getFullYear() === previousYear;
       });
       const previousMonthSales = previousMonthInvoices
-        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+        .reduce((sum, invoice) => {
+          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
       
       const salesGrowth = previousMonthSales > 0 
         ? ((currentMonthSales - previousMonthSales) / previousMonthSales) * 100
