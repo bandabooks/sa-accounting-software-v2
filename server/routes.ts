@@ -154,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     payFastService = createPayFastService();
     console.log("PayFast service initialized successfully");
   } catch (error) {
-    console.warn("PayFast service initialization failed:", error.message);
+    console.warn("PayFast service initialization failed:", (error as Error).message);
   }
 
   // Register multi-company routes
@@ -468,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Reset failed login attempts and clear lock
-      await storage.updateUserLoginAttempts(user.id, 0, null);
+      await storage.updateUserLoginAttempts(user.id, 0, undefined);
       
       res.json({ message: "Account unlocked successfully" });
     } catch (error) {
