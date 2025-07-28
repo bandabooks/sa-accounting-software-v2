@@ -377,71 +377,73 @@ export default function Banking() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {bankAccounts.map((account: BankAccountWithTransactions) => (
               <Card key={account.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-4">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Building className="w-5 h-5 text-blue-600" />
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Building className="w-4 h-4 text-blue-600" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg font-semibold">{account.accountName}</CardTitle>
-                        <p className="text-sm text-gray-500">{account.bankName}</p>
+                        <CardTitle className="text-base font-semibold">{account.accountName}</CardTitle>
+                        <p className="text-xs text-gray-500">{account.bankName}</p>
                       </div>
                     </div>
-                    <Badge variant={account.isActive ? "default" : "secondary"}>
+                    <Badge variant={account.isActive ? "default" : "secondary"} className="text-xs">
                       {account.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-4">
-                  <div className="text-center py-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 mb-1">Current Balance</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                <CardContent className="space-y-2">
+                  <div className="text-center py-2 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">Current Balance</p>
+                    <p className="text-lg font-bold text-gray-900">
                       R {parseFloat(account.currentBalance).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
                     </p>
-                    <div className="flex items-center justify-center space-x-2 mt-2">
-                      <Badge variant="outline" className="text-xs">{account.accountType}</Badge>
-                      <Badge variant="outline" className="text-xs">{account.currency}</Badge>
+                    <div className="flex items-center justify-center space-x-1 mt-1">
+                      <Badge variant="outline" className="text-xs px-1 py-0">{account.accountType}</Badge>
+                      <Badge variant="outline" className="text-xs px-1 py-0">{account.currency}</Badge>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500">Account Number</p>
-                    <p className="font-mono text-sm">****{account.accountNumber.slice(-4)}</p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">Account</p>
+                      <p className="font-mono text-xs">****{account.accountNumber.slice(-4)}</p>
+                    </div>
                     {account.branchCode && (
-                      <>
-                        <p className="text-xs text-gray-500 mt-2">Branch Code</p>
-                        <p className="font-mono text-sm">{account.branchCode}</p>
-                      </>
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-gray-500">Branch</p>
+                        <p className="font-mono text-xs">{account.branchCode}</p>
+                      </div>
                     )}
                   </div>
 
                   {account.chartAccount && (
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                      <p className="text-xs text-green-700 font-medium mb-1">Chart of Accounts</p>
-                      <p className="text-sm text-green-800">
+                    <div className="p-2 bg-green-50 rounded border border-green-100">
+                      <p className="text-xs text-green-700 font-medium">Chart of Accounts</p>
+                      <p className="text-xs text-green-800">
                         {account.chartAccount.accountCode} - {account.chartAccount.accountName}
                       </p>
                     </div>
                   )}
 
-                  <div className="flex space-x-2 pt-2">
+                  <div className="flex space-x-1 pt-1">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 h-7 text-xs"
                       onClick={() => {
                         setSelectedAccount(account);
                         setShowTransactionDialog(true);
                         transactionForm.setValue("bankAccountId", account.id);
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
+                      <Plus className="h-3 w-3 mr-1" />
                       Transaction
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <Pencil className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                      <Pencil className="h-3 w-3" />
                     </Button>
                   </div>
                 </CardContent>
