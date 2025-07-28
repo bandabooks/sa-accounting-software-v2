@@ -136,6 +136,7 @@ const PERMISSIONS = {
   DELIVERIES_CREATE: 'deliveries:create',
   FINANCIAL_VIEW: 'financial:view',
   EXPENSES_VIEW: 'expenses:view',
+  EXPENSES_CREATE: 'expenses:create',
   SUPPLIERS_VIEW: 'suppliers:view',
   PURCHASE_ORDERS_VIEW: 'purchase_orders:view',
   PRODUCTS_VIEW: 'products:view',
@@ -143,7 +144,8 @@ const PERMISSIONS = {
   SETTINGS_VIEW: 'settings:view',
   INVENTORY_VIEW: 'inventory:view',
   CHART_OF_ACCOUNTS_VIEW: 'chart_of_accounts:view',
-  JOURNAL_ENTRIES_VIEW: 'journal_entries:view',
+  JOURNAL_ENTRIES_VIEW: 'journal_entries:view',  
+  BULK_CAPTURE_VIEW: 'bulk_capture:view',
   BANKING_VIEW: 'banking:view',
   GENERAL_LEDGER_VIEW: 'general_ledger:view',
   PROJECTS_VIEW: 'projects:view',
@@ -301,7 +303,7 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         <Route path="/bulk-capture">
-          <ProtectedRoute permission={PERMISSIONS.EXPENSES_CREATE}>
+          <ProtectedRoute permission={PERMISSIONS.BULK_CAPTURE_VIEW}>
             <BulkCapture />
           </ProtectedRoute>
         </Route>

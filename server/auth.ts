@@ -88,6 +88,9 @@ export const PERMISSIONS = {
   JOURNAL_ENTRIES_CREATE: 'journal_entries:create',
   JOURNAL_ENTRIES_UPDATE: 'journal_entries:update',
   JOURNAL_ENTRIES_DELETE: 'journal_entries:delete',
+  BULK_CAPTURE_VIEW: 'bulk_capture:view',
+  BULK_CAPTURE_CREATE: 'bulk_capture:create',
+  BULK_CAPTURE_UPLOAD: 'bulk_capture:upload',
   GENERAL_LEDGER_VIEW: 'general_ledger:view',
   TRIAL_BALANCE_VIEW: 'trial_balance:view',
   
