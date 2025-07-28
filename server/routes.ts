@@ -523,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Get permissions from role assignments for regular users
           try {
-            const permissions = await storage.getUserPermissions(user.id);
+            const permissions = await storage.getUserPermission(user.id);
             userPermissions = permissions;
           } catch (error) {
             // Fallback to default permissions based on user role
