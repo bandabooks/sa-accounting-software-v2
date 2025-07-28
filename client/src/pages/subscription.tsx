@@ -59,13 +59,27 @@ export default function Subscription() {
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>("monthly");
 
   // Fetch current subscription
-  const { data: currentSubscription, isLoading: subscriptionLoading } = useQuery<CompanySubscription>({
+  const { data: currentSubscription, isLoading: subscriptionLoading, error: subscriptionError } = useQuery<CompanySubscription>({
     queryKey: ["/api/company/subscription"],
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors
+      if (error?.message?.includes('401') || error?.message?.includes('authentication')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   // Fetch available plans
-  const { data: plans, isLoading: plansLoading } = useQuery<SubscriptionPlan[]>({
+  const { data: plans, isLoading: plansLoading, error: plansError } = useQuery<SubscriptionPlan[]>({
     queryKey: ["/api/subscription-plans"],
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors
+      if (error?.message?.includes('401') || error?.message?.includes('authentication')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   // Create PayFast payment mutation
@@ -141,6 +155,46 @@ export default function Subscription() {
   const formatPrice = (price: string) => {
     return `R ${parseFloat(price).toFixed(2)}`;
   };
+
+  // Show error state if there are authentication or other critical errors
+  if (subscriptionError || plansError) {
+    const isAuthError = subscriptionError?.message?.includes('401') || 
+                       plansError?.message?.includes('401') ||
+                       subscriptionError?.message?.includes('authentication') ||
+                       plansError?.message?.includes('authentication');
+    
+    if (isAuthError) {
+      return (
+        <div className="container mx-auto p-6">
+          <div className="text-center py-12">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-4">
+              Please log in to view your subscription details.
+            </p>
+            <Button onClick={() => navigate('/login')}>
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-12">
+          <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Subscription Data</h2>
+          <p className="text-gray-600 mb-4">
+            There was an error loading your subscription information. Please try refreshing the page.
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (subscriptionLoading || plansLoading) {
     return (
