@@ -2133,7 +2133,9 @@ export class DatabaseStorage implements IStorage {
         });
       }
 
-      // Check for low stock items  
+      // Check for low stock items (commented out due to schema mismatch)
+      // TODO: Add reorderLevel column to products table to enable this feature
+      /*
       const lowStockProducts = await db
         .select()
         .from(products)
@@ -2150,6 +2152,7 @@ export class DatabaseStorage implements IStorage {
           action: 'review-inventory'
         });
       }
+      */
 
       // VAT compliance check
       const vatRegistered = await this.getCompanyVATStatus(companyId);
@@ -2182,21 +2185,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  private async getCurrentCashPosition(companyId: number): Promise<number> {
-    try {
-      const bankAccounts = await db
-        .select()
-        .from(bankAccounts)
-        .where(eq(bankAccounts.companyId, companyId));
 
-      return bankAccounts.reduce((total, account) => {
-        return total + parseFloat(account.currentBalance || '0');
-      }, 0);
-    } catch (error) {
-      console.error("Error getting current cash position:", error);
-      return 0;
-    }
-  }
 
   private async getTodayCashInflow(companyId: number): Promise<number> {
     try {
@@ -10857,14 +10846,14 @@ export class DatabaseStorage implements IStorage {
   // Real-time data methods
   async getCurrentCashPosition(companyId: number): Promise<number> {
     try {
-      const [result] = await db
-        .select({
-          total: sql<string>`COALESCE(SUM(${bankAccounts.balance}), 0)`
-        })
+      const bankAccountsList = await db
+        .select()
         .from(bankAccounts)
         .where(eq(bankAccounts.companyId, companyId));
-      
-      return parseFloat(result?.total || '0');
+
+      return bankAccountsList.reduce((total, account) => {
+        return total + parseFloat(account.currentBalance || '0');
+      }, 0);
     } catch (error) {
       console.error("Error getting current cash position:", error);
       return 0;
