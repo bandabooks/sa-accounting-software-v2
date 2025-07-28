@@ -601,7 +601,7 @@ export const supplierPayments = pgTable("supplier_payments", {
 });
 
 // Products and Services module
-export const productCategories: PgTableWithColumns<any> = pgTable("product_categories", {
+export const productCategories = pgTable("product_categories", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
