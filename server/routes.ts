@@ -740,13 +740,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard - protected route with company isolation
+  // Enhanced Dashboard - protected route with company isolation
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user.companyId;
-      const stats = await storage.getDashboardStats(companyId);
-      res.json(stats);
+      
+      // Get comprehensive dashboard data
+      const [
+        basicStats,
+        receivablesAging,
+        payablesAging,
+        cashFlowSummary,
+        bankBalances,
+        profitLossData,
+        recentActivities,
+        complianceAlerts
+      ] = await Promise.all([
+        storage.getDashboardStats(companyId),
+        storage.getReceivablesAging(companyId),
+        storage.getPayablesAging(companyId),
+        storage.getCashFlowSummary(companyId),
+        storage.getBankAccountBalances(companyId),
+        storage.getProfitLossChartData(companyId),
+        storage.getRecentBusinessActivities(companyId),
+        storage.getComplianceAlerts(companyId)
+      ]);
+
+      const enhancedStats = {
+        ...basicStats,
+        receivablesAging,
+        payablesAging,
+        cashFlowSummary,
+        bankBalances,
+        profitLossData,
+        recentActivities,
+        complianceAlerts
+      };
+
+      res.json(enhancedStats);
     } catch (error) {
+      console.error("Error fetching enhanced dashboard stats:", error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });

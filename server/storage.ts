@@ -1826,6 +1826,351 @@ export class DatabaseStorage implements IStorage {
     return revenueByMonth;
   }
 
+  // Enhanced Dashboard Analytics Methods
+  async getReceivablesAging(companyId: number): Promise<any> {
+    try {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+      const pendingInvoices = await db
+        .select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.status, 'pending')
+        ));
+
+      let days0to30 = 0, days31to60 = 0, days61to90 = 0, days90Plus = 0;
+
+      pendingInvoices.forEach(invoice => {
+        const dueDate = new Date(invoice.dueDate);
+        const amount = parseFloat(invoice.total);
+        
+        if (dueDate >= thirtyDaysAgo) {
+          days0to30 += amount;
+        } else if (dueDate >= sixtyDaysAgo) {
+          days31to60 += amount;
+        } else if (dueDate >= ninetyDaysAgo) {
+          days61to90 += amount;
+        } else {
+          days90Plus += amount;
+        }
+      });
+
+      const totalReceivables = days0to30 + days31to60 + days61to90 + days90Plus;
+
+      return {
+        days0to30: days0to30.toFixed(2),
+        days31to60: days31to60.toFixed(2),
+        days61to90: days61to90.toFixed(2),
+        days90Plus: days90Plus.toFixed(2),
+        totalReceivables: totalReceivables.toFixed(2)
+      };
+    } catch (error) {
+      console.error("Error getting receivables aging:", error);
+      return {
+        days0to30: "0.00",
+        days31to60: "0.00",
+        days61to90: "0.00",
+        days90Plus: "0.00",
+        totalReceivables: "0.00"
+      };
+    }
+  }
+
+  async getPayablesAging(companyId: number): Promise<any> {
+    try {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+      const pendingPOs = await db
+        .select()
+        .from(purchaseOrders)
+        .where(and(
+          eq(purchaseOrders.companyId, companyId),
+          eq(purchaseOrders.status, 'pending')
+        ));
+
+      let days0to30 = 0, days31to60 = 0, days61to90 = 0, days90Plus = 0;
+
+      pendingPOs.forEach(po => {
+        const deliveryDate = new Date(po.deliveryDate);
+        const amount = parseFloat(po.totalAmount);
+        
+        if (deliveryDate >= thirtyDaysAgo) {
+          days0to30 += amount;
+        } else if (deliveryDate >= sixtyDaysAgo) {
+          days31to60 += amount;
+        } else if (deliveryDate >= ninetyDaysAgo) {
+          days61to90 += amount;
+        } else {
+          days90Plus += amount;
+        }
+      });
+
+      const totalPayables = days0to30 + days31to60 + days61to90 + days90Plus;
+
+      return {
+        days0to30: days0to30.toFixed(2),
+        days31to60: days31to60.toFixed(2),
+        days61to90: days61to90.toFixed(2),
+        days90Plus: days90Plus.toFixed(2),
+        totalPayables: totalPayables.toFixed(2)
+      };
+    } catch (error) {
+      console.error("Error getting payables aging:", error);
+      return {
+        days0to30: "0.00",
+        days31to60: "0.00",
+        days61to90: "0.00",
+        days90Plus: "0.00",
+        totalPayables: "0.00"
+      };
+    }
+  }
+
+  async getCashFlowSummary(companyId: number): Promise<any> {
+    try {
+      const currentCash = await this.getCurrentCashPosition(companyId);
+      const todayInflow = await this.getTodayCashInflow(companyId);
+      const todayOutflow = await this.getTodayCashOutflow(companyId);
+      
+      return {
+        currentCashPosition: currentCash.toFixed(2),
+        todayInflow: todayInflow.toFixed(2),
+        todayOutflow: todayOutflow.toFixed(2),
+        netCashFlow: (todayInflow - todayOutflow).toFixed(2)
+      };
+    } catch (error) {
+      console.error("Error getting cash flow summary:", error);
+      return {
+        currentCashPosition: "0.00",
+        todayInflow: "0.00",
+        todayOutflow: "0.00",
+        netCashFlow: "0.00"
+      };
+    }
+  }
+
+  async getProfitLossChartData(companyId: number, period: string = '6months'): Promise<any[]> {
+    try {
+      const data = [];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const currentMonth = new Date().getMonth();
+      const periods = period === '12months' ? 12 : 6;
+      
+      for (let i = periods - 1; i >= 0; i--) {
+        const monthIndex = (currentMonth - i + 12) % 12;
+        const year = new Date().getFullYear();
+        const month = monthIndex + 1;
+        
+        // Get revenue for this month
+        const monthlyInvoices = await db
+          .select()
+          .from(invoices)
+          .where(and(
+            eq(invoices.companyId, companyId),
+            eq(invoices.status, 'paid'),
+            sql`EXTRACT(MONTH FROM ${invoices.issueDate}) = ${month}`,
+            sql`EXTRACT(YEAR FROM ${invoices.issueDate}) = ${year}`
+          ));
+
+        const revenue = monthlyInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+
+        // Get expenses for this month
+        const monthlyExpenses = await db
+          .select()
+          .from(expenses)
+          .where(and(
+            eq(expenses.companyId, companyId),
+            sql`EXTRACT(MONTH FROM ${expenses.expenseDate}) = ${month}`,
+            sql`EXTRACT(YEAR FROM ${expenses.expenseDate}) = ${year}`
+          ));
+
+        const expenseAmount = monthlyExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        
+        data.push({
+          month: monthNames[monthIndex],
+          revenue: revenue,
+          expenses: expenseAmount,
+          profit: revenue - expenseAmount
+        });
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error getting profit/loss chart data:", error);
+      return [];
+    }
+  }
+
+  async getRecentBusinessActivities(companyId: number): Promise<any[]> {
+    try {
+      const activities = [];
+
+      // Recent invoices
+      const recentInvoices = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          totalAmount: invoices.totalAmount,
+          status: invoices.status,
+          createdAt: invoices.createdAt,
+          customerName: customers.name
+        })
+        .from(invoices)
+        .leftJoin(customers, eq(invoices.customerId, customers.id))
+        .where(eq(invoices.companyId, companyId))
+        .orderBy(desc(invoices.createdAt))
+        .limit(5);
+
+      recentInvoices.forEach(invoice => {
+        activities.push({
+          id: invoice.id,
+          type: 'invoice',
+          description: `Invoice ${invoice.invoiceNumber} created`,
+          amount: invoice.totalAmount,
+          date: invoice.createdAt,
+          status: invoice.status,
+          customerName: invoice.customerName
+        });
+      });
+
+      // Recent payments
+      const recentPayments = await db
+        .select({
+          id: payments.id,
+          amount: payments.amount,
+          paymentMethod: payments.paymentMethod,
+          paymentDate: payments.paymentDate,
+          invoiceNumber: invoices.invoiceNumber,
+          customerName: customers.name
+        })
+        .from(payments)
+        .leftJoin(invoices, eq(payments.invoiceId, invoices.id))
+        .leftJoin(customers, eq(invoices.customerId, customers.id))
+        .where(eq(payments.companyId, companyId))
+        .orderBy(desc(payments.paymentDate))
+        .limit(5);
+
+      recentPayments.forEach(payment => {
+        activities.push({
+          id: payment.id,
+          type: 'payment',
+          description: `Payment received - ${payment.paymentMethod}`,
+          amount: payment.amount,
+          date: payment.paymentDate,
+          status: 'completed',
+          customerName: payment.customerName
+        });
+      });
+
+      // Recent expenses
+      const recentExpenses = await db
+        .select()
+        .from(expenses)
+        .where(eq(expenses.companyId, companyId))
+        .orderBy(desc(expenses.expenseDate))
+        .limit(5);
+
+      recentExpenses.forEach(expense => {
+        activities.push({
+          id: expense.id,
+          type: 'expense',
+          description: expense.description,
+          amount: `-${expense.amount}`,
+          date: expense.expenseDate,
+          status: 'completed',
+          customerName: null
+        });
+      });
+
+      // Sort all activities by date and return top 10
+      activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return activities.slice(0, 10);
+    } catch (error) {
+      console.error("Error getting recent business activities:", error);
+      return [];
+    }
+  }
+
+  async getComplianceAlerts(companyId: number): Promise<any[]> {
+    try {
+      const alerts = [];
+      const now = new Date();
+
+      // Check for overdue invoices
+      const overdueInvoices = await db
+        .select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.status, 'pending'),
+          sql`${invoices.dueDate} < ${now.toISOString().split('T')[0]}`
+        ));
+
+      if (overdueInvoices.length > 0) {
+        alerts.push({
+          type: 'overdue',
+          message: `${overdueInvoices.length} overdue invoices require attention`,
+          severity: 'high',
+          action: 'review-invoices'
+        });
+      }
+
+      // Check for low stock items
+      const lowStockProducts = await db
+        .select()
+        .from(products)
+        .where(and(
+          eq(products.companyId, companyId),
+          sql`${products.stockQuantity} <= ${products.reorderLevel}`
+        ));
+
+      if (lowStockProducts.length > 0) {
+        alerts.push({
+          type: 'stock',
+          message: `${lowStockProducts.length} products are below reorder level`,
+          severity: 'medium',
+          action: 'review-inventory'
+        });
+      }
+
+      // VAT compliance check
+      const vatRegistered = await this.getCompanyVATStatus(companyId);
+      if (vatRegistered) {
+        alerts.push({
+          type: 'vat',
+          message: 'VAT return due in 5 days',
+          severity: 'medium',
+          action: 'prepare-vat-return'
+        });
+      }
+
+      return alerts;
+    } catch (error) {
+      console.error("Error getting compliance alerts:", error);
+      return [];
+    }
+  }
+
+  private async getCompanyVATStatus(companyId: number): Promise<boolean> {
+    try {
+      const [company] = await db
+        .select()
+        .from(companies)
+        .where(eq(companies.id, companyId));
+      
+      return company?.isVatRegistered || false;
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Payments
   async getAllPayments(): Promise<Payment[]> {
     return await db.select().from(payments).orderBy(desc(payments.id));
