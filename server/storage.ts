@@ -2171,6 +2171,84 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  private async getCurrentCashPosition(companyId: number): Promise<number> {
+    try {
+      const bankAccounts = await db
+        .select()
+        .from(bankAccounts)
+        .where(eq(bankAccounts.companyId, companyId));
+
+      return bankAccounts.reduce((total, account) => {
+        return total + parseFloat(account.currentBalance || '0');
+      }, 0);
+    } catch (error) {
+      console.error("Error getting current cash position:", error);
+      return 0;
+    }
+  }
+
+  private async getTodayCashInflow(companyId: number): Promise<number> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const todayPayments = await db
+        .select()
+        .from(payments)
+        .where(and(
+          eq(payments.companyId, companyId),
+          eq(payments.status, 'completed'),
+          sql`DATE(${payments.paymentDate}) = ${today}`
+        ));
+
+      return todayPayments.reduce((total, payment) => {
+        return total + parseFloat(payment.amount);
+      }, 0);
+    } catch (error) {
+      console.error("Error getting today's cash inflow:", error);
+      return 0;
+    }
+  }
+
+  private async getTodayCashOutflow(companyId: number): Promise<number> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const todayExpenses = await db
+        .select()
+        .from(expenses)
+        .where(and(
+          eq(expenses.companyId, companyId),
+          sql`DATE(${expenses.expenseDate}) = ${today}`
+        ));
+
+      return todayExpenses.reduce((total, expense) => {
+        return total + parseFloat(expense.amount);
+      }, 0);
+    } catch (error) {
+      console.error("Error getting today's cash outflow:", error);
+      return 0;
+    }
+  }
+
+  async getBankAccountBalances(companyId: number): Promise<any[]> {
+    try {
+      const accounts = await db
+        .select()
+        .from(bankAccounts)
+        .where(eq(bankAccounts.companyId, companyId))
+        .orderBy(desc(bankAccounts.currentBalance));
+
+      return accounts.map(account => ({
+        accountName: account.accountName,
+        accountNumber: account.accountNumber,
+        balance: account.currentBalance || '0.00'
+      }));
+    } catch (error) {
+      console.error("Error getting bank account balances:", error);
+      return [];
+    }
+  }
+
   // Payments
   async getAllPayments(): Promise<Payment[]> {
     return await db.select().from(payments).orderBy(desc(payments.id));

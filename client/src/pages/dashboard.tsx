@@ -2,11 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, FileText, UserPlus } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import StatsGrid from "@/components/dashboard/stats-grid";
+import EnhancedStatsGrid from "@/components/dashboard/enhanced-stats-grid";
+import ProfitLossChart from "@/components/dashboard/profit-loss-chart";
+import RecentActivities from "@/components/dashboard/recent-activities";
+import ComplianceAlerts from "@/components/dashboard/compliance-alerts";
+import ActionShortcuts from "@/components/dashboard/action-shortcuts";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
-import ActivityFeed from "@/components/dashboard/activity-feed";
 import { dashboardApi } from "@/lib/api";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from "@/lib/utils-invoice";
 import { TooltipWizard } from "@/components/onboarding/TooltipWizard";
 import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
@@ -53,7 +55,14 @@ export default function Dashboard() {
     totalCustomers: 0,
     pendingEstimates: 0,
     recentInvoices: [],
-    revenueByMonth: []
+    revenueByMonth: [],
+    receivablesAging: null,
+    payablesAging: null,
+    cashFlowSummary: null,
+    bankBalances: [],
+    profitLossData: [],
+    recentActivities: [],
+    complianceAlerts: []
   };
 
   return (
@@ -86,64 +95,61 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Stats Grid */}
+      {/* Enhanced Stats Grid */}
       <div data-onboarding="dashboard-stats">
-        <StatsGrid stats={dashboardStats} />
+        <EnhancedStatsGrid stats={dashboardStats} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Invoices */}
-        <RecentInvoices invoices={dashboardStats.recentInvoices} />
+      {/* Profit/Loss Chart */}
+      <ProfitLossChart data={dashboardStats.profitLossData || []} />
 
-        {/* Chart Section */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Revenue Overview</h3>
-            <p className="text-sm text-gray-500">Monthly revenue for the past 6 months</p>
-          </div>
-          <div className="p-6">
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardStats.revenueByMonth}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="month" 
-                    tick={{ fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(value) => `R${value.toLocaleString()}`}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [formatCurrency(value.toString()), "Revenue"]}
-                    labelFormatter={(label) => `${label} 2025`}
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="revenue" 
-                    fill="#3b82f6"
-                    radius={[4, 4, 0, 0]}
-                    stroke="#3b82f6"
-                    strokeWidth={0}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Recent Activities */}
+        <div className="xl:col-span-2">
+          <RecentActivities activities={dashboardStats.recentActivities || []} />
+        </div>
+
+        {/* Action Shortcuts */}
+        <div>
+          <ActionShortcuts />
+        </div>
+      </div>
+
+      {/* Compliance Alerts */}
+      <ComplianceAlerts alerts={dashboardStats.complianceAlerts || []} />
+
+      {/* Legacy Recent Invoices (keeping for compatibility) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RecentInvoices invoices={dashboardStats.recentInvoices} />
+        
+        {/* Quick Stats Summary */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Business Summary</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Monthly Revenue Target</span>
+              <span className="font-medium text-gray-900 dark:text-white">R50,000</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Active Customers</span>
+              <span className="font-medium text-gray-900 dark:text-white">{dashboardStats.totalCustomers}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Conversion Rate</span>
+              <span className="font-medium text-green-600 dark:text-green-400">73%</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Average Invoice Value</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {dashboardStats.recentInvoices.length > 0 
+                  ? formatCurrency((parseFloat(dashboardStats.totalRevenue) / dashboardStats.recentInvoices.length).toString())
+                  : "R0.00"
+                }
+              </span>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Activity Feed */}
-      <ActivityFeed />
 
       {/* Onboarding Tooltip Wizard */}
       <TooltipWizard
