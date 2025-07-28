@@ -1439,25 +1439,63 @@ export class DatabaseStorage implements IStorage {
 
   // Estimates
   async getAllEstimates(companyId?: number): Promise<EstimateWithCustomer[]> {
-    let query = db
-      .select({
-        estimate: estimates,
-        customer: customers
-      })
-      .from(estimates)
-      .leftJoin(customers, eq(estimates.customerId, customers.id));
+    try {
+      let query = db
+        .select({
+          id: estimates.id,
+          companyId: estimates.companyId,
+          estimateNumber: estimates.estimateNumber,
+          customerId: estimates.customerId,
+          issueDate: estimates.issueDate,
+          expiryDate: estimates.expiryDate,
+          status: estimates.status,
+          subtotal: estimates.subtotal,
+          vatAmount: estimates.vatAmount,
+          total: estimates.total,
+          notes: estimates.notes,
+          sentAt: estimates.sentAt,
+          viewedAt: estimates.viewedAt,
+          acceptedAt: estimates.acceptedAt,
+          rejectedAt: estimates.rejectedAt,
+          expiredAt: estimates.expiredAt,
+          sentBy: estimates.sentBy,
+          acceptedBy: estimates.acceptedBy,
+          rejectedBy: estimates.rejectedBy,
+          rejectionReason: estimates.rejectionReason,
+          acceptanceNotes: estimates.acceptanceNotes,
+          createdAt: estimates.createdAt,
+          updatedAt: estimates.updatedAt,
+          customer: customers
+        })
+        .from(estimates)
+        .leftJoin(customers, eq(estimates.customerId, customers.id));
 
-    // Apply company filtering if companyId is provided
-    if (companyId) {
-      query = query.where(eq(estimates.companyId, companyId));
+      // Apply company filtering if companyId is provided
+      if (companyId) {
+        query = query.where(eq(estimates.companyId, companyId));
+      }
+
+      const result = await query.orderBy(desc(estimates.id));
+      
+      return result.map(row => ({
+        id: row.id,
+        companyId: row.companyId,
+        estimateNumber: row.estimateNumber,
+        customerId: row.customerId,
+        issueDate: row.issueDate,
+        expiryDate: row.expiryDate,
+        status: row.status,
+        subtotal: row.subtotal,
+        vatAmount: row.vatAmount,
+        total: row.total,
+        notes: row.notes,
+        createdAt: row.createdAt,
+        customer: row.customer!
+      }));
+    } catch (error) {
+      console.error("Error in getAllEstimates:", error);
+      throw error;
     }
-
-    const result = await query.orderBy(desc(estimates.id));
-    
-    return result.map(row => ({
-      ...row.estimate,
-      customer: row.customer!
-    }));
   }
 
   async getEstimate(id: number): Promise<EstimateWithItems | undefined> {
