@@ -72,7 +72,7 @@ export default function PurchaseReportsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R {purchaseOverview.totalPurchases?.toLocaleString() || '285,400'}</div>
+            <div className="text-2xl font-bold">R {purchaseOverview.totalPurchases?.toLocaleString() || '0'}</div>
             <div className="flex items-center text-xs text-green-600 mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />
               +12.5% vs previous period
@@ -86,10 +86,10 @@ export default function PurchaseReportsPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{purchaseOverview.totalOrders || 67}</div>
+            <div className="text-2xl font-bold">{purchaseOverview.totalOrders || 0}</div>
             <div className="flex items-center text-xs text-blue-600 mt-1">
               <Activity className="h-3 w-3 mr-1" />
-              {purchaseOverview.avgOrderValue || 'R 4,261'} avg value
+              {purchaseOverview.avgOrderValue || 'R 0'} avg value
             </div>
           </CardContent>
         </Card>
@@ -100,10 +100,10 @@ export default function PurchaseReportsPage() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{purchaseOverview.activeSuppliers || 23}</div>
+            <div className="text-2xl font-bold">{purchaseOverview.activeSuppliers || 0}</div>
             <div className="flex items-center text-xs text-green-600 mt-1">
               <Target className="h-3 w-3 mr-1" />
-              {purchaseOverview.topSupplierShare || '28%'} top supplier share
+              {purchaseOverview.topSupplierShare || '0%'} top supplier share
             </div>
           </CardContent>
         </Card>
@@ -114,10 +114,10 @@ export default function PurchaseReportsPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{purchaseOverview.avgProcessingTime || '2.8'} days</div>
+            <div className="text-2xl font-bold">{purchaseOverview.avgProcessingTime || '0'} days</div>
             <div className="flex items-center text-xs text-orange-600 mt-1">
               <Clock className="h-3 w-3 mr-1" />
-              {purchaseOverview.onTimeDelivery || '94%'} on-time delivery
+              {purchaseOverview.onTimeDelivery || '0%'} on-time delivery
             </div>
           </CardContent>
         </Card>
@@ -144,11 +144,7 @@ export default function PurchaseReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {(purchaseOverview.monthlyTrend || [
-                    { month: "Jan", amount: 220000, orders: 45 },
-                    { month: "Feb", amount: 250000, orders: 52 },
-                    { month: "Mar", amount: 285400, orders: 67 }
-                  ]).map((item: any) => (
+                  {(purchaseOverview.monthlyTrend || []).map((item: any) => (
                     <div key={item.month} className="flex items-center justify-between">
                       <span className="text-sm font-medium">{item.month}</span>
                       <div className="text-right">
@@ -170,13 +166,7 @@ export default function PurchaseReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {(purchaseOverview.categoryBreakdown || [
-                    { category: "Office Supplies", amount: 85400, percentage: 30 },
-                    { category: "IT Equipment", amount: 71200, percentage: 25 },
-                    { category: "Professional Services", amount: 56800, percentage: 20 },
-                    { category: "Marketing", amount: 42500, percentage: 15 },
-                    { category: "Other", amount: 28500, percentage: 10 }
-                  ]).map((item: any) => (
+                  {(purchaseOverview.categoryBreakdown || []).map((item: any) => (
                     <div key={item.category} className="flex items-center justify-between">
                       <span className="text-sm font-medium">{item.category}</span>
                       <div className="text-right">
@@ -199,12 +189,7 @@ export default function PurchaseReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(purchaseOverview.recentActivity || [
-                  { date: "2025-01-27", description: "Purchase Order PO-2025-001 approved", amount: 15600, status: "completed" },
-                  { date: "2025-01-26", description: "New supplier ABC Corp added", amount: 0, status: "info" },
-                  { date: "2025-01-26", description: "Purchase Order PO-2025-002 pending approval", amount: 8400, status: "pending" },
-                  { date: "2025-01-25", description: "Expense claim processed - Office supplies", amount: 2340, status: "completed" }
-                ]).map((activity: any, index: number) => (
+                {(purchaseOverview.recentActivity || []).map((activity: any, index: number) => (
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className={`p-2 rounded-lg ${

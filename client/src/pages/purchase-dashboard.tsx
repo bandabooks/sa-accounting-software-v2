@@ -57,10 +57,10 @@ export default function PurchaseDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R {purchaseStats.totalPurchases?.toLocaleString() || '245,000'}</div>
-            <div className="flex items-center text-xs text-green-600">
+            <div className="text-2xl font-bold">R {purchaseStats.totalPurchases?.toLocaleString() || '0'}</div>
+            <div className="flex items-center text-xs text-gray-600">
               <TrendingUp className="h-3 w-3 mr-1" />
-              {purchaseStats.purchaseGrowth || '+8.2%'} from last month
+              {purchaseStats.purchaseGrowth ? `${purchaseStats.purchaseGrowth}%` : '0%'} from last month
             </div>
           </CardContent>
         </Card>
@@ -71,10 +71,10 @@ export default function PurchaseDashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{purchaseStats.pendingOrders || 12}</div>
-            <div className="flex items-center text-xs text-orange-600">
+            <div className="text-2xl font-bold">{purchaseStats.pendingOrders || 0}</div>
+            <div className="flex items-center text-xs text-gray-600">
               <Clock className="h-3 w-3 mr-1" />
-              {purchaseStats.avgProcessingTime || '3.2 days'} avg processing
+              {purchaseStats.avgProcessingTime || '0 days'} avg processing
             </div>
           </CardContent>
         </Card>
@@ -85,10 +85,10 @@ export default function PurchaseDashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R {purchaseStats.outstandingAmount?.toLocaleString() || '45,800'}</div>
-            <div className="flex items-center text-xs text-red-600">
+            <div className="text-2xl font-bold">R {purchaseStats.outstandingAmount?.toLocaleString() || '0'}</div>
+            <div className="flex items-center text-xs text-gray-600">
               <AlertTriangle className="h-3 w-3 mr-1" />
-              {purchaseStats.overdueInvoices || 3} overdue invoices
+              {purchaseStats.overdueInvoices || 0} overdue invoices
             </div>
           </CardContent>
         </Card>
@@ -99,10 +99,10 @@ export default function PurchaseDashboard() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{purchaseStats.activeSuppliers || 18}</div>
+            <div className="text-2xl font-bold">{purchaseStats.activeSuppliers || 0}</div>
             <div className="flex items-center text-xs text-green-600">
               <CheckCircle className="h-3 w-3 mr-1" />
-              {purchaseStats.newSuppliers || 2} new this month
+              {purchaseStats.newSuppliers || 0} new this month
             </div>
           </CardContent>
         </Card>

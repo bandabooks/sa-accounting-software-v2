@@ -6,41 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Upload, Download, Search, Filter, Eye, Trash2 } from "lucide-react";
 
-const mockDocuments = [
-  {
-    id: 1,
-    name: "VAT201_ABC_Manufacturing_Feb2025.pdf",
-    client: "ABC Manufacturing (Pty) Ltd",
-    type: "VAT Return",
-    category: "SARS",
-    size: "2.4 MB",
-    uploadDate: "2025-01-23",
-    status: "approved",
-    uploadedBy: "John Smith"
-  },
-  {
-    id: 2,
-    name: "Annual_Return_XYZ_Services_2024.pdf",
-    client: "XYZ Services CC",
-    type: "Annual Return",
-    category: "CIPC",
-    size: "1.8 MB",
-    uploadDate: "2025-01-22",
-    status: "pending_review",
-    uploadedBy: "Sarah Johnson"
-  },
-  {
-    id: 3,
-    name: "EE_Report_Tech_Solutions_2024.xlsx",
-    client: "Tech Solutions Ltd",
-    type: "Employment Equity",
-    category: "Labour",
-    size: "956 KB",
-    uploadDate: "2025-01-21",
-    status: "draft",
-    uploadedBy: "Mike Wilson"
-  }
-];
+// Real compliance documents will be loaded from API - no mock data
+const documents: any[] = [];
 
 export default function ComplianceDocuments() {
   const [searchTerm, setSearchTerm] = useState("");

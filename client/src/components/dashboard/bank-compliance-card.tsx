@@ -103,14 +103,8 @@ export default function BankComplianceCard({ bankBalances = [], complianceAlerts
     );
   }
 
-  // Show Compliance Alerts card - always show with demo content if no alerts
-  const demoAlerts = [
-    { type: 'vat', message: 'VAT Return due in 7 days', severity: 'high' as const, action: 'Submit VAT201' },
-    { type: 'overdue', message: '3 overdue invoices require follow-up', severity: 'medium' as const, action: 'Contact customers' },
-    { type: 'stock', message: 'Low stock alert for 5 products', severity: 'low' as const, action: 'Reorder stock' }
-  ];
-  
-  const alertsToShow = complianceAlerts.length > 0 ? complianceAlerts : demoAlerts;
+  // Show only real compliance alerts - no demo data
+  const alertsToShow = complianceAlerts;
   const highPriorityAlerts = alertsToShow.filter(alert => alert.severity === 'high');
   const urgentAlerts = alertsToShow.slice(0, 4); // Show max 4 alerts
 

@@ -4,32 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
-const mockEvents = [
-  {
-    id: 1,
-    title: "VAT201 Return Due",
-    client: "ABC Manufacturing",
-    type: "SARS",
-    date: "2025-02-28",
-    status: "pending"
-  },
-  {
-    id: 2,
-    title: "Annual Return Filing",
-    client: "XYZ Services",
-    type: "CIPC", 
-    date: "2025-03-15",
-    status: "scheduled"
-  },
-  {
-    id: 3,
-    title: "Employment Equity Report",
-    client: "Tech Solutions",
-    type: "Labour",
-    date: "2025-01-15",
-    status: "overdue"
-  }
-];
+// Real compliance events will be loaded from API - no mock data
+const events: any[] = [];
 
 export default function ComplianceCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -59,7 +35,7 @@ export default function ComplianceCalendar() {
 
   const getEventsForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return mockEvents.filter(event => event.date === dateStr);
+    return events.filter(event => event.date === dateStr);
   };
 
   const getStatusColor = (status: string) => {
