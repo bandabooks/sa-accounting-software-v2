@@ -2856,20 +2856,15 @@ export class DatabaseStorage implements IStorage {
 
   // Products
   async getAllProducts(companyId?: number): Promise<Product[]> {
-    try {
-      const query = `
-        SELECT * FROM products 
-        WHERE is_active = true 
-        ${companyId ? `AND company_id = ${companyId}` : ''}
-        ORDER BY created_at DESC
-      `;
-      
-      const result = await db.execute(sql`${sql.raw(query)}`);
-      return result as Product[];
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      throw error;
+    let query = db.select().from(products).where(eq(products.isActive, true));
+    
+    // Apply company filtering if companyId is provided
+    if (companyId) {
+      query = query.where(and(eq(products.isActive, true), eq(products.companyId, companyId)));
     }
+    
+    const result = await query.orderBy(desc(products.createdAt));
+    return result;
   }
 
   async getProduct(id: number): Promise<Product | undefined> {

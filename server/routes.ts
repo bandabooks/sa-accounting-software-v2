@@ -2224,8 +2224,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Products routes
   app.get("/api/products", authenticate, async (req, res) => {
     try {
-      const products = await storage.getAllProducts();
-      res.json(products);
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const products = await storage.getAllProducts(companyId);
+      
+      // Handle the case where the result might be a database query result object
+      const productsArray = Array.isArray(products) ? products : (products as any)?.rows || [];
+      
+      res.json(productsArray);
     } catch (error) {
       console.error("Error fetching products:", error);
       res.status(500).json({ message: "Failed to fetch products" });

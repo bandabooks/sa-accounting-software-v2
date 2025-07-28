@@ -56,7 +56,7 @@ export default function Products() {
     },
   });
 
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = (Array.isArray(products) ? products : []).filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase());
