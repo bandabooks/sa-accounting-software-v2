@@ -2852,21 +2852,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sales Stats API
   app.get("/api/sales/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      const companyId = req.user!.companyId;
+      
+      // Get real sales data from invoices
+      const invoices = await storage.getInvoices(companyId);
+      const totalSales = invoices
+        .filter(invoice => invoice.status === 'paid' || invoice.status === 'sent')
+        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+      
+      // Get estimates/quotes
+      const estimates = await storage.getEstimates(companyId);
+      const quotesCount = estimates.length;
+      
+      // Get outstanding invoices
+      const outstandingInvoices = invoices.filter(invoice => 
+        invoice.status === 'sent' || invoice.status === 'overdue'
+      );
+      const outstandingAmount = outstandingInvoices
+        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+      
+      // Get overdue invoices
+      const overdueInvoices = invoices.filter(invoice => {
+        if (invoice.status !== 'overdue') return false;
+        const dueDate = new Date(invoice.dueDate);
+        return dueDate < new Date();
+      });
+      
+      // Get customers
+      const customers = await storage.getCustomers(companyId);
+      const activeCustomers = customers.filter(customer => customer.isActive !== false).length;
+      
+      // Calculate growth (compare with previous month)
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const currentMonthInvoices = invoices.filter(invoice => {
+        const invoiceDate = new Date(invoice.invoiceDate);
+        return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
+      });
+      const currentMonthSales = currentMonthInvoices
+        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+      
+      const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      const previousMonthInvoices = invoices.filter(invoice => {
+        const invoiceDate = new Date(invoice.invoiceDate);
+        return invoiceDate.getMonth() === previousMonth && invoiceDate.getFullYear() === previousYear;
+      });
+      const previousMonthSales = previousMonthInvoices
+        .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
+      
+      const salesGrowth = previousMonthSales > 0 
+        ? ((currentMonthSales - previousMonthSales) / previousMonthSales) * 100
+        : currentMonthSales > 0 ? 100 : 0;
+
       const stats = {
-        totalSales: 150000,
-        salesGrowth: 12.5,
-        totalOrders: 45,
-        pendingOrders: 8,
-        outstandingAmount: 25000,
-        overdueInvoices: 3,
-        activeCustomers: 28,
-        newCustomers: 5,
-        quotesCount: 12,
-        ordersCount: 15,
-        invoicesCount: 32,
-        deliveredCount: 28,
-        totalPipeline: 87
+        totalSales: Math.round(totalSales),
+        salesGrowth: Math.round(salesGrowth * 10) / 10,
+        totalOrders: invoices.length,
+        pendingOrders: invoices.filter(invoice => invoice.status === 'draft').length,
+        outstandingAmount: Math.round(outstandingAmount),
+        overdueInvoices: overdueInvoices.length,
+        activeCustomers: activeCustomers,
+        newCustomers: customers.filter(customer => {
+          const createdDate = new Date(customer.createdAt || customer.createdDate || '');
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          return createdDate > oneMonthAgo;
+        }).length,
+        quotesCount: quotesCount,
+        ordersCount: invoices.filter(invoice => invoice.status === 'sent' || invoice.status === 'paid').length,
+        invoicesCount: invoices.length,
+        deliveredCount: invoices.filter(invoice => invoice.status === 'paid').length,
+        totalPipeline: quotesCount + invoices.filter(invoice => invoice.status === 'draft' || invoice.status === 'sent').length
       };
+      
       res.json(stats);
     } catch (error) {
       console.error("Error fetching sales stats:", error);
