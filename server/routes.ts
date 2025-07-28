@@ -2855,13 +2855,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = req.user!.companyId;
       
       // Get real sales data from invoices
-      const invoices = await storage.getInvoices(companyId);
+      const invoices = await storage.getAllInvoices(companyId);
       const totalSales = invoices
         .filter(invoice => invoice.status === 'paid' || invoice.status === 'sent')
         .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount), 0);
       
       // Get estimates/quotes
-      const estimates = await storage.getEstimates(companyId);
+      const estimates = await storage.getAllEstimates(companyId);
       const quotesCount = estimates.length;
       
       // Get outstanding invoices
@@ -2879,7 +2879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Get customers
-      const customers = await storage.getCustomers(companyId);
+      const customers = await storage.getAllCustomers(companyId);
       const activeCustomers = customers.filter(customer => customer.isActive !== false).length;
       
       // Calculate growth (compare with previous month)
