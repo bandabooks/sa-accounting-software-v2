@@ -112,6 +112,8 @@ export default function UnifiedUserManagement() {
   const [selectedRole, setSelectedRole] = useState<any>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [selectedUserForLogin, setSelectedUserForLogin] = useState<any>(null);
+  const [loginAsUserModalOpen, setLoginAsUserModalOpen] = useState(false);
 
   // Fetch users
   const { data: users = [], isLoading: usersLoading } = useQuery<any[]>({
@@ -122,6 +124,50 @@ export default function UnifiedUserManagement() {
   const { data: systemRoles = [], isLoading: rolesLoading } = useQuery<any[]>({
     queryKey: ["/api/rbac/system-roles"],
   });
+
+  // Log in as user function for support and troubleshooting
+  const loginAsUser = async (userId: number) => {
+    try {
+      const response = await apiRequest(`/api/super-admin/impersonate/${userId}`, "POST");
+      const result = await response.json();
+      
+      if (result.token) {
+        // Store the new token and redirect to dashboard
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('sessionToken', result.sessionToken || result.token);
+        localStorage.setItem('userData', JSON.stringify(result.user));
+        
+        showSuccess({
+          title: "Successfully Logged In As User",
+          description: `You are now logged in as ${result.user.name || result.user.username}. Redirecting to dashboard...`
+        });
+        
+        // Redirect after a short delay to show the success message
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 2000);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to log in as user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLoginAsUser = (user: any) => {
+    setSelectedUserForLogin(user);
+    setLoginAsUserModalOpen(true);
+  };
+
+  const confirmLoginAsUser = () => {
+    if (selectedUserForLogin) {
+      loginAsUser(selectedUserForLogin.id);
+      setLoginAsUserModalOpen(false);
+      setSelectedUserForLogin(null);
+    }
+  };
 
   // Fetch permissions matrix
   const { data: permissionsMatrix = { roles: [] } } = useQuery<any>({
@@ -474,6 +520,15 @@ export default function UnifiedUserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleLoginAsUser(user)}
+                        title="Log in as this user for support and troubleshooting purposes"
+                      >
+                        <UserCheck size={14} />
+                        <span className="ml-1 text-xs">Log In As User</span>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1315,6 +1370,56 @@ export default function UnifiedUserManagement() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Login As User Confirmation Modal */}
+      <Dialog open={loginAsUserModalOpen} onOpenChange={setLoginAsUserModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <UserCheck className="h-5 w-5 text-blue-600" />
+              <span>Confirm Login As User</span>
+            </DialogTitle>
+            <DialogDescription>
+              This will log you in as {selectedUserForLogin?.name || selectedUserForLogin?.username} for support and troubleshooting purposes. 
+              You'll be redirected to their dashboard and can perform actions on their behalf.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedUserForLogin && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
+                    {selectedUserForLogin.name?.[0] || selectedUserForLogin.username?.[0] || "U"}
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {selectedUserForLogin.name || selectedUserForLogin.username}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {selectedUserForLogin.email}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setLoginAsUserModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmLoginAsUser}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <UserCheck size={16} className="mr-2" />
+                Confirm Login
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
