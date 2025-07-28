@@ -116,6 +116,8 @@ import ProductBundles from "@/pages/product-bundles";
 import InventoryReports from "@/pages/inventory-reports";
 import ProductLots from "@/pages/product-lots";
 import ProductSerials from "@/pages/product-serials";
+import Payments from "@/pages/payments";
+import NewPayment from "@/pages/payments/new";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -250,6 +252,16 @@ function AuthenticatedApp() {
         <Route path="/customer-payments">
           <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
             <CustomerPayments />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/payments">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <Payments />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/payments/new">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <NewPayment />
           </ProtectedRoute>
         </Route>
         <Route path="/sales-reports">

@@ -7,6 +7,7 @@ import ProfitLossChart from "@/components/dashboard/profit-loss-chart";
 import RecentActivities from "@/components/dashboard/recent-activities";
 import ComplianceAlerts from "@/components/dashboard/compliance-alerts";
 import ActionShortcuts from "@/components/dashboard/action-shortcuts";
+import BankComplianceCard from "@/components/dashboard/bank-compliance-card";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
 import { dashboardApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils-invoice";
@@ -114,6 +115,12 @@ export default function Dashboard() {
           <ActionShortcuts />
         </div>
       </div>
+
+      {/* Bank Accounts / Compliance Alerts Card */}
+      <BankComplianceCard 
+        bankBalances={dashboardStats.bankBalances || []}
+        complianceAlerts={dashboardStats.complianceAlerts || []}
+      />
 
       {/* Compliance Alerts */}
       <ComplianceAlerts alerts={dashboardStats.complianceAlerts || []} />

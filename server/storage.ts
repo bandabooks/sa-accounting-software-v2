@@ -2033,10 +2033,10 @@ export class DatabaseStorage implements IStorage {
           id: invoice.id,
           type: 'invoice',
           description: `Invoice ${invoice.invoiceNumber} created`,
-          amount: invoice.totalAmount,
+          amount: invoice.totalAmount || '0.00',
           date: invoice.createdAt,
           status: invoice.status,
-          customerName: invoice.customerName
+          customerName: invoice.customerName || 'Unknown Customer'
         });
       });
 
@@ -2104,13 +2104,14 @@ export class DatabaseStorage implements IStorage {
       const now = new Date();
 
       // Check for overdue invoices
+      const todayStr = now.toISOString().split('T')[0];
       const overdueInvoices = await db
         .select()
         .from(invoices)
         .where(and(
           eq(invoices.companyId, companyId),
           eq(invoices.status, 'pending'),
-          sql`${invoices.dueDate} < ${now.toISOString().split('T')[0]}`
+          sql`${invoices.dueDate} < ${todayStr}`
         ));
 
       if (overdueInvoices.length > 0) {
@@ -2122,13 +2123,13 @@ export class DatabaseStorage implements IStorage {
         });
       }
 
-      // Check for low stock items
+      // Check for low stock items  
       const lowStockProducts = await db
         .select()
         .from(products)
         .where(and(
           eq(products.companyId, companyId),
-          sql`${products.stockQuantity} <= ${products.reorderLevel}`
+          sql`COALESCE(${products.stockQuantity}, 0) <= COALESCE(${products.reorderLevel}, 0)`
         ));
 
       if (lowStockProducts.length > 0) {
