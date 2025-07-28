@@ -129,8 +129,11 @@ export default function TrialSignup() {
         description: `Your 14-day free trial has started. Welcome aboard, ${data.user.name}!`,
       });
       
-      // Redirect to onboarding wizard
-      window.location.href = '/onboarding?trial=true';
+      // Wait a moment for authentication state to update, then redirect
+      setTimeout(() => {
+        // Redirect to dashboard for trial users since they've provided company info during signup
+        setLocation('/dashboard?trial=welcome');
+      }, 500);
     },
     onError: (error: Error) => {
       console.error('Signup error:', error);
