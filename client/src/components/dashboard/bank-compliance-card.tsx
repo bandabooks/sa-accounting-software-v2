@@ -24,11 +24,6 @@ interface BankComplianceCardProps {
 export default function BankComplianceCard({ bankBalances = [], complianceAlerts = [] }: BankComplianceCardProps) {
   // Check if banking integration is enabled (has bank accounts)
   const hasBankingIntegration = bankBalances && bankBalances.length > 0;
-  
-  // Only show if we have either bank accounts or compliance alerts
-  if (!hasBankingIntegration && (!complianceAlerts || complianceAlerts.length === 0)) {
-    return null;
-  }
 
   if (hasBankingIntegration) {
     // Show Bank Accounts card
@@ -108,9 +103,16 @@ export default function BankComplianceCard({ bankBalances = [], complianceAlerts
     );
   }
 
-  // Show Compliance Alerts card
-  const highPriorityAlerts = complianceAlerts.filter(alert => alert.severity === 'high');
-  const urgentAlerts = complianceAlerts.slice(0, 4); // Show max 4 alerts
+  // Show Compliance Alerts card - always show with demo content if no alerts
+  const demoAlerts = [
+    { type: 'vat', message: 'VAT Return due in 7 days', severity: 'high' as const, action: 'Submit VAT201' },
+    { type: 'overdue', message: '3 overdue invoices require follow-up', severity: 'medium' as const, action: 'Contact customers' },
+    { type: 'stock', message: 'Low stock alert for 5 products', severity: 'low' as const, action: 'Reorder stock' }
+  ];
+  
+  const alertsToShow = complianceAlerts.length > 0 ? complianceAlerts : demoAlerts;
+  const highPriorityAlerts = alertsToShow.filter(alert => alert.severity === 'high');
+  const urgentAlerts = alertsToShow.slice(0, 4); // Show max 4 alerts
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
@@ -151,7 +153,7 @@ export default function BankComplianceCard({ bankBalances = [], complianceAlerts
           <div className="flex items-center space-x-1">
             <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
             <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-              {complianceAlerts.length} total alerts
+              {alertsToShow.length} total alerts
             </span>
           </div>
         </div>
