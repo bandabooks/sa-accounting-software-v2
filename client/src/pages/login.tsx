@@ -188,8 +188,8 @@ export default function Login() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
+      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-8 bg-white">
+        <div className="w-full max-w-md mx-auto">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center mb-8">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
