@@ -163,8 +163,13 @@ export default function TrialSignup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500 rounded-full filter blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-500 rounded-full filter blur-3xl"></div>
+      </div>
+      <div className="w-full max-w-4xl relative z-10">
         {/* Header with Logo and Progress */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-6">
@@ -237,9 +242,10 @@ export default function TrialSignup() {
         </div>
 
         {/* Main Form Card */}
-        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl mx-auto max-w-3xl">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-8">
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl mx-auto max-w-4xl rounded-3xl overflow-hidden">
+          <div className="p-12">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               
               {/* Step 1: Plan Selection */}
               {step === 1 && (
@@ -253,47 +259,47 @@ export default function TrialSignup() {
                       Select the plan that best fits your business needs. You can change this anytime during your trial.
                     </p>
                   </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                       {plans.map((plan) => (
                         <div
                           key={plan.id}
-                          className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all ${
+                          className={`relative border-2 rounded-2xl p-8 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-xl ${
                             form.watch('planId') === plan.id
-                              ? 'border-blue-600 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
+                              ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg scale-105'
+                              : 'border-gray-200 hover:border-blue-300 bg-white hover:shadow-lg'
                           }`}
                           onClick={() => form.setValue('planId', plan.id)}
                         >
                           {plan.popular && (
-                            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                              <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                                Most Popular
+                            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                                ⭐ Most Popular
                               </span>
                             </div>
                           )}
                           
-                          <div className="text-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h3>
-                            <div className="text-3xl font-bold text-gray-900 mb-2">
+                          <div className="text-center mb-6">
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                            <div className="text-4xl font-bold text-gray-900 mb-3">
                               {plan.price}
-                              <span className="text-sm text-gray-500">/month</span>
+                              <span className="text-lg text-gray-500 font-normal">/month</span>
                             </div>
-                            <p className="text-gray-600 text-sm">{plan.description}</p>
+                            <p className="text-gray-600 text-base leading-relaxed">{plan.description}</p>
                           </div>
                           
-                          <ul className="space-y-2">
+                          <ul className="space-y-3">
                             {plan.features.map((feature, index) => (
-                              <li key={index} className="flex items-center space-x-2 text-sm">
-                                <CheckCircle className="text-green-500 flex-shrink-0" size={16} />
-                                <span className="text-gray-700">{feature}</span>
+                              <li key={index} className="flex items-center space-x-3 text-base">
+                                <CheckCircle className="text-green-500 flex-shrink-0" size={18} />
+                                <span className="text-gray-700 font-medium">{feature}</span>
                               </li>
                             ))}
                           </ul>
                           
                           {form.watch('planId') === plan.id && (
-                            <div className="absolute top-4 right-4">
-                              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                                <CheckCircle className="text-white" size={16} />
+                            <div className="absolute top-6 right-6">
+                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                                <Check className="text-white" size={18} />
                               </div>
                             </div>
                           )}
@@ -314,14 +320,17 @@ export default function TrialSignup() {
                       )}
                     />
                     
-                    <div className="flex justify-end mt-6">
-                      <Button onClick={nextStep} className="px-8">
-                        Continue
-                        <ArrowRight className="ml-2" size={16} />
+                    <div className="flex justify-end mt-10">
+                      <Button 
+                        type="button" 
+                        onClick={nextStep}
+                        className="h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-12 shadow-xl transition-all duration-300 transform hover:scale-[1.05] rounded-xl text-lg"
+                        disabled={!form.watch('planId')}
+                      >
+                        Continue <ArrowRight className="ml-2" size={20} />
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
               )}
 
               {/* Step 2: Personal & Company Information */}
@@ -344,9 +353,9 @@ export default function TrialSignup() {
                         name="firstName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>First Name *</FormLabel>
+                            <FormLabel className="text-sm font-semibold text-gray-700">First Name *</FormLabel>
                             <FormControl>
-                              <Input placeholder="John" {...field} />
+                              <Input placeholder="John" className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -357,9 +366,9 @@ export default function TrialSignup() {
                         name="lastName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Last Name *</FormLabel>
+                            <FormLabel className="text-sm font-semibold text-gray-700">Last Name *</FormLabel>
                             <FormControl>
-                              <Input placeholder="Smith" {...field} />
+                              <Input placeholder="Smith" className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -372,11 +381,11 @@ export default function TrialSignup() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email Address *</FormLabel>
+                          <FormLabel className="text-sm font-semibold text-gray-700">Email Address *</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                              <Input placeholder="john@company.com" className="pl-10" {...field} />
+                              <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <Input placeholder="john@company.com" className="h-12 pl-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -389,11 +398,11 @@ export default function TrialSignup() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password *</FormLabel>
+                          <FormLabel className="text-sm font-semibold text-gray-700">Password *</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                              <Input type="password" placeholder="Minimum 8 characters" className="pl-10" {...field} />
+                              <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                              <Input type="password" placeholder="Minimum 8 characters" className="h-12 pl-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl" {...field} />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -414,9 +423,12 @@ export default function TrialSignup() {
                           name="companyName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Company Name *</FormLabel>
+                              <FormLabel className="text-sm font-semibold text-gray-700">Company Name *</FormLabel>
                               <FormControl>
-                                <Input placeholder="Your Company Name" {...field} />
+                                <div className="relative">
+                                  <Building className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                                  <Input placeholder="Your Company Name" className="h-12 pl-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl" {...field} />
+                                </div>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -477,13 +489,22 @@ export default function TrialSignup() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between">
-                      <Button type="button" variant="outline" onClick={prevStep}>
+                    <div className="flex justify-between mt-8">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={prevStep}
+                        className="h-12 px-8 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl"
+                      >
+                        <ArrowLeft className="mr-2" size={18} />
                         Back
                       </Button>
-                      <Button onClick={nextStep} className="px-8">
-                        Continue
-                        <ArrowRight className="ml-2" size={16} />
+                      <Button 
+                        type="button"
+                        onClick={nextStep} 
+                        className="h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-10 shadow-lg transition-all duration-300 transform hover:scale-[1.02] rounded-xl text-base"
+                      >
+                        Continue <ArrowRight className="ml-2" size={18} />
                       </Button>
                     </div>
                   </CardContent>
@@ -611,18 +632,18 @@ export default function TrialSignup() {
                       </Button>
                       <Button 
                         type="submit" 
-                        className="bg-green-600 hover:bg-green-700 px-8"
+                        className="h-14 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold px-12 shadow-xl transition-all duration-300 transform hover:scale-[1.05] rounded-xl text-lg"
                         disabled={signupMutation.isPending}
                       >
                         {signupMutation.isPending ? (
-                          <>
-                            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                            Starting Trial...
-                          </>
+                          <div className="flex items-center gap-3">
+                            <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                            Creating Your Account...
+                          </div>
                         ) : (
                           <>
+                            <CheckCircle className="mr-3" size={20} />
                             Start My Free Trial
-                            <ArrowRight className="ml-2" size={16} />
                           </>
                         )}
                       </Button>
@@ -630,18 +651,45 @@ export default function TrialSignup() {
                   </CardContent>
                 </Card>
               )}
-            </form>
-          </Form>
-
-          {/* Footer */}
-          <div className="text-center mt-8 text-sm text-gray-600">
-            Already have an account?{' '}
-            <a href="/login" className="text-blue-600 hover:underline font-medium">
-              Sign in here
+              </form>
+            </Form>
+          </div>
+        </Card>
+        
+        {/* Professional Footer */}
+        <div className="text-center mt-8 space-y-4">
+          <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-green-500" />
+              <span>Enterprise Security</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-blue-500" />
+              <span>SARS Compliant</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-purple-500" />
+              <span>500+ Active Businesses</span>
+            </div>
+          </div>
+          
+          <div className="text-sm text-gray-500">
+            Need help? Contact our support team at{" "}
+            <a href="mailto:support@taxnify.co.za" className="text-blue-600 hover:text-blue-700 underline font-medium">
+              support@taxnify.co.za
             </a>
           </div>
+          
+          <Button
+            type="button"
+            variant="link"
+            className="text-blue-600 hover:text-blue-700 font-semibold text-base"
+            onClick={() => setLocation("/login")}
+          >
+            Already have an account? Sign in →
+          </Button>
         </div>
       </div>
-    </MarketingLayout>
+    </div>
   );
 }
