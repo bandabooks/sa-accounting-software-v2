@@ -97,7 +97,17 @@ export default function ProductCreate() {
   });
 
   const onSubmit = (data: ProductFormData) => {
-    createProductMutation.mutate(data);
+    // Convert string fields to proper types for backend
+    const formattedData = {
+      ...data,
+      categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
+      unitPrice: parseFloat(data.unitPrice),
+      costPrice: data.costPrice ? parseFloat(data.costPrice) : undefined,
+      vatRate: data.vatRate ? parseFloat(data.vatRate) : undefined,
+      incomeAccountId: parseInt(data.incomeAccountId),
+      expenseAccountId: parseInt(data.expenseAccountId),
+    };
+    createProductMutation.mutate(formattedData);
   };
 
   const isService = form.watch("isService");
