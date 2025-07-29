@@ -319,6 +319,106 @@ const EnhancedBulkCapture = () => {
     }
   }, [activeTab, quickDate]);
 
+  // Save expense entries mutation
+  const saveExpensesMutation = useMutation({
+    mutationFn: async () => {
+      const validEntries = expenseEntries.filter(entry => 
+        entry.description && 
+        parseFloat(entry.amount) > 0 && 
+        entry.categoryId > 0
+      );
+      
+      if (validEntries.length === 0) {
+        throw new Error('No valid entries to save');
+      }
+
+      return await apiRequest('/api/bulk-capture/sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionType: 'expense',
+          entries: validEntries.map(entry => ({
+            transactionDate: entry.transactionDate,
+            categoryId: entry.categoryId,
+            description: entry.description,
+            amount: parseFloat(entry.amount),
+            supplierId: entry.supplierId || null,
+            bankAccountId: entry.bankAccountId || null,
+            vatTransactionType: entry.vatTransactionType,
+            vatRate: parseFloat(entry.vatRate),
+            vatAmount: parseFloat(entry.vatAmount),
+            reference: entry.reference || null,
+            notes: entry.notes || null,
+          }))
+        })
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `Successfully saved ${expenseCalculations.activeEntries} expense entries`,
+      });
+      // Reset the form
+      initializeExpenseEntries();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save expense entries",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Save income entries mutation
+  const saveIncomesMutation = useMutation({
+    mutationFn: async () => {
+      const validEntries = incomeEntries.filter(entry => 
+        entry.description && 
+        parseFloat(entry.amount) > 0 && 
+        entry.incomeAccountId > 0
+      );
+      
+      if (validEntries.length === 0) {
+        throw new Error('No valid entries to save');
+      }
+
+      return await apiRequest('/api/bulk-capture/sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionType: 'income',
+          entries: validEntries.map(entry => ({
+            transactionDate: entry.transactionDate,
+            incomeAccountId: entry.incomeAccountId,
+            description: entry.description,
+            amount: parseFloat(entry.amount),
+            clientId: entry.clientId || null,
+            bankAccountId: entry.bankAccountId || null,
+            vatTransactionType: entry.vatTransactionType,
+            vatRate: parseFloat(entry.vatRate),
+            vatAmount: parseFloat(entry.vatAmount),
+            reference: entry.reference || null,
+            notes: entry.notes || null,
+          }))
+        })
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `Successfully saved ${incomeCalculations.activeEntries} income entries`,
+      });
+      // Reset the form
+      initializeIncomeEntries();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save income entries",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -470,9 +570,13 @@ const EnhancedBulkCapture = () => {
                 <Plus className="w-4 h-4 mr-2" />
                 Add 5 Rows
               </Button>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => saveIncomesMutation.mutate()}
+                disabled={saveIncomesMutation.isPending}
+              >
                 <Save className="w-4 h-4 mr-2" />
-                Save All Income
+                {saveIncomesMutation.isPending ? 'Saving...' : 'Save All Income'}
               </Button>
             </div>
           </div>
@@ -681,18 +785,203 @@ const EnhancedBulkCapture = () => {
                 <Plus className="w-4 h-4 mr-2" />
                 Add Rows
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => saveExpensesMutation.mutate()}
+                disabled={saveExpensesMutation.isPending}
+              >
                 <Save className="w-4 h-4 mr-2" />
-                Save All Expenses
+                {saveExpensesMutation.isPending ? 'Saving...' : 'Save All Expenses'}
               </Button>
             </div>
           </div>
 
-          {/* Similar table structure for expenses would follow here */}
+          {/* Expense Entry Table */}
           <Card>
-            <CardContent className="p-4">
-              <div className="text-center text-gray-500 py-8">
-                Expense entry table implementation similar to income table above...
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <Calendar className="w-4 h-4 inline mr-2" />
+                        Date
+                      </th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Expense Account</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Amount (R)</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Supplier/Vendor</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">VAT Treatment</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Bank Account</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expenseEntries.map((entry, index) => (
+                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3">
+                          <Input
+                            type="date"
+                            value={entry.transactionDate}
+                            onChange={(e) => updateExpenseEntry(index, 'transactionDate', e.target.value)}
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.categoryId.toString()}
+                            onValueChange={(value) => updateExpenseEntry(index, 'categoryId', parseInt(value))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose expense..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {chartOfAccounts
+                                .filter(account => account.accountType === 'Expense' || account.accountType === 'Cost of Goods Sold')
+                                .map(account => (
+                                  <SelectItem key={account.id} value={account.id.toString()}>
+                                    {account.accountCode} - {account.accountName}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            value={entry.description}
+                            onChange={(e) => updateExpenseEntry(index, 'description', e.target.value)}
+                            placeholder="Expense description..."
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={entry.amount}
+                            onChange={(e) => updateExpenseEntry(index, 'amount', e.target.value)}
+                            placeholder="0.00"
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.supplierId?.toString() || ''}
+                            onValueChange={(value) => updateExpenseEntry(index, 'supplierId', value ? parseInt(value) : 0)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {suppliers.map(supplier => (
+                                <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.vatTransactionType}
+                            onValueChange={(value) => updateExpenseEntry(index, 'vatTransactionType', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="vat_inclusive">VAT Inclusive (15%)</SelectItem>
+                              <SelectItem value="vat_exclusive">VAT Exclusive (15%)</SelectItem>
+                              <SelectItem value="zero_rated">Zero Rated</SelectItem>
+                              <SelectItem value="exempt">Exempt</SelectItem>
+                              <SelectItem value="no_vat">No VAT</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={entry.bankAccountId?.toString() || ''}
+                            onValueChange={(value) => updateExpenseEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose bank..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map(account => (
+                                <SelectItem key={account.id} value={account.id.toString()}>
+                                  {account.accountName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* VAT Breakdown for Expenses */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
+                <Calculator className="w-4 h-4 mr-2" />
+                VAT Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <div className="text-xs text-blue-600 font-medium">VAT Inclusive</div>
+                  <div className="text-lg font-bold text-blue-900">
+                    R {expenseEntries
+                      .filter(e => e.vatTransactionType === 'vat_inclusive' && parseFloat(e.amount) > 0)
+                      .reduce((sum, e) => sum + parseFloat(e.amount), 0)
+                      .toFixed(2)
+                    }
+                  </div>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <div className="text-xs text-green-600 font-medium">VAT Exclusive</div>
+                  <div className="text-lg font-bold text-green-900">
+                    R {expenseEntries
+                      .filter(e => e.vatTransactionType === 'vat_exclusive' && parseFloat(e.amount) > 0)
+                      .reduce((sum, e) => sum + parseFloat(e.amount), 0)
+                      .toFixed(2)
+                    }
+                  </div>
+                </div>
+                <div className="bg-yellow-50 p-3 rounded-lg">
+                  <div className="text-xs text-yellow-600 font-medium">Zero Rated</div>
+                  <div className="text-lg font-bold text-yellow-900">
+                    R {expenseEntries
+                      .filter(e => e.vatTransactionType === 'zero_rated' && parseFloat(e.amount) > 0)
+                      .reduce((sum, e) => sum + parseFloat(e.amount), 0)
+                      .toFixed(2)
+                    }
+                  </div>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <div className="text-xs text-purple-600 font-medium">Exempt</div>
+                  <div className="text-lg font-bold text-purple-900">
+                    R {expenseEntries
+                      .filter(e => e.vatTransactionType === 'exempt' && parseFloat(e.amount) > 0)
+                      .reduce((sum, e) => sum + parseFloat(e.amount), 0)
+                      .toFixed(2)
+                    }
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="text-xs text-gray-600 font-medium">No VAT</div>
+                  <div className="text-lg font-bold text-gray-900">
+                    R {expenseEntries
+                      .filter(e => e.vatTransactionType === 'no_vat' && parseFloat(e.amount) > 0)
+                      .reduce((sum, e) => sum + parseFloat(e.amount), 0)
+                      .toFixed(2)
+                    }
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
