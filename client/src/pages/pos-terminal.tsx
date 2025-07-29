@@ -257,14 +257,14 @@ export default function POSTerminalPage() {
             </CardHeader>
             <CardContent>
               <Select
-                value={selectedCustomerId?.toString() || ''}
-                onValueChange={(value) => setSelectedCustomerId(value ? parseInt(value) : null)}
+                value={selectedCustomerId?.toString() || 'walk-in'}
+                onValueChange={(value) => setSelectedCustomerId(value === 'walk-in' ? null : parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Walk-in Customer</SelectItem>
+                  <SelectItem value="walk-in">Walk-in Customer</SelectItem>
                   {customers.map((customer: any) => (
                     <SelectItem key={customer.id} value={customer.id.toString()}>
                       {customer.name} - {customer.email || 'No email'}
