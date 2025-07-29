@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertChartOfAccountSchema, type ChartOfAccountWithBalance } from "@shared/schema";
-import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, Zap, Power, PowerOff } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, Zap, Power, PowerOff, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -85,7 +85,7 @@ export default function ChartOfAccounts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: rawAccounts = [], isLoading } = useQuery({
+  const { data: rawAccounts = [], isLoading, refetch: refetchAccounts } = useQuery({
     queryKey: ["/api/chart-of-accounts"],
   });
 
@@ -325,6 +325,15 @@ export default function ChartOfAccounts() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => refetchAccounts()}
+            className="flex items-center gap-2 text-blue-600 border-blue-600 hover:bg-blue-50"
+            title="Refresh account balances"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
           {accounts.length === 0 && (
             <Button
               onClick={() => seedMutation.mutate()}

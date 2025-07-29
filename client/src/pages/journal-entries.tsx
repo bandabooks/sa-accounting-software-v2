@@ -78,6 +78,7 @@ export default function JournalEntries() {
     mutationFn: (data: JournalEntryFormData) => apiRequest("/api/journal-entries", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       setIsCreateDialogOpen(false);
       form.reset();
       successModal.showSuccess({
@@ -99,6 +100,7 @@ export default function JournalEntries() {
     mutationFn: (id: number) => apiRequest(`/api/journal-entries/${id}/post`, "PUT"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       successModal.showSuccess({
         title: "Journal Entry Posted Successfully",
         description: "The journal entry has been posted to the general ledger and is now final.",
@@ -119,6 +121,7 @@ export default function JournalEntries() {
       apiRequest(`/api/journal-entries/${id}/reverse`, "POST", { description }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/journal-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       successModal.showSuccess({
         title: "Journal Entry Reversed Successfully",
         description: "The journal entry has been reversed and a new reversing entry has been created.",

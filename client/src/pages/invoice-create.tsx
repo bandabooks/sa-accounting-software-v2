@@ -67,6 +67,7 @@ export default function InvoiceCreate() {
       invoicesApi.create(data),
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       showSuccess(
         "Invoice Created Successfully",
         `Invoice ${invoice.invoiceNumber} has been created and is ready for review.`

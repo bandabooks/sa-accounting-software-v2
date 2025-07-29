@@ -52,6 +52,8 @@ function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPayme
   const handlePaymentAdded = (paymentAmount?: string) => {
     // Invalidate payment queries first
     queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}/payments`] });
+    // Invalidate Chart of Accounts to update account balances
+    queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
     // Then call the parent callback
     onPaymentAdded(paymentAmount);
   };
@@ -92,6 +94,7 @@ export default function InvoiceDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       toast({
         title: "Status updated",
         description: "Invoice status has been updated successfully.",
