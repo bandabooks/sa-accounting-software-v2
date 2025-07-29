@@ -6342,10 +6342,11 @@ export class DatabaseStorage implements IStorage {
 
     const activeIds = activeAccountIds.map(row => row.accountId);
 
-    // Get all accounts and mark which ones are activated
+    // Get ONLY accounts for this specific company
     const allAccounts = await db
       .select()
       .from(chartOfAccounts)
+      .where(eq(chartOfAccounts.companyId, companyId))
       .orderBy(chartOfAccounts.accountCode);
 
     return allAccounts.map(account => ({
