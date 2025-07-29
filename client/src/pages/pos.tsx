@@ -131,10 +131,10 @@ export default function POSPage() {
         <nav className="flex space-x-8">
           {[
             { id: "terminal", label: "POS Terminal", icon: Tablet, path: "/pos/terminal" },
+            { id: "shifts", label: "Shifts", icon: Clock, path: "/pos/shifts" },
+            { id: "reports", label: "POS Reports", icon: BarChart3, path: "/pos/reports" },
             { id: "products", label: "Product Catalog", icon: Package, path: "/products" },
-            { id: "customers", label: "Customers", icon: Users, path: "/customers" },
-            { id: "reports", label: "Reports", icon: BarChart3, path: "/pos/reports" },
-            { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
+            { id: "customers", label: "Customers", icon: Users, path: "/customers" }
           ].map((tab) => (
             <Link key={tab.id} href={tab.path}>
               <span className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm cursor-pointer ${
@@ -175,24 +175,14 @@ export default function POSPage() {
                   <p className="text-sm text-gray-500">
                     <strong>Backend Infrastructure:</strong> ✅ Complete (100%)
                 </p>
-                <div className="space-y-3">
-                  <Button 
-                    onClick={handleNewSale} 
-                    className="w-full"
-                    size="lg"
-                  >
-                    <Calculator className="h-4 w-4 mr-2" />
-                    Simple POS Terminal
-                  </Button>
-                  <Button 
-                    onClick={() => window.location.href = "/pos/enhanced"} 
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    size="lg"
-                  >
-                    <Tablet className="h-4 w-4 mr-2" />
-                    Enhanced POS (FrontAccounting)
-                  </Button>
-                </div>
+                <Button 
+                  onClick={handleNewSale} 
+                  className="mb-4"
+                  size="lg"
+                >
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Open POS Terminal
+                </Button>
                 <p className="text-sm text-gray-500">
                   </p>
                   <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">

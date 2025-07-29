@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, Minus, Trash2, ShoppingCart, Calculator, 
-  User, CreditCard, DollarSign
+  User, CreditCard, DollarSign, Search, Pause, Play,
+  RotateCcw, Settings, Scan, Keyboard, Wifi, WifiOff
 } from "lucide-react";
 
 interface SaleItem {
@@ -34,11 +37,26 @@ interface PaymentData {
   reference?: string;
 }
 
+interface PendingSale {
+  id: string;
+  items: SaleItem[];
+  customerId?: number;
+  customerName?: string;
+  subtotal: number;
+  vatAmount: number;
+  total: number;
+  timestamp: Date;
+}
+
 export default function SimplePOSTerminal() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
+  const [barcodeBuffer, setBarcodeBuffer] = useState("");
   const [paymentData, setPaymentData] = useState<PaymentData>({
     paymentMethod: 'cash',
     amount: 0,
@@ -47,6 +65,10 @@ export default function SimplePOSTerminal() {
     reference: ''
   });
   const [isProcessingSale, setIsProcessingSale] = useState(false);
+  
+  // Refs for keyboard shortcuts
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const barcodeTimeoutRef = useRef<NodeJS.Timeout>();
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -66,6 +88,130 @@ export default function SimplePOSTerminal() {
     queryKey: ['/api/bank-accounts'],
     staleTime: 5 * 60 * 1000,
   });
+
+  // Keyboard shortcuts and barcode handling
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // F1-F12 shortcuts
+      if (e.key === 'F1') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        // Focus customer selection - could open a modal or focus select
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        suspendSale();
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        setShowResumeModal(true);
+      } else if (e.key === 'F5') {
+        e.preventDefault();
+        clearSale();
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        if (saleItems.length > 0) setShowPaymentModal(true);
+      }
+      
+      // Barcode scanning (numeric input)
+      if (/^\d$/.test(e.key)) {
+        setBarcodeBuffer(prev => prev + e.key);
+        
+        if (barcodeTimeoutRef.current) {
+          clearTimeout(barcodeTimeoutRef.current);
+        }
+        
+        barcodeTimeoutRef.current = setTimeout(() => {
+          if (barcodeBuffer.length >= 8) {
+            handleBarcodeScanned(barcodeBuffer + e.key);
+          }
+          setBarcodeBuffer("");
+        }, 100);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+      if (barcodeTimeoutRef.current) {
+        clearTimeout(barcodeTimeoutRef.current);
+      }
+    };
+  }, [barcodeBuffer, saleItems]);
+
+  // Barcode scanning function
+  const handleBarcodeScanned = (barcode: string) => {
+    const product = products.find(p => p.barcode === barcode || p.sku === barcode);
+    if (product) {
+      addToSale(product);
+      toast({
+        title: "Product Added",
+        description: `${product.name} added to cart`,
+      });
+    } else {
+      toast({
+        title: "Product Not Found",
+        description: `No product found with barcode: ${barcode}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Suspend and Resume functions
+  const suspendSale = () => {
+    if (saleItems.length === 0) {
+      toast({
+        title: "No Sale to Suspend",
+        description: "Add items to cart before suspending",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+    const subtotal = saleItems.reduce((sum, item) => sum + item.netAmount, 0);
+    const vatAmount = saleItems.reduce((sum, item) => sum + item.vatAmount, 0);
+    
+    const newPendingSale: PendingSale = {
+      id: Date.now().toString(),
+      items: [...saleItems],
+      customerId: selectedCustomerId || undefined,
+      customerName: selectedCustomer?.name || 'Walk-in Customer',
+      subtotal,
+      vatAmount,
+      total: subtotal + vatAmount,
+      timestamp: new Date(),
+    };
+    
+    setPendingSales(prev => [...prev, newPendingSale]);
+    clearSale();
+    
+    toast({
+      title: "Sale Suspended",
+      description: "Sale has been saved and can be resumed later",
+    });
+  };
+
+  const resumeSale = (saleId: string) => {
+    const sale = pendingSales.find(s => s.id === saleId);
+    if (sale) {
+      setSaleItems(sale.items);
+      setSelectedCustomerId(sale.customerId || null);
+      setPendingSales(prev => prev.filter(s => s.id !== saleId));
+      setShowResumeModal(false);
+      
+      toast({
+        title: "Sale Resumed",
+        description: "Suspended sale has been restored",
+      });
+    }
+  };
+
+  const clearSale = () => {
+    setSaleItems([]);
+    setSelectedCustomerId(null);
+    setSearchTerm("");
+  };
 
   // Safe add to sale function
   const addToSale = (product: any) => {
@@ -352,15 +498,28 @@ export default function SimplePOSTerminal() {
           {/* Product Search */}
           <Card>
             <CardHeader>
-              <CardTitle>Product Search</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center">
+                  <Search className="h-4 w-4 mr-2" />
+                  Product Search
+                </span>
+                <Badge variant="outline" className="text-xs">
+                  <Keyboard className="h-3 w-3 mr-1" />
+                  F1
+                </Badge>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <Input
-                placeholder="Search products by name, barcode, or SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-4"
-              />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search products, scan barcode, or press F1..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 mb-4"
+                />
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
                 {filteredProducts.length === 0 ? (
@@ -391,6 +550,63 @@ export default function SimplePOSTerminal() {
 
         {/* Right Column - Shopping Cart & Totals */}
         <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Settings className="h-4 w-4 mr-2" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={suspendSale}
+                  disabled={saleItems.length === 0}
+                  className="flex items-center"
+                >
+                  <Pause className="h-3 w-3 mr-1" />
+                  Suspend (F3)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowResumeModal(true)}
+                  disabled={pendingSales.length === 0}
+                  className="flex items-center"
+                >
+                  <Play className="h-3 w-3 mr-1" />
+                  Resume (F4)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={clearSale}
+                  disabled={saleItems.length === 0}
+                  className="flex items-center"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Clear (F5)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center"
+                >
+                  <Scan className="h-3 w-3 mr-1" />
+                  Scan
+                </Button>
+              </div>
+              {pendingSales.length > 0 && (
+                <div className="mt-2 text-xs text-blue-600">
+                  {pendingSales.length} suspended sale{pendingSales.length !== 1 ? 's' : ''}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Shopping Cart */}
           <Card>
             <CardHeader>
@@ -399,15 +615,10 @@ export default function SimplePOSTerminal() {
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   Cart ({saleItems.length})
                 </span>
-                {saleItems.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSaleItems([])}
-                  >
-                    Clear All
-                  </Button>
-                )}
+                <Badge variant="outline" className="text-xs">
+                  <Keyboard className="h-3 w-3 mr-1" />
+                  F8 Pay
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -642,6 +853,62 @@ export default function SimplePOSTerminal() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Resume Sale Modal */}
+      <Dialog open={showResumeModal} onOpenChange={setShowResumeModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Play className="h-5 w-5 mr-2" />
+              Resume Suspended Sale
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <ScrollArea className="h-64">
+              {pendingSales.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No suspended sales</p>
+              ) : (
+                <div className="space-y-3">
+                  {pendingSales.map((sale) => (
+                    <div
+                      key={sale.id}
+                      className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => resumeSale(sale.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-medium">{sale.customerName}</div>
+                        <Badge variant="outline">R {sale.total.toFixed(2)}</Badge>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {sale.items.length} item{sale.items.length !== 1 ? 's' : ''} • 
+                        {new Date(sale.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowResumeModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Keyboard Shortcuts Help */}
+      <div className="fixed bottom-4 right-4 bg-black/80 text-white text-xs p-3 rounded-lg max-w-xs">
+        <div className="font-medium mb-2">Keyboard Shortcuts:</div>
+        <div className="space-y-1">
+          <div>F1 - Search Products</div>
+          <div>F3 - Suspend Sale</div>
+          <div>F4 - Resume Sale</div>
+          <div>F5 - Clear Cart</div>
+          <div>F8 - Process Payment</div>
+          <div>Numeric keys - Barcode scan</div>
+        </div>
+      </div>
     </div>
   );
 }
