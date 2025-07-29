@@ -71,7 +71,7 @@ const navigationGroups = [
     icon: Tablet,
     module: "pos",
     items: [
-      { path: "/pos", label: "POS Terminal", icon: Tablet, permission: "POS_VIEW", module: "pos" },
+      { path: "/pos/terminal", label: "POS Terminal", icon: Tablet, permission: "POS_PROCESS_SALES", module: "pos" },
       { path: "/pos/shifts", label: "Shift Management", icon: Clock, permission: "POS_MANAGE_SHIFTS", module: "pos" },
       { path: "/pos/reports", label: "POS Reports", icon: BarChart3, permission: "POS_VIEW_REPORTS", module: "pos" }
     ]
