@@ -120,13 +120,11 @@ export default function ProductEdit() {
   });
 
   const onSubmit = (data: ProductForm) => {
-    // Convert string fields to proper types for backend
+    // Convert only the fields that need to be numbers for backend
     const formattedData = {
       ...data,
       categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
       vatTypeId: data.vatTypeId ? parseInt(data.vatTypeId) : undefined,
-      unitPrice: parseFloat(data.unitPrice || '0'),
-      costPrice: parseFloat(data.costPrice || '0'),
     };
     updateProductMutation.mutate(formattedData);
   };
