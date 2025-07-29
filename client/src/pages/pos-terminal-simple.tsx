@@ -29,6 +29,7 @@ interface SaleItem {
 interface PaymentData {
   paymentMethod: string;
   amount: number;
+  amountTendered: number;
   bankAccountId?: number;
   reference?: string;
 }
@@ -40,7 +41,10 @@ export default function SimplePOSTerminal() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData>({
     paymentMethod: 'cash',
-    amount: 0
+    amount: 0,
+    amountTendered: 0,
+    bankAccountId: undefined,
+    reference: ''
   });
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   
@@ -210,6 +214,8 @@ export default function SimplePOSTerminal() {
         payments: [{
           paymentMethod: paymentData.paymentMethod,
           amount: paymentData.amount || grandTotal,
+          amountTendered: paymentData.amountTendered || grandTotal,
+          changeDue: changeDue,
           bankAccountId: paymentData.bankAccountId,
           reference: paymentData.reference || '',
           authorizationCode: null
@@ -229,7 +235,7 @@ export default function SimplePOSTerminal() {
       setSelectedCustomerId(null);
       setShowPaymentModal(false);
       setIsProcessingSale(false);
-      setPaymentData({ paymentMethod: 'cash', amount: 0 });
+      setPaymentData({ paymentMethod: 'cash', amount: 0, amountTendered: 0, reference: '' });
       
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -255,14 +261,32 @@ export default function SimplePOSTerminal() {
       return;
     }
     
-    setPaymentData(prev => ({ ...prev, amount: grandTotal }));
+    setPaymentData(prev => ({ 
+      ...prev, 
+      amount: grandTotal,
+      amountTendered: grandTotal // Default to exact amount
+    }));
     setShowPaymentModal(true);
   };
 
   const confirmPayment = () => {
+    // Validate amount tendered for cash payments
+    if (paymentData.paymentMethod === 'cash' && paymentData.amountTendered < grandTotal) {
+      toast({
+        title: "Insufficient Amount",
+        description: "Please enter an amount equal to or greater than the total due.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsProcessingSale(true);
     processSaleMutation.mutate();
   };
+
+  // Calculate change due
+  const changeDue = paymentData.amountTendered > grandTotal ? 
+    Number((paymentData.amountTendered - grandTotal).toFixed(2)) : 0;
 
   if (productsLoading || customersLoading) {
     return (
@@ -481,14 +505,20 @@ export default function SimplePOSTerminal() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-lg font-bold">Total: R {grandTotal.toFixed(2)}</div>
+              <div className="text-xl font-bold text-center">Total: R {grandTotal.toFixed(2)}</div>
             </div>
             
             <div>
               <Label htmlFor="paymentMethod">Payment Method</Label>
               <Select
                 value={paymentData.paymentMethod}
-                onValueChange={(value) => setPaymentData(prev => ({ ...prev, paymentMethod: value }))}
+                onValueChange={(value) => {
+                  setPaymentData(prev => ({ 
+                    ...prev, 
+                    paymentMethod: value,
+                    amountTendered: value === 'cash' ? grandTotal : grandTotal // Reset amount tendered
+                  }));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -502,6 +532,45 @@ export default function SimplePOSTerminal() {
               </Select>
             </div>
 
+            {/* Amount Tendered - Required for cash, optional for others */}
+            <div>
+              <Label htmlFor="amountTendered">
+                Amount Tendered {paymentData.paymentMethod === 'cash' ? '*' : '(Optional)'}
+              </Label>
+              <Input
+                id="amountTendered"
+                type="number"
+                step="0.01"
+                min="0"
+                value={paymentData.amountTendered || ''}
+                onChange={(e) => setPaymentData(prev => ({ 
+                  ...prev, 
+                  amountTendered: parseFloat(e.target.value) || 0 
+                }))}
+                placeholder="Enter amount tendered"
+                className={
+                  paymentData.paymentMethod === 'cash' && paymentData.amountTendered < grandTotal
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }
+              />
+              {paymentData.paymentMethod === 'cash' && paymentData.amountTendered < grandTotal && (
+                <p className="text-red-500 text-sm mt-1">
+                  Insufficient amount tendered. Please enter an amount equal to or greater than the total due.
+                </p>
+              )}
+            </div>
+
+            {/* Change Due Display */}
+            {paymentData.paymentMethod === 'cash' && changeDue > 0 && (
+              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                <div className="text-green-800 font-bold text-lg">
+                  Change Due: R {changeDue.toFixed(2)}
+                </div>
+              </div>
+            )}
+
+            {/* Bank Account for non-cash payments */}
             {paymentData.paymentMethod !== 'cash' && (
               <div>
                 <Label htmlFor="bankAccount">Bank Account</Label>
@@ -546,7 +615,15 @@ export default function SimplePOSTerminal() {
               </Button>
               <Button 
                 onClick={confirmPayment}
-                disabled={isProcessingSale}
+                disabled={
+                  isProcessingSale || 
+                  (paymentData.paymentMethod === 'cash' && paymentData.amountTendered < grandTotal)
+                }
+                className={
+                  paymentData.paymentMethod === 'cash' && paymentData.amountTendered < grandTotal
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }
               >
                 {isProcessingSale ? 'Processing...' : `Complete Sale - R ${grandTotal.toFixed(2)}`}
               </Button>
