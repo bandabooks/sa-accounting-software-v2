@@ -12,7 +12,8 @@ import { ErrorBoundary, POSErrorFallback } from "@/components/ErrorBoundary";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Tablet, Scan, CreditCard, Receipt, Plus, Minus, 
-  ShoppingCart, Calculator, Trash2, DollarSign, User, Check
+  ShoppingCart, Calculator, Trash2, DollarSign, User, Check,
+  QrCode, Tag, AlertTriangle, Wifi, WifiOff, Volume2, VolumeX, Users
 } from "lucide-react";
 
 interface SaleItem {
@@ -33,6 +34,21 @@ interface PaymentModalData {
   amount: number;
   bankAccountId?: number;
   reference?: string;
+  splitPayments?: SplitPayment[];
+  isSplitPayment?: boolean;
+  cashTendered?: number;
+  changeGiven?: number;
+  tipAmount?: number;
+  loyaltyPointsUsed?: number;
+  promotionApplied?: string;
+  giftCardNumber?: string;
+  giftCardAmount?: number;
+}
+
+interface SplitPayment {
+  method: string;
+  amount: number;
+  reference?: string;
 }
 
 export default function POSTerminalPage() {
@@ -40,11 +56,27 @@ export default function POSTerminalPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showPromotionsModal, setShowPromotionsModal] = useState(false);
+  const [showOfflineAlert, setShowOfflineAlert] = useState(false);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [isScannerMode, setIsScannerMode] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentModalData>({
     paymentMethod: 'cash',
-    amount: 0
+    amount: 0,
+    isSplitPayment: false,
+    splitPayments: [],
+    tipAmount: 0,
+    loyaltyPointsUsed: 0
   });
   const [isProcessingSale, setIsProcessingSale] = useState(false);
+  const [quickActions, setQuickActions] = useState({
+    holdSale: false,
+    voidSale: false,
+    customerDisplay: true,
+    soundEnabled: true
+  });
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -61,6 +93,63 @@ export default function POSTerminalPage() {
   const { data: bankAccounts = [] } = useQuery<any[]>({
     queryKey: ['/api/bank-accounts'],
   });
+
+  const { data: promotions = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos/promotions'],
+  });
+
+  const { data: loyaltyPrograms = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos/loyalty-programs'],
+  });
+
+  const { data: giftCards = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos/gift-cards'],
+  });
+
+  // Barcode scanner handler
+  const handleBarcodeInput = (barcode: string) => {
+    const product = products.find(p => p.barcode === barcode || p.sku === barcode);
+    if (product) {
+      addToSale(product);
+      setBarcodeInput("");
+      if (quickActions.soundEnabled) {
+        // Play success sound
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvGI=');
+        audio.play().catch(() => {});
+      }
+      toast({
+        title: "Product Scanned",
+        description: `${product.name} added to cart`,
+      });
+    } else {
+      toast({
+        title: "Product Not Found",
+        description: `No product found with barcode: ${barcode}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Add offline mode detection
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOfflineMode(false);
+      setShowOfflineAlert(false);
+    };
+    
+    const handleOffline = () => {
+      setIsOfflineMode(true);
+      setShowOfflineAlert(true);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const addToSale = (product: any) => {
     const existingItem = saleItems.find(item => item.id === product.id.toString());
@@ -99,7 +188,6 @@ export default function POSTerminalPage() {
         price: unitPrice,
         quantity: 1,
         total,
-        vatRate,
         vatAmount,
         netAmount,
         barcode: product.barcode
