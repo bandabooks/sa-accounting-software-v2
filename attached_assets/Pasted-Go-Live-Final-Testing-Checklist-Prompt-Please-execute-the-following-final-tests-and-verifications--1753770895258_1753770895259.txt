@@ -1,0 +1,81 @@
+Go-Live Final Testing Checklist & Prompt
+Please execute the following final tests and verifications to ensure the system is 100% production-ready:
+
+1. Sign-Up & Onboarding Flow
+Test the full user sign-up workflow (as a brand new user):
+
+Complete onboarding fields (name, email, company, password, etc).
+
+Ensure after account creation, user is redirected to the login page with a clear success message (“Account created, please log in”).
+
+Verify new user can successfully log in with the credentials they set up.
+
+Test edge cases: leave required fields blank, use duplicate emails, etc.—make sure proper validation and feedback are provided.
+
+2. Login Flow
+Confirm the login form works for both username and email.
+
+Invalid login credentials display appropriate errors (not blank pages).
+
+Successful login always redirects to the main dashboard.
+
+Session/cookie handling: after logout, user cannot access authenticated pages.
+
+3. Navigation & Page Rendering
+Click through every sidebar and menu item (dashboard, sales, reports, chart of accounts, settings, etc.).
+
+Verify no page renders as blank/white under any condition. If a route or permission is missing, display a friendly error or “not found” message.
+
+Check page responsiveness across different devices (desktop, tablet, mobile).
+
+4. Core Module Functionality
+Test all main modules for correct data flow:
+
+Create new invoices, expenses, customers, suppliers, products, etc.
+
+Make sure all data saves and displays as expected.
+
+Confirm all financial transactions correctly update the Chart of Accounts.
+
+Test real business transactions (e.g., invoice payment, bank posting).
+
+5. Error & Exception Handling
+Force some errors (bad URLs, expired sessions, unauthorized access) to confirm no white screens appear—always show a controlled, professional error message.
+
+Test with missing or invalid data in forms.
+
+6. Email & Notification Delivery
+Confirm account activation, password reset, and notification emails are sent/received (if implemented).
+
+7. Performance & Security
+Pages load quickly, no unhandled errors in browser console.
+
+Sensitive routes are protected (can’t access as an unauthenticated user).
+
+8. Visual QA
+All branding, buttons, menus, and forms render correctly and professionally.
+
+No misaligned or overflowing components.
+
+All content is spell-checked and professional.
+
+Prompt for Final UAT (User Acceptance Testing) & Go-Live Readiness
+Final Pre-Go-Live QA Checklist
+
+Test the complete sign-up, onboarding, and login workflow end-to-end.
+
+Confirm all navigation/menu items load pages with no blank/white screens under any condition.
+
+Validate that every transaction updates the Chart of Accounts and other reports in real time.
+
+Check for any UI glitches, typos, or non-professional error messages.
+
+Ensure after sign-up, the user is redirected to the login page with a confirmation message.
+
+Verify no module or page can be accessed by an unauthenticated user.
+
+Ensure that logging out always redirects to the login page and clears session.
+
+Confirm there are no blank screens or missing content anywhere in the app.
+
+Report and fix any issues immediately. Only mark Go-Live ready when all above checks are passed.
