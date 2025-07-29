@@ -8,7 +8,7 @@ import {
   Settings, TrendingUp, Package, Building, Archive, Building2, 
   BookOpen, Landmark, BookOpenCheck, ReceiptText, DollarSign, 
   CreditCard, Box, Truck, PieChart, CheckCircle, Shield, Briefcase,
-  FolderOpen, CheckSquare, Clock, Tablet, UserCog, Key, ToggleLeft, Upload
+  FolderOpen, CheckSquare, Clock, UserCog, Key, ToggleLeft, Upload
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -65,17 +65,7 @@ const navigationGroups = [
       { path: "/inventory-reports", label: "Inventory Reports", icon: BarChart3, permission: "INVENTORY_VIEW", module: "inventory" }
     ]
   },
-  {
-    id: "pos",
-    label: "Point of Sale",
-    icon: Tablet,
-    module: "pos",
-    items: [
-      { path: "/pos/terminal", label: "POS Terminal", icon: Tablet, permission: "POS_PROCESS_SALES", module: "pos" },
-      { path: "/pos/shifts", label: "Shift Management", icon: Clock, permission: "POS_MANAGE_SHIFTS", module: "pos" },
-      { path: "/pos/reports", label: "POS Reports", icon: BarChart3, permission: "POS_VIEW_REPORTS", module: "pos" }
-    ]
-  },
+
   {
     id: "accounting",
     label: "Accounting",
