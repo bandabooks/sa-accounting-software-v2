@@ -3997,8 +3997,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req as AuthenticatedRequest;
       const companyId = user.user?.activeCompanyId || user.user?.companyId || 2;
       
-      // Get company-specific Chart of Accounts with activation status
-      const accounts = await storage.getCompanyChartOfAccounts(companyId);
+      // Get company-specific Chart of Accounts with calculated balances
+      const accounts = await storage.getAllChartOfAccounts(companyId);
       
       res.json(accounts);
     } catch (error) {
