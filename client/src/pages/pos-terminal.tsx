@@ -135,9 +135,9 @@ export default function POSTerminalPage() {
     setSaleItems(items => items.filter(item => item.id !== id));
   };
 
-  // Calculate totals with proper VAT handling
-  const subtotal = saleItems.reduce((sum, item) => sum + item.netAmount, 0);
-  const totalVatAmount = saleItems.reduce((sum, item) => sum + item.vatAmount, 0);
+  // Calculate totals with proper VAT handling and null safety
+  const subtotal = saleItems.reduce((sum, item) => sum + (item.netAmount || 0), 0);
+  const totalVatAmount = saleItems.reduce((sum, item) => sum + (item.vatAmount || 0), 0);
   const grandTotal = subtotal + totalVatAmount;
 
   const filteredProducts = products.filter(product =>
@@ -178,14 +178,12 @@ export default function POSTerminalPage() {
         }]
       };
 
-      return await apiRequest('/api/pos/sales', {
-        method: 'POST',
-        body: JSON.stringify({
-          sale: saleData,
-          items: saleData.items,
-          payments: saleData.payments
-        })
+      const response = await apiRequest('/api/pos/sales', 'POST', {
+        sale: saleData,
+        items: saleData.items,
+        payments: saleData.payments
       });
+      return response;
     },
     onSuccess: () => {
       toast({
