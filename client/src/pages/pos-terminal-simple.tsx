@@ -190,35 +190,38 @@ export default function SimplePOSTerminal() {
       }
 
       const saleData = {
-        terminalId: 1, // Default terminal ID
-        customerId: selectedCustomerId,
-        subtotal: subtotal,
-        discountAmount: 0,
-        vatAmount: totalVatAmount,
-        total: grandTotal,
-        paymentMethod: paymentData.paymentMethod,
-        status: 'completed',
-        saleDate: new Date().toISOString(),
+        sale: {
+          terminalId: 1, // Default terminal ID
+          customerId: selectedCustomerId,
+          subtotal: subtotal,
+          discountAmount: 0,
+          vatAmount: totalVatAmount,
+          total: grandTotal,
+          paymentMethod: paymentData.paymentMethod,
+          status: 'completed',
+          saleDate: new Date().toISOString()
+        },
         items: saleItems.map(item => ({
           productId: item.productId,
           description: item.name,
-          quantity: item.quantity,
-          unitPrice: item.price,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.price),
           discountPercent: 0,
           discountAmount: 0,
-          vatRate: item.vatRate,
+          vatRate: Number(item.vatRate),
           vatInclusive: false,
-          vatAmount: item.vatAmount,
-          lineTotal: item.total
+          vatAmount: Number(item.vatAmount),
+          lineTotal: Number(item.total)
         })),
         payments: [{
           paymentMethod: paymentData.paymentMethod,
-          amount: paymentData.amount || grandTotal,
-          amountTendered: paymentData.amountTendered || grandTotal,
-          changeDue: changeDue,
+          amount: Number(paymentData.amount || grandTotal),
+          amountTendered: Number(paymentData.amountTendered || grandTotal),
+          changeDue: Number(changeDue),
+          netAmount: Number(paymentData.amount || grandTotal), // Required field
           bankAccountId: paymentData.bankAccountId,
           reference: paymentData.reference || '',
-          authorizationCode: null
+          status: 'completed'
         }]
       };
 
