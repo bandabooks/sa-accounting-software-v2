@@ -1446,7 +1446,7 @@ export class DatabaseStorage implements IStorage {
 
       // Get relevant accounts
       const [debtorsAccount] = await db.select().from(chartOfAccounts)
-        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1100')));
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1150')));
       
       const [salesRevenueAccount] = await db.select().from(chartOfAccounts)
         .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '4000')));
@@ -1542,10 +1542,10 @@ export class DatabaseStorage implements IStorage {
 
       // Get relevant accounts
       const [bankAccount] = await db.select().from(chartOfAccounts)
-        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1050')));
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1000')));
       
       const [debtorsAccount] = await db.select().from(chartOfAccounts)
-        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1100')));
+        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1150')));
 
       // Only create payment lines if we have valid accounts
       if (!bankAccount || !debtorsAccount) {
@@ -5816,9 +5816,9 @@ export class DatabaseStorage implements IStorage {
     if (!invoice) throw new Error("Invoice not found");
 
     // Get the appropriate revenue and receivables accounts
-    const revenueAccount = await this.getChartOfAccountByCode(invoice.companyId, "4010"); // Sales Revenue
-    const receivablesAccount = await this.getChartOfAccountByCode(invoice.companyId, "1100"); // Accounts Receivable
-    const vatAccount = await this.getChartOfAccountByCode(invoice.companyId, "2020"); // VAT Output Tax
+    const revenueAccount = await this.getChartOfAccountByCode(invoice.companyId, "4000"); // Sales Revenue
+    const receivablesAccount = await this.getChartOfAccountByCode(invoice.companyId, "1150"); // Accounts Receivable
+    const vatAccount = await this.getChartOfAccountByCode(invoice.companyId, "2200"); // VAT Output Tax
 
     if (!revenueAccount || !receivablesAccount || !vatAccount) {
       throw new Error("Required accounts not found for invoice journal entry");
@@ -5873,8 +5873,8 @@ export class DatabaseStorage implements IStorage {
     if (!payment.length) throw new Error("Payment not found");
 
     const paymentData = payment[0];
-    const bankAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1010"); // Bank Account
-    const receivablesAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1100"); // Accounts Receivable
+    const bankAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1000"); // Cash and Cash Equivalents
+    const receivablesAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1150"); // Accounts Receivableivable
 
     if (!bankAccount || !receivablesAccount) {
       throw new Error("Required accounts not found for payment journal entry");
