@@ -175,14 +175,24 @@ export default function POSPage() {
                   <p className="text-sm text-gray-500">
                     <strong>Backend Infrastructure:</strong> ✅ Complete (100%)
                 </p>
-                <Button 
-                  onClick={handleNewSale} 
-                  className="mb-4"
-                  size="lg"
-                >
-                  <Calculator className="h-4 w-4 mr-2" />
-                  Open POS Terminal
-                </Button>
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleNewSale} 
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Simple POS Terminal
+                  </Button>
+                  <Button 
+                    onClick={() => window.location.href = "/pos/enhanced"} 
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    size="lg"
+                  >
+                    <Tablet className="h-4 w-4 mr-2" />
+                    Enhanced POS (FrontAccounting)
+                  </Button>
+                </div>
                 <p className="text-sm text-gray-500">
                   </p>
                   <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
