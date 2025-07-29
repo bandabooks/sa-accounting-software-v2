@@ -41,10 +41,11 @@ export default function POSShiftsPage() {
   const openShiftMutation = useMutation({
     mutationFn: async () => {
       const shiftData = {
-        openingCash: openingCash,
+        terminalId: 1, // Default terminal ID - we'll need to add terminal selection later
+        openingCash: openingCash, // Keep as number for decimal validation
         startTime: new Date().toISOString(),
         status: 'open',
-        notes: notes
+        notes: notes || ''
       };
       const response = await apiRequest('/api/pos/shifts', 'POST', shiftData);
       return response;
