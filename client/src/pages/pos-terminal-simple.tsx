@@ -186,27 +186,33 @@ export default function SimplePOSTerminal() {
       }
 
       const saleData = {
+        terminalId: 1, // Default terminal ID
         customerId: selectedCustomerId,
-        totalAmount: grandTotal,
-        subtotalAmount: subtotal,
+        subtotal: subtotal,
+        discountAmount: 0,
         vatAmount: totalVatAmount,
+        total: grandTotal,
         paymentMethod: paymentData.paymentMethod,
-        paymentStatus: 'completed',
+        status: 'completed',
         saleDate: new Date().toISOString(),
         items: saleItems.map(item => ({
           productId: item.productId,
+          description: item.name,
           quantity: item.quantity,
           unitPrice: item.price,
-          totalAmount: item.total,
+          discountPercent: 0,
+          discountAmount: 0,
           vatRate: item.vatRate,
+          vatInclusive: false,
           vatAmount: item.vatAmount,
-          netAmount: item.netAmount
+          lineTotal: item.total
         })),
         payments: [{
           paymentMethod: paymentData.paymentMethod,
-          amount: paymentData.amount,
+          amount: paymentData.amount || grandTotal,
           bankAccountId: paymentData.bankAccountId,
-          reference: paymentData.reference
+          reference: paymentData.reference || '',
+          authorizationCode: null
         }]
       };
 
@@ -471,6 +477,7 @@ export default function SimplePOSTerminal() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Process Payment</DialogTitle>
+            <p className="text-sm text-gray-600">Complete the sale by processing payment</p>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-gray-50 p-4 rounded-lg">

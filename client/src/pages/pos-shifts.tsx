@@ -42,7 +42,7 @@ export default function POSShiftsPage() {
     mutationFn: async () => {
       const shiftData = {
         terminalId: 1, // Default terminal ID - we'll need to add terminal selection later
-        openingCash: openingCash, // Keep as number for decimal validation
+        openingCash: openingCash.toString(), // Convert to string for decimal field
         startTime: new Date().toISOString(),
         status: 'open',
         notes: notes || ''
@@ -290,6 +290,7 @@ export default function POSShiftsPage() {
               <Play className="h-5 w-5 mr-2" />
               Open New Shift
             </DialogTitle>
+            <p className="text-sm text-gray-600">Start a new POS shift with opening cash amount</p>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -345,6 +346,7 @@ export default function POSShiftsPage() {
               <Square className="h-5 w-5 mr-2" />
               Close Shift
             </DialogTitle>
+            <p className="text-sm text-gray-600">Close the active POS shift with cash count</p>
           </DialogHeader>
           
           <div className="space-y-4">
