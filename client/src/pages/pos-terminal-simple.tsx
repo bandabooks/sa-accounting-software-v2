@@ -561,10 +561,18 @@ export default function SimplePOSTerminal() {
               )}
             </div>
 
-            {/* Change Due Display */}
-            {paymentData.paymentMethod === 'cash' && changeDue > 0 && (
-              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                <div className="text-green-800 font-bold text-lg">
+            {/* Change Due Display - Always show for cash payments */}
+            {paymentData.paymentMethod === 'cash' && (
+              <div className={`border p-3 rounded-lg ${
+                changeDue > 0 
+                  ? "bg-green-50 border-green-200" 
+                  : "bg-blue-50 border-blue-200"
+              }`}>
+                <div className={`font-bold text-lg ${
+                  changeDue > 0 
+                    ? "text-green-800" 
+                    : "text-blue-800"
+                }`}>
                   Change Due: R {changeDue.toFixed(2)}
                 </div>
               </div>
