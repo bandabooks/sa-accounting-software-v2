@@ -1,0 +1,57 @@
+Correct Integration & Account Mapping for Chart of Accounts:
+
+1. Display all Individual Bank Accounts and Cash Accounts
+
+Every account of type "Bank" (e.g., "Bank - Current", "Bank - Savings", "Foreign Currency Account") must have its own balance displayed on the Chart of Accounts page.
+
+Do not hide or merge individual bank balances into a single "Cash and Cash Equivalents" line. Show each one.
+
+“Cash and Cash Equivalents” is a summary/parent group for reporting, not an account itself. Sub-accounts should roll up, but each account must be visible and tracked independently.
+
+2. Correct Mapping of All Transactions
+
+When any transaction is recorded (e.g., invoice payment, expense, transfer, etc.), the system must map the transaction to the correct account in the Chart of Accounts.
+
+For example, a payment received should increase both the relevant Bank Account balance and, by aggregation, the Cash and Cash Equivalents group.
+
+3. Accurate Account Integration
+
+All system modules (Sales, Purchases, Bulk Capture, POS, Expenses, etc.) must post directly to the correct account, using the unique account code or ID.
+
+Every accounting transaction must be linked to its true, intended account: revenue to revenue accounts, payments to the selected bank or cash account, VAT to VAT accounts, and so forth.
+
+No transaction should bypass the Chart of Accounts structure; all modules must be integrated.
+
+4. Display Logic on Chart of Accounts Page
+
+The Chart of Accounts UI should display all active accounts, including all banks, cash, revenue, liabilities, equity, and expense accounts, with their current balances.
+
+Each bank account and cash account should display its own up-to-date balance at all times.
+
+Parent/summary accounts (like "Cash and Cash Equivalents") may display the aggregate/roll-up balance for reporting purposes, but all child accounts must remain visible.
+
+5. Consistency & Compliance
+
+The system must comply with best practices in accounting software (Xero, QuickBooks, Sage, etc.), where every transaction is mapped to the correct general ledger account and all balances are updated in real time.
+
+6. After Fixes
+
+Test and confirm that:
+
+Recording a payment to any bank updates that specific bank account balance and the total cash & equivalents.
+
+All accounts display their correct balances, and no bank account is hidden or skipped.
+
+All accounting and business modules (invoices, payments, expenses, transfers, POS) are integrated to post to their correct accounts.
+
+In summary:
+
+Please correct the Chart of Accounts integration and account mapping logic so that:
+
+All individual bank accounts display their own balances
+
+All transactions are mapped to their true accounts
+
+No account is omitted or hidden
+
+Every module in the system posts directly to the Chart of Accounts, updating real balances instantly

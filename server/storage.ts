@@ -1519,6 +1519,13 @@ export class DatabaseStorage implements IStorage {
 
   async updateInvoiceJournalEntriesForPayment(invoice: Invoice): Promise<void> {
     try {
+      // Get the most recent payment for this invoice to determine which bank account was used
+      const [recentPayment] = await db.select()
+        .from(payments)
+        .where(eq(payments.invoiceId, invoice.id))
+        .orderBy(desc(payments.paymentDate))
+        .limit(1);
+
       // Get the next journal entry number for payment
       const entryNumber = await this.getNextJournalEntryNumber(invoice.companyId);
       
@@ -1540,9 +1547,23 @@ export class DatabaseStorage implements IStorage {
         vatAmount: 0
       }).returning();
 
-      // Get relevant accounts
-      const [bankAccount] = await db.select().from(chartOfAccounts)
-        .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1000')));
+      // Get the specific bank account from the payment, or use default Bank Account - Current
+      let bankAccount = null;
+      if (recentPayment?.bankAccountId) {
+        // Get the chart of accounts record linked to this bank account
+        const [bankAccountRecord] = await db.select()
+          .from(bankAccounts)
+          .innerJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
+          .where(eq(bankAccounts.id, recentPayment.bankAccountId));
+        bankAccount = bankAccountRecord?.chart_of_accounts;
+      }
+      
+      // Fallback to Bank Account - Current if no specific bank account
+      if (!bankAccount) {
+        const [defaultBank] = await db.select().from(chartOfAccounts)
+          .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1100')));
+        bankAccount = defaultBank;
+      }
       
       const [debtorsAccount] = await db.select().from(chartOfAccounts)
         .where(and(eq(chartOfAccounts.companyId, invoice.companyId), eq(chartOfAccounts.accountCode, '1150')));
@@ -5868,13 +5889,18 @@ export class DatabaseStorage implements IStorage {
     const payment = await db.select().from(payments)
       .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
       .innerJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(bankAccounts, eq(payments.bankAccountId, bankAccounts.id))
+      .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
       .where(eq(payments.id, paymentId));
 
     if (!payment.length) throw new Error("Payment not found");
 
     const paymentData = payment[0];
-    const bankAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1000"); // Cash and Cash Equivalents
-    const receivablesAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1150"); // Accounts Receivableivable
+    
+    // Use the specific bank account selected for the payment, or default to Bank Account - Current
+    const bankAccount = paymentData.chart_of_accounts || 
+      await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1100"); // Bank Account - Current as fallback
+    const receivablesAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1150"); // Accounts Receivable
 
     if (!bankAccount || !receivablesAccount) {
       throw new Error("Required accounts not found for payment journal entry");
