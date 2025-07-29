@@ -1,0 +1,91 @@
+Modern POS System (FrontAccounting Methodology, Embedded & Standalone Ready)
+Objective:
+Rebuild the Point-of-Sale (POS) system within our business software using the proven methodologies and workflows of FrontAccounting, but deliver it with a modern, user-centric interface, real-time reporting, and seamless integration into our current chart of accounts and business flows.
+
+Functional & Technical Requirements
+Design & UX
+
+Match the clarity, simplicity, and workflow sequence found in FrontAccounting’s POS, but with an upgraded, clean, mobile-friendly, and visually modern UI/UX.
+
+Use the same design language as the rest of the platform for full cohesion.
+
+All key functions must be accessible via keyboard shortcuts, barcode input, or touchscreen.
+
+Core POS Features (as in FrontAccounting)
+
+Sales Entry Screen: Fast product/item lookup (barcode or search), add/remove/edit line items, apply discounts, tax selection, and instant total calculation.
+
+Multiple Payment Methods: Accept cash, card, voucher, and split payment.
+
+Receipt Generation: Print and/or email receipts with full transaction details.
+
+Customer Selection/Walk-In Mode: Option to assign to a registered customer or walk-in.
+
+Price/Stock Lookup: Real-time stock check, automatic price list retrieval, and warning for out-of-stock.
+
+Suspend/Resume Sales: Ability to park a sale and resume later.
+
+Returns & Refunds: Simple process to handle returns, refunds, and exchange—directly linked to original sale and inventory adjustment.
+
+Daily Z-Reports/X-Reports: Shift and end-of-day summaries, with reconciliation features for cash/float management.
+
+Sales Register/Session Management: Log open/close shifts, record cash in/out, and full audit trail per cashier/session.
+
+Integration
+
+Chart of Accounts: All sales, payments, returns, and cash movements must be posted in real-time to the correct general ledger accounts (e.g., Sales Revenue, VAT Output, Cash, Card Receivables).
+
+Inventory: Live integration with stock management; all sales instantly reduce inventory, and stock levels are visible at POS.
+
+Customer Management: Sales link to customer accounts if selected, supporting credit sales or loyalty points where enabled.
+
+Reporting: Instant access to POS-specific reports (sales by product, time, cashier, tender type, profitability, VAT summary, etc.).
+
+User/Roles Integration: POS permissions and visibility managed through existing user/role management.
+
+Deployment/Access
+
+POS can be embedded as a module in the main app (with single-sign-on), but should also support a standalone POS-only plan for businesses needing only sales/register functionality.
+
+Works offline-first with auto-sync when reconnected, if possible.
+
+Modern Enhancements
+
+Touch-optimized for tablet use.
+
+Configurable layout (e.g., product buttons, grid/list view).
+
+QR or barcode scanning for fast checkout.
+
+Optional customer-facing display.
+
+Support for promotions, loyalty, and coupons.
+
+Real-time notifications/alerts for voids, refunds, large cashouts, or errors.
+
+Integration hooks for future mobile payments (SnapScan, Yoco, etc.).
+
+Acceptance Criteria
+All FrontAccounting POS functions are available and improved for modern usability.
+
+No duplicate sales or inventory records—POS must post directly to main ledgers and stock.
+
+User experience is intuitive for experienced accountants and cashiers alike.
+
+All POS reports reconcile with financial and business reports.
+
+Full audit trail for every transaction and session.
+
+Seamless integration with the rest of the platform (accounts, inventory, reporting).
+
+Implementation Notes
+Before building, review existing POS workflows in FrontAccounting for reference.
+
+Ensure all account mappings and integration points are documented.
+
+Do not create a duplicate POS module—enhance and refactor the existing one.
+
+Design for global usability—tax, currency, and receipt formatting must be configurable.
+
+Summary Prompt to Dev/AI Team
+“Enhance our Point-of-Sale system using the proven workflows and integrity checks from FrontAccounting, but deliver it with a fully modern, fast, and professional UI/UX that integrates perfectly into our current platform. Ensure all features, account mappings, inventory updates, and reporting are robust, enterprise-grade, and user-friendly. POS must be accessible both as an embedded module and a standalone plan for clients who need only register functionality.”
