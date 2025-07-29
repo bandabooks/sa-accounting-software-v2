@@ -188,6 +188,7 @@ export default function POSTerminalPage() {
         price: unitPrice,
         quantity: 1,
         total,
+        vatRate: vatRate,
         vatAmount,
         netAmount,
         barcode: product.barcode
@@ -254,7 +255,7 @@ export default function POSTerminalPage() {
           quantity: item.quantity,
           unitPrice: item.price,
           totalAmount: item.total,
-          vatRate: item.vatRate,
+          vatRate: item.vatRate || 15,
           vatAmount: item.vatAmount,
           netAmount: item.netAmount
         })),

@@ -66,7 +66,7 @@ import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
 import VATReportsPage from "@/pages/vat-reports";
 import POS from "@/pages/pos";
-import POSTerminal from "@/pages/pos-terminal";
+import SimplePOSTerminal from "@/pages/pos-terminal-simple";
 import POSShifts from "@/pages/pos-shifts";
 import POSReports from "@/pages/pos-reports";
 import EnterpriseSettings from "@/pages/enterprise-settings";
@@ -414,7 +414,7 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/pos/terminal">
           <ProtectedRoute permission={PERMISSIONS.POS_PROCESS_SALES}>
-            <POSTerminal />
+            <SimplePOSTerminal />
           </ProtectedRoute>
         </Route>
         <Route path="/pos/shifts">
