@@ -40,15 +40,13 @@ export default function POSShiftsPage() {
   // Open shift mutation
   const openShiftMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('/api/pos/shifts', {
-        method: 'POST',
-        body: JSON.stringify({
-          openingCash: openingCash,
-          startTime: new Date().toISOString(),
-          status: 'open',
-          notes: notes
-        })
-      });
+      const shiftData = {
+        openingCash: openingCash,
+        startTime: new Date().toISOString(),
+        status: 'open',
+        notes: notes
+      };
+      const response = await apiRequest('/api/pos/shifts', 'POST', shiftData);
       return response;
     },
     onSuccess: () => {
@@ -75,13 +73,11 @@ export default function POSShiftsPage() {
     mutationFn: async () => {
       if (!selectedShift) throw new Error('No shift selected');
       
-      const response = await apiRequest(`/api/pos/shifts/${selectedShift.id}/close`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          closingCash: closingCash,
-          notes: notes
-        })
-      });
+      const closeData = {
+        closingCash: closingCash,
+        notes: notes
+      };
+      const response = await apiRequest(`/api/pos/shifts/${selectedShift.id}/close`, 'PUT', closeData);
       return response;
     },
     onSuccess: (data: any) => {
@@ -303,7 +299,7 @@ export default function POSShiftsPage() {
                 type="number"
                 step="0.01"
                 placeholder="0.00"
-                value={openingCash}
+                value={openingCash.toString()}
                 onChange={(e) => setOpeningCash(parseFloat(e.target.value) || 0)}
               />
             </div>
@@ -367,7 +363,7 @@ export default function POSShiftsPage() {
                 type="number"
                 step="0.01"
                 placeholder="0.00"
-                value={closingCash}
+                value={closingCash.toString()}
                 onChange={(e) => setClosingCash(parseFloat(e.target.value) || 0)}
               />
             </div>
