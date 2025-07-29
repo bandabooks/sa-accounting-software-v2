@@ -1,21 +1,54 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ErrorBoundary, POSErrorFallback } from "@/components/ErrorBoundary";
 import { 
   Tablet, Users, Package, CreditCard, Receipt, BarChart3, 
-  Settings, Plus, ShoppingCart, Calculator, Clock
+  Settings, Plus, ShoppingCart, Calculator, Clock, TrendingUp
 } from "lucide-react";
 
 export default function POSPage() {
   const [location] = useLocation();
-  const [newSaleOpen, setNewSaleOpen] = useState(false);
-
+  
   const handleNewSale = () => {
     window.location.href = "/pos/terminal";
   };
+
+  // Fetch real POS data
+  const { data: posSales = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos/sales'],
+  });
+
+  const { data: posShifts = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos/shifts'],
+  });
+
+  const { data: products = [] } = useQuery<any[]>({
+    queryKey: ['/api/products'],
+  });
+
+  // Calculate today's metrics
+  const today = new Date().toISOString().split('T')[0];
+  const todaysSales = posSales.filter(sale => 
+    sale.saleDate?.startsWith(today) && sale.paymentStatus === 'completed'
+  );
+  
+  const todaysRevenue = todaysSales.reduce((sum, sale) => sum + (parseFloat(sale.totalAmount) || 0), 0);
+  const todaysTransactionCount = todaysSales.length;
+  const averageTransactionValue = todaysTransactionCount > 0 ? todaysRevenue / todaysTransactionCount : 0;
+  
+  const currentShift = posShifts.find(shift => shift.status === 'open');
+  const cashInDrawer = currentShift ? (parseFloat(currentShift.openingCash) || 0) + 
+    todaysSales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + (parseFloat(s.totalAmount) || 0), 0) : 0;
+  
+  const itemsSoldToday = todaysSales.reduce((sum, sale) => 
+    sum + (sale.items?.reduce((itemSum: number, item: any) => itemSum + (item.quantity || 0), 0) || 0), 0
+  );
+  
+  const uniqueCustomersToday = new Set(todaysSales.filter(s => s.customerId).map(s => s.customerId)).size;
 
   return (
     <ErrorBoundary fallback={POSErrorFallback}>
@@ -46,8 +79,10 @@ export default function POSPage() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R 2,450.00</div>
-            <p className="text-xs text-muted-foreground">12 transactions</p>
+            <div className="text-2xl font-bold">R {todaysRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {todaysTransactionCount} transaction{todaysTransactionCount !== 1 ? 's' : ''}
+            </p>
           </CardContent>
         </Card>
 
@@ -57,8 +92,10 @@ export default function POSPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R 850.00</div>
-            <p className="text-xs text-muted-foreground">Opening: R 200.00</p>
+            <div className="text-2xl font-bold">R {cashInDrawer.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              Opening: R {(currentShift?.openingCash || 0).toFixed(2)}
+            </p>
           </CardContent>
         </Card>
 
@@ -68,8 +105,10 @@ export default function POSPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">47</div>
-            <p className="text-xs text-muted-foreground">Average: R 52.13</p>
+            <div className="text-2xl font-bold">{itemsSoldToday}</div>
+            <p className="text-xs text-muted-foreground">
+              Avg: R {averageTransactionValue > 0 ? averageTransactionValue.toFixed(2) : '0.00'}
+            </p>
           </CardContent>
         </Card>
 
@@ -79,8 +118,10 @@ export default function POSPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">New: 3</p>
+            <div className="text-2xl font-bold">{uniqueCustomersToday}</div>
+            <p className="text-xs text-muted-foreground">
+              Walk-ins: {todaysTransactionCount - uniqueCustomersToday}
+            </p>
           </CardContent>
         </Card>
       </div>

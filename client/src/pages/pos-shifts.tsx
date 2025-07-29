@@ -1,309 +1,408 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
-  Clock, Plus, DollarSign, AlertTriangle, CheckCircle, 
-  Users, Calculator, CreditCard, Package, TrendingUp
+  Clock, Play, Square, DollarSign, Calculator, 
+  TrendingUp, AlertCircle, CheckCircle, User
 } from "lucide-react";
-import { useCollaborationIndicators } from "@/hooks/useCollaborationIndicators";
-import { CollaborationIndicators } from "@/components/collaboration/CollaborationIndicators";
-import { CollaborationFallback } from "@/components/collaboration/CollaborationFallback";
-import { ActivityTracker } from "@/components/collaboration/ActivityTracker";
-import { ErrorBoundary, POSErrorFallback } from "@/components/ErrorBoundary";
 
 export default function POSShiftsPage() {
-  const [currentShift, setCurrentShift] = useState({
-    id: 1,
-    startTime: "2025-01-24T08:00:00",
-    openingAmount: 200.00,
-    cashSales: 1450.00,
-    cardSales: 1000.00,
-    totalSales: 2450.00,
-    status: "active"
+  const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<any>(null);
+  const [openingCash, setOpeningCash] = useState(0);
+  const [closingCash, setClosingCash] = useState(0);
+  const [notes, setNotes] = useState("");
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Fetch shifts data
+  const { data: shifts = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos/shifts'],
   });
 
-  const { collaborationState, updateActivity, requestShiftLock, releaseShiftLock } = useCollaborationIndicators();
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ['/api/auth/me'],
+  });
 
-  const handleCriticalOperation = (operation: string, activityKey: any) => {
-    try {
-      updateActivity(activityKey);
-      requestShiftLock(operation);
-      // In a real implementation, you would perform the operation here
-      // and then release the lock when done
-    } catch (error) {
-      console.error('Error in critical operation:', error);
+  const currentShift = shifts.find(shift => shift.status === 'open');
+  const previousShifts = shifts.filter(shift => shift.status === 'closed').slice(0, 10);
+
+  // Open shift mutation
+  const openShiftMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/pos/shifts', {
+        method: 'POST',
+        body: JSON.stringify({
+          openingCash: openingCash,
+          startTime: new Date().toISOString(),
+          status: 'open',
+          notes: notes
+        })
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Shift Opened",
+        description: `New shift started with R ${openingCash.toFixed(2)} opening cash`,
+      });
+      setShowOpenShiftModal(false);
+      setOpeningCash(0);
+      setNotes("");
+      queryClient.invalidateQueries({ queryKey: ['/api/pos/shifts'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to open shift",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Close shift mutation
+  const closeShiftMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedShift) throw new Error('No shift selected');
+      
+      const response = await apiRequest(`/api/pos/shifts/${selectedShift.id}/close`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          closingCash: closingCash,
+          notes: notes
+        })
+      });
+      return response;
+    },
+    onSuccess: (data: any) => {
+      const variance = data?.cashVariance || 0;
+      toast({
+        title: "Shift Closed",
+        description: `Shift closed with ${variance >= 0 ? 'surplus' : 'shortage'} of R ${Math.abs(variance).toFixed(2)}`,
+      });
+      setShowCloseShiftModal(false);
+      setSelectedShift(null);
+      setClosingCash(0);
+      setNotes("");
+      queryClient.invalidateQueries({ queryKey: ['/api/pos/shifts'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to close shift",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleOpenShift = () => {
+    if (currentShift) {
+      toast({
+        title: "Active Shift",
+        description: "Please close the current shift before opening a new one",
+        variant: "destructive",
+      });
+      return;
     }
+    setShowOpenShiftModal(true);
+  };
+
+  const handleCloseShift = (shift: any) => {
+    setSelectedShift(shift);
+    setShowCloseShiftModal(true);
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  const formatDuration = (startTime: string, endTime?: string) => {
+    const start = new Date(startTime);
+    const end = endTime ? new Date(endTime) : new Date();
+    const diffMs = end.getTime() - start.getTime();
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
   };
 
   return (
-    <ErrorBoundary fallback={POSErrorFallback}>
-      <ActivityTracker activity="VIEWING_SHIFT" location="shift-management">
-        <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Collaboration Indicators */}
-        {collaborationState.activeUsers.length > 0 ? (
-          <CollaborationIndicators
-            activeUsers={collaborationState.activeUsers}
-            shiftLocked={collaborationState.shiftLocked}
-            lockOwner={collaborationState.lockOwner}
-            currentActivity={collaborationState.currentActivity}
-            onActivityUpdate={(activity) => updateActivity(activity as any)}
-          />
-        ) : (
-          <CollaborationFallback />
-        )}
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
           <h1 className="text-3xl font-bold text-gray-900">Shift Management</h1>
-          <p className="text-gray-600 mt-1">Manage POS shifts and cash drawer operations</p>
+          <p className="text-gray-600 mt-1">Manage POS shifts and cash handling</p>
         </div>
         <div className="flex items-center space-x-4">
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            <Clock className="h-3 w-3 mr-1" />
-            Shift Active
-          </Badge>
-          <Button variant="outline">
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            Close Shift
+          {currentShift ? (
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Clock className="h-3 w-3 mr-1" />
+              Shift Active - {formatDuration(currentShift.startTime)}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+              <Square className="h-3 w-3 mr-1" />
+              No Active Shift
+            </Badge>
+          )}
+          <Button 
+            onClick={handleOpenShift}
+            disabled={!!currentShift || openShiftMutation.isPending}
+          >
+            <Play className="h-4 w-4 mr-2" />
+            {openShiftMutation.isPending ? 'Opening...' : 'Open Shift'}
           </Button>
         </div>
       </div>
 
-      {/* Current Shift Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Current Shift */}
+      {currentShift && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Shift Duration</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">6h 24m</div>
-            <p className="text-xs text-muted-foreground">Started: 08:00 AM</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Opening Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R 200.00</div>
-            <p className="text-xs text-muted-foreground">Cash drawer opening</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R 2,450.00</div>
-            <p className="text-xs text-muted-foreground">12 transactions</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Expected Cash</CardTitle>
-            <Calculator className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R 1,650.00</div>
-            <p className="text-xs text-muted-foreground">Opening + Cash Sales</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Shift Details */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
                 <Clock className="h-5 w-5 mr-2" />
-                Current Shift Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Shift Start Time</label>
-                  <p className="text-lg font-semibold">January 24, 2025 - 08:00 AM</p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Cashier</label>
-                  <p className="text-lg font-semibold">Production Administrator</p>
-                </div>
+                Current Shift
               </div>
-
-              <div className="border-t pt-4">
-                <h3 className="text-lg font-semibold mb-4">Payment Breakdown</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-                      <span>Cash Sales</span>
-                    </div>
-                    <span className="font-semibold">R 1,450.00</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center">
-                      <CreditCard className="h-4 w-4 mr-2 text-blue-600" />
-                      <span>Card Sales</span>
-                    </div>
-                    <span className="font-semibold">R 1,000.00</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between items-center font-bold">
-                    <span>Total Sales</span>
-                    <span>R 2,450.00</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="text-lg font-semibold mb-4">Transaction Summary</h3>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-blue-600">12</div>
-                    <div className="text-sm text-gray-600">Total Sales</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">47</div>
-                    <div className="text-sm text-gray-600">Items Sold</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-purple-600">8</div>
-                    <div className="text-sm text-gray-600">Customers</div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Shift Actions */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calculator className="h-5 w-5 mr-2" />
-                Cash Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Current Cash in Drawer</label>
-                <div className="text-2xl font-bold text-green-600">R 1,650.00</div>
-                <p className="text-xs text-gray-500">Expected amount based on sales</p>
-              </div>
-
-              <div className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={() => handleCriticalOperation("Cash Drop", "CASH_DROP")}
-                  disabled={collaborationState.shiftLocked}
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Cash Drop
-                </Button>
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={() => handleCriticalOperation("Count Drawer", "COUNTING_DRAWER")}
-                  disabled={collaborationState.shiftLocked}
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  Count Drawer
-                </Button>
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={() => handleCriticalOperation("Float Adjustment", "FLOAT_ADJUSTMENT")}
-                  disabled={collaborationState.shiftLocked}
-                >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Float Adjustment
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                Shift Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => updateActivity("TAKING_BREAK")}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Take Break
-              </Button>
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => handleCriticalOperation("Switch Cashier", "SWITCH_CASHIER")}
-                disabled={collaborationState.shiftLocked}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Switch Cashier
-              </Button>
-              <Button 
-                className="w-full" 
+              <Button
                 variant="destructive"
-                onClick={() => handleCriticalOperation("Close Shift", "CLOSING_SHIFT")}
-                disabled={collaborationState.shiftLocked}
+                onClick={() => handleCloseShift(currentShift)}
+                disabled={closeShiftMutation.isPending}
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Close Shift
+                <Square className="h-4 w-4 mr-2" />
+                {closeShiftMutation.isPending ? 'Closing...' : 'Close Shift'}
               </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Started</div>
+                <div className="font-medium">{formatDateTime(currentShift.startTime)}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Duration</div>
+                <div className="font-medium">{formatDuration(currentShift.startTime)}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Opening Cash</div>
+                <div className="font-medium">R {(currentShift.openingCash || 0).toFixed(2)}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Operator</div>
+                <div className="font-medium flex items-center justify-center">
+                  <User className="h-4 w-4 mr-1" />
+                  {currentUser?.username || 'Unknown'}
+                </div>
+              </div>
+            </div>
+            {currentShift.notes && (
+              <div className="mt-4 p-3 bg-gray-50 rounded">
+                <div className="text-sm text-gray-600">Notes:</div>
+                <div className="text-sm">{currentShift.notes}</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Recent Shifts */}
+      {/* Shift History */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Shifts</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {[
-              { date: "Jan 23, 2025", cashier: "John Smith", duration: "8h 15m", sales: "R 3,200.00", status: "closed" },
-              { date: "Jan 22, 2025", cashier: "Sarah Wilson", duration: "7h 45m", sales: "R 2,850.00", status: "closed" },
-              { date: "Jan 21, 2025", cashier: "Mike Johnson", duration: "8h 30m", sales: "R 4,100.00", status: "closed" }
-            ].map((shift, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <Badge variant="secondary">{shift.status}</Badge>
-                  <div>
-                    <p className="font-medium">{shift.date}</p>
-                    <p className="text-sm text-gray-600">{shift.cashier}</p>
+          {previousShifts.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+              <p>No previous shifts</p>
+              <p className="text-sm">Open your first shift to start tracking</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {previousShifts.map((shift) => (
+                <div key={shift.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="font-medium">Shift #{shift.id}</span>
+                      <Badge variant="outline" className="bg-gray-50">
+                        {formatDuration(shift.startTime, shift.endTime)}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {formatDateTime(shift.startTime)} - {shift.endTime ? formatDateTime(shift.endTime) : 'Open'}
+                    </div>
                   </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+                    <div>
+                      <div className="text-gray-600">Opening</div>
+                      <div className="font-medium">R {(shift.openingCash || 0).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-600">Closing</div>
+                      <div className="font-medium">R {(shift.closingCash || 0).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-600">Expected</div>
+                      <div className="font-medium">R {(shift.expectedCash || 0).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-600">Variance</div>
+                      <div className={`font-medium ${
+                        (shift.cashVariance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {(shift.cashVariance || 0) >= 0 ? '+' : ''}R {(shift.cashVariance || 0).toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-600">Sales</div>
+                      <div className="font-medium">R {(shift.totalSales || 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+                  
+                  {shift.notes && (
+                    <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+                      <span className="text-gray-600">Notes: </span>
+                      {shift.notes}
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">{shift.sales}</p>
-                  <p className="text-sm text-gray-600">{shift.duration}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
-        </div>
-      </ActivityTracker>
-    </ErrorBoundary>
+
+      {/* Open Shift Modal */}
+      <Dialog open={showOpenShiftModal} onOpenChange={setShowOpenShiftModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Play className="h-5 w-5 mr-2" />
+              Open New Shift
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="openingCash">Opening Cash Amount</Label>
+              <Input
+                id="openingCash"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={openingCash}
+                onChange={(e) => setOpeningCash(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Any notes about the shift opening..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+
+            <div className="flex space-x-2 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowOpenShiftModal(false)}
+                disabled={openShiftMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => openShiftMutation.mutate()}
+                disabled={openShiftMutation.isPending}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {openShiftMutation.isPending ? 'Opening...' : 'Open Shift'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Shift Modal */}
+      <Dialog open={showCloseShiftModal} onOpenChange={setShowCloseShiftModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Square className="h-5 w-5 mr-2" />
+              Close Shift
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedShift && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">Shift Duration</div>
+                <div className="font-medium">{formatDuration(selectedShift.startTime)}</div>
+                <div className="text-sm text-gray-600 mt-2">Opening Cash</div>
+                <div className="font-medium">R {(selectedShift.openingCash || 0).toFixed(2)}</div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="closingCash">Actual Cash in Drawer</Label>
+              <Input
+                id="closingCash"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={closingCash}
+                onChange={(e) => setClosingCash(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="closeNotes">Closing Notes (Optional)</Label>
+              <Textarea
+                id="closeNotes"
+                placeholder="Any notes about the shift closing..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+
+            <div className="flex space-x-2 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowCloseShiftModal(false)}
+                disabled={closeShiftMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => closeShiftMutation.mutate()}
+                disabled={closeShiftMutation.isPending}
+              >
+                <Square className="h-4 w-4 mr-2" />
+                {closeShiftMutation.isPending ? 'Closing...' : 'Close Shift'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

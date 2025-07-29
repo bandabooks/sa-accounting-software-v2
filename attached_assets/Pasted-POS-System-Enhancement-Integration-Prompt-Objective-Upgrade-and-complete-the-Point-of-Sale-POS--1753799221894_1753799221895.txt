@@ -1,0 +1,88 @@
+POS System Enhancement & Integration Prompt
+Objective:
+Upgrade and complete the Point of Sale (POS) module so it is fully integrated within the main accounting and business management system. The POS module must be streamlined for everyday users but robust enough for advanced operations, with the ability to be deployed as a standalone solution if required.
+
+Key Requirements & Implementation Checklist
+Full Integration with Main System
+
+All POS sales, refunds, expenses, and stock movements must reflect immediately in the main system’s financials, inventory, VAT, and reporting modules.
+
+POS transactions must map to correct Chart of Accounts for accurate real-time accounting, including revenue, cash/bank, VAT, and inventory COGS (cost of goods sold).
+
+User permissions and roles for POS must sync with the core user management/admin system.
+
+Professional POS Terminal Features
+
+Sales Register: Intuitive register screen for scanning, searching, or selecting products/services.
+
+Customer Management: Attach sales to existing or walk-in customers, and enable loyalty/rewards integration.
+
+Multiple Payment Methods: Support for cash, card, EFT, vouchers, split payments, and mobile wallets.
+
+Print/Email Receipts: Professional receipt generation (print or email), integrated with transaction records.
+
+Quick Actions: Shortcuts for opening/closing register, cash in/out, daily Z-reports, refunds, and discounts.
+
+Barcode & QR Support: Barcode scanning for products and QR code-based payments or loyalty.
+
+Shift & Cash Management
+
+Open/close shift management with real-time cash drawer tracking.
+
+Automatic end-of-day reconciliation and cash-up summary.
+
+Real-time Stock & Inventory Sync
+
+Every sale deducts product quantity from inventory immediately.
+
+Stock alerts and automatic sync with warehouse/main inventory.
+
+POS Reports
+
+Sales summary, product sales, staff/shift performance, payment breakdown, and cash-up reports.
+
+Ability to export POS reports to the main reports module.
+
+VAT, Compliance, and Audit
+
+All VAT rates and rules are applied at POS, with every transaction correctly mapped for VAT201 and VAT detailed summary reports.
+
+Full audit trail for each transaction (who, when, what).
+
+Standalone POS Plan
+
+POS-only mode: Allow business clients to subscribe to only POS functionality (with minimal accounting/CRM), but ensure that the POS module remains ready for full integration if the client upgrades.
+
+All settings and data must be modular so POS can function alone or as part of the larger system.
+
+Mobile & Offline Ready
+
+The POS terminal must be responsive and mobile-friendly for tablets and smartphones.
+
+Optional offline mode: queue transactions and sync when online.
+
+Performance & UX
+
+Fast load, minimal clicks, and optimized for busy retail/hospitality environments.
+
+Modern, clean, touch-friendly UI, customizable by business type (retail, restaurant, etc.).
+
+Security & Access
+
+Role-based access: restrict voids, returns, discounts, and cash drawer opening to authorized staff only.
+
+PIN or user login for each cashier.
+
+Development Notes
+Never create duplicate POS modules. Always check for existing implementations and enhance what is there.
+
+All integration must be live/real-time—no delayed syncing or batch updates.
+
+POS settings (e.g., tax, receipt templates, payment types, product catalog) should be manageable by admins via a centralized settings page.
+
+POS data and features must be testable from the admin/super admin dashboard.
+
+For standalone deployments, use the same codebase/module with feature toggles.
+
+End Goal
+The POS system must offer a seamless, professional, and robust experience, tightly coupled with the main accounting and business management platform but also modular enough for POS-only business clients. All POS activities should reflect in financials, VAT, inventory, and reporting in real time, and support both retail and service business workflows.
