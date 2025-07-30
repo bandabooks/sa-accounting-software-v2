@@ -68,6 +68,8 @@ export default function Subscription() {
       }
       return failureCount < 3;
     },
+    refetchOnWindowFocus: false,
+    staleTime: 0, // Always fetch fresh data for debugging
   });
 
   // Fetch available plans
@@ -80,6 +82,8 @@ export default function Subscription() {
       }
       return failureCount < 3;
     },
+    refetchOnWindowFocus: false,
+    staleTime: 0, // Always fetch fresh data for debugging
   });
 
   // Create PayFast payment mutation
@@ -161,12 +165,19 @@ export default function Subscription() {
     const subscriptionErrorMsg = subscriptionError?.message || '';
     const plansErrorMsg = plansError?.message || '';
     
+    console.log('Subscription Error:', subscriptionErrorMsg);
+    console.log('Plans Error:', plansErrorMsg);
+    console.log('Auth Token:', localStorage.getItem('authToken'));
+    console.log('Session Token:', localStorage.getItem('sessionToken'));
+    
     const isAuthError = subscriptionErrorMsg.includes('401') || 
                        plansErrorMsg.includes('401') ||
                        subscriptionErrorMsg.includes('authentication') ||
                        plansErrorMsg.includes('authentication') ||
                        subscriptionErrorMsg.includes('Authentication failed') ||
-                       plansErrorMsg.includes('Authentication failed');
+                       plansErrorMsg.includes('Authentication failed') ||
+                       subscriptionErrorMsg.includes('Invalid or expired token') ||
+                       plansErrorMsg.includes('Invalid or expired token');
     
     if (isAuthError) {
       // Clear invalid tokens and redirect to login

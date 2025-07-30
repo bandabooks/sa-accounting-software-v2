@@ -5542,7 +5542,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public Subscription Plans (for company admins to view)
   app.get("/api/subscription-plans", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log('Plans endpoint hit, user:', req.user);
       const plans = await storage.getActiveSubscriptionPlans();
+      console.log('Found plans:', plans?.length || 0);
       res.json(plans);
     } catch (error) {
       console.error("Failed to fetch subscription plans:", error);
@@ -5567,12 +5569,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Company Subscription Management
   app.get("/api/company/subscription", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      console.log('Subscription endpoint hit, user:', req.user);
+      const companyId = req.user?.companyId;
       if (!companyId) {
+        console.log('No active company for user:', req.user);
         return res.status(400).json({ message: "No active company" });
       }
       
+      console.log('Fetching subscription for company:', companyId);
       const subscription = await storage.getCompanySubscription(companyId);
+      console.log('Found subscription:', subscription);
       res.json(subscription);
     } catch (error) {
       console.error("Failed to fetch company subscription:", error);
