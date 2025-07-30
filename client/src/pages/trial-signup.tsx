@@ -129,13 +129,11 @@ export default function TrialSignup() {
         description: `Your 14-day free trial has started. Welcome aboard, ${data.user.name}!`,
       });
       
-      // Redirect directly to login page with welcome message for trial users
-      // This ensures proper authentication flow after trial signup
-      localStorage.setItem('trialSignupSuccess', 'true');
-      localStorage.setItem('trialUserEmail', data.user.email);
-      
-      // Redirect to login page with trial parameter
-      setLocation('/login?trial=success&email=' + encodeURIComponent(data.user.email));
+      // Redirect directly to dashboard after successful signup and authentication
+      // This provides immediate access to the platform after trial signup
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 2000); // Allow time for authentication state to be fully set
     },
     onError: (error: Error) => {
       console.error('Signup error:', error);

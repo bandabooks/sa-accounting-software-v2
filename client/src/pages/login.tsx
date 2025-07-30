@@ -114,8 +114,11 @@ export default function Login() {
 
   const handleLoginSuccessConfirm = () => {
     setLoginSuccessModalOpen(false);
-    // Force page reload to ensure proper authentication state  
-    window.location.href = '/dashboard';
+    // Use setTimeout to ensure authentication state is fully processed
+    setTimeout(() => {
+      // Force page reload to ensure proper authentication state  
+      window.location.href = '/dashboard';
+    }, 100);
   };
 
   return (
