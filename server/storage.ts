@@ -3251,6 +3251,10 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async updateCompanyLogo(companyId: number, logoUrl: string): Promise<any> {
+    return await this.updateCompanySettings(companyId, { logo: logoUrl });
+  }
+
   // Subscription Plan Management (Super Admin Only)
   async getAllSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     return await db

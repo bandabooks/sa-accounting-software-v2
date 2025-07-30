@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building, DollarSign, Mail, Bell, Save, Globe } from "lucide-react";
+import { Building, DollarSign, Mail, Bell, Save, Globe, Upload, X, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +54,10 @@ export default function Settings() {
   const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("company");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings, isLoading } = useQuery<CompanySettings>({
     queryKey: ["/api/settings/company"],
@@ -96,6 +100,11 @@ export default function Settings() {
         fiscalYearStart: settings?.fiscalYearStart || "2025-01-01",
         taxRate: settings?.taxRate || "15.00",
       });
+      
+      // Set logo preview if exists
+      if (settings?.logo) {
+        setLogoPreview(settings.logo);
+      }
     }
   }, [settings, isLoading, form]);
 
@@ -119,6 +128,96 @@ export default function Settings() {
       });
     },
   });
+
+  // Logo upload mutation
+  const uploadLogoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('logo', file);
+      
+      const response = await fetch('/api/settings/company/logo', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'X-Session-Token': localStorage.getItem('sessionToken') || '',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload logo');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setLogoPreview(data.logoUrl);
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/company"] });
+      toast({
+        title: "Success",
+        description: "Company logo uploaded successfully!",
+      });
+      setIsUploadingLogo(false);
+      setLogoFile(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload logo",
+        variant: "destructive",
+      });
+      setIsUploadingLogo(false);
+    },
+  });
+
+  const handleLogoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match(/^image\/(png|jpe?g|gif)$/)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a PNG, JPG, or GIF image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 2MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLogoFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setLogoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoUpload = () => {
+    if (logoFile) {
+      setIsUploadingLogo(true);
+      uploadLogoMutation.mutate(logoFile);
+    }
+  };
+
+  const handleLogoRemove = () => {
+    setLogoPreview(null);
+    setLogoFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const onSubmit = (data: CompanySettingsFormData) => {
     updateSettingsMutation.mutate(data);
@@ -173,15 +272,61 @@ export default function Settings() {
                   <div className="flex flex-col space-y-4">
                     <Label>Company Logo</Label>
                     <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                        <Building className="w-8 h-8 text-gray-400" />
+                      <div className="relative w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden">
+                        {logoPreview ? (
+                          <>
+                            <img 
+                              src={logoPreview} 
+                              alt="Company Logo" 
+                              className="w-full h-full object-cover"
+                            />
+                            {logoFile && (
+                              <button
+                                type="button"
+                                onClick={handleLogoRemove}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <Image className="w-8 h-8 text-gray-400" />
+                        )}
                       </div>
-                      <div>
-                        <Button type="button" variant="outline" size="sm">
-                          Upload Logo
-                        </Button>
+                      <div className="flex-1">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/gif"
+                          onChange={handleLogoSelect}
+                          className="hidden"
+                          id="logo-upload"
+                        />
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploadingLogo}
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            {logoFile ? 'Change Logo' : 'Upload Logo'}
+                          </Button>
+                          {logoFile && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleLogoUpload}
+                              disabled={isUploadingLogo}
+                            >
+                              {isUploadingLogo ? 'Uploading...' : 'Save Logo'}
+                            </Button>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          Upload a PNG or JPG file (max 2MB, recommended: 400x400px)
+                          Upload a PNG, JPG, or GIF file (max 2MB, recommended: 400x400px)
                         </p>
                       </div>
                     </div>

@@ -1,5 +1,9 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { 
   validateAdminCreation,
@@ -138,6 +142,40 @@ function validateRequest(schema: { body?: z.ZodSchema }) {
   };
 }
 
+// Configure multer for logo uploads
+const logoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/logos';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = `company-${Date.now()}${ext}`;
+    cb(null, filename);
+  }
+});
+
+const logoUpload = multer({
+  storage: logoStorage,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PNG, JPG, and GIF files are allowed.'));
+    }
+  }
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize PayFast service
   let payFastService;
@@ -147,6 +185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.warn("PayFast service initialization failed:", (error as Error).message);
   }
+
+  // Serve uploaded files statically
+  app.use('/uploads', express.static('uploads'));
 
   // Register multi-company routes
   registerCompanyRoutes(app);
@@ -3915,6 +3956,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating company settings:", error);
       res.status(500).json({ error: "Failed to update company settings" });
+    }
+  });
+
+  // Company Logo Upload
+  app.post('/api/settings/company/logo', authenticate, logoUpload.single('logo'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No logo file uploaded" });
+      }
+
+      // Generate the logo URL
+      const logoUrl = `/uploads/logos/${req.file.filename}`;
+      
+      // Update company with logo URL
+      await storage.updateCompanyLogo(companyId, logoUrl);
+      
+      // Log the action
+      await logAudit(req.user.id, 'UPDATE', 'company_logo', companyId, `Updated company logo: ${req.file.filename}`);
+      
+      res.json({ 
+        success: true, 
+        logoUrl,
+        message: 'Logo uploaded successfully' 
+      });
+    } catch (error) {
+      console.error('Error uploading company logo:', error);
+      res.status(500).json({ message: 'Failed to upload logo' });
     }
   });
 
