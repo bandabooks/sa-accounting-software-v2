@@ -4,8 +4,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
+// Event interface for type safety
+interface ComplianceEvent {
+  id: string;
+  title: string;
+  date: string;
+  status: 'completed' | 'scheduled' | 'pending' | 'overdue';
+  type: 'SARS' | 'CIPC' | 'Labour';
+  client?: string; // Optional client field
+}
+
 // Real compliance events will be loaded from API - no mock data
-const events: any[] = [];
+const events: ComplianceEvent[] = [];
 
 export default function ComplianceCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -33,9 +43,9 @@ export default function ComplianceCalendar() {
 
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const getEventsForDate = (day: number) => {
+  const getEventsForDate = (day: number): ComplianceEvent[] => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(event => event.date === dateStr);
+    return events.filter((event: ComplianceEvent) => event.date === dateStr);
   };
 
   const getStatusColor = (status: string) => {
@@ -69,7 +79,7 @@ export default function ComplianceCalendar() {
               <div
                 key={event.id}
                 className="text-xs p-1 rounded bg-blue-100 text-blue-800 truncate"
-                title={`${event.title} - ${event.client}`}
+                title={`${event.title}${event.client ? ` - ${event.client}` : ''}`}
               >
                 {event.title}
               </div>
@@ -146,20 +156,34 @@ export default function ComplianceCalendar() {
               <CardDescription>Next 30 days</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {mockEvents.map(event => (
-                <div key={event.id} className="p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm">{event.title}</h4>
-                    <Badge className={getStatusColor(event.status)} variant="secondary">
-                      {event.status}
-                    </Badge>
+              {events.length > 0 ? (
+                events.map((event: ComplianceEvent) => (
+                  <div key={event.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-sm">{event.title}</h4>
+                      <Badge className={getStatusColor(event.status)} variant="secondary">
+                        {event.status}
+                      </Badge>
+                    </div>
+                    {event.client && <p className="text-xs text-gray-600 mb-1">{event.client}</p>}
+                    <p className="text-xs text-gray-500">
+                      {new Date(event.date).toLocaleDateString()}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-600 mb-1">{event.client}</p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(event.date).toLocaleDateString()}
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Events Scheduled</h3>
+                  <p className="text-gray-600 mb-4">
+                    You haven't scheduled any compliance events yet.
                   </p>
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add First Event
+                  </Button>
                 </div>
-              ))}
+              )}
             </CardContent>
           </Card>
 

@@ -6,8 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter } from "lucide-react";
 
+// Task interface for type safety
+interface ComplianceTask {
+  id: string;
+  title: string;
+  client: string;
+  type: 'SARS' | 'CIPC' | 'Labour';
+  priority: 'high' | 'medium' | 'low';
+  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
+  dueDate: string;
+  assignedTo: string;
+}
+
 // Real compliance tasks will be loaded from API - no mock data
-const tasks: any[] = [];
+const tasks: ComplianceTask[] = [];
 
 export default function ComplianceTasks() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,7 +54,7 @@ export default function ComplianceTasks() {
     }
   };
 
-  const filteredTasks = mockTasks.filter(task => {
+  const filteredTasks = tasks.filter((task: ComplianceTask) => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          task.client.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = !selectedType || selectedType === "all" || task.type === selectedType;
@@ -158,34 +170,50 @@ export default function ComplianceTasks() {
 
       {/* Tasks List */}
       <div className="space-y-4">
-        {filteredTasks.map((task) => (
-          <Card key={task.id} className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{task.title}</h3>
-                    <div className="flex space-x-2">
-                      <Badge className={getTypeColor(task.type)}>{task.type}</Badge>
-                      <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                      <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
+        {filteredTasks.length > 0 ? (
+          filteredTasks.map((task: ComplianceTask) => (
+            <Card key={task.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">{task.title}</h3>
+                      <div className="flex space-x-2">
+                        <Badge className={getTypeColor(task.type)}>{task.type}</Badge>
+                        <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                        <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 mb-2">{task.client}</p>
+                    <div className="flex items-center text-sm text-gray-500 space-x-4">
+                      <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>Assigned to: {task.assignedTo}</span>
                     </div>
                   </div>
-                  <p className="text-gray-600 mb-2">{task.client}</p>
-                  <div className="flex items-center text-sm text-gray-500 space-x-4">
-                    <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                    <span>•</span>
-                    <span>Assigned to: {task.assignedTo}</span>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm">View Details</Button>
+                    <Button size="sm">Update Status</Button>
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">View Details</Button>
-                  <Button size="sm">Update Status</Button>
-                </div>
-              </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <CheckSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Tasks Found</h3>
+              <p className="text-gray-600 mb-4">
+                You haven't created any compliance tasks yet, or no tasks match your current filters.
+              </p>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Task
+              </Button>
             </CardContent>
           </Card>
-        ))}
+        )}
       </div>
     </div>
   );
