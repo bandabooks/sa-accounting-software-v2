@@ -6,8 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Upload, Download, Search, Filter, Eye, Trash2 } from "lucide-react";
 
+// Document interface for type safety
+interface ComplianceDocument {
+  id: string;
+  name: string;
+  client: string;
+  type: string;
+  category: 'SARS' | 'CIPC' | 'Labour';
+  status: 'approved' | 'pending_review' | 'draft' | 'rejected';
+  uploadDate: string;
+  fileSize: string;
+  fileName: string;
+  size: string; // File size display
+  uploadedBy: string; // User who uploaded the document
+}
+
 // Real compliance documents will be loaded from API - no mock data
-const documents: any[] = [];
+const documents: ComplianceDocument[] = [];
 
 export default function ComplianceDocuments() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,7 +64,7 @@ export default function ComplianceDocuments() {
     }
   };
 
-  const filteredDocuments = mockDocuments.filter(doc => {
+  const filteredDocuments = documents.filter((doc: ComplianceDocument) => {
     const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doc.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doc.type.toLowerCase().includes(searchTerm.toLowerCase());
@@ -166,7 +181,8 @@ export default function ComplianceDocuments() {
 
       {/* Documents List */}
       <div className="space-y-4">
-        {filteredDocuments.map((document) => (
+        {filteredDocuments.length > 0 ? (
+          filteredDocuments.map((document: ComplianceDocument) => (
           <Card key={document.id} className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
@@ -213,7 +229,22 @@ export default function ComplianceDocuments() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          ))
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
+              <p className="text-gray-600 mb-4">
+                You haven't uploaded any compliance documents yet, or no documents match your current filters.
+              </p>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Your First Document
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
