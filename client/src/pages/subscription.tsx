@@ -156,21 +156,31 @@ export default function Subscription() {
     return `R ${parseFloat(price).toFixed(2)}`;
   };
 
-  // Show error state if there are authentication or other critical errors
+  // Handle authentication errors gracefully
   if (subscriptionError || plansError) {
-    const isAuthError = subscriptionError?.message?.includes('401') || 
-                       plansError?.message?.includes('401') ||
-                       subscriptionError?.message?.includes('authentication') ||
-                       plansError?.message?.includes('authentication');
+    const subscriptionErrorMsg = subscriptionError?.message || '';
+    const plansErrorMsg = plansError?.message || '';
+    
+    const isAuthError = subscriptionErrorMsg.includes('401') || 
+                       plansErrorMsg.includes('401') ||
+                       subscriptionErrorMsg.includes('authentication') ||
+                       plansErrorMsg.includes('authentication') ||
+                       subscriptionErrorMsg.includes('Authentication failed') ||
+                       plansErrorMsg.includes('Authentication failed');
     
     if (isAuthError) {
+      // Clear invalid tokens and redirect to login
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('sessionToken');
+      localStorage.removeItem('userData');
+      
       return (
         <div className="container mx-auto p-6">
           <div className="text-center py-12">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Session Expired</h2>
             <p className="text-gray-600 mb-4">
-              Please log in to view your subscription details.
+              Your session has expired. Please log in again to view your subscription details.
             </p>
             <Button onClick={() => navigate('/login')}>
               Go to Login
@@ -180,17 +190,27 @@ export default function Subscription() {
       );
     }
     
+    // For non-authentication errors, show a generic error with more helpful info
     return (
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
           <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Subscription Data</h2>
           <p className="text-gray-600 mb-4">
-            There was an error loading your subscription information. Please try refreshing the page.
+            There was an error loading your subscription information. This might be due to a temporary network issue.
           </p>
-          <Button onClick={() => window.location.reload()}>
-            Refresh Page
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/company/subscription"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
+            }}>
+              Try Again
+            </Button>
+            <br />
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
+          </div>
         </div>
       </div>
     );

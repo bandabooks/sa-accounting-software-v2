@@ -63,7 +63,14 @@ export function useCompanySubscription() {
   const { user } = useAuth();
   const { data: subscription, isLoading, error } = useQuery<CompanySubscription>({
     queryKey: ["/api/company/subscription"],
-    retry: false,
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors
+      if (error?.message?.includes('401') || error?.message?.includes('authentication')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    enabled: !!user, // Only run query if user is authenticated
   });
 
   // Check if user is super admin or software owner

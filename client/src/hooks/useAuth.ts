@@ -73,6 +73,10 @@ export function useAuth(): AuthState {
       });
 
       if (!response.ok) {
+        // Clear invalid tokens on authentication failure
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('userData');
         throw new Error('Authentication failed');
       }
 
