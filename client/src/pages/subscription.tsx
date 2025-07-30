@@ -238,6 +238,10 @@ export default function Subscription() {
     );
   }
 
+  // Log successful data loading
+  console.log('Subscription data loaded:', currentSubscription);
+  console.log('Plans data loaded:', plans);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="mb-8">
@@ -254,6 +258,9 @@ export default function Subscription() {
             <CreditCard className="h-5 w-5" />
             <span>Current Subscription</span>
           </CardTitle>
+          <CardDescription>
+            {currentSubscription ? 'Your active subscription details' : 'No active subscription found'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {currentSubscription ? (
@@ -315,7 +322,7 @@ export default function Subscription() {
               <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Subscription</h3>
               <p className="text-gray-500 mb-4">
-                You don't have an active subscription. Choose a plan to get started.
+                You don't have an active subscription. Choose a plan below to get started.
               </p>
             </div>
           )}

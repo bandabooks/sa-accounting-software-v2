@@ -5579,6 +5579,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Fetching subscription for company:', companyId);
       const subscription = await storage.getCompanySubscription(companyId);
       console.log('Found subscription:', subscription);
+      
+      // If no subscription exists, return null instead of undefined
+      if (!subscription) {
+        console.log('No subscription found, returning null');
+        return res.json(null);
+      }
+      
       res.json(subscription);
     } catch (error) {
       console.error("Failed to fetch company subscription:", error);
