@@ -28,7 +28,10 @@ interface SubscriptionPlan {
   description: string;
   monthlyPrice: string;
   annualPrice: string;
-  features: string[];
+  features: {
+    core_features?: string[];
+    included_modules?: string[];
+  };
   limits: Record<string, number>;
   isActive: boolean;
   sortOrder: number;
@@ -307,12 +310,14 @@ export default function Subscription() {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Plan Features</Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {currentSubscription.plan.features.map((feature, index) => (
+                    {currentSubscription.plan.features?.core_features?.map((feature, index) => (
                       <div key={index} className="flex items-center space-x-2">
                         <Check className="h-4 w-4 text-green-500" />
                         <span className="text-sm">{feature}</span>
                       </div>
-                    ))}
+                    )) || (
+                      <div className="text-sm text-gray-500">No features listed</div>
+                    )}
                   </div>
                 </div>
               )}
@@ -423,12 +428,14 @@ export default function Subscription() {
                     <div className="space-y-2">
                       <h4 className="font-medium">Features included:</h4>
                       <ul className="space-y-1">
-                        {plan.features.map((feature, index) => (
+                        {plan.features?.core_features?.map((feature, index) => (
                           <li key={index} className="flex items-center space-x-2 text-sm">
                             <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
                             <span>{feature}</span>
                           </li>
-                        ))}
+                        )) || (
+                          <li className="text-sm text-gray-500">No features listed</li>
+                        )}
                       </ul>
                     </div>
 
