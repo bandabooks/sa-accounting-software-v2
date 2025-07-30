@@ -67,66 +67,72 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Dashboard Header */}
-      <div data-onboarding="dashboard-header" className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400">Welcome to your business overview</p>
+    <div className="space-y-4 sm:space-y-6 mobile-safe-area">
+      {/* Mobile-Optimized Dashboard Header */}
+      <div data-onboarding="dashboard-header" className="mobile-header sm:bg-none sm:p-0 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-white sm:text-gray-900 dark:text-white">Dashboard</h1>
+        <p className="text-blue-100 sm:text-gray-600 dark:text-gray-400 text-sm sm:text-base">Welcome to your business overview</p>
       </div>
 
-      {/* Quick Actions */}
-      <div data-onboarding="quick-actions" className="flex flex-wrap gap-4">
-        <Button asChild className="bg-primary hover:bg-blue-800">
+      {/* Mobile-Optimized Quick Actions */}
+      <div data-onboarding="quick-actions" className="mobile-grid sm:flex sm:flex-wrap gap-3 sm:gap-4 px-4 sm:px-0">
+        <Button asChild className="mobile-btn mobile-btn-primary sm:w-auto bg-primary hover:bg-blue-800 min-h-[52px] sm:min-h-[40px]">
           <Link href="/invoices/new">
-            <Plus size={16} className="mr-2" />
+            <Plus size={18} className="mr-2" />
             New Invoice
           </Link>
         </Button>
-        <Button asChild variant="secondary" className="bg-secondary text-white hover:bg-teal-800">
+        <Button asChild variant="secondary" className="mobile-btn sm:w-auto bg-secondary text-white hover:bg-teal-800 min-h-[52px] sm:min-h-[40px]">
           <Link href="/estimates/new">
-            <FileText size={16} className="mr-2" />
+            <FileText size={18} className="mr-2" />
             New Estimate
           </Link>
         </Button>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="mobile-btn sm:w-auto min-h-[52px] sm:min-h-[40px]">
           <Link href="/customers/new">
-            <UserPlus size={16} className="mr-2" />
+            <UserPlus size={18} className="mr-2" />
             Add Customer
           </Link>
         </Button>
       </div>
 
-      {/* Enhanced Stats Grid */}
-      <div data-onboarding="dashboard-stats">
+      {/* Mobile-Optimized Stats Grid */}
+      <div data-onboarding="dashboard-stats" className="px-4 sm:px-0">
         <EnhancedStatsGrid stats={dashboardStats} />
       </div>
 
-      {/* Profit/Loss Chart */}
-      <ProfitLossChart data={dashboardStats.profitLossData || []} />
+      {/* Mobile-Optimized Profit/Loss Chart */}
+      <div className="mobile-card sm:m-0 sm:p-0 sm:bg-transparent sm:shadow-none">
+        <ProfitLossChart data={dashboardStats.profitLossData || []} />
+      </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 px-4 sm:px-0">
         {/* Recent Activities */}
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2 mobile-card sm:m-0 sm:p-0 sm:bg-transparent sm:shadow-none">
           <RecentActivities activities={dashboardStats.recentActivities || []} />
         </div>
 
         {/* Action Shortcuts */}
-        <div>
+        <div className="mobile-card sm:m-0 sm:p-0 sm:bg-transparent sm:shadow-none">
           <ActionShortcuts />
         </div>
       </div>
 
 
 
-      {/* Compliance Alerts */}
-      <ComplianceAlerts alerts={dashboardStats.complianceAlerts || []} />
+      {/* Mobile-Optimized Compliance Alerts */}
+      <div className="mobile-card sm:m-0 sm:p-0 sm:bg-transparent sm:shadow-none">
+        <ComplianceAlerts alerts={dashboardStats.complianceAlerts || []} />
+      </div>
 
-      {/* Legacy Recent Invoices (keeping for compatibility) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RecentInvoices invoices={dashboardStats.recentInvoices} />
+      {/* Mobile-Optimized Recent Invoices and Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 px-4 sm:px-0">
+        <div className="mobile-card sm:m-0 sm:p-0 sm:bg-transparent sm:shadow-none">
+          <RecentInvoices invoices={dashboardStats.recentInvoices} />
+        </div>
         
-        {/* Quick Stats Summary */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+        {/* Mobile-Optimized Quick Stats Summary */}
+        <div className="mobile-stat-card sm:bg-white sm:dark:bg-gray-800 sm:rounded-lg sm:border sm:border-gray-200 sm:dark:border-gray-700 sm:shadow-sm sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Business Summary</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">

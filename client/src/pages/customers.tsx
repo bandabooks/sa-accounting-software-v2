@@ -20,15 +20,15 @@ export default function Customers() {
 
   const { data: stats } = useQuery({
     queryKey: ["/api/customers/stats"],
-    queryFn: () => apiRequest("/api/customers/stats", "GET")
+    queryFn: () => apiRequest("/api/customers/stats", "GET").then(res => res.json())
   });
 
   const filteredCustomers = customers?.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     const matchesStatus = !statusFilter || 
-      (statusFilter === "active" && customer.isActive !== false) ||
-      (statusFilter === "inactive" && customer.isActive === false) ||
+      (statusFilter === "active" && (customer as any).isActive !== false) ||
+      (statusFilter === "inactive" && (customer as any).isActive === false) ||
       (statusFilter === "portal" && customer.portalAccess === true);
     return matchesSearch && matchesStatus;
   }) || [];

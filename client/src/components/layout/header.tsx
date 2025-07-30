@@ -52,26 +52,28 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">{getPageName()}</h2>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{getPageName()}</h2>
           {user && (
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 truncate">
               Welcome back, <span className="font-medium">{user.name}</span>
             </p>
           )}
         </div>
-        <div className="flex items-center space-x-4">
-          {/* Company Switcher */}
-          <CompanySwitcher />
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+          {/* Company Switcher - Hidden on very small screens */}
+          <div className="hidden xs:block">
+            <CompanySwitcher />
+          </div>
           
           {/* Onboarding Help Button */}
           <OnboardingHelpButton />
           
-          <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <Bell size={20} />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          <button className="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <Bell size={18} className="sm:w-5 sm:h-5" />
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
               3
             </span>
           </button>

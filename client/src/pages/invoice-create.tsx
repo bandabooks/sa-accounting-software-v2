@@ -41,7 +41,7 @@ export default function InvoiceCreate() {
     customerId: 0,
     issueDate: new Date(),
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    status: "draft" as const,
+    status: "draft" as "draft" | "sent" | "paid" | "overdue",
     subtotal: "0.00",
     vatAmount: "0.00", 
     total: "0.00",
@@ -180,194 +180,232 @@ export default function InvoiceCreate() {
   const totals = calculateInvoiceTotal(items);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="customer">Customer *</Label>
-              <CustomerSelect
-                value={formData.customerId || undefined}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
-                placeholder="Select a customer"
-              />
+    <div className="mobile-safe-area">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="mobile-form">
+          <div className="mobile-form-header">
+            <h2 className="text-lg sm:text-xl font-bold text-white sm:text-gray-900 dark:text-white">Create Invoice</h2>
+            <p className="text-blue-100 sm:text-gray-600 dark:text-gray-400 text-sm">Fill in the details below</p>
+          </div>
+          <div className="mobile-form-content space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="customer" className="mobile-form-label">Customer *</Label>
+                <CustomerSelect
+                  value={formData.customerId || undefined}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
+                  placeholder="Select a customer"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="status" className="mobile-form-label">Status</Label>
+                <Select 
+                  value={formData.status} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as "paid" | "sent" | "overdue" | "draft" }))}
+                >
+                  <SelectTrigger className="mobile-form-input">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="issueDate" className="mobile-form-label">Issue Date</Label>
+                <Input
+                  type="date"
+                  className="mobile-form-input"
+                  value={formData.issueDate.toISOString().split('T')[0]}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    issueDate: new Date(e.target.value) 
+                  }))}
+                />
+            </div>
+
+              <div>
+                <Label htmlFor="dueDate" className="mobile-form-label">Due Date</Label>
+                <Input
+                  type="date"
+                  className="mobile-form-input"
+                  value={formData.dueDate.toISOString().split('T')[0]}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    dueDate: new Date(e.target.value) 
+                  }))}
+                />
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as "paid" | "sent" | "overdue" | "draft" }))}
+              <Label htmlFor="notes" className="mobile-form-label">Notes</Label>
+              <Textarea
+                placeholder="Additional notes..."
+                className="mobile-form-input min-h-[100px]"
+                value={formData.notes || ""}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile-Optimized Items Section */}
+        <div className="mobile-form">
+          <div className="mobile-form-header">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-white">Invoice Items</h3>
+                <p className="text-blue-100 text-sm">Add products or services</p>
+              </div>
+              <Button 
+                type="button" 
+                onClick={addItem} 
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 min-h-[44px] px-4"
+                size="sm"
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="issueDate">Issue Date</Label>
-              <Input
-                type="date"
-                value={formData.issueDate.toISOString().split('T')[0]}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  issueDate: new Date(e.target.value) 
-                }))}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                type="date"
-                value={formData.dueDate.toISOString().split('T')[0]}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  dueDate: new Date(e.target.value) 
-                }))}
-              />
+                <Plus size={16} className="mr-1" />
+                Add Item
+              </Button>
             </div>
           </div>
-
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              placeholder="Additional notes..."
-              value={formData.notes || ""}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-            />
+          <div className="mobile-form-content">
+            <div className="space-y-6">
+              {items.map((item, index) => (
+                <div key={index} className="mobile-card p-4 border border-gray-200 rounded-lg">
+                  {/* Mobile-optimized item form */}
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="mobile-form-label">Product/Service</Label>
+                      <ProductServiceSelect
+                        value={item.productId}
+                        onValueChange={(productId) => updateItem(index, 'productId', productId)}
+                        onProductSelect={(product) => handleProductSelect(index, product)}
+                        placeholder="Select or create product/service..."
+                      />
+                      {!item.productId && (
+                        <Input
+                          className="mt-2 mobile-form-input"
+                          placeholder="Or enter description manually..."
+                          value={item.description}
+                          onChange={(e) => updateItem(index, 'description', e.target.value)}
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="mobile-form-label">Quantity</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="mobile-form-input"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mobile-form-label">Unit Price</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="mobile-form-input"
+                          value={item.unitPrice}
+                          onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    {shouldShowVATFields && (
+                      <div>
+                        <Label className="mobile-form-label">VAT %</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="mobile-form-input"
+                          value={item.vatRate}
+                          onChange={(e) => updateItem(index, 'vatRate', e.target.value)}
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                      <div>
+                        <Label className="mobile-form-label">Total</Label>
+                        <div className="text-lg font-bold text-blue-600">
+                          {formatCurrency(
+                            parseFloat(item.quantity || "0") * 
+                            parseFloat(item.unitPrice || "0") * 
+                            (shouldShowVATFields ? (1 + parseFloat(item.vatRate || "0") / 100) : 1)
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="min-h-[44px] px-4"
+                        onClick={() => removeItem(index)}
+                        disabled={items.length <= 1}
+                      >
+                        <Trash2 size={16} className="mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {items.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No items added yet. Click "Add Item" to get started.</p>
+                </div>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Items</CardTitle>
-            <Button type="button" onClick={addItem} variant="outline" size="sm">
-              <Plus size={16} className="mr-1" />
-              Add Item
+        {/* Mobile-Optimized Totals and Submit */}
+        <div className="mobile-form">
+          <div className="mobile-form-header">
+            <h3 className="text-lg font-bold text-white">Invoice Summary</h3>
+            <p className="text-blue-100 text-sm">Review and submit</p>
+          </div>
+          <div className="mobile-form-content space-y-4">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+              </div>
+              {shouldShowVATFields && (
+                <div className="flex justify-between">
+                  <span>VAT:</span>
+                  <span className="font-medium">{formatCurrency(totals.vatAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2">
+                <span>Total:</span>
+                <span className="text-blue-600">{formatCurrency(totals.total)}</span>
+              </div>
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="mobile-btn mobile-btn-primary"
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending ? "Creating..." : "Create Invoice"}
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {items.map((item, index) => (
-              <div key={index} className="grid grid-cols-12 gap-4 items-end">
-                <div className="col-span-4">
-                  <Label>Product/Service</Label>
-                  <ProductServiceSelect
-                    value={item.productId}
-                    onValueChange={(productId) => updateItem(index, 'productId', productId)}
-                    onProductSelect={(product) => handleProductSelect(index, product)}
-                    placeholder="Select or create product/service..."
-                  />
-                  {!item.productId && (
-                    <Input
-                      className="mt-2"
-                      placeholder="Or enter description manually..."
-                      value={item.description}
-                      onChange={(e) => updateItem(index, 'description', e.target.value)}
-                    />
-                  )}
-                </div>
-                <div className="col-span-2">
-                  <Label>Quantity</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label>Unit Price</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.unitPrice}
-                    onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
-                  />
-                </div>
-                {shouldShowVATFields && (
-                  <div className="col-span-2">
-                    <Label>VAT %</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.vatRate}
-                      onChange={(e) => updateItem(index, 'vatRate', e.target.value)}
-                    />
-                  </div>
-                )}
-                <div className="col-span-1">
-                  <Label>Total</Label>
-                  <div className="text-sm font-medium py-2">
-                    {formatCurrency(
-                      parseFloat(item.quantity || "0") * 
-                      parseFloat(item.unitPrice || "0") * 
-                      (shouldShowVATFields ? (1 + parseFloat(item.vatRate || "0") / 100) : 1)
-                    )}
-                  </div>
-                </div>
-                <div className="col-span-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeItem(index)}
-                    disabled={items.length <= 1}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 border-t pt-4">
-            <div className="flex justify-end">
-              <div className="w-64 space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(totals.subtotal)}</span>
-                </div>
-                {shouldShowVATFields && (
-                  <div className="flex justify-between">
-                    <span>VAT:</span>
-                    <span>{formatCurrency(totals.vatAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Total:</span>
-                  <span>{formatCurrency(totals.total)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end space-x-4">
-        <Button type="button" variant="outline" onClick={() => setLocation("/invoices")}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={createMutation.isPending}>
-          {createMutation.isPending ? "Creating..." : "Create Invoice"}
-        </Button>
-      </div>
-    </form>
+        </div>
+      </form>
+    </div>
   );
 }

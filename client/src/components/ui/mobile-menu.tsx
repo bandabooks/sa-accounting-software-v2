@@ -233,12 +233,14 @@ function MobileNavigationGroup({ group, location, userPermissions, userRole, isE
       <Link
         href={item.path}
         onClick={onItemClick}
-        className={`mobile-nav-item flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors ${
-          isActive ? "bg-primary text-white hover:bg-primary-dark" : ""
+        className={`mobile-nav-item flex items-center space-x-3 px-4 py-4 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all duration-200 touch-manipulation ${
+          isActive ? "bg-primary text-white hover:bg-primary shadow-lg" : ""
         }`}
+        role="menuitem"
+        tabIndex={0}
       >
-        <Icon size={18} />
-        <span className="font-medium">{item.label}</span>
+        <Icon size={20} />
+        <span className="font-medium text-base">{item.label}</span>
       </Link>
     );
   }
@@ -247,11 +249,14 @@ function MobileNavigationGroup({ group, location, userPermissions, userRole, isE
     <div className="mb-2">
       <button
         onClick={onToggle}
-        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+        className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 touch-manipulation min-h-[52px] ${
           hasActiveItem 
-            ? "bg-blue-50 text-primary" 
-            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            ? "bg-blue-50 dark:bg-blue-900/30 text-primary shadow-sm" 
+            : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
         }`}
+        role="button"
+        aria-expanded={isExpanded}
+        aria-label={`Toggle ${group.label} menu`}
       >
         <div className="flex items-center space-x-3">
           {group.icon && <group.icon size={18} />}
@@ -271,11 +276,13 @@ function MobileNavigationGroup({ group, location, userPermissions, userRole, isE
                 key={item.path}
                 href={item.path}
                 onClick={onItemClick}
-                className={`mobile-nav-subitem flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors ${
-                  isActive ? "bg-blue-50 text-primary font-medium" : ""
+                className={`mobile-nav-subitem flex items-center space-x-3 px-4 py-3 text-sm text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200 touch-manipulation min-h-[48px] ${
+                  isActive ? "bg-blue-50 dark:bg-blue-900/30 text-primary font-medium shadow-sm" : ""
                 }`}
+                role="menuitem"
+                tabIndex={0}
               >
-                <Icon size={16} />
+                <Icon size={18} />
                 <span>{item.label}</span>
               </Link>
             );
@@ -314,21 +321,31 @@ export default function MobileMenu() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden touch-icon-button">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="lg:hidden min-w-[44px] min-h-[44px] p-2 touch-none"
+          aria-label="Open navigation menu"
+        >
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 w-64">
-        <div className="h-full bg-white flex flex-col">
-          <div className="p-6 border-b border-gray-200 flex-shrink-0">
+      <SheetContent 
+        side="left" 
+        className="p-0 w-80 mobile-safe-area"
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        <div className="h-full bg-white dark:bg-gray-900 flex flex-col">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Calculator className="text-white" size={20} />
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <Calculator className="text-white" size={22} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Taxnify</h1>
-                <p className="text-sm text-gray-500">Business & Compliance</p>
+                <h1 className="text-xl font-bold text-white">Taxnify</h1>
+                <p className="text-sm text-blue-100">Business & Compliance</p>
                 <div className="flex items-center gap-2 mt-1">
                   {isSuperAdminOrOwner ? (
                     <span className="text-xs px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full font-medium">
@@ -362,7 +379,7 @@ export default function MobileMenu() {
             )}
           </div>
           
-          <nav className="flex-1 overflow-y-auto mt-6 px-3 pb-6">
+          <nav className="flex-1 overflow-y-auto mt-4 px-4 pb-6 scrollbar-thin" role="menu">
             <div className="space-y-2">
               {navigationGroups
                 .filter(group => {
