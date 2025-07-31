@@ -8517,7 +8517,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getBridgedPermissionsMatrix);
   
   // Permission Toggle Route
-  app.post("/api/permissions/toggle", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/permissions/toggle", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const { roleId, moduleId, permissionType, enabled } = req.body;
       
@@ -8547,7 +8547,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // Permission Update Route
-  app.post("/api/permissions/update", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/permissions/update", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const { roleId, moduleId, permissionType, enabled } = req.body;
       

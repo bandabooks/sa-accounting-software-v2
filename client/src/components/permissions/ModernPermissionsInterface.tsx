@@ -112,10 +112,33 @@ export default function ModernPermissionsInterface() {
       permissionType: string;
       enabled: boolean;
     }) => {
-      return apiRequest('/api/permissions/toggle', {
+      const token = localStorage.getItem('authToken');
+      const sessionToken = localStorage.getItem('sessionToken');
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      if (sessionToken) {
+        headers['X-Session-Token'] = sessionToken;
+      }
+      
+      const response = await fetch('/api/permissions/toggle', {
         method: 'POST',
-        body: { roleId, moduleId, permissionType, enabled },
+        headers,
+        body: JSON.stringify({ roleId, moduleId, permissionType, enabled }),
+        credentials: 'include',
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update permission: ${response.statusText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -241,12 +264,35 @@ export default function ModernPermissionsInterface() {
               size="sm"
               onClick={async () => {
                 try {
-                  const response = await apiRequest('/api/admin/initialize-default-modules', {
+                  const token = localStorage.getItem('authToken');
+                  const sessionToken = localStorage.getItem('sessionToken');
+                  
+                  const headers: HeadersInit = {
+                    'Content-Type': 'application/json',
+                  };
+                  
+                  if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                  }
+                  
+                  if (sessionToken) {
+                    headers['X-Session-Token'] = sessionToken;
+                  }
+                  
+                  const response = await fetch('/api/admin/initialize-default-modules', {
                     method: 'POST',
-                    body: {}
+                    headers,
+                    body: JSON.stringify({}),
+                    credentials: 'include',
                   });
                   
-                  if (response.success) {
+                  if (!response.ok) {
+                    throw new Error(`Failed to initialize permissions: ${response.statusText}`);
+                  }
+                  
+                  const result = await response.json();
+                  
+                  if (result.success) {
                     toast({
                       title: "Success",
                       description: "Default module access initialized for all users",
