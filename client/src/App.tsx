@@ -92,7 +92,7 @@ import LabourCompliance from "@/pages/labour-compliance";
 import ComplianceTasks from "@/pages/compliance-tasks";
 import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
-import UnifiedUserManagement from "@/pages/UnifiedUserManagement";
+import ProfessionalUserManagement from "@/pages/ProfessionalUserManagement";
 import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
@@ -560,7 +560,7 @@ function AuthenticatedApp() {
         {/* Role-Based Access Control (RBAC) Routes */}
         <Route path="/user-management">
           <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
-            <UnifiedUserManagement />
+            <ProfessionalUserManagement />
           </ProtectedRoute>
         </Route>
 

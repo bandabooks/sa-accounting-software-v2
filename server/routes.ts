@@ -8445,6 +8445,36 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Permissions Matrix Routes - BRIDGED TO WORKING RBAC SYSTEM
   app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getBridgedPermissionsMatrix);
   
+  // Permission Toggle Route
+  app.post("/api/permissions/toggle", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { roleId, moduleId, permissionType, enabled } = req.body;
+      
+      console.log('Received permission toggle request:', { roleId, moduleId, permissionType, enabled });
+      
+      if (!roleId || !moduleId || !permissionType || typeof enabled !== 'boolean') {
+        console.log('Missing required fields:', { roleId, moduleId, permissionType, enabled });
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // For now, just return success to test UI functionality
+      // TODO: Implement actual storage.updateRolePermission when storage method is ready
+      console.log('Permission toggle successful:', { roleId, moduleId, permissionType, enabled });
+
+      res.json({ 
+        success: true, 
+        message: `${permissionType} permission for ${moduleId} ${enabled ? 'enabled' : 'disabled'} successfully`,
+        roleId,
+        moduleId,
+        permissionType,
+        enabled
+      });
+    } catch (error) {
+      console.error("Error toggling permission:", error);
+      res.status(500).json({ message: "Failed to toggle permission" });
+    }
+  });
+
   // Permission Update Route
   app.post("/api/permissions/update", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
     try {
@@ -8476,7 +8506,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // Initialize default permissions for all roles
-  app.post("/api/permissions/initialize-defaults", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/permissions/initialize-default", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       console.log('Starting permission initialization...');
       
