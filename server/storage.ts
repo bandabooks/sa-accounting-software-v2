@@ -9798,8 +9798,24 @@ export class DatabaseStorage implements IStorage {
       // Parse current permissions or initialize empty object
       let permissions = {};
       try {
-        permissions = currentRole.permissions ? JSON.parse(currentRole.permissions) : {};
+        const rawPermissions = currentRole.permissions ? JSON.parse(currentRole.permissions) : {};
+        
+        // Convert array format to object format if needed
+        if (Array.isArray(rawPermissions)) {
+          console.log(`Converting array permissions to object format for role ${roleId}`);
+          permissions = {};
+          rawPermissions.forEach((perm: string) => {
+            const [module, action] = perm.split(':');
+            if (module && action) {
+              if (!permissions[module]) permissions[module] = {};
+              permissions[module][action] = true;
+            }
+          });
+        } else {
+          permissions = rawPermissions;
+        }
       } catch (e) {
+        console.log(`Failed to parse permissions for role ${roleId}, initializing empty:`, e);
         permissions = {};
       }
       

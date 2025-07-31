@@ -113,29 +113,11 @@ export default function ModernPermissionsInterface() {
     setPendingChanges(new Map());
   }, [selectedRoleId]);
 
-  // Debug permissions data structure
+  // Clear pending changes when role changes or permissions data updates
   React.useEffect(() => {
-    if (permissionsData) {
-      console.log('=== PERMISSIONS DATA STRUCTURE ===');
-      console.log('Full data:', permissionsData);
-      if (permissionsData.roles) {
-        permissionsData.roles.forEach((role: any) => {
-          console.log(`Role ${role.id} (${role.name}):`, role.permissions);
-          console.log(`Role ${role.id} permissions type:`, typeof role.permissions);
-          if (role.permissions && typeof role.permissions === 'string') {
-            try {
-              const parsed = JSON.parse(role.permissions);
-              console.log(`Role ${role.id} parsed permissions:`, parsed);
-            } catch (e) {
-              console.log(`Role ${role.id} permission parse error:`, e);
-            }
-          } else if (role.permissions && typeof role.permissions === 'object') {
-            console.log(`Role ${role.id} permissions as object:`, role.permissions);
-            console.log(`Role ${role.id} permissions keys:`, Object.keys(role.permissions));
-          }
-        });
-      }
-      console.log('=== END PERMISSIONS DEBUG ===');
+    if (permissionsData?.roles && selectedRoleId) {
+      // Only clear pending changes to prevent UI flash
+      setPendingChanges(new Map());
     }
   }, [permissionsData, selectedRoleId]);
 
@@ -337,21 +319,17 @@ export default function ModernPermissionsInterface() {
           }
         }
         
-        // Handle array permissions (current format)
+        // Handle array permissions (legacy format)
         if (Array.isArray(permissions)) {
           const permissionKey = `${moduleId}:${permissionType}`;
-          const result = permissions.includes(permissionKey);
-          console.log(`✓ Array permission check: ${permissionKey} = ${result}`);
-          return result;
+          return permissions.includes(permissionKey);
         }
         
-        // Handle object permissions (fallback format)
+        // Handle object permissions (current format)
         if (typeof permissions === 'object' && permissions !== null) {
           const modulePermissions = permissions[moduleId];
           if (modulePermissions && typeof modulePermissions === 'object') {
-            const result = modulePermissions[permissionType] === true;
-            console.log(`✓ Object permission check: ${moduleId}:${permissionType} = ${result}`);
-            return result;
+            return Boolean(modulePermissions[permissionType]);
           }
         }
       }
