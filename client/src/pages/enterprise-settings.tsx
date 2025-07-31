@@ -65,6 +65,18 @@ interface SystemConfiguration {
   };
 }
 
+interface AISettings {
+  enabled: boolean;
+  provider: string;
+  contextSharing: boolean;
+  conversationHistory: boolean;
+  suggestions: boolean;
+  apiKey?: string;
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+}
+
 interface NotificationSettings {
   email: {
     enabled: boolean;
@@ -138,13 +150,18 @@ export default function EnterpriseSettings() {
     queryKey: ['/api/audit-logs/enterprise'],
   });
 
+  // Fetch AI settings
+  const { data: aiSettings } = useQuery<AISettings>({
+    queryKey: ['/api/ai/settings'],
+  });
+
   // Setup 2FA mutation
   const setup2FAMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('/api/2fa/setup', 'POST');
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setQrCodeUrl(data.qrCodeUrl);
       toast({
         title: "2FA Setup Ready",
@@ -165,7 +182,7 @@ export default function EnterpriseSettings() {
     mutationFn: async (token: string) => {
       return await apiRequest('/api/2fa/enable', 'POST', { token });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setBackupCodes(data.backupCodes);
       setShowBackupCodes(true);
       setQrCodeUrl('');
@@ -297,13 +314,7 @@ export default function EnterpriseSettings() {
         <TabsContent value="ai">
           <AISettings
             systemConfig={systemConfig}
-            aiSettings={{
-              enabled: true,
-              provider: 'anthropic',
-              contextSharing: true,
-              conversationHistory: true,
-              suggestions: true,
-            }}
+            aiSettings={aiSettings}
           />
         </TabsContent>
 
