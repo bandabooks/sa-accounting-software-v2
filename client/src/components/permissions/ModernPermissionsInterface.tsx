@@ -322,11 +322,10 @@ export default function ModernPermissionsInterface() {
       return true;
     }
     
-    // Check from server data - permissions are stored as object structure
+    // Check from server data
     if (permissionsData?.roles && selectedRoleId) {
       const role = permissionsData.roles.find((r: any) => r.id === selectedRoleId);
       if (role?.permissions) {
-        // Permissions are stored as: { "sales": { "view": true, "create": false }, "inventory": {...} }
         let permissions = role.permissions;
         
         // Handle JSON string permissions (from database)
@@ -339,11 +338,20 @@ export default function ModernPermissionsInterface() {
           }
         }
         
-        // Check the actual permission value in object structure
-        if (typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)) {
+        // Handle array permissions (current format)
+        if (Array.isArray(permissions)) {
+          const permissionKey = `${moduleId}:${permissionType}`;
+          const result = permissions.includes(permissionKey);
+          console.log(`✓ Array permission check: ${permissionKey} = ${result}`);
+          return result;
+        }
+        
+        // Handle object permissions (fallback format)
+        if (typeof permissions === 'object' && permissions !== null) {
           const modulePermissions = permissions[moduleId];
           if (modulePermissions && typeof modulePermissions === 'object') {
             const result = modulePermissions[permissionType] === true;
+            console.log(`✓ Object permission check: ${moduleId}:${permissionType} = ${result}`);
             return result;
           }
         }
