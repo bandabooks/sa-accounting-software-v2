@@ -1010,6 +1010,22 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(userRoles).orderBy(userRoles.name);
   }
 
+  // Get all permissions
+  async getAllPermissions(): Promise<any[]> {
+    return await db.select({
+      id: userPermissions.id,
+      userId: userPermissions.userId,
+      roleId: userPermissions.roleId,
+      moduleId: userPermissions.moduleId,
+      permissionType: userPermissions.permissionType,
+      enabled: userPermissions.enabled,
+      grantedAt: userPermissions.grantedAt,
+      permission: userPermissions.permission
+    }).from(userPermissions)
+    .leftJoin(users, eq(userPermissions.userId, users.id))
+    .leftJoin(userRoles, eq(userPermissions.roleId, userRoles.id));
+  }
+
   async getRole(id: number): Promise<UserRole | undefined> {
     const [role] = await db.select().from(userRoles).where(eq(userRoles.id, id));
     return role;

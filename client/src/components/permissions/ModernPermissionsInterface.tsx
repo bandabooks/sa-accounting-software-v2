@@ -177,13 +177,13 @@ export default function ModernPermissionsInterface() {
         throw new Error('Failed to export permissions');
       }
       
-      // Create and download the CSV file
-      const csvData = await response.text();
-      const blob = new Blob([csvData], { type: 'text/csv' });
+      // Create and download the HTML file for PDF conversion
+      const htmlData = await response.text();
+      const blob = new Blob([htmlData], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `permissions-export-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `permissions-export-report-${new Date().toISOString().split('T')[0]}.html`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -191,7 +191,7 @@ export default function ModernPermissionsInterface() {
       
       toast({
         title: "Export Successful",
-        description: "Permissions data has been exported to CSV",
+        description: "Permissions report has been exported (open in browser and print to PDF)",
       });
     } catch (error) {
       toast({

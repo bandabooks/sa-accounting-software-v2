@@ -100,6 +100,63 @@ const ROLE_COLORS = {
 export default function ProfessionalUserManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Activity Logs Display Component
+  const ActivityLogsDisplay = () => {
+    const { data: auditLogs, isLoading } = useQuery({
+      queryKey: ['/api/admin/audit-logs'],
+      queryFn: async () => {
+        const response = await fetch('/api/admin/audit-logs', {
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'X-Session-Token': localStorage.getItem('sessionToken') || '',
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch audit logs');
+        return response.json();
+      },
+    });
+
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      );
+    }
+
+    if (!auditLogs || auditLogs.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <p>No activity logs found</p>
+          <p className="text-sm">User activities will appear here as they occur</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4 max-h-96 overflow-y-auto">
+        {auditLogs.slice(0, 20).map((log: any, index: number) => (
+          <div key={log.id || index} className="border rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Badge variant="outline">{log.action}</Badge>
+                <span className="font-medium">{log.userName || log.user?.name || 'System'}</span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {new Date(log.timestamp || log.createdAt).toLocaleString()}
+              </span>
+            </div>
+            <p className="text-sm mt-2 text-gray-600">
+              {log.resource} - {log.details || 'No additional details'}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  };
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
@@ -502,17 +559,14 @@ export default function ProfessionalUserManagement() {
         <TabsContent value="activity" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>User Activity</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                User Activity
+              </CardTitle>
               <CardDescription>Recent user actions and system events</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Activity logs will appear here</p>
-                  <p className="text-sm">Track user logins, role changes, and system actions</p>
-                </div>
-              </div>
+              <ActivityLogsDisplay />
             </CardContent>
           </Card>
         </TabsContent>
