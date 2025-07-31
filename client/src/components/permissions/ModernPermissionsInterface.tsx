@@ -165,16 +165,13 @@ export default function ModernPermissionsInterface() {
     setExportLoading(true);
     try {
       const response = await fetch('/api/permissions/export', {
-        method: 'GET',
         credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'X-Session-Token': localStorage.getItem('sessionToken') || '',
-        },
       });
       
       if (!response.ok) {
-        throw new Error('Failed to export permissions');
+        const errorData = await response.text();
+        console.error('Export response error:', errorData);
+        throw new Error(`Export failed: ${response.status} ${response.statusText}`);
       }
       
       // Create and download the HTML file for PDF conversion
