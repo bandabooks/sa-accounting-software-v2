@@ -35,7 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface Role {
   id: number;
@@ -85,6 +85,7 @@ const PERMISSION_TYPES = [
 ];
 
 export default function ModernPermissionsInterface() {
+  const { toast } = useToast();
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -235,6 +236,33 @@ export default function ModernPermissionsInterface() {
             <p className="text-muted-foreground">Configure role-based module permissions with dropdown selection and real-time feedback</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={async () => {
+                try {
+                  const response = await apiRequest('/api/admin/initialize-default-modules', {
+                    method: 'POST',
+                  });
+                  
+                  if (response.success) {
+                    toast({
+                      title: "Success",
+                      description: "Default module access initialized for all users",
+                    });
+                  }
+                } catch (error: any) {
+                  toast({
+                    title: "Error", 
+                    description: error.message || "Failed to initialize default modules",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Initialize Default Permissions
+            </Button>
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Export

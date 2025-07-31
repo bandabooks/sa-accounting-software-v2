@@ -48,6 +48,11 @@ import {
   filterPermissionsByPlan 
 } from "./default-permissions";
 import { 
+  initializeDefaultModuleAccessForAllUsers,
+  createDefaultModuleAccess,
+  validateUserModuleAccess 
+} from "./default-module-access";
+import { 
   requireAnyPermission, 
   SYSTEM_ROLES,
   hasPermission
@@ -5572,6 +5577,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/roles/custom", authenticate, requireSuperAdmin(), createCustomRole);
   app.put("/api/roles/:roleId/permissions", authenticate, requireSuperAdmin(), updateRolePermissions);
   app.post("/api/users/assign-role", authenticate, requireSuperAdmin(), assignUserRole);
+
+  // Default Module Access Management Routes
+  app.post("/api/admin/initialize-default-modules", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      console.log(`🚀 Initializing default module access for all users...`);
+      await initializeDefaultModuleAccessForAllUsers();
+      
+      await logAudit(req.user!.id, 'CREATE', 'default_module_access', 0, 'Initialized default module access for all users');
+      
+      res.json({ 
+        success: true, 
+        message: "Default module access initialized successfully for all users"
+      });
+    } catch (error: any) {
+      console.error("Failed to initialize default module access:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to initialize default module access", 
+        error: error.message 
+      });
+    }
+  });
+
+  app.post("/api/admin/create-user-module-access", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, companyId, role = 'company_admin', subscriptionPlan = 'professional' } = req.body;
+      
+      if (!userId || !companyId) {
+        return res.status(400).json({ message: "userId and companyId are required" });
+      }
+      
+      await createDefaultModuleAccess(userId, companyId, role, subscriptionPlan);
+      
+      await logAudit(req.user!.id, 'CREATE', 'user_module_access', userId, `Created default module access for user ${userId} in company ${companyId}`);
+      
+      res.json({ 
+        success: true, 
+        message: `Default module access created for user ${userId} with role ${role}` 
+      });
+    } catch (error: any) {
+      console.error("Failed to create user module access:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to create user module access", 
+        error: error.message 
+      });
+    }
+  });
+
+  app.get("/api/admin/validate-user-module-access/:userId/:companyId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const companyId = parseInt(req.params.companyId);
+      
+      const validation = await validateUserModuleAccess(userId, companyId);
+      
+      res.json(validation);
+    } catch (error: any) {
+      console.error("Failed to validate user module access:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to validate user module access", 
+        error: error.message 
+      });
+    }
+  });
 
   // Individual User Details (Super Admin)
   app.get("/api/super-admin/users/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
