@@ -275,6 +275,17 @@ export default function SubscriptionIntegratedPermissions({
   const [currentTab, setCurrentTab] = useState("modules");
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Fetch subscription data to sync active modules
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['/api/company/subscription'],
+    queryFn: async () => {
+      const response = await fetch('/api/company/subscription');
+      if (!response.ok) return null;
+      return response.json();
+    },
+    staleTime: 60000, // Cache for 1 minute
+  });
+
   // Direct role loading with fallback to hardcoded roles
   const { data: roles, isLoading: rolesLoading } = useQuery({
     queryKey: ['/api/rbac/system-roles'],
@@ -398,7 +409,71 @@ export default function SubscriptionIntegratedPermissions({
   };
 
   // Simple permission state management
-  const [permissionStates, setPermissionStates] = useState<Record<string, Record<string, boolean>>>({});
+  const [permissionStates, setPermissionStates] = useState<Record<string, boolean>>({});
+
+  // Load current permissions for selected role
+  const { data: currentPermissions } = useQuery({
+    queryKey: ['/api/rbac/role-permissions', selectedRoleId],
+    queryFn: async () => {
+      if (!selectedRoleId) return [];
+      const response = await fetch(`/api/rbac/role-permissions/${selectedRoleId}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!selectedRoleId,
+    staleTime: 30000,
+  });
+
+  // Check if module is active in subscription
+  const isModuleActiveInSubscription = (moduleId: string): boolean => {
+    if (!subscriptionData?.plan) return false;
+    
+    const moduleMapping: Record<string, string> = {
+      'dashboard': 'dashboard_analytics',
+      'customers': 'customer_management', 
+      'invoicing': 'invoicing_billing',
+      'sales': 'sales_crm',
+      'accounting': 'accounting_finance',
+      'inventory': 'inventory_management',
+      'purchases': 'purchase_management',
+      'reports': 'financial_reporting',
+      'pos': 'point_of_sale',
+      'projects': 'project_management',
+      'crm': 'sales_crm',
+      'payroll': 'payroll_hr'
+    };
+
+    const subscriptionKey = moduleMapping[moduleId] || moduleId;
+    return subscriptionData.plan.modules?.[subscriptionKey] === true;
+  };
+
+  // Initialize permission states from current permissions and subscription
+  useEffect(() => {
+    if (currentPermissions && subscriptionData) {
+      const newStates: Record<string, boolean> = {};
+      
+      // Load existing permissions
+      currentPermissions.forEach((perm: any) => {
+        const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
+        newStates[key] = perm.enabled;
+      });
+
+      // Auto-enable basic permissions for subscription-active modules
+      Object.values(AVAILABLE_MODULES).forEach(module => {
+        if (isModuleActiveInSubscription(module.id)) {
+          module.permissions.forEach(permission => {
+            const key = `${selectedRoleId}-${module.id}-${permission}`;
+            // Only auto-enable 'view' permission to avoid overriding explicit settings
+            if (permission === 'view' && newStates[key] === undefined) {
+              newStates[key] = true;
+            }
+          });
+        }
+      });
+
+      setPermissionStates(newStates);
+    }
+  }, [currentPermissions, subscriptionData, selectedRoleId]);
 
   // Direct permission toggle mutation
   const togglePermissionMutation = useMutation({
@@ -418,9 +493,10 @@ export default function SubscriptionIntegratedPermissions({
     },
     onSuccess: (result, variables) => {
       // Update local state immediately for responsive UI
+      const key = `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
       setPermissionStates(prev => ({
         ...prev,
-        [`${variables.roleId}-${variables.moduleId}-${variables.permissionType}`]: variables.enabled
+        [key]: variables.enabled
       }));
       
       toast({
