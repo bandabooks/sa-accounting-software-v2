@@ -108,6 +108,11 @@ export default function ModernPermissionsInterface() {
     // Remove the enabled condition to always fetch permissions
   });
 
+  // Clear pending changes when role changes
+  React.useEffect(() => {
+    setPendingChanges(new Map());
+  }, [selectedRoleId]);
+
   // Debug permissions data structure
   React.useEffect(() => {
     if (permissionsData) {
@@ -177,17 +182,19 @@ export default function ModernPermissionsInterface() {
         duration: 3000,
       });
       
-      // Clear pending changes after successful save
-      const key = `${data.roleId || selectedRoleId}-${data.moduleId}-${data.permissionType}`;
-      setPendingChanges(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(key);
-        return newMap;
-      });
-      
-      // Invalidate and refetch the permissions matrix
+      // Invalidate and refetch the permissions matrix immediately
       queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
       queryClient.refetchQueries({ queryKey: ['/api/permissions/matrix'] });
+      
+      // Clear pending changes after data refresh
+      setTimeout(() => {
+        const key = `${data.roleId || selectedRoleId}-${data.moduleId}-${data.permissionType}`;
+        setPendingChanges(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(key);
+          return newMap;
+        });
+      }, 100);
     },
     onError: (error: any) => {
       console.error('Permission save error:', error);
@@ -310,6 +317,11 @@ export default function ModernPermissionsInterface() {
       return pendingChanges.get(key)!;
     }
     
+    // Super admin always has all permissions
+    if (selectedRole?.name === 'super_admin') {
+      return true;
+    }
+    
     // Check from server data - permissions are stored as object structure
     if (permissionsData?.roles && selectedRoleId) {
       const role = permissionsData.roles.find((r: any) => r.id === selectedRoleId);
@@ -323,34 +335,23 @@ export default function ModernPermissionsInterface() {
             permissions = JSON.parse(permissions);
           } catch (e) {
             console.warn('Failed to parse permissions JSON:', permissions);
-            return selectedRole?.name === 'super_admin';
+            return false;
           }
         }
         
         // Check the actual permission value in object structure
-        if (typeof permissions === 'object' && permissions !== null) {
+        if (typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)) {
           const modulePermissions = permissions[moduleId];
           if (modulePermissions && typeof modulePermissions === 'object') {
             const result = modulePermissions[permissionType] === true;
-            console.log(`Permission check: ${moduleId}:${permissionType} = ${result}`, { 
-              roleId: selectedRoleId, 
-              modulePermissions, 
-              permissionType,
-              fullPermissions: permissions 
-            });
             return result;
-          } else {
-            console.log(`Module ${moduleId} permissions not found or invalid`, { 
-              modulePermissions, 
-              availableModules: Object.keys(permissions) 
-            });
           }
         }
       }
     }
     
-    // Default to false for non-super admin roles
-    return selectedRole?.name === 'super_admin';
+    // Default to false
+    return false;
   };
 
   const togglePermission = (moduleId: string, permissionType: string) => {
