@@ -149,7 +149,7 @@ export function createPayFastService(): PayFastService {
     merchantId: process.env.PAYFAST_MERCHANT_ID || '',
     merchantKey: process.env.PAYFAST_MERCHANT_KEY || '',
     passphrase: process.env.PAYFAST_PASSPHRASE || '',
-    testMode: process.env.NODE_ENV !== 'production',
+    testMode: false, // LIVE MODE ENABLED - Set to false for production payments
   };
 
   if (!config.merchantId || !config.merchantKey) {
