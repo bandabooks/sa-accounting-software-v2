@@ -151,21 +151,28 @@ export default function ModernPermissionsInterface() {
       return response.json();
     },
     onSuccess: (data, variables) => {
-      // Remove the disruptive toast that causes toggle reversion
-      // Instead, provide subtle feedback without UI disruption
-      
-      console.log('Permission saved successfully:', data.message);
-      
-      // Clear the specific pending change for this permission only
-      const key = `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
-      setPendingChanges(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(key);
-        return newMap;
+      // Restore success message now that flickering is fixed
+      toast({
+        title: "✅ Permission Saved",
+        description: data.message || "Permission updated successfully",
+        duration: 2000, // Shorter duration
       });
       
-      // Refresh the permissions data to keep it in sync
+      // Don't immediately clear pending changes - let the query invalidation handle state sync
+      // This prevents the flickering effect when toggle switches briefly left then right
+      
+      // Refresh the permissions data but delay clearing pending changes
       queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+      
+      // Clear pending change after a brief delay to prevent flicker
+      setTimeout(() => {
+        const key = `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
+        setPendingChanges(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(key);
+          return newMap;
+        });
+      }, 100);
     },
     onError: (error: any) => {
       console.error('Permission save error:', error);
@@ -358,36 +365,48 @@ export default function ModernPermissionsInterface() {
     });
   };
 
-  const enableAllForModule = (moduleId: string) => {
+  const enableAllForModule = async (moduleId: string) => {
     if (!selectedRoleId || selectedRole?.name === 'super_admin') return;
     
+    // Set all pending changes first for immediate UI feedback
     PERMISSION_TYPES.forEach(permission => {
       const key = `${selectedRoleId}-${moduleId}-${permission.key}`;
       setPendingChanges(prev => new Map(prev.set(key, true)));
-      
+    });
+    
+    // Process API calls with slight delay to prevent race conditions
+    for (const permission of PERMISSION_TYPES) {
       togglePermissionMutation.mutate({
         roleId: selectedRoleId,
         moduleId,
         permissionType: permission.key,
         enabled: true,
       });
-    });
+      // Small delay to prevent overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
   };
 
-  const disableAllForModule = (moduleId: string) => {
+  const disableAllForModule = async (moduleId: string) => {
     if (!selectedRoleId || selectedRole?.name === 'super_admin') return;
     
+    // Set all pending changes first for immediate UI feedback
     PERMISSION_TYPES.forEach(permission => {
       const key = `${selectedRoleId}-${moduleId}-${permission.key}`;
       setPendingChanges(prev => new Map(prev.set(key, false)));
-      
+    });
+    
+    // Process API calls with slight delay to prevent race conditions
+    for (const permission of PERMISSION_TYPES) {
       togglePermissionMutation.mutate({
         roleId: selectedRoleId,
         moduleId,
         permissionType: permission.key,
         enabled: false,
       });
-    });
+      // Small delay to prevent overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
   };
 
   return (
