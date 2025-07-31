@@ -182,19 +182,18 @@ export default function ModernPermissionsInterface() {
         duration: 3000,
       });
       
-      // Invalidate and refetch the permissions matrix immediately
-      queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
-      queryClient.refetchQueries({ queryKey: ['/api/permissions/matrix'] });
+      // Clear pending changes immediately since the database was updated
+      const key = `${data.roleId || selectedRoleId}-${data.moduleId}-${data.permissionType}`;
+      setPendingChanges(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
       
-      // Clear pending changes after data refresh
+      // Invalidate and refetch the permissions matrix after a short delay
       setTimeout(() => {
-        const key = `${data.roleId || selectedRoleId}-${data.moduleId}-${data.permissionType}`;
-        setPendingChanges(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(key);
-          return newMap;
-        });
-      }, 100);
+        queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+      }, 200);
     },
     onError: (error: any) => {
       console.error('Permission save error:', error);

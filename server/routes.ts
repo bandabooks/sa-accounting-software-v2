@@ -8607,8 +8607,8 @@ Format your response as a JSON array of tip objects with "title", "description",
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      // For now, just return success to test UI functionality
-      // TODO: Implement actual storage.updateRolePermission when storage method is ready
+      // Actually update the permission in the database
+      await storage.updateRolePermission(parseInt(roleId), moduleId, permissionType, enabled);
       console.log('Permission toggle successful:', { roleId, moduleId, permissionType, enabled });
 
       res.json({ 
@@ -8637,8 +8637,8 @@ Format your response as a JSON array of tip objects with "title", "description",
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      // For now, just return success to test UI functionality
-      // TODO: Implement actual storage.updateRolePermission when storage method is ready
+      // Actually update the permission in the database
+      await storage.updateRolePermission(parseInt(roleId), moduleId, permissionType, enabled);
       console.log('Permission update successful:', { roleId, moduleId, permissionType, enabled });
 
       res.json({ 
