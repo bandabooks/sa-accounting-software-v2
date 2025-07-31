@@ -47,7 +47,7 @@ import {
   Briefcase
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import ModernPermissionsInterface from "@/components/permissions/ModernPermissionsInterface";
+import SubscriptionIntegratedPermissions from "@/components/permissions/SubscriptionIntegratedPermissions";
 
 // User schema for forms
 const userSchema = z.object({
@@ -552,7 +552,7 @@ export default function ProfessionalUserManagement() {
 
         {/* Permissions Tab */}
         <TabsContent value="permissions" className="space-y-4">
-          <ModernPermissionsInterface />
+          <SubscriptionIntegratedPermissions context="user_management" />
         </TabsContent>
 
         {/* Activity Tab */}
