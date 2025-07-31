@@ -449,27 +449,29 @@ export default function SubscriptionIntegratedPermissions({
 
   // Initialize permission states from current permissions and subscription
   useEffect(() => {
-    if (currentPermissions && subscriptionData) {
+    if (selectedRoleId) {
       const newStates: Record<string, boolean> = {};
       
-      // Load existing permissions
-      currentPermissions.forEach((perm: any) => {
-        const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
-        newStates[key] = perm.enabled;
-      });
+      // Load existing permissions if available
+      if (currentPermissions) {
+        currentPermissions.forEach((perm: any) => {
+          const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
+          newStates[key] = perm.enabled;
+        });
+      }
 
-      // Auto-enable basic permissions for subscription-active modules
-      Object.values(AVAILABLE_MODULES).forEach(module => {
-        if (isModuleActiveInSubscription(module.id)) {
-          module.permissions.forEach(permission => {
-            const key = `${selectedRoleId}-${module.id}-${permission}`;
-            // Only auto-enable 'view' permission to avoid overriding explicit settings
-            if (permission === 'view' && newStates[key] === undefined) {
+      // Auto-enable ALL permissions for subscription-active modules to match subscription interface
+      if (subscriptionData?.plan?.modules) {
+        Object.values(AVAILABLE_MODULES).forEach(module => {
+          if (isModuleActiveInSubscription(module.id)) {
+            module.permissions.forEach(permission => {
+              const key = `${selectedRoleId}-${module.id}-${permission}`;
+              // Enable ALL permissions for subscription-active modules
               newStates[key] = true;
-            }
-          });
-        }
-      });
+            });
+          }
+        });
+      }
 
       setPermissionStates(newStates);
     }
@@ -717,12 +719,17 @@ export default function SubscriptionIntegratedPermissions({
                                       {module.essential && (
                                         <Badge variant="secondary" className="text-xs">Essential</Badge>
                                       )}
+                                      {isModuleActiveInSubscription(module.id) && (
+                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                          Subscription
+                                        </Badge>
+                                      )}
                                     </h4>
                                     <p className="text-sm text-gray-600">{module.description}</p>
                                   </div>
                                 </div>
-                                <Badge variant={hasAnyPermission ? "default" : "outline"}>
-                                  {hasAnyPermission ? "Active" : "Disabled"}
+                                <Badge variant={hasAnyPermission || isModuleActiveInSubscription(module.id) ? "default" : "outline"}>
+                                  {hasAnyPermission || isModuleActiveInSubscription(module.id) ? "Active" : "Disabled"}
                                 </Badge>
                               </div>
 

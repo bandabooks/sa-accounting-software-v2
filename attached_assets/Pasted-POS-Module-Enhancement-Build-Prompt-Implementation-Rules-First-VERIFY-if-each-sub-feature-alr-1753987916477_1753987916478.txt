@@ -1,0 +1,130 @@
+POS Module Enhancement & Build Prompt
+📌 Implementation Rules:
+
+First VERIFY if each sub-feature already exists before implementing.
+
+If missing, create and integrate it seamlessly into the current POS and stock structure.
+
+DO NOT duplicate product or stock management logic.
+
+Ensure it is mobile and tablet friendly.
+
+Respect user roles and branch/till permissions throughout all POS workflows.
+
+Notes:
+Please note that while our Agent is powerful, it has limitations:
+
+It doesn't guarantee code correctness.
+
+Results may vary for the same prompt.
+
+It requires clear, specific prompts and human oversight.
+
+Recommend keeping both Replit Agent and Assistant focused and on track: Begin each task by verifying what is present, then only implement or enhance what is missing.
+
+Prompt to Build/Enhance Enterprise POS System
+Objective:
+Design and implement a modern, enterprise-grade Point-of-Sale (POS) system that is simple, fast, user-friendly, professional, and scalable, yet includes all features required for retail, hospitality, restaurant, or hybrid environments.
+
+Core Features to VERIFY and IMPLEMENT (if missing):
+
+POS Terminal
+
+Fast, intuitive sales screen with barcode scanning, product search, item modifiers, and quantity adjustments
+
+Quick-add items, support for custom/manual products/services
+
+Split payments (cash, card, voucher, account, loyalty/reward redemption, mobile wallets)
+
+Print/email receipts, reprint, and digital sales records
+
+Shift & Till Management
+
+User login with pin/biometric (if device supports)
+
+Opening float, shift handover, and cash-up reconciliation workflows
+
+Blind close, shift reports, cash drops/pickups, till variance tracking
+
+Product & Inventory Integration
+
+Real-time stock deduction on sale
+
+Product variants (sizes/colors/attributes), bundle/combo offers
+
+Automatic out-of-stock warnings, inventory lookup per location/till
+
+Sales Management
+
+Sales orders, on-hold/parked sales, refunds, returns, exchanges, void/cancel
+
+Layby/split sales, quotations to sales conversion
+
+Discounts (item, bill, category, customer-group)
+
+Customer Management
+
+New customer quick-add, assign sale to customer, loyalty/points integration
+
+View purchase history at POS
+
+Multi-Branch & Multi-Till
+
+Support for unlimited tills, outlets, and role-based permissions per branch/till/user
+
+Sales, stock, and user segregation by location
+
+Centralized sales + shift dashboard for HQ/owner
+
+Security & Audit
+
+Permission control for refunds, voids, price overrides, no sale, cash drops
+
+Full audit log of all POS actions (editable, deleted, voided, etc.)
+
+Hardware & Payment Integration
+
+Print via thermal/receipt printers, open cash drawer, customer-facing display
+
+Barcode scanner, scale integration (if retail)
+
+Card processor/QR/SnapScan/Yoco/PayFast/SnapPay API support
+
+Reporting
+
+Real-time POS sales, Z-reports, X-reports, shift, and till summaries
+
+End-of-day/month sales analysis, cashier sales leaderboard
+
+Offline Mode
+
+Ability to record sales when offline and auto-sync when back online
+
+Modern UI/UX
+
+Simple, touch-friendly layouts, fast keyboard shortcuts, minimal clicks for power users
+
+Color-coded status indicators (paid, pending, voided, refunded, etc.)
+
+Compliance
+
+Full VAT, tax, receipt compliance for South Africa, integrated with the master Chart of Accounts
+
+Transactions mapped to appropriate accounts for sales, cash, VAT, discounts, and payment clearing
+
+General Instructions:
+Verify all core and advanced POS features exist. If any are missing or not integrated, add them using modular, reusable code that follows the existing system architecture.
+
+Do NOT create duplicate logic for products, stock, or user management. Always reuse the central modules.
+
+Ensure POS can be used as a standalone module (for POS-only plans), but also seamlessly integrates with the full business management system.
+
+Confirm mobile and tablet compatibility for all POS screens and dialogs.
+
+Test end-to-end: from user login, to sale, to receipt/shift close, to reporting, with all roles and at least 2 branches/tills.
+
+Final Steps:
+Provide a summary report of new features, integrations, and any refactors.
+
+Highlight any limitations, pending features, or areas needing further business decision.
+
