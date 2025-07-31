@@ -287,13 +287,32 @@ export default function ModernPermissionsInterface() {
       return pendingChanges.get(key)!;
     }
     
-    // Check from server data - permissions matrix API structure
+    // Check from server data - permissions are stored as object structure
     if (permissionsData?.roles && selectedRoleId) {
       const role = permissionsData.roles.find((r: any) => r.id === selectedRoleId);
       if (role?.permissions) {
-        // Check if permission exists in role's permissions array
-        const permissionKey = `${moduleId}:${permissionType}`;
-        return role.permissions.includes(permissionKey);
+        // Permissions are stored as: { "sales": { "view": true, "create": false }, "inventory": {...} }
+        let permissions = role.permissions;
+        
+        // Handle JSON string permissions (from database)
+        if (typeof permissions === 'string') {
+          try {
+            permissions = JSON.parse(permissions);
+          } catch (e) {
+            console.warn('Failed to parse permissions JSON:', permissions);
+            return selectedRole?.name === 'super_admin';
+          }
+        }
+        
+        // Check the actual permission value in object structure
+        if (typeof permissions === 'object' && permissions !== null) {
+          const modulePermissions = permissions[moduleId];
+          if (modulePermissions && typeof modulePermissions === 'object') {
+            const result = modulePermissions[permissionType] === true;
+            console.log(`Permission check: ${moduleId}:${permissionType} = ${result}`, { modulePermissions, permissionType });
+            return result;
+          }
+        }
       }
     }
     
