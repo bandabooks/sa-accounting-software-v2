@@ -243,6 +243,7 @@ export default function ModernPermissionsInterface() {
                 try {
                   const response = await apiRequest('/api/admin/initialize-default-modules', {
                     method: 'POST',
+                    body: {}
                   });
                   
                   if (response.success) {
@@ -250,8 +251,11 @@ export default function ModernPermissionsInterface() {
                       title: "Success",
                       description: "Default module access initialized for all users",
                     });
+                    // Refresh the permissions data
+                    queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
                   }
                 } catch (error: any) {
+                  console.error('Initialize permissions error:', error);
                   toast({
                     title: "Error", 
                     description: error.message || "Failed to initialize default modules",
