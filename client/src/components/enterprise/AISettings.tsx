@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,6 +41,10 @@ interface AISettings {
   contextSharing: boolean;
   conversationHistory: boolean;
   suggestions: boolean;
+  apiKey?: string;
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
 }
 
 interface AISettingsProps {
@@ -50,6 +55,11 @@ interface AISettingsProps {
 export default function AISettings({ systemConfig, aiSettings }: AISettingsProps) {
   const [testingAI, setTestingAI] = useState(false);  
   const [aiResponse, setAiResponse] = useState<string>('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyValue, setApiKeyValue] = useState(aiSettings?.apiKey || '');
+  const [modelValue, setModelValue] = useState(aiSettings?.model || 'claude-3-5-sonnet-20241022');
+  const [maxTokensValue, setMaxTokensValue] = useState(aiSettings?.maxTokens || 4096);
+  const [temperatureValue, setTemperatureValue] = useState(aiSettings?.temperature || 0.7);
   const queryClient = useQueryClient();
 
   // Update AI settings mutation
@@ -72,6 +82,51 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
       });
     },
   });
+
+  const handleSaveApiConfig = () => {
+    updateAISettingsMutation.mutate({
+      apiKey: apiKeyValue,
+      model: modelValue,
+      maxTokens: maxTokensValue,
+      temperature: temperatureValue,
+    });
+  };
+
+  const testAIConnection = async () => {
+    if (!apiKeyValue) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter your Anthropic API key first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTestingAI(true);
+    try {
+      const response = await apiRequest('/api/ai/test-connection', 'POST', {
+        apiKey: apiKeyValue,
+        model: modelValue,
+      });
+      setAiResponse(response.message || 'AI connection test successful!');
+      toast({
+        title: "Connection Successful",
+        description: "AI assistant is working correctly",
+      });
+    } catch (error) {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect to AI service. Please check your API key.",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingAI(false);
+    }
+  };
+
+  const handleSettingChange = (setting: keyof AISettings, value: any) => {
+    updateAISettingsMutation.mutate({ [setting]: value });
+  };
 
   // Test AI functionality
   const testAIMutation = useMutation({
@@ -98,16 +153,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
     },
   });
 
-  const handleSettingChange = (key: keyof AISettings, value: boolean | string) => {
-    if (!aiSettings) return;
-    
-    const updatedSettings = {
-      ...aiSettings,
-      [key]: value,
-    };
-    
-    updateAISettingsMutation.mutate(updatedSettings);
-  };
+
 
   if (!aiSettings) {
     return (
@@ -198,6 +244,137 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
                     Choose the AI provider for your assistant
                   </p>
                 </div>
+
+                {/* API Configuration */}
+                {aiSettings.provider === 'anthropic' && (
+                  <Card className="p-4 bg-gray-50">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm text-gray-900">API Configuration</h4>
+                        <Badge variant="outline" className="text-xs">Anthropic Claude</Badge>
+                      </div>
+                      
+                      {/* API Key */}
+                      <div className="space-y-2">
+                        <Label htmlFor="api-key">API Key</Label>
+                        <div className="relative">
+                          <Input
+                            id="api-key"
+                            type={showApiKey ? "text" : "password"}
+                            value={apiKeyValue}
+                            onChange={(e) => setApiKeyValue(e.target.value)}
+                            placeholder="sk-ant-..."
+                            className="pr-10"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3"
+                            onClick={() => setShowApiKey(!showApiKey)}
+                          >
+                            {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          Your Anthropic API key. Get one from{' '}
+                          <a 
+                            href="https://console.anthropic.com" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            Anthropic Console
+                          </a>
+                        </p>
+                      </div>
+
+                      {/* Model Selection */}
+                      <div className="space-y-2">
+                        <Label htmlFor="ai-model">Model</Label>
+                        <Select value={modelValue} onValueChange={setModelValue}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Latest)</SelectItem>
+                            <SelectItem value="claude-3-sonnet-20240229">Claude 3 Sonnet</SelectItem>
+                            <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku (Fast)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-600">Choose the Claude model for your assistant</p>
+                      </div>
+
+                      {/* Advanced Settings */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="max-tokens">Max Tokens</Label>
+                          <Input
+                            id="max-tokens"
+                            type="number"
+                            value={maxTokensValue}
+                            onChange={(e) => setMaxTokensValue(parseInt(e.target.value) || 4096)}
+                            min="1"
+                            max="8192"
+                          />
+                          <p className="text-xs text-gray-600">Maximum response length</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="temperature">Temperature</Label>
+                          <Input
+                            id="temperature"
+                            type="number"
+                            value={temperatureValue}
+                            onChange={(e) => setTemperatureValue(parseFloat(e.target.value) || 0.7)}
+                            min="0"
+                            max="1"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-600">Response creativity (0-1)</p>
+                        </div>
+                      </div>
+
+                      {/* Save and Test Buttons */}
+                      <div className="flex gap-2 pt-2">
+                        <Button 
+                          onClick={handleSaveApiConfig}
+                          disabled={updateAISettingsMutation.isPending}
+                          size="sm"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Save Configuration
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={testAIConnection}
+                          disabled={testingAI || !apiKeyValue}
+                          size="sm"
+                        >
+                          {testingAI ? (
+                            <>
+                              <div className="animate-spin h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full" />
+                              Testing...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="h-4 w-4 mr-2" />
+                              Test Connection
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Test Response */}
+                      {aiResponse && (
+                        <Alert>
+                          <Info className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>Test Response:</strong> {aiResponse}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </Card>
+                )}
 
                 {/* Privacy Settings */}
                 <div className="space-y-4">

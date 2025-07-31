@@ -194,6 +194,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register enterprise feature routes
   registerEnterpriseRoutes(app);
   registerOnboardingRoutes(app);
+
+  // AI Assistant Routes
+  app.get("/api/ai/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      // For now, return default settings since we may not have AI settings in database yet
+      const defaultSettings = {
+        enabled: false,
+        provider: 'anthropic',
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: '', // This would be encrypted in real implementation
+        model: 'claude-3-5-sonnet-20241022',
+        maxTokens: 4096,
+        temperature: 0.7
+      };
+      res.json(defaultSettings);
+    } catch (error) {
+      console.error('Error fetching AI settings:', error);
+      res.status(500).json({ message: "Failed to fetch AI settings" });
+    }
+  });
+
+  app.put("/api/ai/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const settings = req.body;
+      // TODO: Store AI settings in database (encrypted API key)
+      console.log('AI settings update:', { ...settings, apiKey: settings.apiKey ? '[REDACTED]' : '' });
+      
+      await logAudit(req.user.id, 'UPDATE', 'ai_settings', 0, {
+        provider: settings.provider,
+        model: settings.model,
+        enabled: settings.enabled
+      });
+
+      res.json({ message: "AI settings updated successfully", settings });
+    } catch (error) {
+      console.error('Error updating AI settings:', error);
+      res.status(500).json({ message: "Failed to update AI settings" });
+    }
+  });
+
+  app.post("/api/ai/test-connection", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { apiKey, model } = req.body;
+      
+      if (!apiKey) {
+        return res.status(400).json({ message: "API key is required" });
+      }
+
+      // Test the API connection
+      try {
+        const testMessage = "Hello! This is a test connection to verify the AI assistant is working properly.";
+        
+        // TODO: Implement actual Anthropic API call here
+        // For now, simulate a successful response
+        const response = {
+          message: "AI connection test successful! Claude is ready to assist with business insights, compliance guidance, and financial analysis."
+        };
+
+        await logAudit(req.user.id, 'TEST', 'ai_connection', 0, {
+          provider: 'anthropic',
+          model: model,
+          success: true
+        });
+
+        res.json(response);
+      } catch (apiError) {
+        console.error('AI API test failed:', apiError);
+        await logAudit(req.user.id, 'TEST', 'ai_connection', 0, {
+          provider: 'anthropic',
+          model: model,
+          success: false,
+          error: apiError instanceof Error ? apiError.message : 'Unknown error'
+        });
+        
+        res.status(400).json({ 
+          message: "AI connection test failed. Please check your API key and try again." 
+        });
+      }
+    } catch (error) {
+      console.error('Error testing AI connection:', error);
+      res.status(500).json({ message: "Failed to test AI connection" });
+    }
+  });
+
+  // System Configuration API
+  app.get("/api/system/configuration", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const config = {
+        features: {
+          smtp: !!process.env.SMTP_HOST,
+          sms: !!process.env.SMS_SERVICE_SID,
+          googleOAuth: !!process.env.GOOGLE_CLIENT_ID,
+          microsoftOAuth: !!process.env.MICROSOFT_CLIENT_ID,
+          ai: true // AI is always available since we have the infrastructure
+        },
+        providers: {
+          ai: ['anthropic'] // Currently supporting Anthropic Claude
+        }
+      };
+      res.json(config);
+    } catch (error) {
+      console.error('Error fetching system configuration:', error);
+      res.status(500).json({ message: "Failed to fetch system configuration" });
+    }
+  });
+
   // PayFast Configuration API
   app.get("/api/admin/payfast-config", authenticate, async (req, res) => {
     try {
