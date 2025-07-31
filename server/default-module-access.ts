@@ -185,9 +185,8 @@ export async function initializeDefaultModuleAccessForAllUsers(): Promise<void> 
   try {
     console.log(`🚀 Initializing default module access for all users...`);
     
-    // Get all users with their companies
+    // Get all users
     const allUsers = await storage.getAllUsers();
-    const userCompanies = await storage.getAllUserCompanies();
     
     let processedCount = 0;
     let skippedCount = 0;
@@ -200,8 +199,8 @@ export async function initializeDefaultModuleAccessForAllUsers(): Promise<void> 
         continue;
       }
       
-      // Get user's companies
-      const userCompanyRelations = userCompanies.filter(uc => uc.userId === user.id);
+      // Get user's companies using the correct existing method
+      const userCompanyRelations = await storage.getUserCompanies(user.id);
       
       for (const relation of userCompanyRelations) {
         try {
