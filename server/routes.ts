@@ -8655,6 +8655,143 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // =============================================
+  // UNIFIED PERMISSION SYNC API ROUTES
+  // Real-time synchronization between subscription and user management
+  // =============================================
+
+  // Get unified permission state (source of truth)
+  app.get("/api/permissions/unified-state", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { planId } = req.query;
+      
+      // Get current permissions matrix
+      const permissionsData = await storage.getBridgedPermissionsMatrix();
+      
+      // Get subscription plan details if provided
+      let subscriptionModules = null;
+      if (planId) {
+        const plan = await storage.getSubscriptionPlan(parseInt(planId as string));
+        subscriptionModules = plan?.features || [];
+      }
+      
+      // Get current user's edit permissions
+      const canEdit = req.user?.role === 'super_admin' || 
+                     req.user?.permissions?.includes('permissions:manage');
+      
+      const unifiedState = {
+        permissions: permissionsMatrix?.permissions || [],
+        roles: permissionsMatrix?.roles || [],
+        subscriptionModules,
+        canEdit,
+        timestamp: new Date().toISOString(),
+        context: {
+          userId: req.user?.id,
+          companyId: req.user?.companyId,
+          planId: planId ? parseInt(planId as string) : null
+        }
+      };
+      
+      res.json(unifiedState);
+    } catch (error) {
+      console.error("Error fetching unified permission state:", error);
+      res.status(500).json({ message: "Failed to fetch unified permission state" });
+    }
+  });
+
+  // Unified permission toggle with bi-directional sync
+  app.post("/api/permissions/unified-toggle", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { roleId, moduleId, permissionType, enabled, context, subscriptionPlanId } = req.body;
+      
+      console.log(`[${context}] Unified permission toggle request:`, { roleId, moduleId, permissionType, enabled });
+      
+      if (!roleId || !moduleId || !permissionType || typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Security check: Ensure user has permission to make changes
+      const canEdit = req.user?.role === 'super_admin' || 
+                     req.user?.permissions?.includes('permissions:manage');
+      
+      if (!canEdit) {
+        return res.status(403).json({ 
+          message: "Insufficient permissions to modify role permissions" 
+        });
+      }
+
+      // If this is from subscription context, also update the subscription plan
+      if (context === 'subscription' && subscriptionPlanId) {
+        const plan = await storage.getSubscriptionPlan(subscriptionPlanId);
+        if (plan) {
+          let features = plan.features as string[] || [];
+          
+          if (enabled && !features.includes(moduleId)) {
+            features.push(moduleId);
+          } else if (!enabled && features.includes(moduleId)) {
+            features = features.filter(f => f !== moduleId);
+          }
+          
+          await storage.updateSubscriptionPlan(subscriptionPlanId, { features });
+          console.log(`[subscription] Updated plan ${subscriptionPlanId} features:`, features);
+        }
+      }
+
+      // Always update the role permission in the main system
+      await storage.updateRolePermission(parseInt(roleId), moduleId, permissionType, enabled);
+      
+      console.log(`[${context}] Unified permission sync successful:`, { roleId, moduleId, permissionType, enabled });
+
+      // Return success with sync confirmation
+      res.json({ 
+        success: true, 
+        message: `${permissionType} permission for ${moduleId} ${enabled ? 'enabled' : 'disabled'} successfully`,
+        syncedToSubscription: context === 'subscription' && subscriptionPlanId ? true : false,
+        syncedToPermissions: true,
+        timestamp: new Date().toISOString(),
+        roleId,
+        moduleId,
+        permissionType,
+        enabled
+      });
+    } catch (error) {
+      console.error("Error in unified permission toggle:", error);
+      res.status(500).json({ message: "Failed to toggle permission" });
+    }
+  });
+
+  // Get subscription module status for sync validation
+  app.get("/api/subscription/modules", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { planId } = req.query;
+      
+      if (!planId) {
+        return res.status(400).json({ message: "Plan ID is required" });
+      }
+      
+      const plan = await storage.getSubscriptionPlan(parseInt(planId as string));
+      if (!plan) {
+        return res.status(404).json({ message: "Subscription plan not found" });
+      }
+      
+      const modules = {
+        planId: plan.id,
+        planName: plan.name,
+        activeModules: plan.features as string[] || [],
+        lastUpdated: plan.updatedAt,
+        sync: {
+          timestamp: new Date().toISOString(),
+          status: 'active'
+        }
+      };
+      
+      res.json(modules);
+    } catch (error) {
+      console.error("Error fetching subscription modules:", error);
+      res.status(500).json({ message: "Failed to fetch subscription modules" });
+    }
+  });
+
   // Initialize default permissions for all roles
   app.post("/api/permissions/initialize-default", authenticate, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
     try {

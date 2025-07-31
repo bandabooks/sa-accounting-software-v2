@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useUnifiedPermissionSync } from '@/hooks/useUnifiedPermissionSync';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from '@/hooks/use-toast';
 import { 
   BarChart3, 
@@ -42,7 +44,10 @@ import {
   Edit,
   Trash2,
   Save,
-  Download
+  Download,
+  RefreshCw,
+  Lock,
+  Info
 } from "lucide-react";
 
 // Import the exact same module definitions from subscription system
@@ -268,19 +273,30 @@ export default function SubscriptionIntegratedPermissions({
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(selectedRole || null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["core", "sales", "accounting"]);
   const [currentTab, setCurrentTab] = useState("modules");
-  const [selectedModules, setSelectedModules] = useState<string[]>([]);
-  const [modulePermissions, setModulePermissions] = useState<Record<string, string[]>>({});
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch roles
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
-    queryKey: ['/api/rbac/system-roles'],
+  // Use unified permission sync system for real-time synchronization
+  const {
+    permissionState,
+    subscriptionModules,
+    isLoading,
+    isToggling,
+    togglePermission,
+    isModuleActive,
+    isModuleEnabledInSubscription,
+    getPermissionState,
+    canEditPermissions,
+    getRestrictionReason,
+    lastSyncTime,
+    isSyncing
+  } = useUnifiedPermissionSync({ 
+    context,
+    subscriptionPlanId: context === 'subscription' ? 1 : undefined // Basic plan for demo
   });
 
-  // Fetch permissions matrix
-  const { data: permissionsData, isLoading: permissionsLoading } = useQuery({
-    queryKey: ['/api/permissions/matrix'],
-  });
+  // Get roles from unified state
+  const roles = permissionState?.roles || [];
+  const rolesLoading = isLoading;
 
   // Handle role change
   const handleRoleChange = (roleId: string) => {
@@ -291,75 +307,54 @@ export default function SubscriptionIntegratedPermissions({
     }
   };
 
-  // Get current role permissions
-  const getCurrentRolePermissions = () => {
-    if (!permissionsData || !selectedRoleId) return {};
-    
-    const permissions = (permissionsData as any)?.permissions || [];
-    const rolePermissions = permissions.filter(
-      (p: any) => p.roleId === selectedRoleId
-    );
-    
-    const permissionMap: Record<string, string[]> = {};
-    rolePermissions.forEach((p: any) => {
-      if (!permissionMap[p.moduleId]) {
-        permissionMap[p.moduleId] = [];
-      }
-      if (p.enabled) {
-        permissionMap[p.moduleId].push(p.permissionType);
-      }
-    });
-    
-    return permissionMap;
-  };
-
-  // Check if permission is enabled
+  // Check if permission is enabled using unified system
   const isPermissionEnabled = (moduleId: string, permission: string): boolean => {
-    const rolePermissions = getCurrentRolePermissions();
-    return rolePermissions[moduleId]?.includes(permission) || false;
+    if (!selectedRoleId) return false;
+    return getPermissionState(selectedRoleId, moduleId, permission);
   };
 
-  // Permission toggle mutation
-  const togglePermissionMutation = useMutation({
-    mutationFn: async ({ roleId, moduleId, permissionType, enabled }: {
-      roleId: number;
-      moduleId: string;
-      permissionType: string;
-      enabled: boolean;
-    }) => {
-      return apiRequest('/api/permissions/toggle', 'POST', {
-        roleId,
-        moduleId,
-        permissionType,
-        enabled
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
-      toast({
-        title: "Permission Updated",
-        description: "Permission has been successfully updated.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: "Failed to update permission",
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Toggle permission handler
+  // Handle permission toggle with unified sync
   const handlePermissionToggle = (moduleId: string, permission: string, enabled: boolean) => {
     if (!selectedRoleId) return;
 
-    togglePermissionMutation.mutate({
+    // Check if editing is restricted
+    const restrictionReason = getRestrictionReason(moduleId);
+    if (restrictionReason && !canEditPermissions()) {
+      toast({
+        title: "Permission Restricted",
+        description: restrictionReason,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Use unified permission sync system
+    togglePermission({
       roleId: selectedRoleId,
       moduleId,
       permissionType: permission,
-      enabled
+      enabled,
+      source: context
     });
+  };
+
+  // Get current role permissions for display
+  const getCurrentRolePermissions = () => {
+    if (!selectedRoleId) return {};
+    
+    const permissionMap: Record<string, string[]> = {};
+    Object.values(AVAILABLE_MODULES).forEach(module => {
+      module.permissions.forEach(permission => {
+        if (isPermissionEnabled(module.id, permission)) {
+          if (!permissionMap[module.id]) {
+            permissionMap[module.id] = [];
+          }
+          permissionMap[module.id].push(permission);
+        }
+      });
+    });
+    
+    return permissionMap;
   };
 
   // Get selected count for role
@@ -388,22 +383,57 @@ export default function SubscriptionIntegratedPermissions({
 
   return (
     <div className="space-y-6">
-      {/* Header with Role Selection */}
+      {/* Header with Role Selection and Sync Status */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Package className="h-5 w-5" />
               <span>Module & Permission Selection</span>
+              {context === 'user_management' && (
+                <Badge variant="outline" className="text-xs">
+                  Synced with Subscription
+                </Badge>
+              )}
             </div>
-            {selectedRoleId && (
-              <Badge variant="secondary" className="text-sm">
-                {getSelectedCount()} / {Object.keys(AVAILABLE_MODULES).length} modules selected
-              </Badge>
-            )}
+            <div className="flex items-center space-x-2">
+              {selectedRoleId && (
+                <Badge variant="secondary" className="text-sm">
+                  {getSelectedCount()} / {Object.keys(AVAILABLE_MODULES).length} modules selected
+                </Badge>
+              )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                      <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                      <span>{isSyncing ? 'Syncing...' : 'Real-time sync'}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {context === 'user_management' 
+                        ? 'States synchronized with subscription plan in real-time'  
+                        : 'Changes instantly update user management permissions'
+                      }
+                    </p>
+                    {lastSyncTime && (
+                      <p className="text-xs mt-1">
+                        Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardTitle>
           <CardDescription>
-            Configure role-based module permissions with dropdown selection and real-time feedback
+            Configure role-based module permissions with real-time bi-directional synchronization.
+            {!canEditPermissions() && (
+              <span className="text-orange-600 ml-2">
+                Some modules may be view-only based on subscription plan.
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -528,24 +558,55 @@ export default function SubscriptionIntegratedPermissions({
                               </div>
 
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {module.permissions.map((permission) => (
-                                  <div key={permission} className="flex items-center space-x-2">
-                                    <Switch
-                                      id={`${module.id}-${permission}`}
-                                      checked={isPermissionEnabled(module.id, permission)}
-                                      onCheckedChange={(checked) => 
-                                        handlePermissionToggle(module.id, permission, checked)
-                                      }
-                                      disabled={togglePermissionMutation.isPending}
-                                    />
-                                    <Label
-                                      htmlFor={`${module.id}-${permission}`}
-                                      className="text-sm capitalize cursor-pointer"
-                                    >
-                                      {permission.replace('_', ' ')}
-                                    </Label>
-                                  </div>
-                                ))}
+                                {module.permissions.map((permission) => {
+                                  const isEnabled = isPermissionEnabled(module.id, permission);
+                                  const isRestricted = !canEditPermissions() && !isModuleEnabledInSubscription(module.id);
+                                  const restrictionReason = getRestrictionReason(module.id);
+                                  const isModuleSynced = isModuleActive(module.id, selectedRoleId);
+
+                                  return (
+                                    <div key={permission} className="flex items-center space-x-2">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex items-center space-x-2">
+                                              <Switch
+                                                id={`${module.id}-${permission}`}
+                                                checked={isEnabled}
+                                                onCheckedChange={(checked) => 
+                                                  handlePermissionToggle(module.id, permission, checked)
+                                                }
+                                                disabled={isToggling || isRestricted}
+                                                className={isRestricted ? "opacity-75" : ""}
+                                              />
+                                              <Label
+                                                htmlFor={`${module.id}-${permission}`}
+                                                className={`text-sm capitalize cursor-pointer flex items-center space-x-1 ${
+                                                  isRestricted ? "text-muted-foreground" : ""
+                                                }`}
+                                              >
+                                                <span>{permission.replace('_', ' ')}</span>
+                                                {isRestricted && <Lock className="h-3 w-3" />}
+                                                {isModuleSynced && context === 'user_management' && (
+                                                  <RefreshCw className="h-3 w-3 text-blue-500" />
+                                                )}
+                                              </Label>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            {isRestricted && restrictionReason ? (
+                                              <p>{restrictionReason}</p>
+                                            ) : context === 'user_management' ? (
+                                              <p>Synchronized with subscription plan settings</p>
+                                            ) : (
+                                              <p>Changes will instantly sync to user management</p>
+                                            )}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
