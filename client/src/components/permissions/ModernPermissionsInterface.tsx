@@ -106,10 +106,33 @@ export default function ModernPermissionsInterface() {
   const { data: permissionsData, isLoading: permissionsLoading } = useQuery({
     queryKey: ['/api/permissions/matrix'],
     // Remove the enabled condition to always fetch permissions
-    onSuccess: (data) => {
-      console.log('Permissions matrix data received:', data);
-    }
   });
+
+  // Debug permissions data structure
+  React.useEffect(() => {
+    if (permissionsData) {
+      console.log('=== PERMISSIONS DATA STRUCTURE ===');
+      console.log('Full data:', permissionsData);
+      if (permissionsData.roles) {
+        permissionsData.roles.forEach((role: any) => {
+          console.log(`Role ${role.id} (${role.name}):`, role.permissions);
+          console.log(`Role ${role.id} permissions type:`, typeof role.permissions);
+          if (role.permissions && typeof role.permissions === 'string') {
+            try {
+              const parsed = JSON.parse(role.permissions);
+              console.log(`Role ${role.id} parsed permissions:`, parsed);
+            } catch (e) {
+              console.log(`Role ${role.id} permission parse error:`, e);
+            }
+          } else if (role.permissions && typeof role.permissions === 'object') {
+            console.log(`Role ${role.id} permissions as object:`, role.permissions);
+            console.log(`Role ${role.id} permissions keys:`, Object.keys(role.permissions));
+          }
+        });
+      }
+      console.log('=== END PERMISSIONS DEBUG ===');
+    }
+  }, [permissionsData, selectedRoleId]);
 
   // Permission toggle mutation
   const togglePermissionMutation = useMutation({
@@ -309,8 +332,18 @@ export default function ModernPermissionsInterface() {
           const modulePermissions = permissions[moduleId];
           if (modulePermissions && typeof modulePermissions === 'object') {
             const result = modulePermissions[permissionType] === true;
-            console.log(`Permission check: ${moduleId}:${permissionType} = ${result}`, { modulePermissions, permissionType });
+            console.log(`Permission check: ${moduleId}:${permissionType} = ${result}`, { 
+              roleId: selectedRoleId, 
+              modulePermissions, 
+              permissionType,
+              fullPermissions: permissions 
+            });
             return result;
+          } else {
+            console.log(`Module ${moduleId} permissions not found or invalid`, { 
+              modulePermissions, 
+              availableModules: Object.keys(permissions) 
+            });
           }
         }
       }
