@@ -1,0 +1,51 @@
+Troubleshoot & Fix Role Loading for Permission Sync
+Instructions for Agent/Developer:
+We have unified our permissions and roles system under the Super Admin module, with real-time bi-directional sync to subscription plans. However, on the "Module & Permission Selection" interface, roles fail to load, which prevents permissions from being managed.
+
+Please investigate and resolve the following:
+
+Verify Role Data Source:
+
+Confirm the API endpoint or backend service that supplies the list of roles to the frontend is active and returning correct data.
+
+Check if roles exist in the database for the current tenant/organization and that they are not filtered out incorrectly by plan or tenant ID.
+
+Check API & Network Responses:
+
+Open browser Dev Tools (Network tab) and trigger a page refresh.
+
+Look for the roles fetch request (e.g., /api/roles, /roles/list, etc.).
+
+Verify if the API response is 200 OK and contains the expected role data. If not, inspect the error (auth, permissions, misconfig, etc.).
+
+Review Plan/Sync Logic:
+
+Confirm that the roles list is not filtered out by missing or unsynced subscription data.
+
+Ensure that at least default roles (e.g., Super Admin, Company Admin, User) are always available for every organization/tenant.
+
+Frontend Integration:
+
+Verify that the frontend logic waits for both plan data and role data before attempting to render the permissions UI.
+
+Check for JavaScript or TypeScript errors in the browser console that may halt execution.
+
+Database Check:
+
+Query the roles table directly for the current company/tenant ID.
+
+If no roles exist, create default roles and confirm they appear in the UI.
+
+Fallback & Error Handling:
+
+Implement a user-friendly error if roles cannot be loaded, with a retry button or prompt to contact support.
+
+Summary:
+
+The system must always load and display available roles for permission configuration.
+
+If no roles exist, initialize system defaults.
+
+The permission UI should be inaccessible only if the roles endpoint/API fails or returns empty after repeated attempts.
+
+Please provide a brief root cause and fix summary once resolved.

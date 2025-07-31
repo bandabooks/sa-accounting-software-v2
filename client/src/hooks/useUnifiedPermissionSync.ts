@@ -40,7 +40,7 @@ export function useUnifiedPermissionSync(options: PermissionSyncOptions) {
       } catch (error) {
         // Fallback to regular roles API if unified API fails
         console.log('Falling back to regular roles API due to:', error);
-        const rolesResponse = await fetch('/api/roles');
+        const rolesResponse = await fetch('/api/rbac/system-roles');
         if (!rolesResponse.ok) {
           throw new Error('Failed to fetch roles');
         }
