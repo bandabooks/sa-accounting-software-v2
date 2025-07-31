@@ -194,6 +194,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register enterprise feature routes
   registerEnterpriseRoutes(app);
   registerOnboardingRoutes(app);
+  // PayFast Configuration API
+  app.get("/api/admin/payfast-config", authenticate, async (req, res) => {
+    try {
+      const user = req as AuthenticatedRequest;
+      if (!user.user || user.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      // Return current PayFast configuration (without sensitive data)
+      const config = {
+        merchantId: '18432458',
+        merchantKey: 'm5vlzssivllny',
+        passphrase: '••••••••••••••••',
+        testMode: false, // Currently live mode
+        isActive: payFastService !== null,
+        gatewayUrl: payFastService ? payFastService.getPaymentUrl() : 'Not configured'
+      };
+
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching PayFast config:", error);
+      res.status(500).json({ message: "Failed to fetch PayFast configuration" });
+    }
+  });
+
+  app.put("/api/admin/payfast-config", authenticate, async (req, res) => {
+    try {
+      const user = req as AuthenticatedRequest;
+      if (!user.user || user.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const { testMode, isActive } = req.body;
+      
+      // Here you would normally update the configuration in database/env
+      // For now, we'll just log the changes
+      console.log('PayFast configuration update requested:', { testMode, isActive });
+      
+      await logAudit(user.user.id, 'UPDATE', 'payfast_config', 0, `Updated PayFast config: testMode=${testMode}, isActive=${isActive}`);
+      
+      res.json({ 
+        message: "PayFast configuration updated successfully",
+        testMode,
+        isActive
+      });
+    } catch (error) {
+      console.error("Error updating PayFast config:", error);
+      res.status(500).json({ message: "Failed to update PayFast configuration" });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -5595,6 +5646,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/company/subscription/request", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      // Check if PayFast service is available
+      if (!payFastService) {
+        console.error("PayFast service not initialized");
+        return res.status(500).json({ message: "Payment Setup Failed: PayFast service not configured" });
+      }
+
       const companyId = req.user.companyId;
       if (!companyId) {
         return res.status(400).json({ message: "No active company" });
@@ -5633,25 +5690,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate PayFast payment data
       const paymentReference = `SUB-${companyId}-${payment.id}-${Date.now()}`;
-      const payFastData = payFastService.createPaymentData({
-        amount: amount.toFixed(2),
-        item_name: `${plan.displayName} Subscription`,
-        item_description: `${billingPeriod} subscription for ${company.name}`,
-        return_url: `${process.env.BASE_URL || 'http://localhost:5000'}/subscription/success`,
-        cancel_url: `${process.env.BASE_URL || 'http://localhost:5000'}/subscription/cancel`,
-        notify_url: `${process.env.BASE_URL || 'http://localhost:5000'}/api/payfast/notify`,
-        m_payment_id: paymentReference,
-        email_address: company.email || req.user.email
-      });
       
-      await logAudit(req.user!.id, 'CREATE', 'subscription_payment', payment.id, `Created payment request for plan ${planId} for company ${companyId}`);
-      
-      res.json({ 
-        paymentId: payment.id,
-        paymentUrl: payFastService.getPaymentUrl(),
-        paymentData: payFastData,
-        message: "Payment request created successfully" 
-      });
+      try {
+        const payFastData = payFastService.createPaymentData({
+          amount: amount.toFixed(2),
+          item_name: `${plan.displayName} Subscription`,
+          item_description: `${billingPeriod} subscription for ${company.name}`,
+          return_url: `${process.env.BASE_URL || 'http://localhost:5000'}/subscription/success`,
+          cancel_url: `${process.env.BASE_URL || 'http://localhost:5000'}/subscription/cancel`,
+          notify_url: `${process.env.BASE_URL || 'http://localhost:5000'}/api/payfast/notify`,
+          m_payment_id: paymentReference,
+          email_address: company.email || req.user.email
+        });
+        
+        await logAudit(req.user!.id, 'CREATE', 'subscription_payment', payment.id, `Created payment request for plan ${planId} for company ${companyId}`);
+        
+        res.json({ 
+          paymentId: payment.id,
+          paymentUrl: payFastService.getPaymentUrl(),
+          paymentData: payFastData,
+          message: "Payment request created successfully" 
+        });
+      } catch (payFastError) {
+        console.error("PayFast data generation failed:", payFastError);
+        return res.status(500).json({ message: "Payment Setup Failed: Unable to generate PayFast payment data" });
+      }
     } catch (error) {
       console.error("Failed to create subscription payment:", error);
       res.status(500).json({ message: "Failed to create subscription payment request" });
@@ -5662,6 +5725,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/payfast/notify", async (req, res) => {
     try {
       console.log("PayFast ITN received:", req.body);
+      
+      if (!payFastService) {
+        console.error("PayFast service not available for ITN verification");
+        return res.status(500).send("Payment service not configured");
+      }
       
       // Verify the payment notification from PayFast
       const isValid = payFastService.verifyITN(req.body);

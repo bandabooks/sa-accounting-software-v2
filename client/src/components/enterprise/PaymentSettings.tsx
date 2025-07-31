@@ -24,8 +24,12 @@ export default function PaymentSettings() {
   const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   
-  // Mock PayFast configuration - in real app this would come from API
-  const [payFastConfig, setPayFastConfig] = useState<PayFastConfig>({
+  // Fetch PayFast configuration from API
+  const { data: payFastConfig, isLoading: configLoading } = useQuery<PayFastConfig>({
+    queryKey: ['/api/admin/payfast-config'],
+  });
+
+  const [localConfig, setLocalConfig] = useState<PayFastConfig>({
     merchantId: '18432458',
     merchantKey: 'm5vlzssivllny',
     passphrase: '••••••••••••••••',
@@ -58,14 +62,17 @@ export default function PaymentSettings() {
   });
 
   const handleToggleTestMode = (testMode: boolean) => {
-    setPayFastConfig(prev => ({ ...prev, testMode }));
+    setLocalConfig(prev => ({ ...prev, testMode }));
     updatePayFastConfigMutation.mutate({ testMode });
   };
 
   const handleToggleActive = (isActive: boolean) => {
-    setPayFastConfig(prev => ({ ...prev, isActive }));
+    setLocalConfig(prev => ({ ...prev, isActive }));
     updatePayFastConfigMutation.mutate({ isActive });
   };
+
+  // Use server config if available, otherwise use local config
+  const currentConfig = payFastConfig || localConfig;
 
   return (
     <div className="space-y-6">
@@ -84,8 +91,8 @@ export default function PaymentSettings() {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant={payFastConfig.isActive ? "default" : "secondary"}>
-              {payFastConfig.isActive ? 'Active' : 'Inactive'}
+            <Badge variant={currentConfig.isActive ? "default" : "secondary"}>
+              {currentConfig.isActive ? 'Active' : 'Inactive'}
             </Badge>
           </div>
         </CardHeader>
@@ -95,13 +102,13 @@ export default function PaymentSettings() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Merchant ID</Label>
               <div className="p-3 bg-gray-50 rounded-md">
-                <code className="text-sm">{payFastConfig.merchantId}</code>
+                <code className="text-sm">{currentConfig.merchantId}</code>
               </div>
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium">Merchant Key</Label>
               <div className="p-3 bg-gray-50 rounded-md">
-                <code className="text-sm">{payFastConfig.merchantKey}</code>
+                <code className="text-sm">{currentConfig.merchantKey}</code>
               </div>
             </div>
           </div>
@@ -111,24 +118,24 @@ export default function PaymentSettings() {
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
-                  {payFastConfig.testMode ? (
+                  {currentConfig.testMode ? (
                     <TestTube className="h-4 w-4 text-orange-500" />
                   ) : (
                     <Globe className="h-4 w-4 text-green-500" />
                   )}
                   <Label className="font-medium">
-                    Payment Mode: {payFastConfig.testMode ? 'Test Mode' : 'Live Mode'}
+                    Payment Mode: {currentConfig.testMode ? 'Test Mode' : 'Live Mode'}
                   </Label>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {payFastConfig.testMode 
+                  {currentConfig.testMode 
                     ? 'Using PayFast sandbox for testing - no real payments will be processed'
                     : 'Processing real payments through PayFast production gateway'
                   }
                 </p>
               </div>
               <Switch
-                checked={!payFastConfig.testMode}
+                checked={!currentConfig.testMode}
                 onCheckedChange={(checked) => handleToggleTestMode(!checked)}
                 disabled={updatePayFastConfigMutation.isPending}
               />
@@ -146,7 +153,7 @@ export default function PaymentSettings() {
                 </p>
               </div>
               <Switch
-                checked={payFastConfig.isActive}
+                checked={currentConfig.isActive}
                 onCheckedChange={handleToggleActive}
                 disabled={updatePayFastConfigMutation.isPending}
               />
@@ -154,12 +161,12 @@ export default function PaymentSettings() {
           </div>
 
           {/* Current Mode Alert */}
-          <Alert className={payFastConfig.testMode ? "border-orange-200 bg-orange-50" : "border-green-200 bg-green-50"}>
+          <Alert className={currentConfig.testMode ? "border-orange-200 bg-orange-50" : "border-green-200 bg-green-50"}>
             <Zap className="h-4 w-4" />
             <AlertDescription>
               <strong>Current Status:</strong> PayFast is currently in{' '}
-              <strong>{payFastConfig.testMode ? 'TEST MODE' : 'LIVE MODE'}</strong>.{' '}
-              {payFastConfig.testMode 
+              <strong>{currentConfig.testMode ? 'TEST MODE' : 'LIVE MODE'}</strong>.{' '}
+              {currentConfig.testMode 
                 ? 'No real payments will be processed. Use test card numbers for testing.'
                 : 'Real payments are being processed. Customers will be charged actual money.'
               }
@@ -167,7 +174,7 @@ export default function PaymentSettings() {
           </Alert>
 
           {/* Test Mode Warning */}
-          {!payFastConfig.testMode && (
+          {!currentConfig.testMode && (
             <Alert className="border-red-200 bg-red-50">
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
@@ -182,7 +189,7 @@ export default function PaymentSettings() {
             <Label className="text-sm font-medium">Payment Gateway URL</Label>
             <div className="p-3 bg-gray-50 rounded-md">
               <code className="text-sm">
-                {payFastConfig.testMode 
+                {currentConfig.testMode 
                   ? 'https://sandbox.payfast.co.za/eng/process'
                   : 'https://www.payfast.co.za/eng/process'
                 }
