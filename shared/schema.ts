@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, decimal, timestamp, varchar, jsonb, date, unique, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, decimal, timestamp, varchar, json, jsonb, date, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -4515,3 +4515,136 @@ export type StockCountWithItems = StockCount & { items: StockCountItem[] };
 export type ProductLotWithSerial = ProductLot & { serialNumbers: ProductSerial[] };
 export type ProductWithVariants = Product & { variants: ProductVariant[]; lots: ProductLot[]; bundles: ProductBundle[] };
 export type WarehouseWithStock = Warehouse & { inventory: InventoryTransaction[] };
+
+// Security and Compliance Tables
+export const securityScans = pgTable("security_scans", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  scanType: varchar("scan_type", { length: 50 }).notNull(), // 'vulnerability', 'compliance', 'password', 'data_integrity'
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // 'pending', 'running', 'completed', 'failed'
+  riskLevel: varchar("risk_level", { length: 20 }), // 'low', 'medium', 'high', 'critical'
+  findings: json("findings").$type<SecurityFinding[]>().default([]),
+  recommendation: text("recommendation"),
+  scheduledAt: timestamp("scheduled_at"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const complianceChecks = pgTable("compliance_checks", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  checkType: varchar("check_type", { length: 50 }).notNull(), // 'popi', 'pci_dss', 'gdpr', 'sars', 'data_retention'
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  complianceScore: integer("compliance_score").default(0), // 0-100
+  issues: json("issues").$type<ComplianceIssue[]>().default([]),
+  recommendations: json("recommendations").$type<string[]>().default([]),
+  lastChecked: timestamp("last_checked"),
+  nextCheck: timestamp("next_check"),
+  isAutomated: boolean("is_automated").default(true),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const securityAlerts = pgTable("security_alerts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  alertType: varchar("alert_type", { length: 50 }).notNull(), // 'failed_login', 'suspicious_activity', 'compliance_violation', 'data_breach'
+  severity: varchar("severity", { length: 20 }).notNull(), // 'info', 'warning', 'high', 'critical'
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  metadata: json("metadata").$type<Record<string, any>>().default({}),
+  status: varchar("status", { length: 20 }).notNull().default('active'), // 'active', 'investigating', 'resolved', 'dismissed'
+  assignedTo: integer("assigned_to").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const securityPolicies = pgTable("security_policies", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  policyType: varchar("policy_type", { length: 50 }).notNull(), // 'password', 'access', 'data_retention', 'backup'
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  rules: json("rules").$type<SecurityRule[]>().default([]),
+  isActive: boolean("is_active").default(true),
+  enforcementLevel: varchar("enforcement_level", { length: 20 }).default('warning'), // 'warning', 'block', 'audit'
+  lastReviewedAt: timestamp("last_reviewed_at"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Type definitions for security and compliance
+export interface SecurityFinding {
+  id: string;
+  type: 'vulnerability' | 'weakness' | 'misconfiguration';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  affected_resource: string;
+  recommendation: string;
+  references?: string[];
+}
+
+export interface ComplianceIssue {
+  id: string;
+  regulation: string; // 'POPI', 'GDPR', 'PCI-DSS', 'SARS'
+  requirement: string;
+  status: 'compliant' | 'non_compliant' | 'needs_review';
+  description: string;
+  remediation: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface SecurityRule {
+  id: string;
+  name: string;
+  condition: string;
+  action: 'allow' | 'deny' | 'warn' | 'log';
+  parameters: Record<string, any>;
+}
+
+// Insert schemas for security and compliance
+export const insertSecurityScanSchema = createInsertSchema(securityScans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertComplianceCheckSchema = createInsertSchema(complianceChecks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSecurityAlertSchema = createInsertSchema(securityAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSecurityPolicySchema = createInsertSchema(securityPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for security and compliance
+export type SecurityScan = typeof securityScans.$inferSelect;
+export type InsertSecurityScan = z.infer<typeof insertSecurityScanSchema>;
+
+export type ComplianceCheck = typeof complianceChecks.$inferSelect;
+export type InsertComplianceCheck = z.infer<typeof insertComplianceCheckSchema>;
+
+export type SecurityAlert = typeof securityAlerts.$inferSelect;
+export type InsertSecurityAlert = z.infer<typeof insertSecurityAlertSchema>;
+
+export type SecurityPolicy = typeof securityPolicies.$inferSelect;
+export type InsertSecurityPolicy = z.infer<typeof insertSecurityPolicySchema>;
