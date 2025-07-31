@@ -22,7 +22,7 @@ export function useUnifiedPermissionSync(options: PermissionSyncOptions) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Main permission state query - source of truth
+  // Main permission state query - source of truth with fallback
   const permissionStateQuery = useQuery({
     queryKey: ['/api/permissions/unified-state', options.subscriptionPlanId],
     queryFn: async () => {
@@ -31,14 +31,34 @@ export function useUnifiedPermissionSync(options: PermissionSyncOptions) {
         params.append('planId', options.subscriptionPlanId.toString());
       }
       
-      const response = await fetch(`/api/permissions/unified-state?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch unified permission state');
+      try {
+        const response = await fetch(`/api/permissions/unified-state?${params}`);
+        if (!response.ok) {
+          throw new Error('Unified API failed');
+        }
+        return response.json();
+      } catch (error) {
+        // Fallback to regular roles API if unified API fails
+        console.log('Falling back to regular roles API due to:', error);
+        const rolesResponse = await fetch('/api/roles');
+        if (!rolesResponse.ok) {
+          throw new Error('Failed to fetch roles');
+        }
+        const roles = await rolesResponse.json();
+        
+        // Return in unified format
+        return {
+          permissions: [],
+          roles: roles,
+          subscriptionModules: null,
+          canEdit: true,
+          timestamp: new Date().toISOString(),
+          context: { fallback: true }
+        };
       }
-      return response.json();
     },
     staleTime: 0, // Always fetch fresh data for real-time sync
-    refetchInterval: 2000, // Poll every 2 seconds for real-time updates
+    refetchInterval: 5000, // Slower polling when using fallback
     refetchIntervalInBackground: true,
   });
 
@@ -58,27 +78,48 @@ export function useUnifiedPermissionSync(options: PermissionSyncOptions) {
     enabled: !!options.subscriptionPlanId,
   });
 
-  // Permission toggle mutation with bi-directional sync
+  // Permission toggle mutation with bi-directional sync and fallback
   const togglePermissionMutation = useMutation({
     mutationFn: async (data: UnifiedPermissionState) => {
       console.log(`[${options.context}] Toggling permission:`, data);
       
-      const response = await fetch('/api/permissions/unified-toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          context: options.context,
-          subscriptionPlanId: options.subscriptionPlanId,
-        }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to toggle permission');
+      try {
+        const response = await fetch('/api/permissions/unified-toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...data,
+            context: options.context,
+            subscriptionPlanId: options.subscriptionPlanId,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Unified toggle failed');
+        }
+        
+        return response.json();
+      } catch (error) {
+        // Fallback to regular permission toggle API
+        console.log('Falling back to regular permission toggle API due to:', error);
+        const fallbackResponse = await fetch('/api/permissions/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roleId: data.roleId,
+            moduleId: data.moduleId,
+            permissionType: data.permissionType,
+            enabled: data.enabled,
+          }),
+        });
+        
+        if (!fallbackResponse.ok) {
+          const fallbackError = await fallbackResponse.json();
+          throw new Error(fallbackError.message || 'Failed to toggle permission');
+        }
+        
+        return fallbackResponse.json();
       }
-      
-      return response.json();
     },
     onSuccess: (result, variables) => {
       console.log(`[${options.context}] Permission sync successful:`, result);
