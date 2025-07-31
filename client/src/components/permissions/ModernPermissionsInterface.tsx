@@ -602,28 +602,28 @@ export default function ModernPermissionsInterface() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {filteredModules.map((module) => {
                     const IconComponent = module.icon;
                     const isExpanded = expandedModules.has(module.id);
                     return (
-                      <Tooltip key={module.id}>
-                        <TooltipTrigger asChild>
+                      <Card key={module.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
                           <Button
                             variant={isExpanded ? "default" : "outline"}
                             size="sm"
                             onClick={() => toggleModule(module.id)}
-                            className="h-16 w-full flex flex-col items-center gap-1 p-2"
+                            className="w-full h-auto flex flex-col items-center gap-2 p-3"
                           >
-                            <IconComponent className="h-5 w-5" />
-                            <span className="text-xs font-medium truncate w-full">{module.name}</span>
-                            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                            <IconComponent className="h-6 w-6" />
+                            <div className="text-center">
+                              <div className="text-sm font-semibold leading-tight">{module.displayName}</div>
+                              <div className="text-xs text-muted-foreground mt-1">{module.category}</div>
+                            </div>
+                            {isExpanded ? <ChevronDown className="h-3 w-3 mt-1" /> : <ChevronRight className="h-3 w-3 mt-1" />}
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{module.displayName}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                 </div>

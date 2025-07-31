@@ -1,0 +1,74 @@
+ System Modules Identification and Labeling
+User Experience Issue:
+The current system modules navigation uses only icons to represent each module (e.g., Sales, Purchases, Product Catalog, Reporting, etc.). This makes it difficult and inefficient for users to quickly identify the function of each module, especially for new users or those with accessibility needs. Relying on hover tooltips or guesswork is not acceptable for professional, world-class enterprise software.
+
+Implementation Instructions:
+Remove Icon-Only Representation:
+Replace the icon-only system modules in the navigation/permissions panel with clearly written module names. For example:
+
+Sales Management
+
+Purchase Management
+
+Product Catalog
+
+Reporting
+
+Inventory Management
+
+Point of Sale
+
+User Management
+
+System Settings
+
+...and so on.
+
+Add Descriptive Labels:
+Each module should display the full, clear name (e.g., “Product Catalog” not just a box icon) under or next to the icon. The text should always be visible—no hover required.
+
+Icon & Text Pairing (Optional):
+If you want to keep the icons for visual appeal, place the icon above or to the left of the text label. The label must always be visible and large enough for easy reading.
+
+Consistent Styling:
+Use a consistent, professional font and styling for all module names. Consider bold or high-contrast text for maximum clarity.
+
+Accessibility:
+Ensure all module labels meet accessibility standards (sufficient color contrast, readable font size, no icon-only navigation).
+
+No Guesswork:
+Users must be able to instantly identify the purpose of each module at a glance, without hovering, guessing, or memorizing icon meanings.
+
+Acceptance Criteria:
+Every module in the system modules/permissions panel must have a fully written, descriptive label that is always visible.
+
+If icons are used, they are supplementary and not the only means of identification.
+
+The change must apply across all system modules (Sales, Purchases, Inventory, Reporting, etc.).
+
+The update should be reflected in both desktop and mobile/tablet views for consistency.
+
+Reminder for All Prompts (to keep Replit Agent & developers focused):
+First VERIFY if the feature exists before implementing.
+
+If missing, create and integrate it seamlessly into the current system.
+
+Do not duplicate logic; always use and extend the existing architecture.
+
+Ensure mobile/tablet-friendliness and accessibility compliance.
+
+Respect user role and branch/till permissions throughout.
+
+Please note: While our Agent is powerful, it has limitations. It doesn't guarantee code correctness, results may vary, and human oversight is always required.
+
+Use this prompt to get a clear, world-class navigation and permission management experience—no more icon-only guessing! If you want a quick design mockup or further UI/UX advice, just let me know!
+
+
+
+
+
+
+
+
+
+Ask ChatGPT
