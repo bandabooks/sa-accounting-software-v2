@@ -56,10 +56,15 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
   const [testingAI, setTestingAI] = useState(false);  
   const [aiResponse, setAiResponse] = useState<string>('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [enabledValue, setEnabledValue] = useState(aiSettings?.enabled || false);
+  const [providerValue, setProviderValue] = useState(aiSettings?.provider || 'anthropic');
   const [apiKeyValue, setApiKeyValue] = useState(aiSettings?.apiKey || '');
   const [modelValue, setModelValue] = useState(aiSettings?.model || 'claude-3-5-sonnet-20241022');
   const [maxTokensValue, setMaxTokensValue] = useState(aiSettings?.maxTokens || 4096);
   const [temperatureValue, setTemperatureValue] = useState(aiSettings?.temperature || 0.7);
+  const [contextSharingValue, setContextSharingValue] = useState(aiSettings?.contextSharing || true);
+  const [conversationHistoryValue, setConversationHistoryValue] = useState(aiSettings?.conversationHistory || true);
+  const [suggestionsValue, setSuggestionsValue] = useState(aiSettings?.suggestions || true);
   const queryClient = useQueryClient();
 
   // Update AI settings mutation
@@ -125,6 +130,26 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
   };
 
   const handleSettingChange = (setting: keyof AISettings, value: any) => {
+    // Update local state first for immediate UI feedback
+    switch(setting) {
+      case 'enabled':
+        setEnabledValue(value);
+        break;
+      case 'provider':
+        setProviderValue(value);
+        break;
+      case 'contextSharing':
+        setContextSharingValue(value);
+        break;
+      case 'conversationHistory':
+        setConversationHistoryValue(value);
+        break;
+      case 'suggestions':
+        setSuggestionsValue(value);
+        break;
+    }
+    
+    // Then update the backend
     updateAISettingsMutation.mutate({ [setting]: value });
   };
 
@@ -184,8 +209,8 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant={aiSettings.enabled ? "default" : "secondary"}>
-                {aiSettings.enabled ? 'Active' : 'Inactive'}
+              <Badge variant={enabledValue ? "default" : "secondary"}>
+                {enabledValue ? 'Active' : 'Inactive'}
               </Badge>
               {!systemConfig?.features.ai && (
                 <Badge variant="outline">Unavailable</Badge>
@@ -212,19 +237,19 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
               </div>
               <Switch
                 id="ai-enabled"
-                checked={aiSettings.enabled}
+                checked={enabledValue}
                 onCheckedChange={(checked) => handleSettingChange('enabled', checked)}
                 disabled={!systemConfig?.features.ai || updateAISettingsMutation.isPending}
               />
             </div>
 
-            {aiSettings.enabled && (
+            {enabledValue && (
               <div className="space-y-6 border-l-2 border-gray-200 pl-6 ml-3">
                 {/* AI Provider Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="ai-provider">AI Provider</Label>
                   <Select
-                    value={aiSettings.provider}
+                    value={providerValue}
                     onValueChange={(value) => handleSettingChange('provider', value)}
                     disabled={updateAISettingsMutation.isPending}
                   >
@@ -246,7 +271,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
                 </div>
 
                 {/* API Configuration */}
-                {aiSettings.provider === 'anthropic' && (
+                {providerValue === 'anthropic' && (
                   <Card className="p-4 bg-gray-50">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
