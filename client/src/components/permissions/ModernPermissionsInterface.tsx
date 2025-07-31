@@ -36,6 +36,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Role {
   id: number;
@@ -90,6 +91,9 @@ export default function ModernPermissionsInterface() {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
+  const [exportLoading, setExportLoading] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   
   const queryClient = useQueryClient();
 
@@ -156,7 +160,79 @@ export default function ModernPermissionsInterface() {
     },
   });
 
-  const selectedRole = roles.find((role: Role) => role.id === selectedRoleId);
+  // Export permissions functionality
+  const handleExportPermissions = async () => {
+    setExportLoading(true);
+    try {
+      const response = await fetch('/api/permissions/export', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'X-Session-Token': localStorage.getItem('sessionToken') || '',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to export permissions');
+      }
+      
+      // Create and download the CSV file
+      const csvData = await response.text();
+      const blob = new Blob([csvData], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `permissions-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "Permissions data has been exported to CSV",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export permissions data",
+        variant: "destructive",
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // View audit log functionality
+  const handleViewAuditLog = async () => {
+    try {
+      const response = await fetch('/api/admin/audit-logs', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'X-Session-Token': localStorage.getItem('sessionToken') || '',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch audit logs');
+      }
+      
+      const logs = await response.json();
+      setAuditLogs(logs);
+      setShowAuditModal(true);
+    } catch (error) {
+      toast({
+        title: "Failed to Load Audit Logs",
+        description: "Could not retrieve audit log data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const selectedRole = (roles as Role[]).find((role: Role) => role.id === selectedRoleId);
   const filteredModules = MODULES.filter(module => 
     module.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     module.displayName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -317,11 +393,20 @@ export default function ModernPermissionsInterface() {
               <Settings className="h-4 w-4 mr-2" />
               Initialize Default Permissions
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleExportPermissions}
+              disabled={exportLoading}
+            >
               <Download className="h-4 w-4 mr-2" />
-              Export
+              {exportLoading ? 'Exporting...' : 'Export'}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleViewAuditLog}
+            >
               <Info className="h-4 w-4 mr-2" />
               Audit Log
             </Button>
@@ -544,6 +629,40 @@ export default function ModernPermissionsInterface() {
           </>
         )}
       </div>
+
+      {/* Audit Log Modal */}
+      <Dialog open={showAuditModal} onOpenChange={setShowAuditModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Audit Log - Permissions Activity</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {auditLogs.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Info className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No audit log entries found</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {auditLogs.map((log, index) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Badge variant="outline">{log.action}</Badge>
+                        <span className="font-medium">{log.userName || 'System'}</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(log.timestamp || log.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm mt-2">{log.resource} - {log.details || 'No details'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

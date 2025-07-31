@@ -835,6 +835,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Permissions export endpoint
+  app.get("/api/permissions/export", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const roles = await storage.getAllRoles();
+      const permissions = await storage.getAllPermissions();
+      
+      // Create CSV content
+      const csvHeaders = ['Role ID', 'Role Name', 'Module', 'Permission Type', 'Enabled', 'Granted Date'];
+      const csvRows = permissions.map((perm: any) => [
+        perm.roleId || '',
+        roles.find((r: any) => r.id === perm.roleId)?.displayName || '',
+        perm.moduleId || perm.permission?.split(':')[0] || '',
+        perm.permissionType || perm.permission?.split(':')[1] || '',
+        perm.enabled ? 'Yes' : 'No',
+        perm.grantedAt ? new Date(perm.grantedAt).toLocaleDateString() : ''
+      ]);
+      
+      const csvContent = [csvHeaders.join(','), ...csvRows.map(row => row.join(','))].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="permissions-export.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error exporting permissions:", error);
+      res.status(500).json({ message: "Failed to export permissions" });
+    }
+  });
+
   // Super admin audit logs endpoints
   app.get("/api/super-admin/audit-logs", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
