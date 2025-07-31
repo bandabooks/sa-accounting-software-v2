@@ -166,6 +166,15 @@ export default function ModernPermissionsInterface() {
     try {
       const response = await fetch('/api/permissions/export', {
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('authToken') && {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }),
+          ...(localStorage.getItem('sessionToken') && {
+            'X-Session-Token': localStorage.getItem('sessionToken')
+          })
+        }
       });
       
       if (!response.ok) {
