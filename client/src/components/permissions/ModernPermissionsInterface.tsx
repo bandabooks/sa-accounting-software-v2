@@ -293,10 +293,14 @@ export default function ModernPermissionsInterface() {
                   const result = await response.json();
                   
                   if (result.success) {
+                    // Show prominent success notification using toast but with better positioning
                     toast({
-                      title: "Success",
-                      description: "Default module access initialized for all users",
+                      title: "✅ Success!",
+                      description: "Default module access initialized for all users successfully",
+                      duration: 5000,
+                      className: "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 bg-green-50 border-green-200 text-green-800",
                     });
+                    
                     // Refresh the permissions data
                     queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
                   }
