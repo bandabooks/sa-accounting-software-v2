@@ -42,6 +42,7 @@ import SecuritySettings from '@/components/enterprise/SecuritySettings';
 import NotificationSettings from '@/components/enterprise/NotificationSettings';
 import OAuthSettings from '@/components/enterprise/OAuthSettings';
 import AISettings from '@/components/enterprise/AISettings';
+import PaymentSettings from '@/components/enterprise/PaymentSettings';
 import AuditLogs from '@/components/enterprise/AuditLogs';
 
 interface TwoFactorStatus {
@@ -241,7 +242,7 @@ export default function EnterpriseSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="security" className="flex items-center space-x-2">
             <Shield className="h-4 w-4" />
             <span>Security</span>
@@ -257,6 +258,10 @@ export default function EnterpriseSettings() {
           <TabsTrigger value="ai" className="flex items-center space-x-2">
             <Brain className="h-4 w-4" />
             <span>AI Assistant</span>
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="flex items-center space-x-2">
+            <Key className="h-4 w-4" />
+            <span>Payment Settings</span>
           </TabsTrigger>
           <TabsTrigger value="audit" className="flex items-center space-x-2">
             <Activity className="h-4 w-4" />
@@ -300,6 +305,11 @@ export default function EnterpriseSettings() {
               suggestions: true,
             }}
           />
+        </TabsContent>
+
+        {/* Payment Settings Tab */}
+        <TabsContent value="payment">
+          <PaymentSettings />
         </TabsContent>
 
         {/* Audit Logs Tab */}
