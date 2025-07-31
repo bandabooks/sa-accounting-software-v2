@@ -102,10 +102,13 @@ export default function ModernPermissionsInterface() {
     queryKey: ['/api/rbac/system-roles'],
   });
 
-  // Fetch permissions matrix
+  // Fetch permissions matrix - always fetch, not just when role selected
   const { data: permissionsData, isLoading: permissionsLoading } = useQuery({
     queryKey: ['/api/permissions/matrix'],
-    enabled: !!selectedRoleId,
+    // Remove the enabled condition to always fetch permissions
+    onSuccess: (data) => {
+      console.log('Permissions matrix data received:', data);
+    }
   });
 
   // Permission toggle mutation
@@ -146,16 +149,38 @@ export default function ModernPermissionsInterface() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Permission Updated",
-        description: data.message,
+        title: "✅ Permission Saved",
+        description: data.message || "Permission updated successfully",
+        duration: 3000,
       });
+      
+      // Clear pending changes after successful save
+      const key = `${data.roleId || selectedRoleId}-${data.moduleId}-${data.permissionType}`;
+      setPendingChanges(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
+      
+      // Invalidate and refetch the permissions matrix
       queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+      queryClient.refetchQueries({ queryKey: ['/api/permissions/matrix'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Permission save error:', error);
       toast({
-        title: "Error",
-        description: "Failed to update permission",
+        title: "❌ Save Failed",
+        description: error.message || "Failed to save permission - please try again",
         variant: "destructive",
+        duration: 5000,
+      });
+      
+      // Clear pending changes on error so UI shows correct state
+      const key = `${selectedRoleId}-${error.moduleId || 'unknown'}-${error.permissionType || 'unknown'}`;
+      setPendingChanges(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
       });
     },
   });
@@ -256,18 +281,24 @@ export default function ModernPermissionsInterface() {
 
   const isPermissionEnabled = (moduleId: string, permissionType: string): boolean => {
     const key = `${selectedRoleId}-${moduleId}-${permissionType}`;
+    
+    // Check pending changes first
     if (pendingChanges.has(key)) {
       return pendingChanges.get(key)!;
     }
     
-    // Check from server data
-    if (permissionsData?.permissions) {
-      const permission = permissionsData.permissions.find((p: Permission) => 
-        p.roleId === selectedRoleId && p.moduleId === moduleId && p.permissionType === permissionType
-      );
-      return permission?.enabled || false;
+    // Check from server data - permissions matrix API structure
+    if (permissionsData?.roles && selectedRoleId) {
+      const role = permissionsData.roles.find((r: any) => r.id === selectedRoleId);
+      if (role?.permissions) {
+        // Check if permission exists in role's permissions array
+        const permissionKey = `${moduleId}:${permissionType}`;
+        return role.permissions.includes(permissionKey);
+      }
     }
-    return false;
+    
+    // Default to false for non-super admin roles
+    return selectedRole?.name === 'super_admin';
   };
 
   const togglePermission = (moduleId: string, permissionType: string) => {
@@ -433,7 +464,19 @@ export default function ModernPermissionsInterface() {
                 <label className="text-sm font-medium mb-2 block">Select Role to Configure</label>
                 <Select 
                   value={selectedRoleId?.toString() || ""} 
-                  onValueChange={(value) => setSelectedRoleId(parseInt(value))}
+                  onValueChange={(value) => {
+                    const id = parseInt(value);
+                    setSelectedRoleId(id);
+                    
+                    // Clear pending changes when switching roles
+                    setPendingChanges(new Map());
+                    
+                    // Clear expanded modules when switching roles for fresh view
+                    setExpandedModules(new Set());
+                    
+                    // Force refetch permissions for the new role
+                    queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a role..." />
