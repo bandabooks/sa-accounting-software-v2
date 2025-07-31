@@ -9798,10 +9798,16 @@ export class DatabaseStorage implements IStorage {
       // Parse current permissions or initialize empty object
       let permissions = {};
       try {
-        const rawPermissions = currentRole.permissions ? JSON.parse(currentRole.permissions) : {};
+        const rawPermissions = currentRole.permissions;
         
-        // Convert array format to object format if needed
-        if (Array.isArray(rawPermissions)) {
+        // Handle different permission data formats
+        if (!rawPermissions) {
+          permissions = {};
+        } else if (typeof rawPermissions === 'string') {
+          // Parse JSON string
+          permissions = JSON.parse(rawPermissions);
+        } else if (Array.isArray(rawPermissions)) {
+          // Convert array format to object format
           console.log(`Converting array permissions to object format for role ${roleId}`);
           permissions = {};
           rawPermissions.forEach((perm: string) => {
@@ -9811,8 +9817,12 @@ export class DatabaseStorage implements IStorage {
               permissions[module][action] = true;
             }
           });
-        } else {
+        } else if (typeof rawPermissions === 'object') {
+          // Already in object format
           permissions = rawPermissions;
+        } else {
+          console.log(`Unknown permissions format for role ${roleId}:`, typeof rawPermissions);
+          permissions = {};
         }
       } catch (e) {
         console.log(`Failed to parse permissions for role ${roleId}, initializing empty:`, e);

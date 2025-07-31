@@ -108,18 +108,11 @@ export default function ModernPermissionsInterface() {
     // Remove the enabled condition to always fetch permissions
   });
 
-  // Clear pending changes when role changes
+  // Clear pending changes when role changes, but NOT when permissions data updates
+  // This prevents the UI from reverting when data refreshes after permission saves
   React.useEffect(() => {
     setPendingChanges(new Map());
   }, [selectedRoleId]);
-
-  // Clear pending changes when role changes or permissions data updates
-  React.useEffect(() => {
-    if (permissionsData?.roles && selectedRoleId) {
-      // Only clear pending changes to prevent UI flash
-      setPendingChanges(new Map());
-    }
-  }, [permissionsData, selectedRoleId]);
 
   // Permission toggle mutation
   const togglePermissionMutation = useMutation({
@@ -157,25 +150,22 @@ export default function ModernPermissionsInterface() {
       
       return response.json();
     },
-    onSuccess: (data) => {
-      toast({
-        title: "✅ Permission Saved",
-        description: data.message || "Permission updated successfully",
-        duration: 3000,
-      });
+    onSuccess: (data, variables) => {
+      // Remove the disruptive toast that causes toggle reversion
+      // Instead, provide subtle feedback without UI disruption
       
-      // Clear pending changes immediately since the database was updated
-      const key = `${data.roleId || selectedRoleId}-${data.moduleId}-${data.permissionType}`;
+      console.log('Permission saved successfully:', data.message);
+      
+      // Clear the specific pending change for this permission only
+      const key = `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
       setPendingChanges(prev => {
         const newMap = new Map(prev);
         newMap.delete(key);
         return newMap;
       });
       
-      // Invalidate and refetch the permissions matrix after a short delay
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
-      }, 200);
+      // Refresh the permissions data to keep it in sync
+      queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
     },
     onError: (error: any) => {
       console.error('Permission save error:', error);
