@@ -47,6 +47,11 @@ export default function SuperAdminCompanyDetail() {
     queryKey: ["/api/super-admin/users"],
   });
 
+  // Fetch system roles for role dropdown
+  const { data: systemRoles } = useQuery({
+    queryKey: ["/api/rbac/system-roles"],
+  });
+
   // Update company mutation
   const updateCompanyMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -427,11 +432,11 @@ export default function SuperAdminCompanyDetail() {
                             <SelectValue placeholder="Select role..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="owner">Owner</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="accountant">Accountant</SelectItem>
-                            <SelectItem value="employee">Employee</SelectItem>
+                            {systemRoles?.map((role: any) => (
+                              <SelectItem key={role.id} value={role.name}>
+                                {role.displayName} (Level {role.level})
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -487,15 +492,15 @@ export default function SuperAdminCompanyDetail() {
                               })
                             }
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-48">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="owner">Owner</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="manager">Manager</SelectItem>
-                              <SelectItem value="accountant">Accountant</SelectItem>
-                              <SelectItem value="employee">Employee</SelectItem>
+                              {systemRoles?.map((role: any) => (
+                                <SelectItem key={role.id} value={role.name}>
+                                  {role.displayName} (Level {role.level})
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
