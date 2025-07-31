@@ -116,6 +116,11 @@ import ProductLots from "@/pages/product-lots";
 import ProductSerials from "@/pages/product-serials";
 import Payments from "@/pages/payments";
 import NewPayment from "@/pages/payments/new";
+// POS Module imports
+import POSDashboard from "@/pages/pos-dashboard";
+import POSTerminal from "@/pages/pos-terminal";
+import POSShifts from "@/pages/pos-shifts";
+import POSTerminals from "@/pages/pos-terminals";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -402,6 +407,33 @@ function AuthenticatedApp() {
         <Route path="/product-serials">
           <ProtectedRoute permission={PERMISSIONS.INVENTORY_VIEW}>
             <ProductSerials />
+          </ProtectedRoute>
+        </Route>
+
+        {/* POS Module Routes */}
+        <Route path="/pos">
+          <ProtectedRoute permission={PERMISSIONS.POS_VIEW}>
+            <POSDashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pos/dashboard">
+          <ProtectedRoute permission={PERMISSIONS.POS_VIEW}>
+            <POSDashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pos/terminal">
+          <ProtectedRoute permission={PERMISSIONS.POS_PROCESS_SALES}>
+            <POSTerminal />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pos/shifts">
+          <ProtectedRoute permission={PERMISSIONS.POS_MANAGE_SHIFTS}>
+            <POSShifts />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/pos/terminals">
+          <ProtectedRoute permission={PERMISSIONS.POS_MANAGE}>
+            <POSTerminals />
           </ProtectedRoute>
         </Route>
 
