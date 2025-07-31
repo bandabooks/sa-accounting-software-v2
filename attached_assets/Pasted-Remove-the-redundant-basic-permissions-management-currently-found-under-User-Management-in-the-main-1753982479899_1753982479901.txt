@@ -1,0 +1,43 @@
+Remove the redundant, basic permissions management currently found under User Management in the main dashboard. Integrate and centralize ALL permission logic to the robust, feature-complete permission module found under Subscriptions/Super Admin.
+
+Unify Permissions Control:
+
+The advanced module in Super Admin (with plan-specific, role-based, and module permission settings) should become the single source of truth for permissions management across the system.
+
+Remove/deprecate any other standalone or "lite" permission modules (such as the one in regular User Management).
+
+Ensure Seamless Role Mapping:
+
+When a user, admin, or company admin sets permissions for any role, it must reference and update the unified permissions logic, not two different systems.
+
+Subscription/Plan Integration:
+
+Module/feature toggles and role-permission settings under each subscription plan must flow directly to the user's access in the actual platform.
+
+Changes to permissions in the plan editor should immediately reflect in role assignments and access for all users in that subscription.
+
+UI/UX Alignment:
+
+Use the same permission selection interface (the robust, dropdown-based one) everywhere permissions are set—no duplicate or simplified versions.
+
+Ensure that when managing permissions from the User Management panel, it opens the same module (perhaps via a modal, drawer, or direct link) as in Super Admin.
+
+Eliminate Conflicts and Bugs:
+
+After migration, test thoroughly to ensure that there are no leftover endpoints, database tables, or logic from the removed, old permission management system.
+
+Make sure toggling permissions works instantly and reliably everywhere, with proper feedback.
+
+Single Source of Truth (SSOT):
+
+Permissions should be stored and updated in one table or schema only, so that any UI change or API call stays perfectly in sync.
+
+Summary to Developers:
+Centralize all permission logic in the robust Super Admin/SaaS subscription module.
+
+Remove all other permission managers and ensure only one way to assign, edit, or revoke permissions per role or module.
+
+Link User Management > Permissions directly to the unified manager.
+
+Test thoroughly for conflicts and edge cases after migration.
+

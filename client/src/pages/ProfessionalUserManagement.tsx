@@ -236,7 +236,7 @@ export default function ProfessionalUserManagement() {
     mutationFn: async (userId: number) => {
       return apiRequest("/api/auth/impersonate", "POST", { userId });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.token) {
         localStorage.setItem('token', data.token);
         window.location.href = '/dashboard';

@@ -557,8 +557,13 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
 
-        {/* Role-Based Access Control (RBAC) Routes */}
+        {/* Unified Permission Management Routes */}
         <Route path="/user-management">
+          <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
+            <ProfessionalUserManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/permissions-management">
           <ProtectedRoute permission={PERMISSIONS.USERS_VIEW}>
             <ProfessionalUserManagement />
           </ProtectedRoute>
