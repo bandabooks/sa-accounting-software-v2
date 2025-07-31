@@ -47,7 +47,6 @@ import {
   Briefcase
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import ProfessionalPermissionsMatrix from "@/components/permissions/ProfessionalPermissionsMatrix";
 import ModernPermissionsInterface from "@/components/permissions/ModernPermissionsInterface";
 
 // User schema for forms
@@ -312,7 +311,7 @@ export default function ProfessionalUserManagement() {
 
       {/* Main Tabs */}
       <Tabs value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Users
@@ -324,10 +323,6 @@ export default function ProfessionalUserManagement() {
           <TabsTrigger value="permissions" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Permissions
-          </TabsTrigger>
-          <TabsTrigger value="modern-permissions" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Modern
           </TabsTrigger>
           <TabsTrigger value="activity" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
@@ -500,11 +495,6 @@ export default function ProfessionalUserManagement() {
 
         {/* Permissions Tab */}
         <TabsContent value="permissions" className="space-y-4">
-          <ProfessionalPermissionsMatrix />
-        </TabsContent>
-
-        {/* Modern Permissions Tab */}
-        <TabsContent value="modern-permissions" className="space-y-4">
           <ModernPermissionsInterface />
         </TabsContent>
 

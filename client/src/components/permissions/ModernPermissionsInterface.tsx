@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   Search, 
   Shield, 
@@ -110,13 +111,10 @@ export default function ModernPermissionsInterface() {
       permissionType: string;
       enabled: boolean;
     }) => {
-      const response = await fetch('/api/permissions/toggle', {
+      return apiRequest('/api/permissions/toggle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roleId, moduleId, permissionType, enabled }),
+        body: { roleId, moduleId, permissionType, enabled },
       });
-      if (!response.ok) throw new Error('Failed to toggle permission');
-      return response.json();
     },
     onSuccess: (data) => {
       toast({
