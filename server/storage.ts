@@ -8874,11 +8874,30 @@ export class DatabaseStorage implements IStorage {
   
   // POS Terminals
   async getPosTerminals(companyId: number): Promise<PosTerminal[]> {
-    return await db
+    const results = await db
       .select()
       .from(posTerminals)
       .where(eq(posTerminals.companyId, companyId))
       .orderBy(desc(posTerminals.createdAt));
+    
+    // Transform database results to match the expected API format
+    return results.map(terminal => ({
+      id: terminal.id,
+      name: terminal.terminalName,
+      location: terminal.location,
+      status: terminal.isActive ? 'active' : 'inactive',
+      ipAddress: terminal.ipAddress || undefined,
+      macAddress: terminal.serialNumber || undefined,
+      printerName: undefined, // These would be stored in settings JSON
+      cashDrawerPort: undefined,
+      barcodeScanner: false,
+      customerDisplay: false,
+      notes: undefined,
+      currentShiftId: undefined, // Would need to join with shifts table
+      lastActivity: undefined,
+      createdAt: terminal.createdAt.toISOString(),
+      updatedAt: terminal.updatedAt?.toISOString() || terminal.createdAt.toISOString()
+    }));
   }
 
   async getPosTerminal(id: number): Promise<PosTerminal | undefined> {
@@ -8892,37 +8911,143 @@ export class DatabaseStorage implements IStorage {
   async createPosTerminal(terminal: InsertPosTerminal): Promise<PosTerminal> {
     const [newTerminal] = await db
       .insert(posTerminals)
-      .values(terminal)
+      .values({
+        companyId: terminal.companyId,
+        terminalName: terminal.name || 'New Terminal',
+        location: terminal.location || 'Unknown Location',
+        serialNumber: terminal.macAddress || undefined,
+        ipAddress: terminal.ipAddress || undefined,
+        isActive: terminal.status === 'active',
+        settings: terminal.settings || {}
+      })
       .returning();
-    return newTerminal;
+    
+    return {
+      id: newTerminal.id,
+      name: newTerminal.terminalName,
+      location: newTerminal.location,
+      status: newTerminal.isActive ? 'active' : 'inactive',
+      ipAddress: newTerminal.ipAddress || undefined,
+      macAddress: newTerminal.serialNumber || undefined,
+      printerName: undefined,
+      cashDrawerPort: undefined,
+      barcodeScanner: false,
+      customerDisplay: false,
+      notes: undefined,
+      currentShiftId: undefined,
+      lastActivity: undefined,
+      createdAt: newTerminal.createdAt.toISOString(),
+      updatedAt: newTerminal.updatedAt?.toISOString() || newTerminal.createdAt.toISOString()
+    };
   }
 
-  async updatePosTerminal(id: number, terminal: Partial<InsertPosTerminal>): Promise<PosTerminal | undefined> {
+  async updatePosTerminal(id: number, terminal: Partial<InsertPosTerminal>, companyId: number): Promise<PosTerminal | undefined> {
     const [updatedTerminal] = await db
       .update(posTerminals)
       .set({ ...terminal, updatedAt: new Date() })
-      .where(eq(posTerminals.id, id))
+      .where(and(eq(posTerminals.id, id), eq(posTerminals.companyId, companyId)))
       .returning();
-    return updatedTerminal;
+    
+    if (!updatedTerminal) return undefined;
+    
+    return {
+      id: updatedTerminal.id,
+      name: updatedTerminal.terminalName,
+      location: updatedTerminal.location,
+      status: updatedTerminal.isActive ? 'active' : 'inactive',
+      ipAddress: updatedTerminal.ipAddress || undefined,
+      macAddress: updatedTerminal.serialNumber || undefined,
+      printerName: undefined,
+      cashDrawerPort: undefined,
+      barcodeScanner: false,
+      customerDisplay: false,
+      notes: undefined,
+      currentShiftId: undefined,
+      lastActivity: undefined,
+      createdAt: updatedTerminal.createdAt.toISOString(),
+      updatedAt: updatedTerminal.updatedAt?.toISOString() || updatedTerminal.createdAt.toISOString()
+    };
   }
 
-  async deletePosTerminal(id: number): Promise<boolean> {
-    const result = await db.delete(posTerminals).where(eq(posTerminals.id, id));
+  async deletePosTerminal(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(posTerminals)
+      .where(and(eq(posTerminals.id, id), eq(posTerminals.companyId, companyId)));
     return (result.rowCount || 0) > 0;
   }
 
+  // POS Shifts
+  async getPosShifts(companyId: number, status?: string, terminalId?: number): Promise<any[]> {
+    let query = db
+      .select()
+      .from(posShifts)
+      .where(eq(posShifts.companyId, companyId));
+
+    if (status) {
+      query = query.where(and(eq(posShifts.companyId, companyId), eq(posShifts.status, status)));
+    }
+
+    if (terminalId) {
+      query = query.where(and(eq(posShifts.companyId, companyId), eq(posShifts.terminalId, terminalId)));
+    }
+
+    return await query.orderBy(desc(posShifts.startTime));
+  }
+
+  async getCurrentPosShifts(companyId: number): Promise<any[]> {
+    return await db
+      .select()
+      .from(posShifts)
+      .where(and(eq(posShifts.companyId, companyId), eq(posShifts.status, 'open')))
+      .orderBy(desc(posShifts.startTime));
+  }
+
+  async createPosShift(shift: any): Promise<any> {
+    const [newShift] = await db
+      .insert(posShifts)
+      .values(shift)
+      .returning();
+    return newShift;
+  }
+
+  async closePosShift(shiftId: number, closingData: any, companyId: number): Promise<any> {
+    const [updatedShift] = await db
+      .update(posShifts)
+      .set(closingData)
+      .where(and(eq(posShifts.id, shiftId), eq(posShifts.companyId, companyId)))
+      .returning();
+    return updatedShift;
+  }
+
   // POS Sales
-  async getPosSales(companyId: number, terminalId?: number): Promise<PosSale[]> {
+  async getPosSales(companyId: number, filters: { shiftId?: number; startDate?: string; endDate?: string }): Promise<any[]> {
     let query = db
       .select()
       .from(posSales)
       .where(eq(posSales.companyId, companyId));
 
-    if (terminalId) {
-      query = query.where(and(eq(posSales.companyId, companyId), eq(posSales.terminalId, terminalId)));
+    if (filters.shiftId) {
+      query = query.where(and(eq(posSales.companyId, companyId), eq(posSales.shiftId, filters.shiftId)));
     }
 
     return await query.orderBy(desc(posSales.saleDate));
+  }
+
+  async getPosSalesStats(companyId: number, date: string): Promise<any> {
+    // For now, return mock stats. In production, this would calculate actual stats
+    return {
+      totalSales: 0,
+      transactionCount: 0,
+      averageTransaction: 0
+    };
+  }
+
+  async createPosSale(sale: any): Promise<any> {
+    const [newSale] = await db
+      .insert(posSales)
+      .values(sale)
+      .returning();
+    return newSale;
   }
 
   async getPosSale(id: number): Promise<PosSaleWithItems | undefined> {

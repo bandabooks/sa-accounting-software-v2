@@ -9352,5 +9352,198 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // ===== POS (Point of Sale) API Routes =====
+  
+  // POS Terminals API
+  app.get("/api/pos/terminals", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const terminals = await storage.getPosTerminals(companyId);
+      res.json(terminals);
+    } catch (error) {
+      console.error("Error fetching POS terminals:", error);
+      res.status(500).json({ message: "Failed to fetch POS terminals" });
+    }
+  });
+
+  app.post("/api/pos/terminals", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = (req as AuthenticatedRequest).user?.id;
+      const terminalData = {
+        ...req.body,
+        companyId,
+        settings: req.body.settings || {}
+      };
+      
+      const terminal = await storage.createPosTerminal(terminalData);
+      await logAudit(userId, 'CREATE', 'pos_terminal', terminal?.id || 0);
+      res.status(201).json(terminal);
+    } catch (error) {
+      console.error("Error creating POS terminal:", error);
+      res.status(500).json({ message: "Failed to create POS terminal" });
+    }
+  });
+
+  app.put("/api/pos/terminals/:id", authenticate, async (req, res) => {
+    try {
+      const terminalId = parseInt(req.params.id);
+      const userId = (req as AuthenticatedRequest).user?.id;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      
+      const terminal = await storage.updatePosTerminal(terminalId, req.body, companyId);
+      if (!terminal) {
+        return res.status(404).json({ message: "POS terminal not found" });
+      }
+      
+      await logAudit(userId, 'UPDATE', 'pos_terminal', terminalId);
+      res.json(terminal);
+    } catch (error) {
+      console.error("Error updating POS terminal:", error);
+      res.status(500).json({ message: "Failed to update POS terminal" });
+    }
+  });
+
+  app.delete("/api/pos/terminals/:id", authenticate, async (req, res) => {
+    try {
+      const terminalId = parseInt(req.params.id);
+      const userId = (req as AuthenticatedRequest).user?.id;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      
+      const deleted = await storage.deletePosTerminal(terminalId, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "POS terminal not found" });
+      }
+      
+      await logAudit(userId, 'DELETE', 'pos_terminal', terminalId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting POS terminal:", error);
+      res.status(500).json({ message: "Failed to delete POS terminal" });
+    }
+  });
+
+  // POS Shifts API
+  app.get("/api/pos/shifts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const status = req.query.status as string;
+      const terminalId = req.query.terminalId ? parseInt(req.query.terminalId as string) : undefined;
+      
+      const shifts = await storage.getPosShifts(companyId, status, terminalId);
+      res.json(shifts);
+    } catch (error) {
+      console.error("Error fetching POS shifts:", error);
+      res.status(500).json({ message: "Failed to fetch POS shifts" });
+    }
+  });
+
+  app.get("/api/pos/shifts/current", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const shifts = await storage.getCurrentPosShifts(companyId);
+      res.json(shifts);
+    } catch (error) {
+      console.error("Error fetching current POS shifts:", error);
+      res.status(500).json({ message: "Failed to fetch current POS shifts" });
+    }
+  });
+
+  app.post("/api/pos/shifts", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = (req as AuthenticatedRequest).user?.id;
+      
+      const shiftData = {
+        ...req.body,
+        companyId,
+        userId,
+        startTime: new Date().toISOString()
+      };
+      
+      const shift = await storage.createPosShift(shiftData);
+      await logAudit(userId, 'CREATE', 'pos_shift', shift?.id || 0);
+      res.status(201).json(shift);
+    } catch (error) {
+      console.error("Error creating POS shift:", error);
+      res.status(500).json({ message: "Failed to create POS shift" });
+    }
+  });
+
+  app.put("/api/pos/shifts/:id/close", authenticate, async (req, res) => {
+    try {
+      const shiftId = parseInt(req.params.id);
+      const userId = (req as AuthenticatedRequest).user?.id;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      
+      const closingData = {
+        ...req.body,
+        endTime: new Date().toISOString(),
+        status: 'closed'
+      };
+      
+      const shift = await storage.closePosShift(shiftId, closingData, companyId);
+      if (!shift) {
+        return res.status(404).json({ message: "POS shift not found" });
+      }
+      
+      await logAudit(userId, 'UPDATE', 'pos_shift', shiftId, 'Shift closed');
+      res.json(shift);
+    } catch (error) {
+      console.error("Error closing POS shift:", error);
+      res.status(500).json({ message: "Failed to close POS shift" });
+    }
+  });
+
+  // POS Sales API
+  app.get("/api/pos/sales", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const shiftId = req.query.shiftId ? parseInt(req.query.shiftId as string) : undefined;
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      const sales = await storage.getPosSales(companyId, { shiftId, startDate, endDate });
+      res.json(sales);
+    } catch (error) {
+      console.error("Error fetching POS sales:", error);
+      res.status(500).json({ message: "Failed to fetch POS sales" });
+    }
+  });
+
+  app.get("/api/pos/sales/stats", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const date = req.query.date as string;
+      
+      const stats = await storage.getPosSalesStats(companyId, date);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching POS sales stats:", error);
+      res.status(500).json({ message: "Failed to fetch POS sales stats" });
+    }
+  });
+
+  app.post("/api/pos/sales", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = (req as AuthenticatedRequest).user?.id;
+      
+      const saleData = {
+        ...req.body,
+        companyId,
+        cashierId: userId,
+        saleDate: new Date().toISOString()
+      };
+      
+      const sale = await storage.createPosSale(saleData);
+      await logAudit(userId, 'CREATE', 'pos_sale', sale?.id || 0);
+      res.status(201).json(sale);
+    } catch (error) {
+      console.error("Error creating POS sale:", error);
+      res.status(500).json({ message: "Failed to create POS sale" });
+    }
+  });
+
   return httpServer;
 }
