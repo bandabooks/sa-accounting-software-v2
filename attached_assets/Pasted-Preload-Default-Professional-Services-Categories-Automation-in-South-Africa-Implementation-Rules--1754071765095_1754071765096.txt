@@ -1,0 +1,149 @@
+Preload Default Professional Services, Categories & Automation in South Africa
+Implementation Rules:
+First VERIFY if each sub-feature exists before implementing.
+
+If missing, create and integrate it seamlessly into existing service, product, and project/task structure.
+
+DO NOT duplicate service or category logic—extend or reuse where possible.
+
+Ensure all features are mobile and tablet friendly.
+
+Respect user roles, permissions, and package/module switches.
+
+Prompt:
+1. Preload Default Professional Services for South Africa
+Build a comprehensive master list of professional services offered by accountants, tax practitioners, auditors, business consultants, payroll practitioners, and related professionals in South Africa.
+
+Include at least the most common 33 services—see below for initial list.
+
+For each service, preload the following fields:
+
+Service Name
+
+Description
+
+Suggested Retail Price (editable)
+
+Default Service Category
+
+Frequency/Periodicity (e.g., Monthly, Bi-Monthly, Quarterly, Annual, Once-off)
+
+Linked Deadlines & Compliance Dates (auto-calculate for SARS/CIPC, e.g., VAT bi-monthly, Provisional Tax twice yearly, CIPC Annual Returns, etc.)
+
+Linked Task/Project Template (when the service is selected, it auto-generates a standard project/task with default deadlines, reminders, and steps)
+
+Linked Authority (SARS, CIPC, DOL, UIF, COIDA, etc.)
+
+Switch/Toggle to include/exclude this service in each package/module.
+
+2. Preload Default Categories
+Preload a master list of default service categories (e.g., Accounting, Tax, Payroll, Advisory, CIPC Services, Compliance, Audit, Secretarial, Other).
+
+Preload default product categories (e.g., Office Supplies, Software, Hardware, Books, Training Materials, etc.)
+
+Categories must be editable, but not deletable if used by system services/products.
+
+3. Service Automation & Project Linking
+Every default service must be linked to a task/project template.
+
+When a service is added to a client, it must auto-create a project/task (with deadlines, steps, and reminders).
+
+Deadlines and reminders must trigger based on regulatory timelines (e.g., VAT due on 25th every second month, EMP201 monthly, Provisional Tax Feb/Aug, CIPC returns annual, etc.).
+
+Admins can edit the deadlines or steps, but the default template must be provided.
+
+4. Suggested Pricing
+Each service should have a suggested minimum and maximum price, based on market research or regulatory guidelines (editable by the user/firm).
+
+5. Package/Module Management
+Default services and categories must be available for switch on/off per module or subscription plan.
+
+Admin can enable/disable (hide) default services and categories per company.
+
+6. System Requirements
+All default data should be preloaded on first setup/installation, and must not be overwritten on future updates unless not customized.
+
+All features must be available and usable on both desktop and mobile/tablet.
+
+User must be able to customize/add new services or categories, but system defaults should always be available for reference.
+
+Sample List of 33 Default Professional Services (expand as needed):
+Annual Financial Statements (AFS)
+
+Bookkeeping/Monthly Accounting
+
+VAT Returns (201/202/201V)
+
+Payroll Processing
+
+EMP201 Monthly Submission
+
+EMP501 Reconciliation (Annual/Interim)
+
+SARS Income Tax Return (ITR12/ITR14)
+
+Provisional Tax Return (IRP6)
+
+CIPC Annual Return Submission
+
+New Company Registration (CIPC)
+
+Change of Directors/Officers (CIPC)
+
+SARS Tax Clearance Pin Application
+
+BEE Certificate Application
+
+COIDA Registration/Return of Earnings
+
+UIF Registration/Monthly Declaration
+
+PAYE Registration/Submission
+
+SDL Registration/Submission
+
+WCA Letter of Good Standing
+
+Financial Statement Review/Compilation
+
+Audit/Independent Review
+
+Tax Dispute/Objection Submission
+
+SARS eFiling Registration & Profile Setup
+
+Trust Registration/Trust Deed Drafting
+
+Estate Planning & Administration
+
+Asset Register Management
+
+SARS Penalty Remission/Request for Suspension of Payment
+
+Business Advisory/Consulting
+
+Cash Flow Forecast Preparation
+
+Budgeting & Variance Reporting
+
+Director/Shareholder Change/Resolution
+
+SARS Bank Details Update
+
+SARS Representative Registration
+
+SARS/Tax Practitioner Appointment & Deregistration
+
+(Expand with any additional specialized or regionally-required services.)
+
+Summary
+Preload a robust, editable list of default professional services and categories.
+
+Each service links to a project/task template with compliance-based deadlines.
+
+Services include suggested pricing and authority (SARS, CIPC, etc).
+
+Dropdowns for VAT types, categories, and service names are available in all related modules.
+
+All defaults are switchable by admin and tied to package/module structure.
+

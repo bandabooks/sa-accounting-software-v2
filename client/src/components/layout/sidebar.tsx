@@ -62,6 +62,7 @@ const navigationGroups = [
     module: "inventory",
     items: [
       { path: "/products", label: "Products", icon: Package, permission: "PRODUCT_VIEW", module: "products" },
+      { path: "/professional-services", label: "Professional Services", icon: Briefcase, permission: "PRODUCT_VIEW", module: "products" },
       { path: "/inventory", label: "Inventory", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" },
       { path: "/warehouses", label: "Warehouses", icon: Building2, permission: "INVENTORY_VIEW", module: "inventory" },
       { path: "/product-lots", label: "Lot/Batch Tracking", icon: ReceiptText, permission: "INVENTORY_VIEW", module: "inventory" },

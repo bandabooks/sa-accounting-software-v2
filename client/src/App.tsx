@@ -124,6 +124,11 @@ import POSDashboard from "@/pages/pos-dashboard";
 import POSTerminal from "@/pages/pos-terminal";
 import POSShifts from "@/pages/pos-shifts";
 import POSTerminals from "@/pages/pos-terminals";
+import POSCustomerLoyalty from "@/pages/pos-customer-loyalty";
+import POSReports from "@/pages/pos-reports";
+import PayFastPayments from "@/pages/payfast-payments";
+import POSShiftManagement from "@/pages/pos-shift-management";
+import ProfessionalServices from "@/pages/professional-services";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -437,6 +442,13 @@ function AuthenticatedApp() {
         <Route path="/pos/terminals">
           <ProtectedRoute permission={PERMISSIONS.POS_MANAGE}>
             <POSTerminals />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Professional Services Module */}
+        <Route path="/professional-services">
+          <ProtectedRoute permission={PERMISSIONS.PRODUCTS_VIEW}>
+            <ProfessionalServices />
           </ProtectedRoute>
         </Route>
 
