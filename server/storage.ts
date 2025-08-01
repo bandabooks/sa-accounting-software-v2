@@ -742,7 +742,7 @@ export interface IStorage {
   createPosPayment(payment: InsertPosPayment): Promise<PosPayment>;
 
   // POS Shifts
-  getPosShifts(companyId: number, terminalId?: number): Promise<PosShift[]>;
+  getPosShifts(companyId: number, status?: string, terminalId?: number): Promise<PosShift[]>;
   getCurrentShift(terminalId: number, userId: number): Promise<PosShift | undefined>;
   createPosShift(shift: InsertPosShift): Promise<PosShift>;
   closeShift(id: number, closingData: { closingCash: number; notes?: string }): Promise<PosShift | undefined>;
@@ -9217,15 +9217,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   // POS Shifts
-  async getPosShifts(companyId: number, terminalId?: number): Promise<PosShift[]> {
-    let query = db
-      .select()
-      .from(posShifts)
-      .where(eq(posShifts.companyId, companyId));
+  async getPosShifts(companyId: number, status?: string, terminalId?: number): Promise<PosShift[]> {
+    let conditions = [eq(posShifts.companyId, companyId)];
+
+    if (status) {
+      conditions.push(eq(posShifts.status, status));
+    }
 
     if (terminalId) {
-      query = query.where(and(eq(posShifts.companyId, companyId), eq(posShifts.terminalId, terminalId)));
+      conditions.push(eq(posShifts.terminalId, terminalId));
     }
+
+    const query = db
+      .select()
+      .from(posShifts)
+      .where(and(...conditions));
 
     return await query.orderBy(desc(posShifts.startTime));
   }

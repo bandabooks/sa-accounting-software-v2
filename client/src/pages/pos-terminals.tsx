@@ -61,19 +61,6 @@ export default function POSTerminals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Error boundary for white screen prevention
-  const [hasError, setHasError] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleError = (error: ErrorEvent) => {
-      console.error('POS Terminals Error:', error);
-      setHasError(true);
-    };
-
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedTerminal, setSelectedTerminal] = useState<PosTerminal | null>(null);
@@ -97,7 +84,7 @@ export default function POSTerminals() {
   });
 
   // Error state
-  if (hasError || terminalsError) {
+  if (terminalsError) {
     return (
       <div className="container mx-auto p-6">
         <Card className="w-full max-w-md mx-auto">

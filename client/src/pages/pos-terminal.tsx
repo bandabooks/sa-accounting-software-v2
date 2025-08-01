@@ -72,19 +72,6 @@ export default function POSTerminal() {
   const queryClient = useQueryClient();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
-  // Error boundary for white screen prevention
-  const [hasError, setHasError] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleError = (error: ErrorEvent) => {
-      console.error('POS Terminal Error:', error);
-      setHasError(true);
-    };
-
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-
   // State Management
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
@@ -125,7 +112,7 @@ export default function POSTerminal() {
   const isLoading = shiftLoading || productsLoading || customersLoading;
 
   // Error state
-  if (hasError || shiftError) {
+  if (shiftError) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
