@@ -9355,9 +9355,9 @@ Format your response as a JSON array of tip objects with "title", "description",
   // ===== POS (Point of Sale) API Routes =====
   
   // POS Terminals API
-  app.get("/api/pos/terminals", authenticate, async (req, res) => {
+  app.get("/api/pos/terminals", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = req.user.companyId;
       const terminals = await storage.getPosTerminals(companyId);
       res.json(terminals);
     } catch (error) {
@@ -9366,10 +9366,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.post("/api/pos/terminals", authenticate, async (req, res) => {
+  app.post("/api/pos/terminals", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const userId = (req as AuthenticatedRequest).user?.id;
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
       const terminalData = {
         ...req.body,
         companyId,
@@ -9385,11 +9385,11 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.put("/api/pos/terminals/:id", authenticate, async (req, res) => {
+  app.put("/api/pos/terminals/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const terminalId = parseInt(req.params.id);
-      const userId = (req as AuthenticatedRequest).user?.id;
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = req.user.id;
+      const companyId = req.user.companyId;
       
       const terminal = await storage.updatePosTerminal(terminalId, req.body, companyId);
       if (!terminal) {
@@ -9404,11 +9404,11 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.delete("/api/pos/terminals/:id", authenticate, async (req, res) => {
+  app.delete("/api/pos/terminals/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const terminalId = parseInt(req.params.id);
-      const userId = (req as AuthenticatedRequest).user?.id;
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = req.user.id;
+      const companyId = req.user.companyId;
       
       const deleted = await storage.deletePosTerminal(terminalId, companyId);
       if (!deleted) {
@@ -9424,9 +9424,9 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // POS Shifts API
-  app.get("/api/pos/shifts", authenticate, async (req, res) => {
+  app.get("/api/pos/shifts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = req.user.companyId;
       const status = req.query.status as string;
       const terminalId = req.query.terminalId ? parseInt(req.query.terminalId as string) : undefined;
       
@@ -9438,9 +9438,9 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.get("/api/pos/shifts/current", authenticate, async (req, res) => {
+  app.get("/api/pos/shifts/current", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = req.user.companyId;
       const shifts = await storage.getCurrentPosShifts(companyId);
       res.json(shifts);
     } catch (error) {
@@ -9449,10 +9449,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.post("/api/pos/shifts", authenticate, async (req, res) => {
+  app.post("/api/pos/shifts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const userId = (req as AuthenticatedRequest).user?.id;
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
       
       const shiftData = {
         ...req.body,
@@ -9470,11 +9470,11 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.put("/api/pos/shifts/:id/close", authenticate, async (req, res) => {
+  app.put("/api/pos/shifts/:id/close", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const shiftId = parseInt(req.params.id);
-      const userId = (req as AuthenticatedRequest).user?.id;
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const userId = req.user.id;
+      const companyId = req.user.companyId;
       
       const closingData = {
         ...req.body,
@@ -9496,9 +9496,9 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // POS Sales API
-  app.get("/api/pos/sales", authenticate, async (req, res) => {
+  app.get("/api/pos/sales", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = req.user.companyId;
       const shiftId = req.query.shiftId ? parseInt(req.query.shiftId as string) : undefined;
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
@@ -9511,9 +9511,9 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.get("/api/pos/sales/stats", authenticate, async (req, res) => {
+  app.get("/api/pos/sales/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = req.user.companyId;
       const date = req.query.date as string;
       
       const stats = await storage.getPosSalesStats(companyId, date);
@@ -9524,10 +9524,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.post("/api/pos/sales", authenticate, async (req, res) => {
+  app.post("/api/pos/sales", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const userId = (req as AuthenticatedRequest).user?.id;
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
       
       const saleData = {
         ...req.body,
