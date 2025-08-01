@@ -42,6 +42,7 @@ import JournalEntries from "@/pages/journal-entries";
 import Banking from "@/pages/banking";
 import GeneralLedger from "@/pages/general-ledger";
 import FixedAssets from "@/pages/fixed-assets";
+import FixedAssetCreate from "@/pages/fixed-asset-create";
 import Budgeting from "@/pages/budgeting";
 import CashFlowForecasting from "@/pages/cash-flow-forecasting";
 import BankReconciliation from "@/pages/bank-reconciliation";
@@ -468,6 +469,11 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/fixed-assets">
           <FixedAssets />
+        </Route>
+        <Route path="/fixed-assets/new">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <FixedAssetCreate />
+          </ProtectedRoute>
         </Route>
         <Route path="/budgeting">
           <Budgeting />
