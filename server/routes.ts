@@ -9614,5 +9614,96 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // =============================================
+  // INTEGRATIONS API ENDPOINTS
+  // =============================================
+
+  // Get integrations status
+  app.get('/api/integrations/status', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      // For now, return mock data. In a real implementation, 
+      // this would check actual integration statuses
+      const integrations = [
+        {
+          id: 'sars',
+          name: 'SARS eFiling',
+          status: 'connected',
+          lastSync: new Date().toISOString(),
+          features: ['VAT Returns', 'Compliance', 'Payments', 'Data Sync']
+        },
+        {
+          id: 'banking',
+          name: 'Banking Integration',
+          status: 'disconnected',
+          features: ['Bank Statements', 'Balance Updates', 'Transaction Import']
+        },
+        {
+          id: 'payfast',
+          name: 'PayFast Payments',
+          status: 'pending',
+          features: ['Payment Processing', 'Recurring Billing', 'Notifications']
+        },
+        {
+          id: 'cipc',
+          name: 'CIPC Integration',
+          status: 'disconnected',
+          features: ['Company Registration', 'Compliance Monitoring', 'Annual Returns']
+        }
+      ];
+      
+      res.json(integrations);
+    } catch (error) {
+      console.error('Error fetching integrations status:', error);
+      res.status(500).json({ message: 'Failed to fetch integrations status' });
+    }
+  });
+
+  // Test integration connection
+  app.post('/api/integrations/:integrationId/test', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { integrationId } = req.params;
+      
+      // Mock connection test - in real implementation, this would test actual connections
+      const success = Math.random() > 0.3; // 70% success rate for demo
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: `${integrationId.toUpperCase()} connection test successful`,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: `${integrationId.toUpperCase()} connection test failed. Please check your credentials.`,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error testing integration connection:', error);
+      res.status(500).json({ message: 'Failed to test integration connection' });
+    }
+  });
+
+  // Save integration credentials
+  app.post('/api/integrations/:integrationId/credentials', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { integrationId } = req.params;
+      const credentials = req.body;
+      
+      // Mock credential saving - in real implementation, this would securely store credentials
+      console.log(`Saving credentials for ${integrationId}:`, Object.keys(credentials));
+      
+      res.json({ 
+        success: true, 
+        message: `${integrationId.toUpperCase()} credentials saved successfully`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error saving integration credentials:', error);
+      res.status(500).json({ message: 'Failed to save integration credentials' });
+    }
+  });
+
   return httpServer;
 }

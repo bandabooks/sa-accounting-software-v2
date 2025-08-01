@@ -8,7 +8,7 @@ import {
   Settings, TrendingUp, Package, Building, Archive, Building2, 
   BookOpen, Landmark, BookOpenCheck, ReceiptText, DollarSign, 
   CreditCard, Box, Truck, PieChart, CheckCircle, Shield, Briefcase,
-  FolderOpen, CheckSquare, Clock, UserCog, Key, ToggleLeft, Upload, Terminal
+  FolderOpen, CheckSquare, Clock, UserCog, Key, ToggleLeft, Upload, Terminal, Zap
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -172,6 +172,7 @@ const navigationGroups = [
       { path: "/companies", label: "Companies", icon: Building2, permission: "COMPANY_VIEW", module: "multi_company" },
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
       { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/integrations", label: "Integrations", icon: Zap, permission: "SETTINGS_VIEW", module: "dashboard" },
       { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" }
     ]
   },

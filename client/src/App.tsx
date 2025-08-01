@@ -91,6 +91,7 @@ import ComplianceDashboard from "@/pages/compliance-dashboard";
 import ComplianceClients from "@/pages/compliance-clients";
 import SARSCompliance from "@/pages/sars-compliance";
 import SARSIntegration from "@/pages/sars-integration";
+import Integrations from "@/pages/integrations";
 import CIPCCompliance from "@/pages/cipc-compliance";
 import LabourCompliance from "@/pages/labour-compliance";
 import ComplianceTasks from "@/pages/compliance-tasks";
@@ -649,8 +650,13 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         <Route path="/sars-integration">
-          <ProtectedRoute permission={PERMISSIONS.MANAGE_SETTINGS}>
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <SARSIntegration />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/integrations">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <Integrations />
           </ProtectedRoute>
         </Route>
         <Route path="/compliance/cipc">
