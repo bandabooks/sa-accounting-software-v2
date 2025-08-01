@@ -84,7 +84,6 @@ export default function FixedAssetCreate() {
     // Set current value to purchase price if not set
     const dataToSubmit = {
       ...formData,
-      currentValue: formData.currentValue || formData.purchasePrice,
       usefulLife: Number(formData.usefulLife),
       purchasePrice: Number(formData.purchasePrice).toFixed(2),
       currentValue: Number(formData.currentValue || formData.purchasePrice).toFixed(2),
