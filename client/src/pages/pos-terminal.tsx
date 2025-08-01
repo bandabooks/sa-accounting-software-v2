@@ -241,7 +241,7 @@ export default function POSTerminal() {
     if (totalPayment < cartTotal) {
       toast({
         title: "Insufficient Payment",
-        description: `Payment required: R${(cartTotal - totalPayment).toFixed(2)}`,
+        description: `Payment required: R${((cartTotal ?? 0) - (totalPayment ?? 0)).toFixed(2)}`,
         variant: "destructive",
       });
       return;
@@ -403,10 +403,10 @@ export default function POSTerminal() {
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="outline">
-            Sales: {currentShift.salesCount}
+            Sales: {currentShift?.salesCount ?? 0}
           </Badge>
           <Badge variant="outline">
-            Total: R{currentShift.totalSales.toFixed(2)}
+            Total: R{(currentShift?.totalSales ?? 0).toFixed(2)}
           </Badge>
         </div>
       </div>
@@ -472,7 +472,7 @@ export default function POSTerminal() {
                     onClick={() => addToCart(product)}
                   >
                     <div className="truncate w-full text-center">{product.name}</div>
-                    <div className="text-green-600 font-semibold">R{parseFloat(product.sellingPrice || '0').toFixed(2)}</div>
+                    <div className="text-green-600 font-semibold">R{(parseFloat(product.sellingPrice || '0') || 0).toFixed(2)}</div>
                   </Button>
                 ))}
               </div>
@@ -514,10 +514,10 @@ export default function POSTerminal() {
                         <div className="flex-1">
                           <div className="font-medium">{item.description}</div>
                           <div className="text-sm text-muted-foreground">
-                            R{item.unitPrice.toFixed(2)} × {item.quantity}
+                            R{(item.unitPrice ?? 0).toFixed(2)} × {item.quantity ?? 0}
                             {(item.discountPercent > 0 || item.discountAmount > 0) && (
                               <span className="text-red-600 ml-2">
-                                -{item.discountPercent > 0 ? `${item.discountPercent}%` : `R${item.discountAmount.toFixed(2)}`}
+                                -{(item.discountPercent ?? 0) > 0 ? `${item.discountPercent ?? 0}%` : `R${(item.discountAmount ?? 0).toFixed(2)}`}
                               </span>
                             )}
                           </div>
@@ -557,7 +557,7 @@ export default function POSTerminal() {
                           </Button>
                         </div>
                         <div className="w-20 text-right font-semibold">
-                          R{item.lineTotal.toFixed(2)}
+                          R{(item.lineTotal ?? 0).toFixed(2)}
                         </div>
                       </div>
                     ))}
@@ -577,22 +577,22 @@ export default function POSTerminal() {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>R{cartSubtotal.toFixed(2)}</span>
+                <span>R{(cartSubtotal ?? 0).toFixed(2)}</span>
               </div>
               {cartDiscount > 0 && (
                 <div className="flex justify-between text-red-600">
                   <span>Discount:</span>
-                  <span>-R{cartDiscount.toFixed(2)}</span>
+                  <span>-R{(cartDiscount ?? 0).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span>VAT:</span>
-                <span>R{cartVAT.toFixed(2)}</span>
+                <span>R{(cartVAT ?? 0).toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
-                <span>R{cartTotal.toFixed(2)}</span>
+                <span>R{(cartTotal ?? 0).toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
@@ -664,7 +664,7 @@ export default function POSTerminal() {
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Process Payment - R{cartTotal.toFixed(2)}</DialogTitle>
+            <DialogTitle>Process Payment - R{(cartTotal ?? 0).toFixed(2)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -725,7 +725,7 @@ export default function POSTerminal() {
                   {paymentMethods.map((payment, index) => (
                     <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                       <span className="capitalize">{payment.method}</span>
-                      <span>R{payment.amount.toFixed(2)}</span>
+                      <span>R{(payment.amount ?? 0).toFixed(2)}</span>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -738,12 +738,12 @@ export default function POSTerminal() {
                 </div>
                 <div className="mt-2 pt-2 border-t flex justify-between font-semibold">
                   <span>Total Paid:</span>
-                  <span>R{paymentMethods.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+                  <span>R{paymentMethods.reduce((sum, p) => sum + (p.amount ?? 0), 0).toFixed(2)}</span>
                 </div>
-                {paymentMethods.reduce((sum, p) => sum + p.amount, 0) > cartTotal && (
+                {paymentMethods.reduce((sum, p) => sum + (p.amount ?? 0), 0) > (cartTotal ?? 0) && (
                   <div className="flex justify-between text-green-600">
                     <span>Change:</span>
-                    <span>R{(paymentMethods.reduce((sum, p) => sum + p.amount, 0) - cartTotal).toFixed(2)}</span>
+                    <span>R{(paymentMethods.reduce((sum, p) => sum + (p.amount ?? 0), 0) - (cartTotal ?? 0)).toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -755,7 +755,7 @@ export default function POSTerminal() {
             </Button>
             <Button
               onClick={processPayment}
-              disabled={paymentMethods.reduce((sum, p) => sum + p.amount, 0) < cartTotal}
+              disabled={paymentMethods.reduce((sum, p) => sum + (p.amount ?? 0), 0) < (cartTotal ?? 0)}
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               Complete Sale
