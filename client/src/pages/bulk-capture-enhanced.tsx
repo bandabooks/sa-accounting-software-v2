@@ -22,7 +22,7 @@ import {
   Calendar
 } from "lucide-react";
 import { format } from "date-fns";
-import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "../../../shared/vat-constants";
+import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "@shared/vat-constants";
 
 interface ExpenseEntry {
   id?: number;
