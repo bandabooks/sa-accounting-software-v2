@@ -1,0 +1,79 @@
+Error 500: {"message":"Failed to create session"}
+along with repeated "Failed to load resource: the server responded with a status of 500 (Internal Server Error)" on the /api/bulk-capture/sessions endpoint means that bulk income and expense transactions are NOT being recorded in the database. This is a backend/server error, not a front-end bug.
+
+Root Causes (Likely)
+API/Backend is failing to process and save the transaction (server-side code is not handling the POST request).
+
+The endpoint /api/bulk-capture/sessions is either:
+
+Not implemented
+
+Throws an error (e.g., missing required fields, database connection, code bug)
+
+Permissions/roles not set up correctly
+
+Database migrations not up to date for new tables/fields
+
+Direct Fix Prompt (for your developer or Replit agent)
+Prompt:
+
+vbnet
+Copy
+Edit
+The current implementation of the Bulk Income and Bulk Expense Capture modules is failing to save transactions to the database. When attempting to save, a 500 Internal Server Error occurs from the `/api/bulk-capture/sessions` endpoint, and no transactions are recorded. 
+
+**Implementation Rules:**
+- First **VERIFY** that the `/api/bulk-capture/sessions` endpoint exists and is properly implemented in the backend.
+- CHECK for required fields or data validation errors that might be causing the endpoint to throw an error.
+- INSPECT server logs for detailed error output and resolve any code exceptions or database issues.
+- ENSURE the database schema/migrations for bulk capture features are up-to-date.
+- CONFIRM that permissions and roles allow bulk capture actions for the current user.
+- TEST the endpoint with sample data using Postman or similar tools to confirm it returns a 200 OK and successfully inserts records.
+- Once fixed, confirm that:
+  - Submissions from the UI save records in the DB
+  - Bulk entries reflect immediately in general/journal entries and standard reports (integration, not just separate storage).
+- DO NOT duplicate business logic—ensure this uses the same posting logic as individual entries/invoices.
+
+**Notes:**  
+- This feature must be seamless and robust.  
+- Ensure all error handling and user feedback are in place for failed or partial submissions.
+Instructions for You/Your Developer
+Check the API Route:
+
+Make sure /api/bulk-capture/sessions is implemented and mapped to a valid controller/function.
+
+Check Server Logs:
+
+Get the actual error from the backend logs to pinpoint if it’s a database issue, validation, missing parameter, or code bug.
+
+Validate Data:
+
+Make sure all required fields are being sent (e.g., dates, account IDs, descriptions, amounts, etc.).
+
+Database Migrations:
+
+Run migrations/updates to ensure tables and columns for bulk capture exist.
+
+Test API Directly:
+
+Use a tool like Postman to POST sample data directly and see if the error still occurs.
+
+If it works in Postman but not UI, check the front-end data structure.
+
+Permissions:
+
+Confirm the logged-in user has the correct permissions/roles for bulk capture.
+
+Error Handling:
+
+Update the UI to show clear error messages if the backend fails, not just a generic toast.
+
+Summary
+The error is backend/server-related (500 Internal Server Error).
+
+Transactions are not saved—must be fixed in backend API.
+
+Use the above prompt to guide your developer or AI agent.
+
+Once backend is fixed, bulk entries should save and reflect everywhere in the system.
+
