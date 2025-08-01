@@ -303,7 +303,7 @@ export default function POSShifts() {
                       </div>
                       <div className="flex justify-between">
                         <span>Opening Cash:</span>
-                        <span>R{(shift.openingCash || 0).toFixed(2)}</span>
+                        <span>R{Number(shift.openingCash ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Sales Count:</span>
@@ -311,7 +311,7 @@ export default function POSShifts() {
                       </div>
                       <div className="flex justify-between font-semibold">
                         <span>Total Sales:</span>
-                        <span>R{(shift.totalSales || 0).toFixed(2)}</span>
+                        <span>R{Number(shift.totalSales ?? 0).toFixed(2)}</span>
                       </div>
                     </div>
 
@@ -412,7 +412,7 @@ export default function POSShifts() {
                       </div>
                       <div>
                         <div className="text-muted-foreground">Actual Cash</div>
-                        <div>R{(shift.closingCash || 0).toFixed(2)}</div>
+                        <div>R{Number(shift.closingCash ?? 0).toFixed(2)}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Variance</div>
@@ -588,8 +588,8 @@ export default function POSShifts() {
                   placeholder="0.00"
                 />
                 {closingCash && (
-                  <p className={`text-sm mt-1 ${getVarianceColor(parseFloat(closingCash) - calculateExpectedCash(selectedShift))}`}>
-                    Variance: R{((parseFloat(closingCash) || 0) - calculateExpectedCash(selectedShift)).toFixed(2)}
+                  <p className={`text-sm mt-1 ${getVarianceColor(Number(closingCash ?? 0) - calculateExpectedCash(selectedShift))}`}>
+                    Variance: R{(Number(closingCash ?? 0) - calculateExpectedCash(selectedShift)).toFixed(2)}
                   </p>
                 )}
               </div>
