@@ -21,17 +21,17 @@ import { format } from 'date-fns';
 
 export default function POSDashboard() {
   // Data Queries
-  const { data: terminals = [] } = useQuery({
+  const { data: terminals = [] } = useQuery<any[]>({
     queryKey: ['/api/pos/terminals'],
   });
 
-  const { data: currentShifts = [] } = useQuery({
-    queryKey: ['/api/pos/shifts', { status: 'open' }],
+  const { data: currentShifts = [] } = useQuery<any[]>({
+    queryKey: ['/api/pos/shifts?status=open'],
     refetchInterval: 30000,
   });
 
-  const { data: todayStats } = useQuery({
-    queryKey: ['/api/pos/sales/stats', { date: new Date().toISOString().split('T')[0] }],
+  const { data: todayStats } = useQuery<{ totalSales: number; transactionCount: number; averageTransaction: number }>({
+    queryKey: [`/api/pos/sales/stats?date=${new Date().toISOString().split('T')[0]}`],
     refetchInterval: 60000,
   });
 

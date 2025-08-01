@@ -72,6 +72,19 @@ export default function POSTerminal() {
   const queryClient = useQueryClient();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
+  // Error boundary for white screen prevention
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      console.error('POS Terminal Error:', error);
+      setHasError(true);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   // State Management
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
@@ -92,18 +105,67 @@ export default function POSTerminal() {
   const currentTerminalId = 1;
 
   // Data Queries
-  const { data: currentShift } = useQuery({
-    queryKey: ['/api/pos/shifts/current', { terminalId: currentTerminalId }],
+  const { data: currentShift, isLoading: shiftLoading, error: shiftError } = useQuery<CurrentShift>({
+    queryKey: [`/api/pos/shifts/current?terminalId=${currentTerminalId}`],
     refetchInterval: 30000, // Refresh every 30 seconds
+    retry: 1,
   });
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isLoading: productsLoading } = useQuery<any[]>({
     queryKey: ['/api/products'],
+    retry: 1,
   });
 
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [], isLoading: customersLoading } = useQuery<any[]>({
     queryKey: ['/api/customers'],
+    retry: 1,
   });
+
+  // Loading state
+  const isLoading = shiftLoading || productsLoading || customersLoading;
+
+  // Error state
+  if (hasError || shiftError) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center space-y-4">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+            <h2 className="text-xl font-semibold text-gray-900">POS Terminal Error</h2>
+            <p className="text-gray-600">
+              There was an issue loading the POS terminal. Please refresh the page or contact support.
+            </p>
+            <div className="space-y-2">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/pos-dashboard'} className="w-full">
+                <Home className="h-4 w-4 mr-2" />
+                Back to POS Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <h2 className="text-xl font-semibold text-gray-900">Loading POS Terminal</h2>
+            <p className="text-gray-600">
+              Preparing your point of sale terminal...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Mutations
   const createSaleMutation = useMutation({

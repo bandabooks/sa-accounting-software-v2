@@ -61,6 +61,19 @@ export default function POSTerminals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Error boundary for white screen prevention
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      console.error('POS Terminals Error:', error);
+      setHasError(true);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedTerminal, setSelectedTerminal] = useState<PosTerminal | null>(null);
@@ -78,9 +91,53 @@ export default function POSTerminals() {
   });
 
   // Data Queries
-  const { data: terminals = [], isLoading } = useQuery({
+  const { data: terminals = [], isLoading, error: terminalsError } = useQuery<PosTerminal[]>({
     queryKey: ['/api/pos/terminals'],
+    retry: 1,
   });
+
+  // Error state
+  if (hasError || terminalsError) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="p-6 text-center space-y-4">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+            <h2 className="text-xl font-semibold text-gray-900">POS Terminals Error</h2>
+            <p className="text-gray-600">
+              There was an issue loading the POS terminals. Please refresh the page or contact support.
+            </p>
+            <div className="space-y-2">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/pos-dashboard'} className="w-full">
+                <Home className="h-4 w-4 mr-2" />
+                Back to POS Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <h2 className="text-xl font-semibold text-gray-900">Loading POS Terminals</h2>
+            <p className="text-gray-600">
+              Loading terminal configurations and hardware settings...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Mutations
   const createTerminalMutation = useMutation({

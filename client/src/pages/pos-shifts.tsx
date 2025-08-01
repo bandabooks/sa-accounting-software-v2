@@ -63,6 +63,19 @@ export default function POSShifts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Error boundary for white screen prevention
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      console.error('POS Shifts Error:', error);
+      setHasError(true);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   const [selectedTerminal, setSelectedTerminal] = useState<number | null>(null);
   const [showOpenShiftDialog, setShowOpenShiftDialog] = useState(false);
   const [showCloseShiftDialog, setShowCloseShiftDialog] = useState(false);
@@ -72,18 +85,67 @@ export default function POSShifts() {
   const [closingNotes, setClosingNotes] = useState('');
 
   // Data Queries
-  const { data: terminals = [] } = useQuery({
+  const { data: terminals = [], isLoading: terminalsLoading, error: terminalsError } = useQuery<Terminal[]>({
     queryKey: ['/api/pos/terminals'],
+    retry: 1,
   });
 
-  const { data: shifts = [] } = useQuery({
+  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<PosShift[]>({
     queryKey: ['/api/pos/shifts'],
+    retry: 1,
   });
 
-  const { data: currentShifts = [] } = useQuery({
-    queryKey: ['/api/pos/shifts', { status: 'open' }],
+  const { data: currentShifts = [], isLoading: currentShiftsLoading } = useQuery<PosShift[]>({
+    queryKey: ['/api/pos/shifts?status=open'],
     refetchInterval: 30000, // Refresh every 30 seconds
+    retry: 1,
   });
+
+  // Loading state
+  const isLoading = terminalsLoading || shiftsLoading || currentShiftsLoading;
+
+  // Error state
+  if (hasError || terminalsError) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="p-6 text-center space-y-4">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+            <h2 className="text-xl font-semibold text-gray-900">POS Shifts Error</h2>
+            <p className="text-gray-600">
+              There was an issue loading the POS shifts. Please refresh the page or contact support.
+            </p>
+            <div className="space-y-2">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/pos-dashboard'} className="w-full">
+                <Home className="h-4 w-4 mr-2" />
+                Back to POS Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <h2 className="text-xl font-semibold text-gray-900">Loading POS Shifts</h2>
+            <p className="text-gray-600">
+              Loading terminal shifts and cash handling data...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Mutations
   const openShiftMutation = useMutation({
@@ -253,15 +315,15 @@ export default function POSShifts() {
                       </div>
                       <div className="flex justify-between">
                         <span>Opening Cash:</span>
-                        <span>R{shift.openingCash.toFixed(2)}</span>
+                        <span>R{(shift.openingCash || 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Sales Count:</span>
-                        <span>{shift.salesCount}</span>
+                        <span>{shift.salesCount || 0}</span>
                       </div>
                       <div className="flex justify-between font-semibold">
                         <span>Total Sales:</span>
-                        <span>R{shift.totalSales.toFixed(2)}</span>
+                        <span>R{(shift.totalSales || 0).toFixed(2)}</span>
                       </div>
                     </div>
 
