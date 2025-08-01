@@ -88,52 +88,6 @@ export default function POSShifts() {
     retry: 1,
   });
 
-  // Loading state
-  const isLoading = terminalsLoading || shiftsLoading || currentShiftsLoading;
-
-  // Error state
-  if (terminalsError) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card className="w-full max-w-md mx-auto">
-          <CardContent className="p-6 text-center space-y-4">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
-            <h2 className="text-xl font-semibold text-gray-900">POS Shifts Error</h2>
-            <p className="text-gray-600">
-              There was an issue loading the POS shifts. Please refresh the page or contact support.
-            </p>
-            <div className="space-y-2">
-              <Button onClick={() => window.location.reload()} className="w-full">
-                Refresh Page
-              </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/pos-dashboard'} className="w-full">
-                <Home className="h-4 w-4 mr-2" />
-                Back to POS Dashboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card className="w-full max-w-md mx-auto">
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <h2 className="text-xl font-semibold text-gray-900">Loading POS Shifts</h2>
-            <p className="text-gray-600">
-              Loading terminal shifts and cash handling data...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // Mutations
   const openShiftMutation = useMutation({
     mutationFn: async (shiftData: any) => {
@@ -186,6 +140,29 @@ export default function POSShifts() {
     }
   });
 
+  // Calculate functions
+  const calculateExpectedCash = (shift: PosShift): number => {
+    return (Number(shift.openingCash) || 0) + (Number(shift.totalCash) || 0);
+  };
+
+  const calculateVariance = (shift: PosShift): number => {
+    if (!shift.closingCash) return 0;
+    return (Number(shift.closingCash) || 0) - calculateExpectedCash(shift);
+  };
+
+  const getVarianceColor = (variance: number): string => {
+    if (variance === 0) return 'text-green-600';
+    if (Math.abs(variance) <= 5) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  // Derived state
+  const isLoading = terminalsLoading || shiftsLoading || currentShiftsLoading;
+  const availableTerminals = terminals.filter((terminal: Terminal) => 
+    !currentShifts.some((shift: PosShift) => shift.terminalId === terminal.id)
+  );
+
+  // Event handlers
   const handleOpenShift = () => {
     if (!selectedTerminal || !openingCash) {
       toast({
@@ -219,24 +196,48 @@ export default function POSShifts() {
     });
   };
 
-  const calculateExpectedCash = (shift: PosShift): number => {
-    return (Number(shift.openingCash) || 0) + (Number(shift.totalCash) || 0);
-  };
+  // Error state
+  if (terminalsError) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="p-6 text-center space-y-4">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+            <h2 className="text-xl font-semibold text-gray-900">POS Shifts Error</h2>
+            <p className="text-gray-600">
+              There was an issue loading the POS shifts. Please refresh the page or contact support.
+            </p>
+            <div className="space-y-2">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/pos-dashboard'} className="w-full">
+                <Home className="h-4 w-4 mr-2" />
+                Back to POS Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const calculateVariance = (shift: PosShift): number => {
-    if (!shift.closingCash) return 0;
-    return (Number(shift.closingCash) || 0) - calculateExpectedCash(shift);
-  };
-
-  const getVarianceColor = (variance: number): string => {
-    if (variance === 0) return 'text-green-600';
-    if (Math.abs(variance) <= 5) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const availableTerminals = terminals.filter((terminal: Terminal) => 
-    !currentShifts.some((shift: PosShift) => shift.terminalId === terminal.id)
-  );
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <h2 className="text-xl font-semibold text-gray-900">Loading POS Shifts</h2>
+            <p className="text-gray-600">
+              Loading terminal shifts and cash handling data...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
