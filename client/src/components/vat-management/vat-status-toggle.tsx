@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,12 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Query to get fresh VAT settings
+  const { data: freshVatSettings } = useQuery({
+    queryKey: ["/api/companies", companyId, "vat-settings"],
+    staleTime: 0, // Always fetch fresh data
+  });
+
   const form = useForm<VatSettingsForm>({
     resolver: zodResolver(vatSettingsSchema),
     defaultValues: {
@@ -49,6 +55,19 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
       vatSubmissionDay: initialSettings.vatSubmissionDay,
     },
   });
+
+  // Update form when fresh VAT settings are loaded
+  useEffect(() => {
+    if (freshVatSettings) {
+      form.reset({
+        isVatRegistered: (freshVatSettings as any).isVatRegistered || false,
+        vatNumber: (freshVatSettings as any).vatNumber || "",
+        vatRegistrationDate: (freshVatSettings as any).vatRegistrationDate || "",
+        vatPeriodMonths: (freshVatSettings as any).vatPeriodMonths || 2,
+        vatSubmissionDay: (freshVatSettings as any).vatSubmissionDay || 25,
+      });
+    }
+  }, [freshVatSettings, form]);
 
   const updateVatSettingsMutation = useMutation({
     mutationFn: async (data: VatSettingsForm) => {
