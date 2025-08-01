@@ -220,12 +220,12 @@ export default function POSShifts() {
   };
 
   const calculateExpectedCash = (shift: PosShift): number => {
-    return shift.openingCash + shift.totalCash;
+    return (Number(shift.openingCash) || 0) + (Number(shift.totalCash) || 0);
   };
 
   const calculateVariance = (shift: PosShift): number => {
     if (!shift.closingCash) return 0;
-    return shift.closingCash - calculateExpectedCash(shift);
+    return (Number(shift.closingCash) || 0) - calculateExpectedCash(shift);
   };
 
   const getVarianceColor = (variance: number): string => {
@@ -391,7 +391,7 @@ export default function POSShifts() {
                     </div>
                     <div>
                       <div className="text-muted-foreground">Total</div>
-                      <div className="font-medium">R{(shift.totalSales ?? 0).toFixed(2)}</div>
+                      <div className="font-medium">R{(Number(shift.totalSales) || 0).toFixed(2)}</div>
                     </div>
                   </div>
 
@@ -399,15 +399,15 @@ export default function POSShifts() {
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                       <div>
                         <div className="text-muted-foreground">Opening Cash</div>
-                        <div>R{(shift.openingCash ?? 0).toFixed(2)}</div>
+                        <div>R{(Number(shift.openingCash) || 0).toFixed(2)}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Cash Sales</div>
-                        <div>R{(shift.totalCash ?? 0).toFixed(2)}</div>
+                        <div>R{(Number(shift.totalCash) || 0).toFixed(2)}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Expected Cash</div>
-                        <div>R{(calculateExpectedCash(shift) ?? 0).toFixed(2)}</div>
+                        <div>R{calculateExpectedCash(shift).toFixed(2)}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Actual Cash</div>
@@ -416,7 +416,7 @@ export default function POSShifts() {
                       <div>
                         <div className="text-muted-foreground">Variance</div>
                         <div className={getVarianceColor(calculateVariance(shift))}>
-                          R{(calculateVariance(shift) ?? 0).toFixed(2)}
+                          R{calculateVariance(shift).toFixed(2)}
                           {calculateVariance(shift) !== 0 && (
                             <AlertTriangle className="h-3 w-3 inline ml-1" />
                           )}
@@ -458,7 +458,7 @@ export default function POSShifts() {
               <DollarSign className="h-8 w-8 text-green-600" />
               <div>
                 <div className="text-2xl font-bold">
-                  R{currentShifts.reduce((sum: number, shift: PosShift) => sum + (shift.totalSales ?? 0), 0).toFixed(0)}
+                  R{currentShifts.reduce((sum: number, shift: PosShift) => sum + (Number(shift.totalSales) || 0), 0).toFixed(0)}
                 </div>
                 <div className="text-sm text-muted-foreground">Today's Sales</div>
               </div>
@@ -486,7 +486,7 @@ export default function POSShifts() {
               <TrendingUp className="h-8 w-8 text-orange-600" />
               <div>
                 <div className="text-2xl font-bold">
-                  R{currentShifts.length > 0 ? (currentShifts.reduce((sum: number, shift: PosShift) => sum + (shift.totalSales ?? 0), 0) / Math.max(currentShifts.reduce((sum: number, shift: PosShift) => sum + (shift.salesCount ?? 0), 0), 1)).toFixed(0) : '0'}
+                  R{currentShifts.length > 0 ? (currentShifts.reduce((sum: number, shift: PosShift) => sum + (Number(shift.totalSales) || 0), 0) / Math.max(currentShifts.reduce((sum: number, shift: PosShift) => sum + (shift.salesCount || 0), 0), 1)).toFixed(0) : '0'}
                 </div>
                 <div className="text-sm text-muted-foreground">Avg Transaction</div>
               </div>
@@ -557,23 +557,23 @@ export default function POSShifts() {
               <div className="bg-gray-50 p-4 rounded space-y-2">
                 <div className="flex justify-between">
                   <span>Opening Cash:</span>
-                  <span>R{(selectedShift.openingCash ?? 0).toFixed(2)}</span>
+                  <span>R{(Number(selectedShift.openingCash) || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Cash Sales:</span>
-                  <span>R{(selectedShift.totalCash ?? 0).toFixed(2)}</span>
+                  <span>R{(Number(selectedShift.totalCash) || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Card Sales:</span>
-                  <span>R{(selectedShift.totalCard ?? 0).toFixed(2)}</span>
+                  <span>R{(Number(selectedShift.totalCard) || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Other Payments:</span>
-                  <span>R{(selectedShift.totalOther ?? 0).toFixed(2)}</span>
+                  <span>R{(Number(selectedShift.totalOther) || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-semibold border-t pt-2">
                   <span>Expected Cash:</span>
-                  <span>R{(calculateExpectedCash(selectedShift) ?? 0).toFixed(2)}</span>
+                  <span>R{calculateExpectedCash(selectedShift).toFixed(2)}</span>
                 </div>
               </div>
               
@@ -588,7 +588,7 @@ export default function POSShifts() {
                 />
                 {closingCash && (
                   <p className={`text-sm mt-1 ${getVarianceColor(parseFloat(closingCash) - calculateExpectedCash(selectedShift))}`}>
-                    Variance: R{((parseFloat(closingCash) || 0) - (calculateExpectedCash(selectedShift) ?? 0)).toFixed(2)}
+                    Variance: R{((parseFloat(closingCash) || 0) - calculateExpectedCash(selectedShift)).toFixed(2)}
                   </p>
                 )}
               </div>
