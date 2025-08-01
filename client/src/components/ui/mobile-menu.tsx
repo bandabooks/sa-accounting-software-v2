@@ -137,6 +137,7 @@ const navigationGroups = [
     module: "vat_management",
     items: [
       { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "vat_management" },
+      { path: "/sars-integration", label: "SARS API Integration", icon: Shield, permission: "SETTINGS_VIEW", module: "vat_management" },
       { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW", module: "vat_management" },
       { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW", module: "vat_management" },
       { path: "/vat-reports", label: "VAT Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "vat_management" }
