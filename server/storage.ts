@@ -11813,20 +11813,67 @@ export class DatabaseStorage implements IStorage {
         
         for (const entry of entries) {
           try {
-            // Create expense record
-            await this.createExpense({
+            // Create proper journal entry for expense following the same pattern as individual expenses
+            const expenseAccount = await this.getChartOfAccount(entry.categoryId);
+            const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
+            const vatInputAccount = await this.getChartOfAccountByCode(companyId, "1400"); // VAT Input Tax
+
+            if (!expenseAccount || !bankAccount || !vatInputAccount) {
+              throw new Error("Required accounts not found for expense journal entry");
+            }
+
+            const entryNumber = await this.generateEntryNumber(companyId, 'BULK-EXP');
+            const netAmount = Number(entry.netAmount ?? 0).toFixed(2);
+            const vatAmount = Number(entry.vatAmount ?? 0).toFixed(2);
+            const totalAmount = Number(entry.amount ?? 0).toFixed(2);
+
+            const journalEntry: InsertJournalEntry = {
               companyId: entry.companyId,
-              date: entry.transactionDate,
-              categoryId: entry.categoryId,
-              description: entry.description,
-              amount: entry.amount,
-              supplierId: entry.supplierId,
-              reference: entry.reference,
-              notes: entry.notes,
-              vatAmount: entry.vatAmount,
+              entryNumber,
+              transactionDate: entry.transactionDate,
+              description: `Bulk Expense: ${entry.description}`,
+              reference: entry.reference || session.batchId,
+              totalDebit: totalAmount,
+              totalCredit: totalAmount,
+              sourceModule: 'bulk_expense',
+              sourceId: entry.id,
+              createdBy: session.userId || 1,
+              isPosted: true,
+            };
+
+            const lines = [
+              {
+                accountId: expenseAccount.id,
+                description: entry.description,
+                debitAmount: netAmount,
+                creditAmount: "0.00",
+                reference: entry.reference || session.batchId,
+              }
+            ];
+
+            // Add VAT line if applicable
+            if (parseFloat(vatAmount) > 0) {
+              lines.push({
+                accountId: vatInputAccount.id,
+                description: `VAT on ${entry.description}`,
+                debitAmount: vatAmount,
+                creditAmount: "0.00",
+                reference: entry.reference || session.batchId,
+              });
+            }
+
+            // Add bank credit line
+            lines.push({
+              accountId: bankAccount.id,
+              description: `Payment for ${entry.description}`,
+              debitAmount: "0.00",
+              creditAmount: totalAmount,
+              reference: entry.reference || session.batchId,
             });
 
+            await this.createJournalEntry(journalEntry, lines);
             processedCount++;
+
           } catch (error) {
             errors.push({ entryId: entry.id, error: error.message });
           }
@@ -11836,29 +11883,67 @@ export class DatabaseStorage implements IStorage {
         
         for (const entry of entries) {
           try {
-            // Create journal entry for income
-            await this.createJournalEntry({
-              companyId: entry.companyId,
-              date: entry.transactionDate,
-              description: `Bulk income: ${entry.description}`,
-              reference: entry.reference || session.batchId,
-              lines: [
-                {
-                  accountId: 1, // Bank or Cash account
-                  description: entry.description,
-                  debitAmount: entry.netAmount,
-                  creditAmount: '0.00',
-                },
-                {
-                  accountId: entry.incomeAccountId,
-                  description: entry.description,
-                  debitAmount: '0.00',
-                  creditAmount: entry.netAmount,
-                }
-              ]
-            });
+            // Create proper journal entry for income
+            const incomeAccount = await this.getChartOfAccount(entry.incomeAccountId);
+            const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
+            const vatOutputAccount = await this.getChartOfAccountByCode(companyId, "2200"); // VAT Output Tax
 
+            if (!incomeAccount || !bankAccount || !vatOutputAccount) {
+              throw new Error("Required accounts not found for income journal entry");
+            }
+
+            const entryNumber = await this.generateEntryNumber(companyId, 'BULK-INC');
+            const netAmount = Number(entry.netAmount ?? 0).toFixed(2);
+            const vatAmount = Number(entry.vatAmount ?? 0).toFixed(2);
+            const totalAmount = Number(entry.amount ?? 0).toFixed(2);
+
+            const journalEntry: InsertJournalEntry = {
+              companyId: entry.companyId,
+              entryNumber,
+              transactionDate: entry.transactionDate,
+              description: `Bulk Income: ${entry.description}`,
+              reference: entry.reference || session.batchId,
+              totalDebit: totalAmount,
+              totalCredit: totalAmount,
+              sourceModule: 'bulk_income',
+              sourceId: entry.id,
+              createdBy: session.userId || 1,
+              isPosted: true,
+            };
+
+            const lines = [
+              // Debit Bank Account
+              {
+                accountId: bankAccount.id,
+                description: `Receipt for ${entry.description}`,
+                debitAmount: totalAmount,
+                creditAmount: "0.00",
+                reference: entry.reference || session.batchId,
+              },
+              // Credit Income Account
+              {
+                accountId: incomeAccount.id,
+                description: entry.description,
+                debitAmount: "0.00",
+                creditAmount: netAmount,
+                reference: entry.reference || session.batchId,
+              }
+            ];
+
+            // Add VAT line if applicable
+            if (parseFloat(vatAmount) > 0) {
+              lines.push({
+                accountId: vatOutputAccount.id,
+                description: `VAT on ${entry.description}`,
+                debitAmount: "0.00",
+                creditAmount: vatAmount,
+                reference: entry.reference || session.batchId,
+              });
+            }
+
+            await this.createJournalEntry(journalEntry, lines);
             processedCount++;
+
           } catch (error) {
             errors.push({ entryId: entry.id, error: error.message });
           }
@@ -11870,6 +11955,11 @@ export class DatabaseStorage implements IStorage {
         status: errors.length > 0 ? 'completed_with_errors' : 'completed',
         processedEntries: processedCount,
       });
+
+      // Sync General Ledger after processing all entries
+      if (processedCount > 0) {
+        await this.syncGeneralLedgerFromJournalEntries(companyId);
+      }
 
       return {
         success: errors.length === 0,

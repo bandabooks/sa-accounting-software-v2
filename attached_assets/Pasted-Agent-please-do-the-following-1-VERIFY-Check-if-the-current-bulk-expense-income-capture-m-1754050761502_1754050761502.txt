@@ -1,0 +1,48 @@
+Agent, please do the following:
+
+1. **VERIFY**: Check if the current bulk expense/income capture modules are correctly integrated with the general journal/ledger system.
+    - Ensure that every "Save All Expenses" or "Save All Income" action posts a transaction that is immediately available in the Journal Entry list and GL reports.
+    - Confirm that every entry is validated against double-entry rules (total debits = total credits).
+    - If an API error or 400/500 occurs, show the exact error cause (e.g. missing required field, invalid HTTP method, or backend validation failure).
+
+2. **FIX INTEGRATION**:
+    - Refactor bulk capture (expense/income) so that each row generates a standard journal entry or invoice, using the *same* backend logic as individual entries.
+    - Ensure the backend endpoint expects and correctly handles arrays of entries, not just single entries.
+    - If current API only accepts single entries, update the endpoint to support batch (array) creation with proper transaction handling (rollback if any entry fails).
+
+3. **FRONTEND**:
+    - Show real-time success/failure feedback for each row in the bulk capture.
+    - Clearly show if any transaction fails and why (e.g. missing account, invalid amount, permissions).
+    - After successful save, auto-refresh or link to Journal Entries/GL, highlighting new transactions.
+
+4. **TECHNICAL**:
+    - Fix any `fetch` errors like: `Failed to execute 'fetch' on 'Window': '[object Object]' is not a valid HTTP method.`
+    - Ensure all API calls use correct HTTP methods (POST for create, PUT for update, DELETE for remove).
+    - Validate that each POST includes all required data (account, amount, type, date, description, user).
+
+5. **TEST**:
+    - Run automated and manual tests to ensure bulk capture, journal entry, and GL are all perfectly in sync.
+    - Try edge cases: missing fields, wrong accounts, zero/negative values, permissions.
+    - Ensure rollback on partial failure (all-or-nothing).
+
+6. **USABILITY**:
+    - Ensure that all relevant totals (VAT, net, gross, grand total) are correctly calculated and displayed.
+    - Allow users to click through from bulk entry to the resulting journal entry for full audit trail.
+
+---
+
+**Notes:**  
+Please note that while our Agent is powerful, it has limitations:
+- It doesn't guarantee code correctness.
+- Results may vary for the same prompt.
+- It requires clear, specific prompts and human oversight.
+
+---
+
+**Business requirement**:  
+**Bulk capture** is not a standalone module—it’s a power data-entry interface for accountants to quickly record many transactions, but all logic, validation, and data storage must mirror the normal accounting/journal workflow. Every bulk action is as binding and auditable as any single-entry transaction.
+
+---
+
+Use this exact prompt with your team or Replit AI agent to get your journal/bulk integration world-class and bug-free!  
+If you want it in a shorter format for direct copy-paste into Replit, just ask!

@@ -79,6 +79,11 @@ const EnhancedBulkCapture = () => {
     queryKey: ['/api/customers'],
   });
 
+  // Fetch bulk capture sessions
+  const { data: bulkSessions = [], refetch: refetchSessions } = useQuery<any[]>({
+    queryKey: ['/api/bulk-capture/sessions'],
+  });
+
   const { data: bankAccounts = [] } = useQuery<any[]>({
     queryKey: ['/api/bank-accounts'],
   });
@@ -332,33 +337,35 @@ const EnhancedBulkCapture = () => {
         throw new Error('No valid entries to save');
       }
 
-      return await apiRequest('/api/bulk-capture/sessions', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionType: 'expense',
-          entries: validEntries.map(entry => ({
-            transactionDate: entry.transactionDate,
-            categoryId: entry.categoryId,
-            description: entry.description,
-            amount: parseFloat(entry.amount),
-            supplierId: entry.supplierId || null,
-            bankAccountId: entry.bankAccountId || null,
-            vatTransactionType: entry.vatTransactionType,
-            vatRate: parseFloat(entry.vatRate),
-            vatAmount: parseFloat(entry.vatAmount),
-            reference: entry.reference || null,
-            notes: entry.notes || null,
-          }))
-        })
+      return await apiRequest('/api/bulk-capture/sessions', 'POST', {
+        sessionType: 'expense',
+        totalEntries: validEntries.length,
+        batchNotes: `Bulk expense capture - ${validEntries.length} entries`,
+        entries: validEntries.map(entry => ({
+          transactionDate: entry.transactionDate,
+          categoryId: entry.categoryId,
+          description: entry.description,
+          amount: parseFloat(entry.amount),
+          supplierId: entry.supplierId || null,
+          bankAccountId: entry.bankAccountId || null,
+          vatTransactionType: entry.vatTransactionType,
+          vatRate: parseFloat(entry.vatRate),
+          vatAmount: parseFloat(entry.vatAmount),
+          netAmount: parseFloat(entry.netAmount) || (parseFloat(entry.amount) - parseFloat(entry.vatAmount)),
+          reference: entry.reference || null,
+          notes: entry.notes || null,
+        }))
       });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast({
         title: "Success",
-        description: `Successfully saved ${expenseCalculations.activeEntries} expense entries`,
+        description: `Successfully saved ${expenseCalculations.activeEntries} expense entries to session ${data.session?.batchId}`,
       });
       // Reset the form
       initializeExpenseEntries();
+      // Refetch sessions to show the new one
+      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
     },
     onError: (error: any) => {
       toast({
@@ -382,38 +389,63 @@ const EnhancedBulkCapture = () => {
         throw new Error('No valid entries to save');
       }
 
-      return await apiRequest('/api/bulk-capture/sessions', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionType: 'income',
-          entries: validEntries.map(entry => ({
-            transactionDate: entry.transactionDate,
-            incomeAccountId: entry.incomeAccountId,
-            description: entry.description,
-            amount: parseFloat(entry.amount),
-            clientId: entry.clientId || null,
-            bankAccountId: entry.bankAccountId || null,
-            vatTransactionType: entry.vatTransactionType,
-            vatRate: parseFloat(entry.vatRate),
-            vatAmount: parseFloat(entry.vatAmount),
-            reference: entry.reference || null,
-            notes: entry.notes || null,
-          }))
-        })
+      return await apiRequest('/api/bulk-capture/sessions', 'POST', {
+        sessionType: 'income',
+        totalEntries: validEntries.length,
+        batchNotes: `Bulk income capture - ${validEntries.length} entries`,
+        entries: validEntries.map(entry => ({
+          transactionDate: entry.transactionDate,
+          incomeAccountId: entry.incomeAccountId,
+          description: entry.description,
+          amount: parseFloat(entry.amount),
+          clientId: entry.clientId || null,
+          bankAccountId: entry.bankAccountId || null,
+          vatTransactionType: entry.vatTransactionType,
+          vatRate: parseFloat(entry.vatRate),
+          vatAmount: parseFloat(entry.vatAmount),
+          netAmount: parseFloat(entry.netAmount) || (parseFloat(entry.amount) - parseFloat(entry.vatAmount)),
+          reference: entry.reference || null,
+          notes: entry.notes || null,
+        }))
       });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast({
         title: "Success",
-        description: `Successfully saved ${incomeCalculations.activeEntries} income entries`,
+        description: `Successfully saved ${incomeCalculations.activeEntries} income entries to session ${data.session?.batchId}`,
       });
       // Reset the form
       initializeIncomeEntries();
+      // Refetch sessions to show the new one
+      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to save income entries",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Process bulk session mutation
+  const processBulkSessionMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      return await apiRequest(`/api/bulk-capture/sessions/${sessionId}/process`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Success",
+        description: `Successfully processed ${data.processedCount} entries. ${data.errors?.length || 0} errors.`,
+      });
+      // Refetch sessions to update status
+      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process bulk session",
         variant: "destructive",
       });
     },
@@ -987,6 +1019,83 @@ const EnhancedBulkCapture = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Bulk Sessions Management */}
+      {bulkSessions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <Clock className="w-5 h-5 mr-2" />
+              Bulk Capture Sessions
+            </CardTitle>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Process saved bulk entries into journal entries for general ledger integration
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {bulkSessions.map((session: any) => (
+                <div 
+                  key={session.id} 
+                  className="flex items-center justify-between p-4 border rounded-lg bg-gray-50 dark:bg-gray-800"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <Badge 
+                        variant={session.status === 'completed' ? 'default' : 
+                                session.status === 'error' ? 'destructive' : 'secondary'}
+                      >
+                        {session.status}
+                      </Badge>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {session.sessionType === 'expense' ? 'Expenses' : 'Income'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {session.batchId}
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {session.totalEntries} entries
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Created: {format(new Date(session.createdAt), 'MMM dd, yyyy HH:mm')}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {session.status === 'processing' && (
+                      <Button
+                        size="sm"
+                        onClick={() => processBulkSessionMutation.mutate(session.id)}
+                        disabled={processBulkSessionMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {processBulkSessionMutation.isPending ? (
+                          <>Processing...</>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Process to Journal
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {session.status === 'completed' && (
+                      <Badge variant="default" className="bg-green-100 text-green-800">
+                        ✓ Processed ({session.processedEntries} entries)
+                      </Badge>
+                    )}
+                    {session.status === 'error' && (
+                      <Badge variant="destructive">
+                        ✗ Error
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
