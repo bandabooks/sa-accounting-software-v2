@@ -67,7 +67,7 @@ export default function POSDashboard() {
             <div className="flex items-center space-x-2">
               <DollarSign className="h-8 w-8 text-green-600" />
               <div>
-                <div className="text-2xl font-bold">R{todaySales.toFixed(0)}</div>
+                <div className="text-2xl font-bold">R{(todaySales ?? 0).toFixed(0)}</div>
                 <div className="text-sm text-muted-foreground">Today's Sales</div>
               </div>
             </div>
@@ -188,7 +188,7 @@ export default function POSDashboard() {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Started at {format(new Date(shift.startTime), 'HH:mm')} • 
-                        {shift.salesCount} sales • R{shift.totalSales.toFixed(2)}
+                        {shift.salesCount ?? 0} sales • R{(shift.totalSales ?? 0).toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -284,7 +284,7 @@ export default function POSDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-green-600">
-                R{todayTransactions > 0 ? (todaySales / todayTransactions).toFixed(0) : '0'}
+                R{(todayTransactions ?? 0) > 0 ? ((todaySales ?? 0) / (todayTransactions ?? 1)).toFixed(0) : '0'}
               </div>
               <div className="text-sm text-muted-foreground">Avg Transaction</div>
             </div>
