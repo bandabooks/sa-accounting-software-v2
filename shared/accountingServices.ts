@@ -483,4 +483,350 @@ export const serviceTaskTemplates = {
   }
 };
 
+// Additional Professional Services (16-33) to complete the 33 services total
+export const additionalProfessionalServices = [
+  {
+    id: 'financial-year-end-changes',
+    name: 'Financial Year End Changes',
+    category: 'Company Secretarial',
+    complexity: 'intermediate',
+    description: 'Change of financial year end for registered companies',
+    estimatedHours: 4,
+    pricingTier: 'standard',
+    basePrice: { min: 850, max: 1350 },
+    requiredQualifications: ['Professional Accountant', 'Company Secretary'],
+    complianceRequirements: ['CIPC Filing', 'SARS Notification'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['accountant', 'bookkeeper', 'company_secretary']
+  },
+  {
+    id: 'company-address-changes',
+    name: 'Company Address Changes',
+    category: 'Company Secretarial',
+    complexity: 'basic',
+    description: 'Registration of registered address or postal address changes',
+    estimatedHours: 2,
+    pricingTier: 'basic',
+    basePrice: { min: 350, max: 750 },
+    requiredQualifications: ['Company Secretary'],
+    complianceRequirements: ['CIPC Notification'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: false
+    },
+    isActive: true,
+    roleAccess: ['company_secretary', 'accountant']
+  },
+  {
+    id: 'monthly-payroll-processing',
+    name: 'Monthly Payroll Processing',
+    category: 'Payroll Services',
+    complexity: 'intermediate',
+    description: 'Complete monthly payroll processing including UIF, SDL, PAYE',
+    estimatedHours: 8,
+    pricingTier: 'standard',
+    basePrice: { min: 850, max: 1850 },
+    requiredQualifications: ['Payroll Administrator', 'Professional Accountant'],
+    complianceRequirements: ['SARS PAYE', 'UIF Submissions', 'SDL Returns'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['payroll_admin', 'accountant', 'bookkeeper']
+  },
+  {
+    id: 'emp501-monthly-submissions',
+    name: 'EMP501 Monthly Submissions',
+    category: 'Payroll Services',
+    complexity: 'intermediate',
+    description: 'Monthly employee tax reconciliation and submissions to SARS',
+    estimatedHours: 6,
+    pricingTier: 'standard',
+    basePrice: { min: 750, max: 1250 },
+    requiredQualifications: ['Payroll Administrator', 'Professional Accountant'],
+    complianceRequirements: ['SARS PAYE', 'EMP501 Filing'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['payroll_admin', 'accountant']
+  },
+  {
+    id: 'emp502-annual-reconciliation',
+    name: 'EMP502 Annual Reconciliation',
+    category: 'Payroll Services',
+    complexity: 'advanced',
+    description: 'Annual employee tax reconciliation for SARS compliance',
+    estimatedHours: 12,
+    pricingTier: 'premium',
+    basePrice: { min: 1500, max: 4500 },
+    requiredQualifications: ['Professional Accountant', 'Tax Practitioner'],
+    complianceRequirements: ['SARS PAYE', 'Annual Reconciliation'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['payroll_admin', 'accountant', 'tax_practitioner']
+  },
+  {
+    id: 'brs101-tax-certificates',
+    name: 'BRS101 Tax Certificates',
+    category: 'Tax Compliance',
+    complexity: 'basic',
+    description: 'Application and processing of tax compliance certificates',
+    estimatedHours: 3,
+    pricingTier: 'standard',
+    basePrice: { min: 450, max: 850 },
+    requiredQualifications: ['Tax Practitioner', 'Professional Accountant'],
+    complianceRequirements: ['SARS Application', 'Tax Compliance'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['tax_practitioner', 'accountant']
+  },
+  {
+    id: 'coid-registration',
+    name: 'COID Registration',
+    category: 'Regulatory Compliance',
+    complexity: 'intermediate',
+    description: 'Registration with Compensation for Occupational Injuries and Diseases',
+    estimatedHours: 5,
+    pricingTier: 'standard',
+    basePrice: { min: 850, max: 1450 },
+    requiredQualifications: ['HR Specialist', 'Professional Accountant'],
+    complianceRequirements: ['COID Registration', 'Risk Assessment'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['hr_specialist', 'accountant', 'compliance_officer']
+  },
+  {
+    id: 'coid-annual-returns',
+    name: 'COID Annual Returns',
+    category: 'Regulatory Compliance',
+    complexity: 'intermediate',
+    description: 'Annual returns and compliance for occupational injuries and diseases',
+    estimatedHours: 6,
+    pricingTier: 'standard',
+    basePrice: { min: 950, max: 1950 },
+    requiredQualifications: ['HR Specialist', 'Professional Accountant'],
+    complianceRequirements: ['COID Filing', 'Annual Assessment'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['hr_specialist', 'accountant', 'compliance_officer']
+  },
+  {
+    id: 'ccir-registration-construction',
+    name: 'CCIR Registration (Construction Industry)',
+    category: 'Industry Specialist',
+    complexity: 'advanced',
+    description: 'Registration with Construction Industry Development Board',
+    estimatedHours: 8,
+    pricingTier: 'premium',
+    basePrice: { min: 1500, max: 3500 },
+    requiredQualifications: ['Industry Specialist', 'Professional Accountant'],
+    complianceRequirements: ['CIDB Registration', 'Industry Compliance'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['industry_specialist', 'accountant']
+  },
+  {
+    id: 'ccir-annual-returns',
+    name: 'CCIR Annual Returns',
+    category: 'Industry Specialist',
+    complexity: 'advanced',
+    description: 'Annual returns and compliance for Construction Industry Registration',
+    estimatedHours: 10,
+    pricingTier: 'premium',
+    basePrice: { min: 1750, max: 3500 },
+    requiredQualifications: ['Industry Specialist', 'Professional Accountant'],
+    complianceRequirements: ['CIDB Filing', 'Annual Compliance'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['industry_specialist', 'accountant']
+  },
+  {
+    id: 'basic-bookkeeping-services',
+    name: 'Basic Bookkeeping Services',
+    category: 'Bookkeeping Services',
+    complexity: 'basic',
+    description: 'Monthly bookkeeping including bank reconciliation and basic financial statements',
+    estimatedHours: 20,
+    pricingTier: 'standard',
+    basePrice: { min: 1500, max: 4500 },
+    requiredQualifications: ['Bookkeeper', 'Professional Accountant'],
+    complianceRequirements: ['Monthly Reconciliation', 'Financial Records'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['bookkeeper', 'accountant']
+  },
+  {
+    id: 'monthly-management-accounts',
+    name: 'Monthly Management Accounts',
+    category: 'Management Reporting',
+    complexity: 'intermediate',
+    description: 'Preparation of monthly management accounts and profit & loss statements',
+    estimatedHours: 12,
+    pricingTier: 'standard',
+    basePrice: { min: 2500, max: 6500 },
+    requiredQualifications: ['Professional Accountant', 'Management Accountant'],
+    complianceRequirements: ['Management Reporting', 'Financial Analysis'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['accountant', 'management_accountant']
+  },
+  {
+    id: 'statutory-audit',
+    name: 'Statutory Audit',
+    category: 'Audit Services',
+    complexity: 'expert',
+    description: 'Independent statutory audit of annual financial statements',
+    estimatedHours: 80,
+    pricingTier: 'enterprise',
+    basePrice: { min: 25000, max: 150000 },
+    requiredQualifications: ['Chartered Accountant', 'Registered Auditor'],
+    complianceRequirements: ['Audit Standards', 'IRBA Compliance'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['auditor', 'chartered_accountant']
+  },
+  {
+    id: 'independent-review',
+    name: 'Independent Review',
+    category: 'Audit Services',
+    complexity: 'advanced',
+    description: 'Independent review of annual financial statements',
+    estimatedHours: 40,
+    pricingTier: 'premium',
+    basePrice: { min: 12000, max: 35000 },
+    requiredQualifications: ['Professional Accountant', 'Chartered Accountant'],
+    complianceRequirements: ['Review Standards', 'Professional Standards'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['accountant', 'chartered_accountant']
+  },
+  {
+    id: 'b-bbee-certificate-applications',
+    name: 'B-BBEE Certificate Applications',
+    category: 'Transformation Services',
+    complexity: 'advanced',
+    description: 'Preparation and submission of B-BBEE certificate applications',
+    estimatedHours: 25,
+    pricingTier: 'premium',
+    basePrice: { min: 8500, max: 18500 },
+    requiredQualifications: ['B-BBEE Specialist', 'Professional Accountant'],
+    complianceRequirements: ['B-BBEE Codes', 'Verification Requirements'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['b_bbee_specialist', 'accountant']
+  },
+  {
+    id: 'popia-compliance-assessment',
+    name: 'POPIA Compliance Assessment',
+    category: 'Legal Compliance',
+    complexity: 'advanced',
+    description: 'Assessment of personal information and compliance with POPIA requirements',
+    estimatedHours: 20,
+    pricingTier: 'premium',
+    basePrice: { min: 8500, max: 18500 },
+    requiredQualifications: ['Legal Specialist', 'Compliance Officer'],
+    complianceRequirements: ['POPIA Requirements', 'Data Protection'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['compliance_officer', 'legal_specialist']
+  },
+  {
+    id: 'business-plan-preparation',
+    name: 'Business Plan Preparation',
+    category: 'Business Advisory',
+    complexity: 'advanced',
+    description: 'Comprehensive business plan preparation for funding or strategic purposes',
+    estimatedHours: 40,
+    pricingTier: 'premium',
+    basePrice: { min: 8500, max: 25000 },
+    requiredQualifications: ['Business Advisor', 'Management Consultant'],
+    complianceRequirements: ['Financial Projections', 'Market Analysis'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['business_advisor', 'management_consultant']
+  },
+  {
+    id: 'tax-planning-advisory',
+    name: 'Tax Planning and Advisory',
+    category: 'Tax Advisory',
+    complexity: 'advanced',
+    description: 'Strategic tax planning and advisory services for tax optimization',
+    estimatedHours: 15,
+    pricingTier: 'premium',
+    basePrice: { min: 4500, max: 12500 },
+    requiredQualifications: ['Tax Specialist', 'Tax Practitioner'],
+    complianceRequirements: ['Tax Planning', 'Advisory Standards'],
+    automationSettings: {
+      autoReminders: true,
+      emailNotifications: true,
+      deadlineAlerts: true
+    },
+    isActive: true,
+    roleAccess: ['tax_specialist', 'tax_practitioner']
+  }
+];
+
 export default accountingServicesData;

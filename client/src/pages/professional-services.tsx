@@ -53,7 +53,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Link } from 'wouter';
-import { accountingServicesData, serviceCategories, userRoles } from '@shared/accountingServices';
+import { accountingServicesData, serviceCategories, userRoles, additionalProfessionalServices } from '@shared/accountingServices';
 
 export default function ProfessionalServices() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -125,19 +125,19 @@ export default function ProfessionalServices() {
         }
       ],
       budgetRange: {
-        min: service.suggestedPrice?.min || 500,
-        max: service.suggestedPrice?.max || 2000,
+        min: service.suggestedPrice?.min || service.basePrice?.min || 500,
+        max: service.suggestedPrice?.max || service.basePrice?.max || 2000,
         currency: 'ZAR'
       }
     });
     setIsStartWorkingOpen(true);
   };
 
-  // Use the comprehensive accounting services data
-  const allServices = accountingServicesData;
-  const categories = ['All', ...serviceCategories];
-  const complexityLevels = ['All', 'basic', 'intermediate', 'advanced'];
-  const roles = ['All', ...userRoles];
+  // Combine original services with additional services to get all 33
+  const allServices = [...accountingServicesData, ...additionalProfessionalServices];
+  const categories = ['All', ...serviceCategories, 'Payroll Services', 'Regulatory Compliance', 'Industry Specialist', 'Bookkeeping Services', 'Management Reporting', 'Audit Services', 'Transformation Services', 'Legal Compliance', 'Business Advisory', 'Tax Advisory'];
+  const complexityLevels = ['All', 'basic', 'intermediate', 'advanced', 'expert'];
+  const roles = ['All', ...userRoles, 'payroll_admin', 'hr_specialist', 'industry_specialist', 'management_accountant', 'auditor', 'chartered_accountant', 'b_bbee_specialist', 'legal_specialist', 'business_advisor', 'tax_specialist'];
 
   const filteredServices = allServices.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -145,8 +145,8 @@ export default function ProfessionalServices() {
                          service.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || service.category === selectedCategory;
     const matchesComplexity = selectedComplexity === 'All' || service.complexity === selectedComplexity;
-    const matchesRole = selectedRole === 'All' || service.roleAccess.includes(selectedRole);
-    const isActive = service.active;
+    const matchesRole = selectedRole === 'All' || (service.roleAccess && service.roleAccess.includes(selectedRole));
+    const isActive = service.active !== false && service.isActive !== false; // Support both active and isActive properties
     
     return matchesSearch && matchesCategory && matchesComplexity && matchesRole && isActive;
   });
@@ -203,32 +203,35 @@ export default function ProfessionalServices() {
     return icons[category as keyof typeof icons] || FileText;
   };
 
+  // Helper functions to safely access service properties
   const formatPrice = (service: any) => {
-    const { suggestedPrice } = service;
-    const min = parseFloat(suggestedPrice.min);
-    const max = parseFloat(suggestedPrice.max);
-    
-    if (min === max) {
-      return `R ${min.toLocaleString()}`;
-    }
-    return `R ${min.toLocaleString()} - ${max.toLocaleString()}`;
+    const min = service.suggestedPrice?.min || service.basePrice?.min || 0;
+    const max = service.suggestedPrice?.max || service.basePrice?.max || 0;
+    return `R ${min} - R ${max}`;
   };
 
-  const getPriceUnit = (unit: string) => {
-    const units = {
-      'once-off': 'Once-off',
-      'monthly': 'per month',
-      'annually': 'per year',
-      'hourly': 'per hour',
-      'bi-annually': 'bi-annually',
-      'bi-monthly': 'bi-monthly',
-      'per employee per month': 'per employee/month',
-      'per certificate': 'per certificate',
-      'per transaction': 'per transaction',
-      'per name': 'per name'
-    };
-    return units[unit as keyof typeof units] || unit;
+  const getPriceUnit = (unit?: string) => {
+    return unit || 'per service';
   };
+
+  const getComplianceInfo = (service: any) => {
+    return service.complianceDeadlines || service.complianceRequirements || [];
+  };
+
+  const hasCompliance = (service: any) => {
+    const compliance = getComplianceInfo(service);
+    return compliance && compliance.length > 0;
+  };
+
+  const getServiceQualifications = (service: any) => {
+    return service.requiredQualifications || [];
+  };
+
+  const getServiceRoleAccess = (service: any) => {
+    return service.roleAccess || [];
+  };
+
+
 
   const handleSetupService = (service: any) => {
     setSelectedService(service);
@@ -405,7 +408,7 @@ export default function ProfessionalServices() {
                           </div>
                           <div className="text-right">
                             <div className="font-semibold text-green-600">{formatPrice(service)}</div>
-                            <div className="text-xs text-gray-500">{getPriceUnit(service.suggestedPrice.unit)}</div>
+                            <div className="text-xs text-gray-500">{getPriceUnit((service as any).suggestedPrice?.unit)}</div>
                           </div>
                         </div>
                       </div>
@@ -418,7 +421,7 @@ export default function ProfessionalServices() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <Users className="h-3 w-3 text-gray-400" />
-                          <span className="text-gray-600">{service.roleAccess.length} roles</span>
+                          <span className="text-gray-600">{getServiceRoleAccess(service).length} roles</span>
                         </div>
                       </div>
 
@@ -426,27 +429,27 @@ export default function ProfessionalServices() {
                       <div>
                         <h4 className="text-xs font-semibold text-gray-900 mb-2">Required Qualifications:</h4>
                         <div className="flex flex-wrap gap-1">
-                          {service.requiredQualifications.slice(0, 2).map((qual: string, index: number) => (
+                          {getServiceQualifications(service).slice(0, 2).map((qual: string, index: number) => (
                             <Badge key={index} variant="outline" className="text-xs">
                               {qual}
                             </Badge>
                           ))}
-                          {service.requiredQualifications.length > 2 && (
+                          {getServiceQualifications(service).length > 2 && (
                             <Badge variant="outline" className="text-xs">
-                              +{service.requiredQualifications.length - 2} more
+                              +{getServiceQualifications(service).length - 2} more
                             </Badge>
                           )}
                         </div>
                       </div>
 
                       {/* Compliance Deadlines */}
-                      {service.complianceDeadlines && service.complianceDeadlines.length > 0 && (
+                      {hasCompliance(service) && (
                         <div>
                           <h4 className="text-xs font-semibold text-red-700 mb-1 flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
-                            Compliance Deadline:
+                            Compliance:
                           </h4>
-                          <p className="text-xs text-red-600">{service.complianceDeadlines[0]}</p>
+                          <p className="text-xs text-red-600">{getComplianceInfo(service)[0]}</p>
                         </div>
                       )}
 
@@ -507,7 +510,7 @@ export default function ProfessionalServices() {
                                 </div>
                                 <div className="flex items-center space-x-1 text-sm text-gray-500">
                                   <Users className="h-4 w-4" />
-                                  <span>{service.roleAccess.length} roles</span>
+                                  <span>{getServiceRoleAccess(service).length} roles</span>
                                 </div>
                               </div>
 
@@ -515,13 +518,13 @@ export default function ProfessionalServices() {
                                 <div className="flex items-center space-x-1">
                                   <Banknote className="h-4 w-4 text-green-600" />
                                   <span className="font-semibold text-green-600">{formatPrice(service)}</span>
-                                  <span className="text-gray-500">{getPriceUnit(service.suggestedPrice.unit)}</span>
+                                  <span className="text-gray-500">{getPriceUnit((service as any).suggestedPrice?.unit)}</span>
                                 </div>
                                 
-                                {service.complianceDeadlines && service.complianceDeadlines.length > 0 && (
+                                {hasCompliance(service) && (
                                   <div className="flex items-center space-x-1 text-red-600">
                                     <Calendar className="h-4 w-4" />
-                                    <span className="text-xs">{service.complianceDeadlines[0]}</span>
+                                    <span className="text-xs">{getComplianceInfo(service)[0]}</span>
                                   </div>
                                 )}
                               </div>
@@ -582,7 +585,7 @@ export default function ProfessionalServices() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Service Categories Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {serviceCategories.map(category => {
-              const categoryServices = allServices.filter(s => s.category === category && s.active);
+              const categoryServices = allServices.filter(s => s.category === category && ((s as any).active !== false && (s as any).isActive !== false));
               const CategoryIcon = getCategoryIcon(category);
               return (
                 <div 
