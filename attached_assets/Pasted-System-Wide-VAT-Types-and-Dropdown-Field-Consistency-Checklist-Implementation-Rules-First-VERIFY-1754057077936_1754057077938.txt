@@ -1,0 +1,81 @@
+System-Wide VAT Types and Dropdown Field Consistency
+Checklist & Implementation Rules:
+First, VERIFY if each sub-feature exists before implementing.
+
+If missing, create and integrate it seamlessly into the existing structure.
+
+DO NOT duplicate logic or data structures—reuse and reference existing tables/models.
+
+Ensure everything is mobile and tablet friendly.
+
+Respect user roles and permissions.
+
+Prompt:
+1. VAT Types Consistency
+
+Check the database for duplicate VAT types or groups.
+
+There should be only one master list/group of VAT types (e.g., VAT Inclusive, VAT Exclusive, Zero Rated, Exempt, No VAT).
+
+Remove or merge any duplicate VAT types across the system—ensure only the official master group is available everywhere.
+
+The VAT types available in the Bulk Capture module must be the same as those used in Product Creation, Invoice Creation, and Estimate modules.
+
+All modules should reference the same VAT type table/model.
+
+2. Dropdown Integration
+
+On Product Creation, Invoice Creation, and Estimate Creation pages, the VAT Type must be a dropdown field.
+
+The VAT dropdown must list all options from the unified VAT type group (no duplicates).
+
+Selecting a VAT type on a product should automatically use the same type when the product is added to an invoice or estimate.
+
+The dropdowns should be clear, searchable, and responsive on all devices.
+
+3. Email Configuration
+
+Verify that system-wide outgoing email (SMTP/API) is configured (check .env or config files, and admin settings panel).
+
+If not configured, prompt the user/admin with a clear message or setup wizard.
+
+Test sending a sample email (invoice, notification, etc.) to ensure everything is working.
+
+4. Integration Check
+
+All transactions—whether captured in bulk or one-by-one—must use the same VAT logic and dropdown source.
+
+Updates to VAT types in settings or admin panel should reflect system-wide immediately.
+
+5. Remove Legacy/Duplicate Fields
+
+Audit all forms and codebases for legacy or duplicate VAT fields and remove them.
+
+Only reference the unified dropdown in all modules.
+
+6. User Experience
+
+Ensure all VAT dropdown fields are labeled and placed intuitively.
+
+Show the selected VAT type on all generated invoices, estimates, and product lists.
+
+Additional Notes:
+The above improvements should not duplicate any existing product or VAT management logic.
+
+All features must be mobile- and tablet-friendly.
+
+Follow strict permission rules for user access to VAT setup and changes.
+
+Summary:
+
+One VAT group in the system.
+
+One source for dropdown in every relevant module.
+
+No duplicate or legacy VAT types.
+
+Dropdown must be present in Product, Invoice, and Estimate creation.
+
+Email must be configured and tested.
+
+UX must be consistent and intuitive.

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VATTypeSelect } from "@/components/ui/vat-type-select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   TrendingUp, 
@@ -21,6 +22,7 @@ import {
   Calendar
 } from "lucide-react";
 import { format } from "date-fns";
+import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "../../../shared/vat-constants";
 
 interface ExpenseEntry {
   id?: number;
@@ -129,25 +131,21 @@ const EnhancedBulkCapture = () => {
     }
   }, [activeTab, initializeExpenseEntries, initializeIncomeEntries, expenseEntries.length, incomeEntries.length]);
 
-  // VAT Calculation helpers
+  // VAT calculation function using unified system
   const calculateVAT = useCallback((amount: string, vatRate: string, vatType: string) => {
-    const numAmount = parseFloat(amount) || 0;
-    const numVatRate = parseFloat(vatRate) || 0;
+    const numAmount = Number(amount ?? 0);
     
-    if (vatType === 'vat_inclusive') {
-      const vatAmount = (numAmount * numVatRate) / (100 + numVatRate);
-      const netAmount = numAmount - vatAmount;
-      return {
-        vatAmount: vatAmount.toFixed(2),
-        netAmount: netAmount.toFixed(2),
-      };
-    } else {
-      const vatAmount = (numAmount * numVatRate) / 100;
-      return {
-        vatAmount: vatAmount.toFixed(2),
-        netAmount: numAmount.toFixed(2),
-      };
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return { vatAmount: '0.00', netAmount: '0.00' };
     }
+
+    const vatAmount = calculateVATAmount(numAmount, vatType);
+    const netAmount = calculateNetAmount(numAmount, vatType);
+
+    return {
+      vatAmount: vatAmount.toFixed(2),
+      netAmount: netAmount.toFixed(2),
+    };
   }, []);
 
   // Real-time calculations for income entries
@@ -698,21 +696,11 @@ const EnhancedBulkCapture = () => {
                           </Select>
                         </td>
                         <td className="p-3">
-                          <Select
+                          <VATTypeSelect
                             value={entry.vatTransactionType}
                             onValueChange={(value) => updateIncomeEntry(index, 'vatTransactionType', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="vat_inclusive">VAT Inclusive (15%)</SelectItem>
-                              <SelectItem value="vat_exclusive">VAT Exclusive (15%)</SelectItem>
-                              <SelectItem value="zero_rated">Zero Rated</SelectItem>
-                              <SelectItem value="exempt">Exempt</SelectItem>
-                              <SelectItem value="no_vat">No VAT</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            placeholder="VAT..."
+                          />
                         </td>
                         <td className="p-3">
                           <Select
@@ -913,21 +901,11 @@ const EnhancedBulkCapture = () => {
                           </Select>
                         </td>
                         <td className="p-3">
-                          <Select
+                          <VATTypeSelect
                             value={entry.vatTransactionType}
                             onValueChange={(value) => updateExpenseEntry(index, 'vatTransactionType', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="vat_inclusive">VAT Inclusive (15%)</SelectItem>
-                              <SelectItem value="vat_exclusive">VAT Exclusive (15%)</SelectItem>
-                              <SelectItem value="zero_rated">Zero Rated</SelectItem>
-                              <SelectItem value="exempt">Exempt</SelectItem>
-                              <SelectItem value="no_vat">No VAT</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            placeholder="VAT..."
+                          />
                         </td>
                         <td className="p-3">
                           <Select
