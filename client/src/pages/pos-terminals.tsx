@@ -80,11 +80,6 @@ export default function POSTerminals() {
   // Data Queries
   const { data: terminals = [], isLoading } = useQuery({
     queryKey: ['/api/pos/terminals'],
-    queryFn: async () => {
-      const response = await fetch('/api/pos/terminals');
-      if (!response.ok) return [];
-      return response.json();
-    },
   });
 
   // Mutations

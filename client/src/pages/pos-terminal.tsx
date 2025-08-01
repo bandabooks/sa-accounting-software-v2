@@ -93,31 +93,16 @@ export default function POSTerminal() {
 
   // Data Queries
   const { data: currentShift } = useQuery({
-    queryKey: ['/api/pos/current-shift', currentTerminalId],
-    queryFn: async () => {
-      const response = await fetch(`/api/pos/shifts/current?terminalId=${currentTerminalId}`);
-      if (!response.ok) return null;
-      return response.json();
-    },
+    queryKey: ['/api/pos/shifts/current', { terminalId: currentTerminalId }],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ['/api/products'],
-    queryFn: async () => {
-      const response = await fetch('/api/products');
-      if (!response.ok) return [];
-      return response.json();
-    },
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ['/api/customers'],
-    queryFn: async () => {
-      const response = await fetch('/api/customers');
-      if (!response.ok) return [];
-      return response.json();
-    },
   });
 
   // Mutations

@@ -74,29 +74,14 @@ export default function POSShifts() {
   // Data Queries
   const { data: terminals = [] } = useQuery({
     queryKey: ['/api/pos/terminals'],
-    queryFn: async () => {
-      const response = await fetch('/api/pos/terminals');
-      if (!response.ok) return [];
-      return response.json();
-    },
   });
 
   const { data: shifts = [] } = useQuery({
     queryKey: ['/api/pos/shifts'],
-    queryFn: async () => {
-      const response = await fetch('/api/pos/shifts');
-      if (!response.ok) return [];
-      return response.json();
-    },
   });
 
   const { data: currentShifts = [] } = useQuery({
-    queryKey: ['/api/pos/current-shifts'],
-    queryFn: async () => {
-      const response = await fetch('/api/pos/shifts?status=open');
-      if (!response.ok) return [];
-      return response.json();
-    },
+    queryKey: ['/api/pos/shifts', { status: 'open' }],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 

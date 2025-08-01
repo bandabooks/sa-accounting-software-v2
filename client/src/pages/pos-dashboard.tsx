@@ -23,31 +23,15 @@ export default function POSDashboard() {
   // Data Queries
   const { data: terminals = [] } = useQuery({
     queryKey: ['/api/pos/terminals'],
-    queryFn: async () => {
-      const response = await fetch('/api/pos/terminals');
-      if (!response.ok) return [];
-      return response.json();
-    },
   });
 
   const { data: currentShifts = [] } = useQuery({
-    queryKey: ['/api/pos/current-shifts'],
-    queryFn: async () => {
-      const response = await fetch('/api/pos/shifts?status=open');
-      if (!response.ok) return [];
-      return response.json();
-    },
+    queryKey: ['/api/pos/shifts', { status: 'open' }],
     refetchInterval: 30000,
   });
 
   const { data: todayStats } = useQuery({
-    queryKey: ['/api/pos/today-stats'],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/pos/sales/stats?date=${today}`);
-      if (!response.ok) return { totalSales: 0, transactionCount: 0, averageTransaction: 0 };
-      return response.json();
-    },
+    queryKey: ['/api/pos/sales/stats', { date: new Date().toISOString().split('T')[0] }],
     refetchInterval: 60000,
   });
 
