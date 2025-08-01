@@ -44,7 +44,9 @@ import GeneralLedger from "@/pages/general-ledger";
 import FixedAssets from "@/pages/fixed-assets";
 import FixedAssetCreate from "@/pages/fixed-asset-create";
 import Budgeting from "@/pages/budgeting";
+import BudgetCreate from "@/pages/budget-create";
 import CashFlowForecasting from "@/pages/cash-flow-forecasting";
+import CashFlowForecastCreate from "@/pages/cash-flow-forecast-create";
 import BankReconciliation from "@/pages/bank-reconciliation";
 
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
@@ -478,8 +480,18 @@ function AuthenticatedApp() {
         <Route path="/budgeting">
           <Budgeting />
         </Route>
+        <Route path="/budgets/new">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <BudgetCreate />
+          </ProtectedRoute>
+        </Route>
         <Route path="/cash-flow-forecasting">
           <CashFlowForecasting />
+        </Route>
+        <Route path="/cash-flow-forecasts/new">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <CashFlowForecastCreate />
+          </ProtectedRoute>
         </Route>
         <Route path="/bank-reconciliation">
           <BankReconciliation />

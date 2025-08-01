@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -47,6 +50,13 @@ export default function BankReconciliation() {
   const [activeTab, setActiveTab] = useState("reconciliations");
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
   const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
+  const [reconciliationDialogOpen, setReconciliationDialogOpen] = useState(false);
+  const [newReconciliation, setNewReconciliation] = useState({
+    bankAccountId: "",
+    reconciliationDate: new Date().toISOString().split('T')[0],
+    statementBalance: "",
+    notes: ""
+  });
   const { toast } = useToast();
 
   // Fetch bank accounts
@@ -79,6 +89,29 @@ export default function BankReconciliation() {
     },
   });
 
+  // Create reconciliation mutation
+  const createReconciliationMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/bank-reconciliations", "POST", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-reconciliations"] });
+      setReconciliationDialogOpen(false);
+      setNewReconciliation({
+        bankAccountId: "",
+        reconciliationDate: new Date().toISOString().split('T')[0],
+        statementBalance: "",
+        notes: ""
+      });
+      toast({ title: "Success", description: "Bank reconciliation started successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to start reconciliation", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed": return "bg-green-100 text-green-800";
@@ -101,6 +134,40 @@ export default function BankReconciliation() {
     }
   };
 
+  const handleStartReconciliation = () => {
+    if (!newReconciliation.bankAccountId || !newReconciliation.statementBalance) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a bank account and enter the statement balance",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedAccount = bankAccounts.find(acc => acc.id === parseInt(newReconciliation.bankAccountId));
+    if (!selectedAccount) {
+      toast({
+        title: "Error",
+        description: "Selected bank account not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reconciliationData = {
+      bankAccountId: parseInt(newReconciliation.bankAccountId),
+      reconciliationDate: newReconciliation.reconciliationDate,
+      statementBalance: parseFloat(newReconciliation.statementBalance).toFixed(2),
+      bookBalance: selectedAccount.currentBalance,
+      difference: (parseFloat(newReconciliation.statementBalance) - parseFloat(selectedAccount.currentBalance)).toFixed(2),
+      status: "in_progress",
+      reconciliationType: "manual",
+      notes: newReconciliation.notes || undefined
+    };
+
+    createReconciliationMutation.mutate(reconciliationData);
+  };
+
   if (accountsLoading || reconciliationsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -116,10 +183,82 @@ export default function BankReconciliation() {
           <h1 className="text-3xl font-bold text-gray-900">Bank Reconciliation</h1>
           <p className="text-gray-600 mt-1">Match your bank statements with accounting records</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Start Reconciliation
-        </Button>
+        <Dialog open={reconciliationDialogOpen} onOpenChange={setReconciliationDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Start Reconciliation
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Start New Bank Reconciliation</DialogTitle>
+              <DialogDescription>
+                Begin a new bank reconciliation by selecting an account and entering the statement balance.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="bankAccount">Bank Account *</Label>
+                <Select
+                  value={newReconciliation.bankAccountId}
+                  onValueChange={(value) => setNewReconciliation(prev => ({ ...prev, bankAccountId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id.toString()}>
+                        {account.accountName} ({account.accountNumber}) - {formatCurrency(parseFloat(account.currentBalance))}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reconciliationDate">Reconciliation Date *</Label>
+                <Input
+                  id="reconciliationDate"
+                  type="date"
+                  value={newReconciliation.reconciliationDate}
+                  onChange={(e) => setNewReconciliation(prev => ({ ...prev, reconciliationDate: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="statementBalance">Bank Statement Balance *</Label>
+                <Input
+                  id="statementBalance"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={newReconciliation.statementBalance}
+                  onChange={(e) => setNewReconciliation(prev => ({ ...prev, statementBalance: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Input
+                  id="notes"
+                  placeholder="Add any notes about this reconciliation"
+                  value={newReconciliation.notes}
+                  onChange={(e) => setNewReconciliation(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setReconciliationDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleStartReconciliation}
+                disabled={createReconciliationMutation.isPending}
+              >
+                {createReconciliationMutation.isPending ? "Starting..." : "Start Reconciliation"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Summary Cards */}
@@ -182,7 +321,7 @@ export default function BankReconciliation() {
                     <Landmark className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Reconciliations Found</h3>
                     <p className="text-gray-600 mb-4">Start your first bank reconciliation</p>
-                    <Button>
+                    <Button onClick={() => setReconciliationDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Start First Reconciliation
                     </Button>
