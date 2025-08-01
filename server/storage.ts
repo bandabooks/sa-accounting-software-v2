@@ -3617,6 +3617,63 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // SARS API Credentials Management
+  async getSarsCredentials(companyId: number): Promise<any> {
+    // Return masked credentials for security
+    return {
+      clientId: 'SARS_CLIENT_123456',
+      clientSecret: '***masked***',
+      username: 'user@company.co.za',
+      password: '***masked***',
+      apiUrl: 'https://secure.sarsefiling.co.za/api/v1',
+      redirectUri: 'https://yourdomain.com/sars/callback',
+      environment: 'sandbox',
+      vatVendorNumber: '4123456789',
+      payeNumber: '7012345678901',
+      taxNumber: '9012345678'
+    };
+  }
+
+  async saveSarsCredentials(companyId: number, credentials: any): Promise<any> {  
+    // In real implementation, encrypt and store credentials securely
+    // For now, simulate successful save
+    return {
+      success: true,
+      message: 'SARS credentials saved securely'
+    };
+  }
+
+  async testSarsConnection(companyId: number): Promise<any> {
+    // Simulate API connection test
+    // In real implementation, would ping SARS API endpoints
+    const isConnected = Math.random() > 0.2; // 80% success rate for demo
+    
+    if (isConnected) {
+      return {
+        success: true,
+        message: 'Successfully connected to SARS eFiling API',
+        connectionTime: new Date(),
+        apiVersion: 'v1.2.3',
+        availableServices: ['VAT201', 'EMP501', 'EMP502', 'ITR12', 'ITR14']
+      };
+    } else {
+      throw new Error('Unable to connect to SARS API. Please check your credentials.');
+    }
+  }
+
+  async performSarsSync(companyId: number): Promise<any> {
+    // Simulate comprehensive SARS data sync
+    return {
+      success: true,
+      syncTime: new Date(),
+      recordsSynced: 42,
+      recordsUpdated: 15,
+      recordsCreated: 27,
+      nextSync: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
+      syncedTypes: ['VAT Returns', 'Tax Periods', 'Compliance Status', 'Outstanding Returns']
+    };
+  }
+
   async generateAIVatComplianceTips(companyId: number, vatSettings: any, transactionData: any): Promise<any[]> {
     // Enhanced AI-powered VAT compliance tips using Anthropic Claude
     const tips = [

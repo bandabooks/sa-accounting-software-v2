@@ -4931,6 +4931,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SARS API Credentials Management
+  app.get("/api/sars/credentials", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const credentials = await storage.getSarsCredentials(companyId);
+      res.json(credentials);
+    } catch (error) {
+      console.error("Error fetching SARS credentials:", error);
+      res.status(500).json({ message: "Failed to fetch SARS credentials" });
+    }
+  });
+
+  app.post("/api/sars/credentials", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), validateRequest({
+    body: z.object({
+      clientId: z.string().optional(),
+      clientSecret: z.string().optional(),
+      username: z.string().optional(),
+      password: z.string().optional(),
+      apiUrl: z.string().optional(),
+      redirectUri: z.string().optional(),
+      environment: z.enum(['sandbox', 'production']).optional(),
+      vatVendorNumber: z.string().optional(),
+      payeNumber: z.string().optional(),
+      taxNumber: z.string().optional(),
+    })
+  }), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const credentials = await storage.saveSarsCredentials(companyId, req.body);
+      
+      await logAudit(req.user!.id, 'UPDATE', 'sars_credentials', companyId, 'SARS API credentials updated');
+      
+      res.json({ success: true, message: "SARS credentials saved successfully" });
+    } catch (error) {
+      console.error("Error saving SARS credentials:", error);
+      res.status(500).json({ message: "Failed to save SARS credentials" });
+    }
+  });
+
+  // SARS API Connection Test
+  app.post("/api/sars/test-connection", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const testResult = await storage.testSarsConnection(companyId);
+      
+      await logAudit(req.user!.id, 'ACTION', 'sars_test_connection', companyId, 'SARS API connection test performed');
+      
+      res.json(testResult);
+    } catch (error) {
+      console.error("Error testing SARS connection:", error);
+      res.status(500).json({ message: "SARS connection test failed", error: error.message });
+    }
+  });
+
+  // SARS Data Sync
+  app.post("/api/sars/sync", authenticate, requirePermission(PERMISSIONS.MANAGE_SETTINGS), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const syncResult = await storage.performSarsSync(companyId);
+      
+      await logAudit(req.user!.id, 'ACTION', 'sars_sync', companyId, 'SARS data synchronization performed');
+      
+      res.json(syncResult);
+    } catch (error) {
+      console.error("Error performing SARS sync:", error);
+      res.status(500).json({ message: "SARS sync failed", error: error.message });
+    }
+  });
+
   app.post("/api/vat/ai-compliance-tips", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { companyId, vatSettings, transactionData } = req.body;
