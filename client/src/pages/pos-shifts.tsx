@@ -142,12 +142,18 @@ export default function POSShifts() {
 
   // Calculate functions
   const calculateExpectedCash = (shift: PosShift): number => {
-    return (Number(shift.openingCash) || 0) + (Number(shift.totalCash) || 0);
+    const openingCash = Number(shift.openingCash) || 0;
+    const totalCash = Number(shift.totalCash) || 0;
+    const result = openingCash + totalCash;
+    return isNaN(result) ? 0 : result;
   };
 
   const calculateVariance = (shift: PosShift): number => {
     if (!shift.closingCash) return 0;
-    return (Number(shift.closingCash) || 0) - calculateExpectedCash(shift);
+    const closingCash = Number(shift.closingCash) || 0;
+    const expectedCash = calculateExpectedCash(shift);
+    const result = closingCash - expectedCash;
+    return isNaN(result) ? 0 : result;
   };
 
   const getVarianceColor = (variance: number): string => {
@@ -408,7 +414,7 @@ export default function POSShifts() {
                       </div>
                       <div>
                         <div className="text-muted-foreground">Expected Cash</div>
-                        <div>R{calculateExpectedCash(shift).toFixed(2)}</div>
+                        <div>R{Number(calculateExpectedCash(shift)).toFixed(2)}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Actual Cash</div>
@@ -417,7 +423,7 @@ export default function POSShifts() {
                       <div>
                         <div className="text-muted-foreground">Variance</div>
                         <div className={getVarianceColor(calculateVariance(shift))}>
-                          R{calculateVariance(shift).toFixed(2)}
+                          R{Number(calculateVariance(shift)).toFixed(2)}
                           {calculateVariance(shift) !== 0 && (
                             <AlertTriangle className="h-3 w-3 inline ml-1" />
                           )}
@@ -487,7 +493,12 @@ export default function POSShifts() {
               <TrendingUp className="h-8 w-8 text-orange-600" />
               <div>
                 <div className="text-2xl font-bold">
-                  R{currentShifts.length > 0 ? (currentShifts.reduce((sum: number, shift: PosShift) => sum + (Number(shift.totalSales) || 0), 0) / Math.max(currentShifts.reduce((sum: number, shift: PosShift) => sum + (shift.salesCount || 0), 0), 1)).toFixed(0) : '0'}
+                  R{(() => {
+                    const totalSales = currentShifts.reduce((sum: number, shift: PosShift) => sum + (Number(shift.totalSales) || 0), 0);
+                    const totalTransactions = currentShifts.reduce((sum: number, shift: PosShift) => sum + (shift.salesCount || 0), 0);
+                    const avgTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+                    return isNaN(avgTransaction) ? '0' : avgTransaction.toFixed(0);
+                  })()}
                 </div>
                 <div className="text-sm text-muted-foreground">Avg Transaction</div>
               </div>
@@ -574,7 +585,7 @@ export default function POSShifts() {
                 </div>
                 <div className="flex justify-between font-semibold border-t pt-2">
                   <span>Expected Cash:</span>
-                  <span>R{calculateExpectedCash(selectedShift).toFixed(2)}</span>
+                  <span>R{Number(calculateExpectedCash(selectedShift)).toFixed(2)}</span>
                 </div>
               </div>
               
@@ -589,7 +600,7 @@ export default function POSShifts() {
                 />
                 {closingCash && (
                   <p className={`text-sm mt-1 ${getVarianceColor(Number(closingCash ?? 0) - calculateExpectedCash(selectedShift))}`}>
-                    Variance: R{(Number(closingCash ?? 0) - calculateExpectedCash(selectedShift)).toFixed(2)}
+                    Variance: R{Number(Number(closingCash ?? 0) - calculateExpectedCash(selectedShift)).toFixed(2)}
                   </p>
                 )}
               </div>
