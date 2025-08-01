@@ -1,7 +1,7 @@
 import React from 'react';
+import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UNIFIED_VAT_TYPES } from "@shared/vat-constants";
 
 interface VATTypeSelectProps {
   value?: string;
@@ -9,6 +9,7 @@ interface VATTypeSelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  companyId?: number;
 }
 
 export const VATTypeSelect: React.FC<VATTypeSelectProps> = ({
@@ -16,16 +17,22 @@ export const VATTypeSelect: React.FC<VATTypeSelectProps> = ({
   onValueChange,
   placeholder = "Select VAT type",
   disabled = false,
-  className
+  className,
+  companyId = 2
 }) => {
+  // Fetch VAT types from the database VAT module
+  const { data: vatTypes = [] } = useQuery({
+    queryKey: ["/api/companies", companyId, "vat-types"],
+  });
+
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {UNIFIED_VAT_TYPES.map((vatType) => (
-          <SelectItem key={vatType.id} value={vatType.id}>
+        {vatTypes.map((vatType: any) => (
+          <SelectItem key={vatType.id} value={vatType.id.toString()}>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="font-mono text-xs">
                 {vatType.code}

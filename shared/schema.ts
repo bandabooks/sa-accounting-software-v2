@@ -1116,7 +1116,7 @@ export const bulkExpenseEntries = pgTable("bulk_expense_entries", {
   description: text("description").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   supplierId: integer("supplier_id"),
-  vatTransactionType: text("vat_transaction_type").notNull().default("vat_inclusive"), // vat_inclusive, vat_exclusive, zero_rated, exempt, no_vat
+  vatTypeId: integer("vat_type_id").notNull().default(1), // Reference to VAT types from VAT module (1=STD, 2=ZER, 3=EXE, 4=OUT)
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).default("15.00"),
   vatAmount: decimal("vat_amount", { precision: 12, scale: 2 }).default("0.00"),
   netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(),
@@ -1145,7 +1145,7 @@ export const bulkIncomeEntries = pgTable("bulk_income_entries", {
   description: text("description").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   clientId: integer("client_id"), // Reference to customers table
-  vatTransactionType: text("vat_transaction_type").notNull().default("vat_inclusive"),
+  vatTypeId: integer("vat_type_id").notNull().default(1), // Reference to VAT types from VAT module
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).default("15.00"),
   vatAmount: decimal("vat_amount", { precision: 12, scale: 2 }).default("0.00"),
   netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(),

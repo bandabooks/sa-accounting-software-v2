@@ -31,7 +31,7 @@ interface ExpenseEntry {
   description: string;
   amount: string;
   supplierId?: number;
-  vatTransactionType: string;
+  vatTypeId: number;
   vatRate: string;
   vatAmount: string;
   netAmount: string;
@@ -48,7 +48,7 @@ interface IncomeEntry {
   description: string;
   amount: string;
   clientId?: number;
-  vatTransactionType: string;
+  vatTypeId: number;
   vatRate: string;
   vatAmount: string;
   netAmount: string;
@@ -97,7 +97,7 @@ const EnhancedBulkCapture = () => {
       categoryId: 0,
       description: '',
       amount: '',
-      vatTransactionType: 'vat_inclusive',
+      vatTypeId: 1, // Default to Standard Rate VAT type
       vatRate: '15.00',
       vatAmount: '0.00',
       netAmount: '0.00',
@@ -113,7 +113,7 @@ const EnhancedBulkCapture = () => {
       incomeAccountId: 0,
       description: '',
       amount: '',
-      vatTransactionType: 'vat_inclusive',
+      vatTypeId: 1, // Default to Standard Rate VAT type
       vatRate: '15.00',
       vatAmount: '0.00',
       netAmount: '0.00',
@@ -131,16 +131,31 @@ const EnhancedBulkCapture = () => {
     }
   }, [activeTab, initializeExpenseEntries, initializeIncomeEntries, expenseEntries.length, incomeEntries.length]);
 
-  // VAT calculation function using unified system
-  const calculateVAT = useCallback((amount: string, vatRate: string, vatType: string) => {
+  // VAT calculation function using database VAT types
+  const calculateVAT = useCallback((amount: string, vatRate: string, vatTypeId: number) => {
     const numAmount = Number(amount ?? 0);
+    const numVatRate = Number(vatRate ?? 15);
     
     if (isNaN(numAmount) || numAmount <= 0) {
       return { vatAmount: '0.00', netAmount: '0.00' };
     }
 
-    const vatAmount = calculateVATAmount(numAmount, vatType);
-    const netAmount = calculateNetAmount(numAmount, vatType);
+    let vatAmount = 0;
+    let netAmount = 0;
+
+    // VAT type 1 = Standard Rate (15% - inclusive by default)
+    // VAT type 2 = Zero Rated (0%)
+    // VAT type 3 = Exempt (0%)
+    // VAT type 4 = Out of Scope (0%)
+    if (vatTypeId === 1) {
+      // Standard rate - assume inclusive calculation
+      vatAmount = numAmount * (numVatRate / (100 + numVatRate));
+      netAmount = numAmount - vatAmount;
+    } else {
+      // Zero rated, exempt, or out of scope
+      vatAmount = 0;
+      netAmount = numAmount;
+    }
 
     return {
       vatAmount: vatAmount.toFixed(2),
@@ -174,17 +189,17 @@ const EnhancedBulkCapture = () => {
       totalVAT += vatAmount;
       totalNet += netAmount;
 
-      // VAT breakdown by type
-      if (entry.vatTransactionType === 'vat_inclusive') {
+      // VAT breakdown by type ID (1=STD, 2=ZER, 3=EXE, 4=OUT)
+      if (entry.vatTypeId === 1) {
         vatBreakdown.vatInclusive += amount;
-      } else if (entry.vatTransactionType === 'vat_exclusive') {
-        vatBreakdown.vatExclusive += amount;
-      } else if (entry.vatTransactionType === 'zero_rated') {
+      } else if (entry.vatTypeId === 2) {
         vatBreakdown.zeroRated += amount;
-      } else if (entry.vatTransactionType === 'exempt') {
+      } else if (entry.vatTypeId === 3) {
         vatBreakdown.exempt += amount;
-      } else {
+      } else if (entry.vatTypeId === 4) {
         vatBreakdown.noVAT += amount;
+      } else {
+        vatBreakdown.vatExclusive += amount;
       }
     });
 
@@ -212,7 +227,7 @@ const EnhancedBulkCapture = () => {
       const vatAmount = parseFloat(entry.vatAmount) || 0;
       const netAmount = parseFloat(entry.netAmount) || 0;
 
-      if (entry.vatTransactionType === 'vat_inclusive') {
+      if (entry.vatTypeId === 1) {
         subtotalExclVAT += netAmount;
         grandTotal += amount;
       } else {
@@ -238,11 +253,11 @@ const EnhancedBulkCapture = () => {
       
       (entry as any)[field] = value;
       
-      if (field === 'amount' || field === 'vatRate' || field === 'vatTransactionType') {
+      if (field === 'amount' || field === 'vatRate' || field === 'vatTypeId') {
         const calculations = calculateVAT(
           entry.amount.toString(),
           entry.vatRate.toString(),
-          entry.vatTransactionType
+          entry.vatTypeId
         );
         entry.vatAmount = calculations.vatAmount;
         entry.netAmount = calculations.netAmount;
@@ -261,11 +276,11 @@ const EnhancedBulkCapture = () => {
       
       (entry as any)[field] = value;
       
-      if (field === 'amount' || field === 'vatRate' || field === 'vatTransactionType') {
+      if (field === 'amount' || field === 'vatRate' || field === 'vatTypeId') {
         const calculations = calculateVAT(
           entry.amount.toString(),
           entry.vatRate.toString(),
-          entry.vatTransactionType
+          entry.vatTypeId
         );
         entry.vatAmount = calculations.vatAmount;
         entry.netAmount = calculations.netAmount;
@@ -299,7 +314,7 @@ const EnhancedBulkCapture = () => {
         categoryId: 0,
         description: '',
         amount: '',
-        vatTransactionType: 'vat_inclusive',
+        vatTypeId: 1, // Default to Standard Rate
         vatRate: '15.00',
         vatAmount: '0.00',
         netAmount: '0.00',
@@ -312,7 +327,7 @@ const EnhancedBulkCapture = () => {
         incomeAccountId: 0,
         description: '',
         amount: '',
-        vatTransactionType: 'vat_inclusive',
+        vatTypeId: 1, // Default to Standard Rate
         vatRate: '15.00',
         vatAmount: '0.00',
         netAmount: '0.00',
@@ -346,7 +361,7 @@ const EnhancedBulkCapture = () => {
           amount: parseFloat(entry.amount),
           supplierId: entry.supplierId || null,
           bankAccountId: entry.bankAccountId || null,
-          vatTransactionType: entry.vatTransactionType,
+          vatTypeId: entry.vatTypeId,
           vatRate: parseFloat(entry.vatRate),
           vatAmount: parseFloat(entry.vatAmount),
           netAmount: parseFloat(entry.netAmount) || (parseFloat(entry.amount) - parseFloat(entry.vatAmount)),
@@ -398,7 +413,7 @@ const EnhancedBulkCapture = () => {
           amount: parseFloat(entry.amount),
           clientId: entry.clientId || null,
           bankAccountId: entry.bankAccountId || null,
-          vatTransactionType: entry.vatTransactionType,
+          vatTypeId: entry.vatTypeId,
           vatRate: parseFloat(entry.vatRate),
           vatAmount: parseFloat(entry.vatAmount),
           netAmount: parseFloat(entry.netAmount) || (parseFloat(entry.amount) - parseFloat(entry.vatAmount)),
@@ -697,8 +712,8 @@ const EnhancedBulkCapture = () => {
                         </td>
                         <td className="p-3">
                           <VATTypeSelect
-                            value={entry.vatTransactionType}
-                            onValueChange={(value) => updateIncomeEntry(index, 'vatTransactionType', value)}
+                            value={entry.vatTypeId.toString()}
+                            onValueChange={(value) => updateIncomeEntry(index, 'vatTypeId', parseInt(value))}
                             placeholder="VAT..."
                           />
                         </td>
@@ -902,8 +917,8 @@ const EnhancedBulkCapture = () => {
                         </td>
                         <td className="p-3">
                           <VATTypeSelect
-                            value={entry.vatTransactionType}
-                            onValueChange={(value) => updateExpenseEntry(index, 'vatTransactionType', value)}
+                            value={entry.vatTypeId.toString()}
+                            onValueChange={(value) => updateExpenseEntry(index, 'vatTypeId', parseInt(value))}
                             placeholder="VAT..."
                           />
                         </td>
