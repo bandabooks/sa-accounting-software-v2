@@ -104,6 +104,7 @@ import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
 import BulkCapture from "@/pages/bulk-capture-enhanced";
 import SalesOrders from "@/pages/sales-orders";
+import SalesOrderCreate from "@/pages/sales-order-create";
 import Deliveries from "@/pages/deliveries";
 import SalesDashboard from "@/pages/sales-dashboard";
 import CreditNotes from "@/pages/credit-notes";
@@ -254,6 +255,11 @@ function AuthenticatedApp() {
         <Route path="/sales-orders">
           <ProtectedRoute permission={PERMISSIONS.SALES_ORDERS_VIEW}>
             <SalesOrders />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/sales-orders/create">
+          <ProtectedRoute permission={PERMISSIONS.SALES_ORDERS_CREATE}>
+            <SalesOrderCreate />
           </ProtectedRoute>
         </Route>
         <Route path="/deliveries">
