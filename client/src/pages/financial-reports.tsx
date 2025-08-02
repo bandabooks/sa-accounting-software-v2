@@ -1827,11 +1827,11 @@ export default function FinancialReports() {
                 </p>
               </div>
 
-              {/* Date Range Selector - Vertical Stack */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-3 lg:min-w-[220px]">
+              {/* Date Range Selector - Horizontal Layout */}
+              <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-3 lg:min-w-[320px]">
                 <h3 className="text-white font-semibold mb-2 text-sm">Report Parameters</h3>
-                <div className="space-y-2">
-                  <div>
+                <div className="flex flex-col sm:flex-row items-end gap-2">
+                  <div className="flex-1 min-w-0">
                     <Label htmlFor="dateFrom" className="text-purple-100 text-xs">From Date</Label>
                     <Input
                       id="dateFrom"
@@ -1841,7 +1841,7 @@ export default function FinancialReports() {
                       className="mt-1 bg-white/20 border-white/30 text-white placeholder-purple-200 text-sm h-8"
                     />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <Label htmlFor="dateTo" className="text-purple-100 text-xs">To Date</Label>
                     <Input
                       id="dateTo"
@@ -1851,7 +1851,7 @@ export default function FinancialReports() {
                       className="mt-1 bg-white/20 border-white/30 text-white placeholder-purple-200 text-sm h-8"
                     />
                   </div>
-                  <Button className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 text-sm h-8 mt-2">
+                  <Button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 text-sm h-8 px-3 shrink-0">
                     <Filter className="h-3 w-3 mr-1" />
                     Apply Filters
                   </Button>
