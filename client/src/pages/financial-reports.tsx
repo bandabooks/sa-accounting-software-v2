@@ -255,7 +255,20 @@ export default function FinancialReports() {
           icon: BookOpen, 
           description: "Detailed transaction history by account",
           lastGenerated: "2025-01-27",
-          frequency: "Weekly"
+          frequency: "Weekly",
+          data: {
+            id: "general-ledger",
+            title: "General Ledger",
+            lastGenerated: format(new Date(), "yyyy-MM-dd"),
+            data: {
+              entries: [
+                { date: "2025-01-27", account: "Cash", reference: "PV001", debit: 50000, credit: 0, balance: 50000 },
+                { date: "2025-01-27", account: "Sales Revenue", reference: "INV001", debit: 0, credit: 50000, balance: 50000 },
+                { date: "2025-01-26", account: "Office Expenses", reference: "EXP001", debit: 2500, credit: 0, balance: 2500 },
+                { date: "2025-01-26", account: "Cash", reference: "EXP001", debit: 0, credit: 2500, balance: 47500 }
+              ]
+            }
+          }
         },
         { 
           id: "aged-receivables", 
@@ -263,7 +276,26 @@ export default function FinancialReports() {
           icon: FileBarChart, 
           description: "Outstanding customer balances aging",
           lastGenerated: "2025-01-27",
-          frequency: "Weekly"
+          frequency: "Weekly",
+          data: {
+            id: "aged-receivables",
+            title: "Aged Receivables Analysis",
+            lastGenerated: format(new Date(), "yyyy-MM-dd"),
+            summary: {
+              total: 485000,
+              current: 320000,
+              overdue30: 95000,
+              overdue60: 45000,
+              overdue90: 25000
+            },
+            data: {
+              customers: [
+                { name: "ABC Corp", current: 120000, days30: 25000, days60: 0, days90: 0, total: 145000 },
+                { name: "XYZ Ltd", current: 85000, days30: 35000, days60: 15000, days90: 10000, total: 145000 },
+                { name: "DEF Industries", current: 115000, days30: 35000, days60: 30000, days90: 15000, total: 195000 }
+              ]
+            }
+          }
         },
         { 
           id: "aged-payables", 
@@ -271,7 +303,26 @@ export default function FinancialReports() {
           icon: FileBarChart, 
           description: "Outstanding supplier balances aging",
           lastGenerated: "2025-01-27",
-          frequency: "Weekly"
+          frequency: "Weekly",
+          data: {
+            id: "aged-payables",
+            title: "Aged Payables Analysis",
+            lastGenerated: format(new Date(), "yyyy-MM-dd"),
+            summary: {
+              total: 285000,
+              current: 180000,
+              overdue30: 65000,
+              overdue60: 25000,
+              overdue90: 15000
+            },
+            data: {
+              suppliers: [
+                { name: "Office Supplies Co", current: 45000, days30: 15000, days60: 0, days90: 0, total: 60000 },
+                { name: "Tech Equipment Ltd", current: 85000, days30: 25000, days60: 15000, days90: 10000, total: 135000 },
+                { name: "Utilities Provider", current: 50000, days30: 25000, days60: 10000, days90: 5000, total: 90000 }
+              ]
+            }
+          }
         },
         { 
           id: "expense-report", 
@@ -279,7 +330,30 @@ export default function FinancialReports() {
           icon: FolderOpen, 
           description: "Categorized expense breakdown and trends",
           lastGenerated: "2025-01-27",
-          frequency: "Monthly"
+          frequency: "Monthly",
+          data: {
+            id: "expense-report",
+            title: "Expense Analysis Report",
+            lastGenerated: format(new Date(), "yyyy-MM-dd"),
+            summary: {
+              totalExpenses: 1420000,
+              operatingExpenses: 520000,
+              adminExpenses: 220000,
+              costOfSales: 680000
+            },
+            data: {
+              categories: [
+                { category: "Cost of Goods Sold", amount: 680000, percentage: 47.9 },
+                { category: "Operating Expenses", amount: 520000, percentage: 36.6 },
+                { category: "Administrative Expenses", amount: 220000, percentage: 15.5 }
+              ],
+              monthlyTrend: [
+                { month: "Jan", amount: 485000 },
+                { month: "Feb", amount: 465000 },
+                { month: "Mar", amount: 470000 }
+              ]
+            }
+          }
         }
       ]
     },
@@ -299,7 +373,29 @@ export default function FinancialReports() {
           icon: Receipt, 
           description: "VAT calculations and compliance summary",
           lastGenerated: "2025-01-27",
-          frequency: "Monthly"
+          frequency: "Monthly",
+          data: {
+            id: "vat-summary",
+            title: "VAT Summary Report",
+            lastGenerated: format(new Date(), "yyyy-MM-dd"),
+            summary: {
+              vatInput: 145000,
+              vatOutput: 285000,
+              vatPayable: 140000,
+              vatRate: 15
+            },
+            data: {
+              vatInput: [
+                { description: "Office Equipment Purchase", vatAmount: 45000, netAmount: 300000 },
+                { description: "Professional Services", vatAmount: 15000, netAmount: 100000 },
+                { description: "Office Supplies", vatAmount: 85000, netAmount: 566667 }
+              ],
+              vatOutput: [
+                { description: "Product Sales", vatAmount: 180000, netAmount: 1200000 },
+                { description: "Service Revenue", vatAmount: 105000, netAmount: 700000 }
+              ]
+            }
+          }
         },
         { 
           id: "tax-summary", 
@@ -307,7 +403,25 @@ export default function FinancialReports() {
           icon: Building, 
           description: "Comprehensive tax liability analysis",
           lastGenerated: "2025-01-27",
-          frequency: "Quarterly"
+          frequency: "Quarterly",
+          data: {
+            id: "tax-summary",
+            title: "Tax Summary Report",
+            lastGenerated: format(new Date(), "yyyy-MM-dd"),
+            summary: {
+              incomeTax: 129000,
+              vatPayable: 140000,
+              paye: 85000,
+              totalTaxLiability: 354000
+            },
+            data: {
+              taxes: [
+                { type: "Income Tax", amount: 129000, dueDate: "2025-02-28", status: "Pending" },
+                { type: "VAT", amount: 140000, dueDate: "2025-02-25", status: "Pending" },
+                { type: "PAYE", amount: 85000, dueDate: "2025-02-07", status: "Overdue" }
+              ]
+            }
+          }
         },
         { 
           id: "bank-reconciliation", 
@@ -315,7 +429,25 @@ export default function FinancialReports() {
           icon: PiggyBank, 
           description: "Bank statement to ledger reconciliation",
           lastGenerated: "2025-01-27",
-          frequency: "Monthly"
+          frequency: "Monthly",
+          data: {
+            id: "bank-reconciliation",
+            title: "Bank Reconciliation",
+            lastGenerated: format(new Date(), "yyyy-MM-dd"),
+            summary: {
+              bookBalance: 485000,
+              bankBalance: 495000,
+              reconcileItems: 3,
+              unreconciled: 10000
+            },
+            data: {
+              reconcileItems: [
+                { date: "2025-01-27", description: "Outstanding Cheque #1001", amount: -15000, type: "outstanding" },
+                { date: "2025-01-26", description: "Bank Charges", amount: -500, type: "bank_charges" },
+                { date: "2025-01-25", description: "Deposit in Transit", amount: 25500, type: "deposit_transit" }
+              ]
+            }
+          }
         }
       ]
     }
@@ -358,6 +490,20 @@ export default function FinancialReports() {
         return renderCashFlow(reportData);
       case "trial-balance":
         return renderTrialBalance(reportData);
+      case "general-ledger":
+        return renderGeneralLedger(reportData);
+      case "aged-receivables":
+        return renderAgedReceivables(reportData);
+      case "aged-payables":
+        return renderAgedPayables(reportData);
+      case "expense-report":
+        return renderExpenseReport(reportData);
+      case "vat-summary":
+        return renderVATSummary(reportData);
+      case "tax-summary":
+        return renderTaxSummary(reportData);
+      case "bank-reconciliation":
+        return renderBankReconciliation(reportData);
       default:
         return <div>Report content not available</div>;
     }
@@ -659,6 +805,430 @@ export default function FinancialReports() {
     </div>
   );
 
+  const renderGeneralLedger = (reportData: ReportData) => (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800">General Ledger</CardTitle>
+          <CardDescription>Detailed transaction history by account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Account</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reference</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Debit</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Credit</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {reportData.data?.entries?.map((entry: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-800">{entry.date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-800">{entry.account}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{entry.reference}</td>
+                    <td className="px-4 py-3 text-sm text-right font-medium">
+                      {entry.debit > 0 ? formatCurrency(entry.debit) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-medium">
+                      {entry.credit > 0 ? formatCurrency(entry.credit) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-medium">
+                      {formatCurrency(entry.balance)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderAgedReceivables = (reportData: ReportData) => (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.total || 0)}</div>
+            <div className="text-blue-100 text-sm">Total Receivables</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-600 to-emerald-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.current || 0)}</div>
+            <div className="text-green-100 text-sm">Current</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-600 to-red-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency((reportData.summary?.overdue30 || 0) + (reportData.summary?.overdue60 || 0))}</div>
+            <div className="text-orange-100 text-sm">30-60 Days</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-600 to-pink-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.overdue90 || 0)}</div>
+            <div className="text-red-100 text-sm">90+ Days</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Customer Details */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800">Customer Aging Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Current</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">30 Days</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">60 Days</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">90+ Days</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {reportData.data?.customers?.map((customer: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-800 font-medium">{customer.name}</td>
+                    <td className="px-4 py-3 text-sm text-right">{formatCurrency(customer.current)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-orange-600">{formatCurrency(customer.days30)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-orange-700">{formatCurrency(customer.days60)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-red-600">{formatCurrency(customer.days90)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold">{formatCurrency(customer.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderAgedPayables = (reportData: ReportData) => (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.total || 0)}</div>
+            <div className="text-blue-100 text-sm">Total Payables</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-600 to-emerald-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.current || 0)}</div>
+            <div className="text-green-100 text-sm">Current</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-600 to-red-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency((reportData.summary?.overdue30 || 0) + (reportData.summary?.overdue60 || 0))}</div>
+            <div className="text-orange-100 text-sm">30-60 Days</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-600 to-pink-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.overdue90 || 0)}</div>
+            <div className="text-red-100 text-sm">90+ Days</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Supplier Details */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800">Supplier Aging Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Supplier</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Current</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">30 Days</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">60 Days</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">90+ Days</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {reportData.data?.suppliers?.map((supplier: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-800 font-medium">{supplier.name}</td>
+                    <td className="px-4 py-3 text-sm text-right">{formatCurrency(supplier.current)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-orange-600">{formatCurrency(supplier.days30)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-orange-700">{formatCurrency(supplier.days60)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-red-600">{formatCurrency(supplier.days90)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold">{formatCurrency(supplier.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderExpenseReport = (reportData: ReportData) => (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-600 to-pink-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.totalExpenses || 0)}</div>
+            <div className="text-red-100 text-sm">Total Expenses</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-600 to-red-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.operatingExpenses || 0)}</div>
+            <div className="text-orange-100 text-sm">Operating Expenses</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.costOfSales || 0)}</div>
+            <div className="text-purple-100 text-sm">Cost of Sales</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Category Breakdown */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800">Expense Categories</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {reportData.data?.categories?.map((category: any, index: number) => (
+              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <span className="font-medium text-gray-800">{category.category}</span>
+                  <span className="text-sm text-gray-600 ml-2">({category.percentage}%)</span>
+                </div>
+                <span className="font-semibold text-lg">{formatCurrency(category.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderVATSummary = (reportData: ReportData) => (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-600 to-emerald-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.vatInput || 0)}</div>
+            <div className="text-green-100 text-sm">VAT Input</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.vatOutput || 0)}</div>
+            <div className="text-blue-100 text-sm">VAT Output</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-600 to-pink-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.vatPayable || 0)}</div>
+            <div className="text-red-100 text-sm">VAT Payable</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* VAT Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800">VAT Input Claims</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {reportData.data?.vatInput?.map((item: any, index: number) => (
+                <div key={index} className="flex justify-between items-center">
+                  <span className="text-gray-600">{item.description}</span>
+                  <span className="font-semibold text-green-600">{formatCurrency(item.vatAmount)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800">VAT Output</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {reportData.data?.vatOutput?.map((item: any, index: number) => (
+                <div key={index} className="flex justify-between items-center">
+                  <span className="text-gray-600">{item.description}</span>
+                  <span className="font-semibold text-blue-600">{formatCurrency(item.vatAmount)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderTaxSummary = (reportData: ReportData) => (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-600 to-pink-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.totalTaxLiability || 0)}</div>
+            <div className="text-red-100 text-sm">Total Tax Liability</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.incomeTax || 0)}</div>
+            <div className="text-blue-100 text-sm">Income Tax</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.vatPayable || 0)}</div>
+            <div className="text-purple-100 text-sm">VAT Payable</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-600 to-red-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.paye || 0)}</div>
+            <div className="text-orange-100 text-sm">PAYE</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tax Details */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800">Tax Obligations</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tax Type</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {reportData.data?.taxes?.map((tax: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-800 font-medium">{tax.type}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold">{formatCurrency(tax.amount)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{tax.dueDate}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <Badge variant={tax.status === 'Overdue' ? 'destructive' : 'outline'}>
+                        {tax.status}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderBankReconciliation = (reportData: ReportData) => (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.bookBalance || 0)}</div>
+            <div className="text-blue-100 text-sm">Book Balance</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-600 to-emerald-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.bankBalance || 0)}</div>
+            <div className="text-green-100 text-sm">Bank Balance</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-600 to-red-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{reportData.summary?.reconcileItems || 0}</div>
+            <div className="text-orange-100 text-sm">Reconcile Items</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-600 to-pink-700 text-white">
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{formatCurrency(reportData.summary?.unreconciled || 0)}</div>
+            <div className="text-red-100 text-sm">Unreconciled</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Reconciliation Items */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800">Reconciliation Items</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {reportData.data?.reconcileItems?.map((item: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-800">{item.date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-800">{item.description}</td>
+                    <td className="px-4 py-3 text-sm text-right font-medium">
+                      <span className={item.amount >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {formatCurrency(item.amount)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <Badge variant="outline" className="text-xs">
+                        {item.type.replace('_', ' ')}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <div className="container mx-auto px-4 py-6 space-y-8">
@@ -757,38 +1327,38 @@ export default function FinancialReports() {
               {/* Category Reports */}
               <Collapsible open={expandedCategory === category.id}>
                 <CollapsibleContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pl-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 pl-4">
                     {category.reports.map((report) => (
                       <Card 
                         key={report.id} 
-                        className="group border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer"
+                        className="group border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer"
                         onClick={() => handleReportClick(report)}
                       >
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg bg-gradient-to-r ${category.gradient}`}>
-                              <report.icon className="h-5 w-5 text-white" />
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`p-1.5 rounded-lg bg-gradient-to-r ${category.gradient}`}>
+                              <report.icon className="h-4 w-4 text-white" />
                             </div>
                             <div className="flex-1">
-                              <CardTitle className="text-sm font-semibold text-gray-800 group-hover:text-purple-600 transition-colors">
+                              <CardTitle className="text-xs font-semibold text-gray-800 group-hover:text-purple-600 transition-colors leading-tight">
                                 {report.title}
                               </CardTitle>
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-3">
-                          <p className="text-xs text-gray-600">{report.description}</p>
+                        <CardContent className="space-y-1.5 pt-0">
+                          <p className="text-xs text-gray-600 line-clamp-1">{report.description}</p>
                           
                           <div className="flex justify-between text-xs text-gray-500">
-                            <span>Last: {report.lastGenerated}</span>
-                            <Badge variant="outline" className="text-xs">
+                            <span className="truncate">Last: {report.lastGenerated}</span>
+                            <Badge variant="outline" className="text-xs px-1.5 py-0.5 ml-1">
                               {report.frequency}
                             </Badge>
                           </div>
 
                           {/* Summary Preview */}
                           {report.data?.summary && (
-                            <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+                            <div className="mt-1 p-1 bg-gray-50 rounded-lg">
                               <div className="grid grid-cols-1 gap-1 text-xs">
                                 {report.id === 'balance-sheet' && report.data?.summary && (
                                   <>
@@ -826,13 +1396,68 @@ export default function FinancialReports() {
                                     </div>
                                   </>
                                 )}
+                                {report.id === 'aged-receivables' && report.data?.summary && (
+                                  <>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Total:</span>
+                                      <span className="font-semibold">{formatCurrency(report.data.summary.total || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Overdue:</span>
+                                      <span className="font-semibold text-red-600">{formatCurrency((report.data.summary.overdue30 || 0) + (report.data.summary.overdue60 || 0) + (report.data.summary.overdue90 || 0))}</span>
+                                    </div>
+                                  </>
+                                )}
+                                {report.id === 'aged-payables' && report.data?.summary && (
+                                  <>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Total:</span>
+                                      <span className="font-semibold">{formatCurrency(report.data.summary.total || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Overdue:</span>
+                                      <span className="font-semibold text-red-600">{formatCurrency((report.data.summary.overdue30 || 0) + (report.data.summary.overdue60 || 0) + (report.data.summary.overdue90 || 0))}</span>
+                                    </div>
+                                  </>
+                                )}
+                                {report.id === 'vat-summary' && report.data?.summary && (
+                                  <>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">VAT Input:</span>
+                                      <span className="font-semibold">{formatCurrency(report.data.summary.vatInput || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">VAT Payable:</span>
+                                      <span className="font-semibold text-red-600">{formatCurrency(report.data.summary.vatPayable || 0)}</span>
+                                    </div>
+                                  </>
+                                )}
+                                {report.id === 'tax-summary' && report.data?.summary && (
+                                  <>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Total Tax:</span>
+                                      <span className="font-semibold">{formatCurrency(report.data.summary.totalTaxLiability || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">Income Tax:</span>
+                                      <span className="font-semibold text-red-600">{formatCurrency(report.data.summary.incomeTax || 0)}</span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
                           )}
 
-                          <Button className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Report
+                          <Button 
+                            size="sm"
+                            className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 py-1 text-xs mt-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReportClick(report);
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
                           </Button>
                         </CardContent>
                       </Card>
