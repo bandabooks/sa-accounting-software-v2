@@ -45,10 +45,14 @@ export default function Header() {
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'admin': return 'Administrator';
+      case 'super_admin': return 'Super Administrator';
       case 'manager': return 'Manager';
       case 'accountant': return 'Accountant';
       case 'employee': return 'Employee';
-      default: return role;
+      case 'business_owner': return 'Business Owner';
+      case 'finance_manager': return 'Finance Manager';
+      case 'sales_manager': return 'Sales Manager';
+      default: return role.replace(/_/g, ' ');
     }
   };
 
@@ -87,33 +91,50 @@ export default function Header() {
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button data-onboarding="user-profile" variant="ghost" className="flex items-center space-x-3 hover:bg-gray-50">
+                <Button 
+                  data-onboarding="user-profile" 
+                  variant="ghost" 
+                  className="flex items-center space-x-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-blue-200"
+                >
                   <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                    <div className="text-sm text-gray-500">{getRoleDisplayName(user.role)}</div>
+                    <div className="text-sm font-semibold text-gray-900">{user.name}</div>
+                    <div className="text-xs text-gray-500 capitalize">
+                      {user.role.replace(/_/g, ' ')}
+                    </div>
                   </div>
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User className="text-blue-600" size={20} />
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center ring-2 ring-blue-100">
+                    <User className="text-white" size={18} />
                   </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-64 p-2">
+                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg mb-2">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center ring-2 ring-blue-200">
+                    <User className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800">{user.name}</p>
+                    <p className="text-sm text-gray-600 capitalize">
+                      {user.role.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-xs text-gray-500">{user.email || 'No email'}</p>
+                  </div>
+                </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/profile" className="flex items-center">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild className="cursor-pointer">
                   <Link href="/settings" className="flex items-center">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                {user.role === 'admin' && (
-                  <DropdownMenuItem asChild>
+                {(user.role === 'admin' || user.role === 'super_admin') && (
+                  <DropdownMenuItem asChild className="cursor-pointer">
                     <Link href="/admin-panel" className="flex items-center">
                       <Shield className="mr-2 h-4 w-4" />
                       <span>Admin Panel</span>
@@ -121,7 +142,7 @@ export default function Header() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600">
+                <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
