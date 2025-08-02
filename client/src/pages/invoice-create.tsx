@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGlobalNotification } from "@/contexts/NotificationContext";
 import { CustomerSelect } from "@/components/CustomerSelect";
 import { ProductServiceSelect } from "@/components/ProductServiceSelect";
+import { VATTypeSelect } from "@/components/ui/vat-type-select";
 import { VATConditionalWrapper, VATFieldWrapper } from "@/components/vat/VATConditionalWrapper";
 import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
 import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
@@ -43,7 +44,7 @@ interface InvoiceItem {
   vatRate: string;
   vatInclusive: boolean;
   vatAmount: string;
-  vatType: string; // New field for VAT type selection
+  vatTypeId: number; // Changed to match bulk module format
 }
 
 export default function InvoiceCreate() {
@@ -180,7 +181,7 @@ export default function InvoiceCreate() {
       vatRate: "15.00", 
       vatInclusive: false, 
       vatAmount: "0.00",
-      vatType: "vat_exclusive"
+      vatTypeId: 1 // Default to first VAT type (usually VAT Exclusive)
     }]);
   };
 
@@ -196,8 +197,13 @@ export default function InvoiceCreate() {
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
-    if (item.vatType && shouldShowVATFields) {
-      return calculateVATAmount(lineAmount, item.vatType);
+    if (item.vatTypeId && shouldShowVATFields) {
+      // Convert vatTypeId to vatType string for calculation
+      const vatType = item.vatTypeId === 1 ? "vat_exclusive" : 
+                     item.vatTypeId === 2 ? "vat_inclusive" :
+                     item.vatTypeId === 3 ? "zero_rated" :
+                     item.vatTypeId === 4 ? "exempt" : "no_vat";
+      return calculateVATAmount(lineAmount, vatType);
     }
     
     // Fallback to traditional calculation
@@ -212,7 +218,7 @@ export default function InvoiceCreate() {
     (newItems[index] as any)[field] = value;
     
     // Auto-calculate VAT amount when relevant fields change
-    if (field === 'quantity' || field === 'unitPrice' || field === 'vatType' || field === 'vatRate') {
+    if (field === 'quantity' || field === 'unitPrice' || field === 'vatTypeId' || field === 'vatRate') {
       const calculatedVAT = calculateItemVAT(newItems[index]);
       newItems[index].vatAmount = calculatedVAT.toFixed(2);
     }
@@ -237,7 +243,7 @@ export default function InvoiceCreate() {
       description: product.description || product.name,
       unitPrice: product.unitPrice,
       vatRate: product.vatRate || "15",
-      vatType: product.vatRate === "0" ? "zero_rated" : "vat_exclusive" // Smart VAT type detection
+      vatTypeId: product.vatRate === "0" ? 3 : 1 // Smart VAT type detection (3=zero_rated, 1=vat_exclusive)
     };
     
     // Calculate VAT amount for the updated item
@@ -466,185 +472,118 @@ export default function InvoiceCreate() {
             </CardContent>
           </Card>
 
-          {/* Professional Invoice Items Section */}
+          {/* Invoice Items Table - Matching Screenshot Format */}
           <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                  <Calculator className="h-5 w-5 mr-2 text-green-600" />
-                  Invoice Items
-                </CardTitle>
-                <Button 
-                  type="button" 
-                  onClick={addItem} 
-                  variant="outline"
-                  className="bg-white hover:bg-green-50 text-green-700 border-green-200 hover:border-green-300"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              </div>
+            <CardHeader className="bg-gray-50 dark:bg-gray-900 border-b flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center text-gray-900 dark:text-white text-lg">
+                <Calculator className="h-5 w-5 mr-2 text-purple-600" />
+                Invoice Items
+              </CardTitle>
+              <Button 
+                type="button" 
+                onClick={addItem} 
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Item
+              </Button>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="space-y-0">
+              {/* Table Header */}
+              <div className="bg-gray-100 dark:bg-gray-800 border-b">
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <div className="col-span-3">Product/Service</div>
+                  <div className="col-span-3">Description</div>
+                  <div className="col-span-1 text-center">Qty</div>
+                  <div className="col-span-2 text-center">Unit Price</div>
+                  <div className="col-span-2 text-center">Amount</div>
+                  <div className="col-span-1 text-center">Remove</div>
+                </div>
+              </div>
+
+              {/* Table Body */}
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {items.map((item, index) => (
-                  <div key={index} className="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                    <div className="p-6 space-y-4">
-                      {/* Item Header */}
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Item #{index + 1}
-                        </h4>
-                        {items.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(index)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                  <div key={index} className="grid grid-cols-12 gap-2 px-4 py-3 items-center">
+                    {/* Product/Service Column */}
+                    <div className="col-span-3">
+                      <ProductServiceSelect
+                        value={item.productId}
+                        onValueChange={(productId) => updateItem(index, 'productId', productId)}
+                        onProductSelect={(product) => handleProductSelect(index, product)}
+                        placeholder="Select..."
+                      />
+                    </div>
+
+                    {/* Description Column */}
+                    <div className="col-span-3">
+                      <Input
+                        placeholder="Enter item description..."
+                        value={item.description}
+                        onChange={(e) => updateItem(index, 'description', e.target.value)}
+                        className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Quantity Column */}
+                    <div className="col-span-1">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                        className="text-center border-gray-300 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Unit Price Column */}
+                    <div className="col-span-2">
+                      <div className="flex items-center">
+                        <span className="text-gray-500 mr-1">R</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unitPrice}
+                          onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
+                          className="text-center border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
                       </div>
+                    </div>
 
-                      {/* Product/Service Selection */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="lg:col-span-2">
-                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Product/Service
-                          </Label>
-                          <ProductServiceSelect
-                            value={item.productId}
-                            onValueChange={(productId) => updateItem(index, 'productId', productId)}
-                            onProductSelect={(product) => handleProductSelect(index, product)}
-                            placeholder="Search and select a product/service..."
-                          />
-                          {!item.productId && (
-                            <Input
-                              className="mt-2 focus:ring-2 focus:ring-blue-500"
-                              placeholder="Or enter custom description..."
-                              value={item.description}
-                              onChange={(e) => updateItem(index, 'description', e.target.value)}
-                            />
-                          )}
-                        </div>
+                    {/* Amount Column */}
+                    <div className="col-span-2">
+                      <div className="text-center font-medium text-gray-900 dark:text-white">
+                        R{(parseFloat(item.quantity || "0") * parseFloat(item.unitPrice || "0")).toFixed(2)}
                       </div>
+                    </div>
 
-                      {/* Quantity, Price, and VAT Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Quantity
-                          </Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            className="focus:ring-2 focus:ring-blue-500"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                            <DollarSign className="h-3 w-3 mr-1" />
-                            Unit Price
-                          </Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            className="focus:ring-2 focus:ring-blue-500"
-                            value={item.unitPrice}
-                            onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
-                          />
-                        </div>
-
-                        {/* Professional VAT Type Dropdown */}
-                        {shouldShowVATFields && (
-                          <div className="md:col-span-2">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                              <Tag className="h-3 w-3 mr-1" />
-                              VAT Treatment
-                            </Label>
-                            <Select
-                              value={item.vatType}
-                              onValueChange={(value) => {
-                                updateItem(index, 'vatType', value);
-                                const vatConfig = getVATTypeConfig(value);
-                                if (vatConfig) {
-                                  updateItem(index, 'vatRate', vatConfig.rate.toString());
-                                  updateItem(index, 'vatInclusive', value === 'vat_inclusive');
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
-                                <SelectValue placeholder="Select VAT type..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {UNIFIED_VAT_TYPES.map((vatType) => (
-                                  <SelectItem key={vatType.id} value={vatType.id}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">{vatType.name}</span>
-                                        <span className="text-xs text-gray-500">{vatType.description}</span>
-                                      </div>
-                                      <Badge 
-                                        variant="outline" 
-                                        className={`ml-2 text-xs ${
-                                          vatType.rate === 15 ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                          vatType.rate === 0 ? 'bg-gray-50 text-gray-700 border-gray-200' :
-                                          'bg-green-50 text-green-700 border-green-200'
-                                        }`}
-                                      >
-                                        {vatType.rate}%
-                                      </Badge>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            VAT Amount
-                          </Label>
-                          <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded border text-right font-medium text-gray-900 dark:text-white">
-                            {formatCurrency(parseFloat(item.vatAmount || '0'))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Line Total
-                          </Label>
-                          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border text-right font-bold text-blue-700 dark:text-blue-300">
-                            {formatCurrency(
-                              parseFloat(item.quantity || "0") * 
-                              parseFloat(item.unitPrice || "0") * 
-                              (shouldShowVATFields ? (1 + parseFloat(item.vatRate || "0") / 100) : 1)
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                    {/* Remove Column */}
+                    <div className="col-span-1 text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(index)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
+                        disabled={items.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
-                
-                {items.length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                      <Calculator className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <p className="text-lg font-medium">No items added yet</p>
-                    <p className="text-sm">Click "Add Item" to get started with your invoice</p>
-                  </div>
-                )}
               </div>
+
+              {/* Empty State */}
+              {items.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <Calculator className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-lg font-medium">No items added yet</p>
+                  <p className="text-sm">Click "Add Item" to get started</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -703,79 +642,106 @@ export default function InvoiceCreate() {
 
             {/* Right side - Invoice Summary */}
             <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-b">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b flex flex-row items-center">
                 <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                  <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
+                  <FileText className="h-5 w-5 mr-2 text-green-600" />
                   Invoice Summary
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {formatCurrency(parseFloat(formData.subtotal))}
-                    </span>
-                  </div>
-                  
+                  {/* VAT Treatment Dropdown - Matching Screenshot */}
                   {shouldShowVATFields && (
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">VAT Amount</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {formatCurrency(parseFloat(formData.vatAmount))}
-                      </span>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        VAT Treatment
+                      </Label>
+                      <VATTypeSelect
+                        value="1" // Default to VAT Exclusive (15%)
+                        onValueChange={(value) => {
+                          // Handle global VAT treatment change
+                          console.log('VAT Treatment changed to:', value);
+                        }}
+                        placeholder="Select VAT treatment..."
+                        className="w-full"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        Rate: 15% | Exclusive
+                      </div>
                     </div>
                   )}
                   
-                  <Separator />
+                  <Separator className="my-4" />
                   
-                  <div className="flex justify-between items-center py-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4">
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">Total Amount</span>
-                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                      {formatCurrency(parseFloat(formData.total))}
-                    </span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal (excl. VAT):</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        R {parseFloat(formData.subtotal).toFixed(2)}
+                      </span>
+                    </div>
+                    
+                    {shouldShowVATFields && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">VAT (15%):</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          R {parseFloat(formData.vatAmount).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <Separator />
+                    
+                    <div className="flex justify-between items-center py-3 bg-green-50 dark:bg-green-900/20 rounded-lg px-4">
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">
+                        Total (incl. VAT):
+                      </span>
+                      <span className="text-2xl font-bold text-green-700 dark:text-green-300">
+                        R {parseFloat(formData.total).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Create Invoice Button - Matching Screenshot */}
+                  <div className="mt-6">
+                    <Button 
+                      type="submit"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-medium"
+                      disabled={createMutation.isPending || updateMutation.isPending}
+                    >
+                      {createMutation.isPending || updateMutation.isPending ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Processing...
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <FileText className="h-5 w-5 mr-2" />
+                          Create Invoice
+                        </div>
+                      )}
+                    </Button>
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                      Journal entry will be automatically created
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Professional Action Buttons */}
-          <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row gap-4 justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setLocation('/invoices')}
-                  className="border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-                
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
-                >
-                  {createMutation.isPending || updateMutation.isPending ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </div>
-                  ) : (
-                    <div className="flex items-center">
-                      <FileText className="h-4 w-4 mr-2" />
-                      {isEditing ? "Update Invoice" : "Create Invoice"}
-                    </div>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Back to Sales Button */}
+          <div className="flex justify-start mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLocation('/invoices')}
+              className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Sales
+            </Button>
+          </div>
         </form>
       </main>
     </div>
