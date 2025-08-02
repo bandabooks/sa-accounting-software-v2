@@ -1,0 +1,38 @@
+Dashboard Quick Actions & Compliance Alerts Layout Update
+Objective:
+Reorganize the dashboard’s main section to optimize space and accessibility for key functions. Remove empty/unused areas and enhance the strategic placement of “Quick Actions” and “Compliance Alerts”.
+
+Instructions:
+
+Remove Empty Space:
+Eliminate the empty/blank areas currently shown in the red-marked boxes on the dashboard mockup.
+
+Move Quick Actions:
+
+Take the existing “Quick Actions” section (currently found lower on the dashboard) and move it up to the main/prime area at the top of the dashboard (where the upper red box is marked).
+
+The “Quick Actions” panel should be horizontal, occupying the full width above or beside key dashboard widgets, making frequent operations like “Create Invoice,” “Add Customer,” “Record Payment,” and “New Estimate” quickly accessible immediately after login.
+
+Integrate Compliance Alerts:
+
+Place the “Compliance & Alerts” section directly below the “Quick Actions” bar (as shown in the lower red box).
+
+Make this panel horizontal and prominent, so that alerts like “VAT return due in 5 days” are easily visible but do not consume excessive vertical space.
+
+The design should allow the Compliance Alerts to expand/collapse or slide for multiple alerts, if needed.
+
+Responsiveness:
+
+On mobile/tablet, ensure both Quick Actions and Compliance Alerts stack vertically but remain above the fold.
+
+On desktop, both panels must remain horizontal and take advantage of the available width.
+
+Result:
+
+The area previously marked as empty will now provide instant access to both the most common user actions and essential compliance alerts, enhancing the dashboard’s usability and visual balance.
+
+The dashboard should look compact, with less wasted space, and a clear priority on what users need most.
+
+Summary (for internal ticket):
+
+Move “Quick Actions” panel to the top dashboard area (replace empty space), displayed horizontally. Place “Compliance & Alerts” directly underneath, also horizontal. Ensure layout is compact, visually balanced, and responsive for desktop/mobile. Remove all empty space shown in the red-marked areas.
