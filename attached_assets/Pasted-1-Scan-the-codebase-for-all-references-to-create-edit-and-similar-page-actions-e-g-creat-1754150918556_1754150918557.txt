@@ -1,0 +1,24 @@
+1. Scan the codebase for all references to `create`, `edit`, and similar page actions (e.g., `/create`, `/edit`, `/new`, `/update`, etc.) in the routing configuration (such as React Router, Vue Router, or your framework's router).
+
+2. For each route:
+    a. Check if the page/component is correctly registered in the router (e.g., `routes.js`, `App.js`, `Router.tsx`, or your main router file).
+    b. Ensure the path, component, and import statements are all correct and have not been renamed, moved, or deleted.
+    c. Verify there are no typos or case sensitivity issues in route paths or component names.
+
+3. For each button, link, or navigation that triggers a "create", "edit", or similar action:
+    a. Confirm the navigation (e.g., `navigate()`, `<Link>`, `history.push`) matches a registered route.
+    b. If using dynamic route parameters (e.g., `/create?id=1`, `/edit/:id`), ensure parameter handling is consistent and the component can handle both creation and editing as intended.
+
+4. Test all create, edit, and related actions from the UI.
+    a. If any action results in a 404 error, output the route that failed and why (e.g., missing from router, component import error, file not found, etc.).
+    b. Suggest immediate fixes (e.g., add the route to the router, correct the component import, fix navigation path, etc.).
+
+5. Add a **preventive check** in your deployment or build scripts to automatically scan for missing routes/components for all common CRUD actions.
+    - If any are missing, output a warning and fail the build until resolved.
+
+6. Ensure any recent merges or rollbacks did not overwrite or remove route/component registrations. Run a diff check on router files.
+
+7. After implementing fixes, re-test all actions to confirm that no "404 Page Not Found" appears for any valid create, edit, or CRUD action.
+
+**Summary:**  
+Automate the detection of missing or broken routes (especially create/edit) by verifying router registration, navigation links, and component presence. Prevent any 404 errors by running this check before every deployment or feature push.

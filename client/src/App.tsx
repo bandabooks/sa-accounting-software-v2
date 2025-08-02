@@ -103,15 +103,20 @@ import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
 import BulkCapture from "@/pages/bulk-capture-enhanced";
+import SalesDashboard from "@/pages/sales-dashboard";
 import SalesOrders from "@/pages/sales-orders";
 import SalesOrderCreate from "@/pages/sales-order-create";
-import Deliveries from "@/pages/deliveries";
-import SalesDashboard from "@/pages/sales-dashboard";
 import CreditNotes from "@/pages/credit-notes";
+import CreditNoteCreate from "@/pages/credit-note-create";
 import CustomerPayments from "@/pages/customer-payments";
+import CustomerPaymentRecord from "@/pages/customer-payment-record";
+import Deliveries from "@/pages/deliveries";
+import Payments from "@/pages/payments";
+import NewPayment from "@/pages/new-payment";
 import SalesReports from "@/pages/sales-reports";
 import PurchaseDashboard from "@/pages/purchase-dashboard";
 import PurchaseReports from "@/pages/purchase-reports";
+
 import Warehouses from "@/pages/warehouses";
 import LotBatchTracking from "@/pages/lot-batch-tracking";
 import SerialNumbers from "@/pages/serial-numbers";
@@ -121,8 +126,7 @@ import ProductBundles from "@/pages/product-bundles";
 import InventoryReports from "@/pages/inventory-reports";
 import ProductLots from "@/pages/product-lots";
 import ProductSerials from "@/pages/product-serials";
-import Payments from "@/pages/payments";
-import NewPayment from "@/pages/payments/new";
+
 // POS Module imports
 import POSDashboard from "@/pages/pos-dashboard";
 import POSTerminal from "@/pages/pos-terminal";
@@ -212,6 +216,11 @@ function AuthenticatedApp() {
             <InvoiceCreate />
           </ProtectedRoute>
         </Route>
+        <Route path="/invoices/create">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_CREATE}>
+            <InvoiceCreate />
+          </ProtectedRoute>
+        </Route>
         <Route path="/invoices/:id">
           <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
             <InvoiceDetail />
@@ -275,6 +284,16 @@ function AuthenticatedApp() {
         <Route path="/customer-payments">
           <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
             <CustomerPayments />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customer-payments/record">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_CREATE}>
+            <CustomerPaymentRecord />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/credit-notes/create">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_CREATE}>
+            <CreditNoteCreate />
           </ProtectedRoute>
         </Route>
         <Route path="/payments">

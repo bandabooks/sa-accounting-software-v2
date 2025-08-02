@@ -249,7 +249,7 @@ export const salesOrders = pgTable("sales_orders", {
   requiredDate: timestamp("required_date"),
   status: text("status").notNull().default("draft"), // draft, confirmed, in_production, ready_to_ship, shipped, delivered, completed, cancelled
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
   // Status tracking timestamps

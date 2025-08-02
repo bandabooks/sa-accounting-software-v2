@@ -86,17 +86,15 @@ export default function SalesOrderCreate() {
         orderDate: new Date(salesOrderData.orderDate),
         expectedDate: new Date(salesOrderData.expectedDate),
         subtotal: subtotal.toString(),
-        vatAmount: vatAmount.toString(),
+        taxAmount: vatAmount.toString(),
         total: totalAmount.toString(),
         companyId: 2, // TODO: Get from auth context
       };
 
       const salesOrderItems: Omit<InsertSalesOrderItem, 'salesOrderId'>[] = items.map(item => ({
-        productId: item.productId,
         description: item.description,
         quantity: item.quantity.toString(),
         unitPrice: item.unitPrice.toString(),
-        vatRate: item.vatRate.toString(),
         total: item.total.toString(),
         companyId: 2, // TODO: Get from auth context
       }));
