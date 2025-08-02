@@ -9632,22 +9632,52 @@ Format your response as a JSON array of tip objects with "title", "description",
           features: ['VAT Returns', 'Compliance', 'Payments', 'Data Sync']
         },
         {
-          id: 'banking',
-          name: 'Banking Integration',
-          status: 'disconnected',
-          features: ['Bank Statements', 'Balance Updates', 'Transaction Import']
-        },
-        {
-          id: 'payfast',
-          name: 'PayFast Payments',
-          status: 'pending',
-          features: ['Payment Processing', 'Recurring Billing', 'Notifications']
-        },
-        {
           id: 'cipc',
           name: 'CIPC Integration',
           status: 'disconnected',
           features: ['Company Registration', 'Compliance Monitoring', 'Annual Returns']
+        },
+        {
+          id: 'payfast',
+          name: 'PayFast',
+          status: 'disconnected',
+          features: ['Credit & debit card processing', 'EFT payments', 'Recurring billing', '3D Secure authentication']
+        },
+        {
+          id: 'peach',
+          name: 'Peach Payments',
+          status: 'disconnected',
+          features: ['Global payment processing', 'Local SA acquiring', 'Advanced analytics', 'Tokenization']
+        },
+        {
+          id: 'paygate',
+          name: 'PayGate',
+          status: 'disconnected',
+          features: ['3D Secure 2.0', 'Multi-currency processing', 'Tokenization', 'Risk management']
+        },
+        {
+          id: 'stripe',
+          name: 'Stripe',
+          status: 'disconnected',
+          features: ['Global payments', 'Subscription management', 'Fraud detection', 'Developer APIs']
+        },
+        {
+          id: 'yoco',
+          name: 'Yoco',
+          status: 'disconnected',
+          features: ['Card reader integration', 'Online payments', 'Business insights', 'No setup fees']
+        },
+        {
+          id: 'ozow',
+          name: 'Ozow',
+          status: 'disconnected',
+          features: ['Instant EFT payments', 'Real-time verification', 'All major SA banks', 'Lower fees']
+        },
+        {
+          id: 'banking',
+          name: 'Banking Integration',
+          status: 'disconnected',
+          features: ['Bank Statements', 'Balance Updates', 'Transaction Import']
         }
       ];
       

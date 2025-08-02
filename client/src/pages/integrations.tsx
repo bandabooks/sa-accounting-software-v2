@@ -563,6 +563,190 @@ export default function Integrations() {
   );
 }
 
+// Payment Gateway Credentials Form Component
+function PaymentGatewayCredentialsForm({ 
+  gatewayId,
+  gatewayName,
+  onSave, 
+  isLoading 
+}: { 
+  gatewayId: string;
+  gatewayName: string;
+  onSave: (data: any) => void; 
+  isLoading: boolean; 
+}) {
+  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Only send non-empty fields
+    const dataToSend = Object.entries(credentials).reduce((acc, [key, value]) => {
+      if (value && value.trim() !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as any);
+    
+    onSave(dataToSend);
+  };
+
+  const toggleSecretVisibility = (field: string) => {
+    setShowSecrets(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const getFieldsForGateway = (gatewayId: string) => {
+    switch (gatewayId) {
+      case 'payfast':
+        return [
+          { key: 'merchantId', label: 'Merchant ID', type: 'text', placeholder: '10000100', secret: false },
+          { key: 'merchantKey', label: 'Merchant Key', type: 'password', placeholder: '46f0cd694581a', secret: true },
+          { key: 'passphrase', label: 'Passphrase', type: 'password', placeholder: 'Optional passphrase', secret: true },
+          { key: 'environment', label: 'Environment', type: 'select', options: ['sandbox', 'live'], secret: false }
+        ];
+      case 'peach':
+        return [
+          { key: 'userId', label: 'User ID', type: 'text', placeholder: '8a8294174b7ecb28014b9699220015ca', secret: false },
+          { key: 'password', label: 'Password', type: 'password', placeholder: 'sy6KJsT8', secret: true },
+          { key: 'entityId', label: 'Entity ID', type: 'text', placeholder: '8a8294174b7ecb28014b9699220015cc', secret: false },
+          { key: 'environment', label: 'Environment', type: 'select', options: ['test', 'live'], secret: false }
+        ];
+      case 'paygate':
+        return [
+          { key: 'payGateId', label: 'PayGate ID', type: 'text', placeholder: '10011072130', secret: false },
+          { key: 'payGateKey', label: 'PayGate Key', type: 'password', placeholder: 'secret', secret: true },
+          { key: 'environment', label: 'Environment', type: 'select', options: ['test', 'live'], secret: false }
+        ];
+      case 'stripe':
+        return [
+          { key: 'publishableKey', label: 'Publishable Key', type: 'text', placeholder: 'pk_test_...', secret: false },
+          { key: 'secretKey', label: 'Secret Key', type: 'password', placeholder: 'sk_test_...', secret: true },
+          { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', placeholder: 'whsec_...', secret: true },
+          { key: 'environment', label: 'Environment', type: 'select', options: ['test', 'live'], secret: false }
+        ];
+      case 'yoco':
+        return [
+          { key: 'publicKey', label: 'Public Key', type: 'text', placeholder: 'pk_test_...', secret: false },
+          { key: 'secretKey', label: 'Secret Key', type: 'password', placeholder: 'sk_test_...', secret: true },
+          { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', placeholder: 'wh_...', secret: true },
+          { key: 'environment', label: 'Environment', type: 'select', options: ['test', 'live'], secret: false }
+        ];
+      case 'ozow':
+        return [
+          { key: 'siteKey', label: 'Site Key', type: 'text', placeholder: 'TST-TST-TST', secret: false },
+          { key: 'privateKey', label: 'Private Key', type: 'password', placeholder: '215114554d524f28626d06237d18f4aa', secret: true },
+          { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'f9b884bc-2c35-46a5-8f5c-5dfdb6e56b80', secret: true },
+          { key: 'environment', label: 'Environment', type: 'select', options: ['test', 'live'], secret: false }
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const fields = getFieldsForGateway(gatewayId);
+
+  const getDocumentationUrl = (gatewayId: string) => {
+    switch (gatewayId) {
+      case 'payfast': return 'https://developers.payfast.co.za/';
+      case 'peach': return 'https://docs.peachpayments.com/';
+      case 'paygate': return 'https://docs.paygate.co.za/';
+      case 'stripe': return 'https://stripe.com/docs';
+      case 'yoco': return 'https://developer.yoco.com/';
+      case 'ozow': return 'https://docs.ozow.com/';
+      default: return '#';
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Alert>
+        <Shield className="h-4 w-4" />
+        <AlertDescription>
+          <strong>{gatewayName} Integration:</strong> Configure your merchant credentials to enable payment processing. All credentials are encrypted and stored securely.
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {fields.map((field) => (
+          <div key={field.key} className="space-y-2">
+            <Label htmlFor={field.key}>{field.label}</Label>
+            {field.type === 'select' ? (
+              <select
+                id={field.key}
+                value={credentials[field.key] || ''}
+                onChange={(e) => setCredentials(prev => ({ ...prev, [field.key]: e.target.value }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Select {field.label}</option>
+                {field.options?.map((option) => (
+                  <option key={option} value={option} className="capitalize">{option}</option>
+                ))}
+              </select>
+            ) : field.secret ? (
+              <div className="relative">
+                <Input
+                  id={field.key}
+                  type={showSecrets[field.key] ? "text" : "password"}
+                  value={credentials[field.key] || ''}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, [field.key]: e.target.value }))}
+                  placeholder={field.placeholder}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                  onClick={() => toggleSecretVisibility(field.key)}
+                >
+                  {showSecrets[field.key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            ) : (
+              <Input
+                id={field.key}
+                type={field.type}
+                value={credentials[field.key] || ''}
+                onChange={(e) => setCredentials(prev => ({ ...prev, [field.key]: e.target.value }))}
+                placeholder={field.placeholder}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+        <div>
+          <p className="font-medium">Need Help Getting Started?</p>
+          <p className="text-sm text-gray-600">Visit the official {gatewayName} documentation for setup instructions</p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <a href={getDocumentationUrl(gatewayId)} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-4 w-4 mr-2" />
+            View Documentation
+          </a>
+        </Button>
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Shield className="h-4 w-4 mr-2" />
+              Save {gatewayName} Settings
+            </>
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 // SARS Credentials Form Component
 function SARSCredentialsForm({ 
   credentials: initialCredentials, 
