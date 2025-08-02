@@ -1810,49 +1810,49 @@ export default function FinancialReports() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
           
-          <div className="relative p-8 lg:p-12 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-              <div className="space-y-4 flex-1">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <BarChart3 className="h-6 w-6 text-white" />
+          <div className="relative p-4 lg:p-6 text-white">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <BarChart3 className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-purple-100 text-lg font-medium">Financial Reporting</span>
+                  <span className="text-purple-100 text-sm font-medium">Financial Reporting</span>
                 </div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-white tracking-tight">
+                <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
                   Financial Reports
                 </h1>
-                <p className="text-purple-100 text-xl font-medium">
+                <p className="text-purple-100 text-sm">
                   Complete financial statements and analysis dashboard
                 </p>
               </div>
 
-              {/* Date Range Selector */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-4 lg:min-w-[300px]">
-                <h3 className="text-white font-semibold mb-3">Report Parameters</h3>
-                <div className="space-y-3">
+              {/* Date Range Selector - Vertical Stack */}
+              <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-3 lg:min-w-[220px]">
+                <h3 className="text-white font-semibold mb-2 text-sm">Report Parameters</h3>
+                <div className="space-y-2">
                   <div>
-                    <Label htmlFor="dateFrom" className="text-purple-100 text-sm">From Date</Label>
+                    <Label htmlFor="dateFrom" className="text-purple-100 text-xs">From Date</Label>
                     <Input
                       id="dateFrom"
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="mt-1 bg-white/20 border-white/30 text-white placeholder-purple-200"
+                      className="mt-1 bg-white/20 border-white/30 text-white placeholder-purple-200 text-sm h-8"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="dateTo" className="text-purple-100 text-sm">To Date</Label>
+                    <Label htmlFor="dateTo" className="text-purple-100 text-xs">To Date</Label>
                     <Input
                       id="dateTo"
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
-                      className="mt-1 bg-white/20 border-white/30 text-white placeholder-purple-200"
+                      className="mt-1 bg-white/20 border-white/30 text-white placeholder-purple-200 text-sm h-8"
                     />
                   </div>
-                  <Button className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30">
-                    <Filter className="h-4 w-4 mr-2" />
+                  <Button className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 text-sm h-8 mt-2">
+                    <Filter className="h-3 w-3 mr-1" />
                     Apply Filters
                   </Button>
                 </div>
