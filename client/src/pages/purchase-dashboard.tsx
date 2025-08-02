@@ -32,141 +32,218 @@ export default function PurchaseDashboard() {
   const isLoading = statsLoading || ordersLoading || suppliersLoading || expensesLoading;
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Purchase Dashboard</h1>
-          <p className="text-gray-600 mt-1">Monitor and manage all your purchase activities</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Link href="/purchase-orders">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Purchase Order
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Purchases</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R {purchaseStats.totalPurchases?.toLocaleString() || '0'}</div>
-            <div className="flex items-center text-xs text-gray-600">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              {purchaseStats.purchaseGrowth ? `${purchaseStats.purchaseGrowth}%` : '0%'} from last month
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{purchaseStats.pendingOrders || 0}</div>
-            <div className="flex items-center text-xs text-gray-600">
-              <Clock className="h-3 w-3 mr-1" />
-              {purchaseStats.avgProcessingTime || '0 days'} avg processing
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding Amount</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R {purchaseStats.outstandingAmount?.toLocaleString() || '0'}</div>
-            <div className="flex items-center text-xs text-gray-600">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              {purchaseStats.overdueInvoices || 0} overdue invoices
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Suppliers</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{purchaseStats.activeSuppliers || 0}</div>
-            <div className="flex items-center text-xs text-green-600">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              {purchaseStats.newSuppliers || 0} new this month
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Target className="h-5 w-5 mr-2" />
-            Quick Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link href="/purchase-orders">
-              <Button variant="outline" className="w-full h-20 flex flex-col">
-                <ShoppingCart className="h-6 w-6 mb-2" />
-                <span className="text-sm">New Purchase Order</span>
-              </Button>
-            </Link>
-            <Link href="/suppliers">
-              <Button variant="outline" className="w-full h-20 flex flex-col">
-                <Building2 className="h-6 w-6 mb-2" />
-                <span className="text-sm">Add Supplier</span>
-              </Button>
-            </Link>
-            <Link href="/expenses">
-              <Button variant="outline" className="w-full h-20 flex flex-col">
-                <Receipt className="h-6 w-6 mb-2" />
-                <span className="text-sm">Record Expense</span>
-              </Button>
-            </Link>
-            <Link href="/three-way-matching">
-              <Button variant="outline" className="w-full h-20 flex flex-col">
-                <CheckCircle className="h-6 w-6 mb-2" />
-                <span className="text-sm">3-Way Matching</span>
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Activities */}
-      <Tabs defaultValue="orders" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="orders">Recent Purchase Orders</TabsTrigger>
-          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-          <TabsTrigger value="expenses">Recent Expenses</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="orders" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Recent Purchase Orders
-                </span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+      <div className="container mx-auto px-4 py-6 space-y-8">
+        {/* Enhanced Header */}
+        <div className="relative">
+          {/* Background Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-2xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
+          
+          {/* Header Content */}
+          <div className="relative p-8 text-white">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <h1 className="text-4xl font-bold text-white tracking-tight">Purchase Dashboard</h1>
+                <p className="text-blue-100 text-lg font-medium">Monitor and manage all your purchase activities with precision</p>
+                <div className="flex items-center gap-3 mt-4">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <DollarSign className="h-4 w-4" />
+                    <span className="text-sm font-medium">Real-time Data</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-sm font-medium">Live Analytics</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
                 <Link href="/purchase-orders">
-                  <Button variant="outline" size="sm">View All</Button>
+                  <Button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <Plus className="h-5 w-5 mr-2" />
+                    New Purchase Order
+                  </Button>
                 </Link>
-              </CardTitle>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Purchases Card */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-100">Total Purchases</CardTitle>
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-white mb-2">R {purchaseStats.totalPurchases?.toLocaleString() || '0'}</div>
+              <div className="flex items-center text-sm text-blue-100">
+                <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>{purchaseStats.purchaseGrowth ? `${purchaseStats.purchaseGrowth}%` : '0%'}</span>
+                </div>
+                <span className="ml-2">from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pending Orders Card */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 text-white transform hover:scale-105 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-orange-100">Pending Orders</CardTitle>
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-white mb-2">{purchaseStats.pendingOrders || 0}</div>
+              <div className="flex items-center text-sm text-orange-100">
+                <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                  <Clock className="h-3 w-3" />
+                  <span>{purchaseStats.avgProcessingTime || '0 days'}</span>
+                </div>
+                <span className="ml-2">avg processing</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Outstanding Amount Card */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-red-500 via-red-600 to-pink-600 text-white transform hover:scale-105 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-red-100">Outstanding Amount</CardTitle>
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                <CreditCard className="h-5 w-5 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-white mb-2">R {purchaseStats.outstandingAmount?.toLocaleString() || '0'}</div>
+              <div className="flex items-center text-sm text-red-100">
+                <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>{purchaseStats.overdueInvoices || 0}</span>
+                </div>
+                <span className="ml-2">overdue invoices</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Suppliers Card */}
+          <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 text-white transform hover:scale-105 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-green-100">Active Suppliers</CardTitle>
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-white mb-2">{purchaseStats.activeSuppliers || 0}</div>
+              <div className="flex items-center text-sm text-green-100">
+                <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                  <CheckCircle className="h-3 w-3" />
+                  <span>{purchaseStats.newSuppliers || 0}</span>
+                </div>
+                <span className="ml-2">new this month</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Enhanced Quick Actions */}
+        <Card className="relative overflow-hidden border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-50/50 to-blue-50/50"></div>
+          <CardHeader className="relative">
+            <CardTitle className="flex items-center text-gray-800">
+              <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg mr-3">
+                <Target className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-semibold">Quick Actions</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <Link href="/purchase-orders">
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105"></div>
+                  <Button variant="outline" className="relative w-full h-24 flex flex-col bg-white/80 backdrop-blur-sm border-gray-200 hover:border-transparent group-hover:text-white transition-all duration-300 shadow-lg">
+                    <div className="p-2 bg-blue-100 group-hover:bg-white/20 rounded-lg mb-2 transition-all duration-300">
+                      <ShoppingCart className="h-6 w-6 text-blue-600 group-hover:text-white transition-colors duration-300" />
+                    </div>
+                    <span className="text-sm font-medium">New Purchase Order</span>
+                  </Button>
+                </div>
+              </Link>
+              <Link href="/suppliers">
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105"></div>
+                  <Button variant="outline" className="relative w-full h-24 flex flex-col bg-white/80 backdrop-blur-sm border-gray-200 hover:border-transparent group-hover:text-white transition-all duration-300 shadow-lg">
+                    <div className="p-2 bg-green-100 group-hover:bg-white/20 rounded-lg mb-2 transition-all duration-300">
+                      <Building2 className="h-6 w-6 text-green-600 group-hover:text-white transition-colors duration-300" />
+                    </div>
+                    <span className="text-sm font-medium">Add Supplier</span>
+                  </Button>
+                </div>
+              </Link>
+              <Link href="/expenses">
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105"></div>
+                  <Button variant="outline" className="relative w-full h-24 flex flex-col bg-white/80 backdrop-blur-sm border-gray-200 hover:border-transparent group-hover:text-white transition-all duration-300 shadow-lg">
+                    <div className="p-2 bg-orange-100 group-hover:bg-white/20 rounded-lg mb-2 transition-all duration-300">
+                      <Receipt className="h-6 w-6 text-orange-600 group-hover:text-white transition-colors duration-300" />
+                    </div>
+                    <span className="text-sm font-medium">Record Expense</span>
+                  </Button>
+                </div>
+              </Link>
+              <Link href="/three-way-matching">
+                <div className="group relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105"></div>
+                  <Button variant="outline" className="relative w-full h-24 flex flex-col bg-white/80 backdrop-blur-sm border-gray-200 hover:border-transparent group-hover:text-white transition-all duration-300 shadow-lg">
+                    <div className="p-2 bg-purple-100 group-hover:bg-white/20 rounded-lg mb-2 transition-all duration-300">
+                      <CheckCircle className="h-6 w-6 text-purple-600 group-hover:text-white transition-colors duration-300" />
+                    </div>
+                    <span className="text-sm font-medium">3-Way Matching</span>
+                  </Button>
+                </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Enhanced Recent Activities */}
+        <Tabs defaultValue="orders" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-800">Recent Activities</h2>
+            <TabsList className="bg-white/80 backdrop-blur-sm shadow-lg border border-gray-200">
+              <TabsTrigger value="orders" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white">Recent Purchase Orders</TabsTrigger>
+              <TabsTrigger value="suppliers" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white">Suppliers</TabsTrigger>
+              <TabsTrigger value="expenses" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white">Recent Expenses</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="orders" className="space-y-4">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50"></div>
+              <CardHeader className="relative">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center text-gray-800">
+                    <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg mr-3">
+                      <Package className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-xl font-semibold">Recent Purchase Orders</span>
+                  </span>
+                  <Link href="/purchase-orders">
+                    <Button variant="outline" size="sm" className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600 hover:text-white hover:border-transparent transition-all duration-300">View All</Button>
+                  </Link>
+                </CardTitle>
+              </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="space-y-3">
@@ -182,25 +259,31 @@ export default function PurchaseDashboard() {
                 </div>
               ) : recentPurchaseOrders.length > 0 ? (
                 <div className="space-y-4">
-                  {recentPurchaseOrders.slice(0, 5).map((order: any) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="bg-blue-100 p-2 rounded-lg">
-                          <Package className="h-5 w-5 text-blue-600" />
+                    {recentPurchaseOrders.slice(0, 5).map((order: any) => (
+                      <div key={order.id} className="flex items-center justify-between p-5 bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02]">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow-md">
+                            <Package className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">{order.orderNumber}</p>
+                            <p className="text-sm text-gray-600">{order.supplier?.name}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{order.orderNumber}</p>
-                          <p className="text-sm text-gray-600">{order.supplier?.name}</p>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-800">R {order.totalAmount?.toLocaleString()}</p>
+                          <Badge 
+                            className={`${
+                              order.status === 'pending' 
+                                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white border-0' 
+                                : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0'
+                            } shadow-md`}
+                          >
+                            {order.status}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">R {order.totalAmount?.toLocaleString()}</p>
-                        <Badge variant={order.status === 'pending' ? 'secondary' : 'default'}>
-                          {order.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -211,21 +294,24 @@ export default function PurchaseDashboard() {
                   </Link>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="suppliers" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center">
-                  <Building2 className="h-5 w-5 mr-2" />
-                  Active Suppliers
-                </span>
-                <Link href="/suppliers">
-                  <Button variant="outline" size="sm">Manage All</Button>
-                </Link>
+          <TabsContent value="suppliers" className="space-y-4">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-50/50 to-emerald-50/50"></div>
+              <CardHeader className="relative">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center text-gray-800">
+                    <div className="p-2 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg mr-3">
+                      <Building2 className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-xl font-semibold">Active Suppliers</span>
+                  </span>
+                  <Link href="/suppliers">
+                    <Button variant="outline" size="sm" className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-gradient-to-r hover:from-green-600 hover:to-emerald-600 hover:text-white hover:border-transparent transition-all duration-300">Manage All</Button>
+                  </Link>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -243,22 +329,24 @@ export default function PurchaseDashboard() {
                 </div>
               ) : recentSuppliers.length > 0 ? (
                 <div className="space-y-4">
-                  {recentSuppliers.slice(0, 5).map((supplier: any) => (
-                    <div key={supplier.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="bg-green-100 p-2 rounded-lg">
-                          <Building2 className="h-5 w-5 text-green-600" />
+                    {recentSuppliers.slice(0, 5).map((supplier: any) => (
+                      <div key={supplier.id} className="flex items-center justify-between p-5 bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02]">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow-md">
+                            <Building2 className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">{supplier.name}</p>
+                            <p className="text-sm text-gray-600">{supplier.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{supplier.name}</p>
-                          <p className="text-sm text-gray-600">{supplier.email}</p>
+                        <div className="text-right">
+                          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md">
+                            {supplier.category || 'General'}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <Badge variant="outline">{supplier.category || 'General'}</Badge>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -271,21 +359,24 @@ export default function PurchaseDashboard() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="expenses" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center">
-                  <Receipt className="h-5 w-5 mr-2" />
-                  Recent Expenses
-                </span>
-                <Link href="/expenses">
-                  <Button variant="outline" size="sm">View All</Button>
-                </Link>
-              </CardTitle>
-            </CardHeader>
+          <TabsContent value="expenses" className="space-y-4">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-50/50 to-red-50/50"></div>
+              <CardHeader className="relative">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center text-gray-800">
+                    <div className="p-2 bg-gradient-to-r from-orange-600 to-red-600 rounded-lg mr-3">
+                      <Receipt className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-xl font-semibold">Recent Expenses</span>
+                  </span>
+                  <Link href="/expenses">
+                    <Button variant="outline" size="sm" className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-gradient-to-r hover:from-orange-600 hover:to-red-600 hover:text-white hover:border-transparent transition-all duration-300">View All</Button>
+                  </Link>
+                </CardTitle>
+              </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="space-y-3">
@@ -301,23 +392,23 @@ export default function PurchaseDashboard() {
                 </div>
               ) : recentExpenses.length > 0 ? (
                 <div className="space-y-4">
-                  {recentExpenses.slice(0, 5).map((expense: any) => (
-                    <div key={expense.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="bg-orange-100 p-2 rounded-lg">
-                          <Receipt className="h-5 w-5 text-orange-600" />
+                    {recentExpenses.slice(0, 5).map((expense: any) => (
+                      <div key={expense.id} className="flex items-center justify-between p-5 bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02]">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 bg-gradient-to-r from-orange-600 to-red-600 rounded-lg shadow-md">
+                            <Receipt className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">{expense.description}</p>
+                            <p className="text-sm text-gray-600">{expense.category}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{expense.description}</p>
-                          <p className="text-sm text-gray-600">{expense.category}</p>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-800">R {expense.amount?.toLocaleString()}</p>
+                          <p className="text-sm text-gray-600">{new Date(expense.date).toLocaleDateString()}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">R {expense.amount?.toLocaleString()}</p>
-                        <p className="text-sm text-gray-600">{new Date(expense.date).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -328,10 +419,11 @@ export default function PurchaseDashboard() {
                   </Link>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
