@@ -440,44 +440,119 @@ export default function Integrations() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Integration List */}
         <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Available Integrations</CardTitle>
-              <CardDescription>Select an integration to configure</CardDescription>
+          <Card className="bg-gradient-to-br from-white to-gray-50 border-gray-200 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-100 border-b border-gray-200">
+              <CardTitle className="text-lg flex items-center text-gray-800">
+                <Zap className="h-5 w-5 mr-2 text-blue-600" />
+                Available Integrations
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Select an integration to configure and manage
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               {integrationCategories.map((category) => (
-                <div key={category.id} className="space-y-2">
-                  <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">
-                    {category.name}
-                  </h3>
+                <div key={category.id} className="space-y-3">
+                  <div className={`p-3 rounded-lg ${
+                    category.id === 'compliance' 
+                      ? 'bg-gradient-to-r from-red-50 to-pink-50 border border-red-100' 
+                      : category.id === 'payments'
+                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100'
+                      : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100'
+                  }`}>
+                    <h3 className={`font-bold text-sm uppercase tracking-wide flex items-center ${
+                      category.id === 'compliance' ? 'text-red-700' :
+                      category.id === 'payments' ? 'text-green-700' : 'text-blue-700'
+                    }`}>
+                      {category.id === 'compliance' && <Shield className="h-4 w-4 mr-2" />}
+                      {category.id === 'payments' && <CreditCard className="h-4 w-4 mr-2" />}
+                      {category.id === 'financial' && <Landmark className="h-4 w-4 mr-2" />}
+                      {category.name}
+                    </h3>
+                  </div>
+                  
                   {category.integrations.map((integrationId) => {
                     const integration = allIntegrations.find(i => i.id === integrationId);
                     if (!integration) return null;
                     
                     const Icon = integration.icon;
+                    const isSelected = selectedIntegration === integration.id;
+                    
                     return (
                       <button
                         key={integration.id}
                         onClick={() => setSelectedIntegration(integration.id)}
-                        className={`w-full p-3 text-left rounded-lg border transition-colors ${
-                          selectedIntegration === integration.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:bg-gray-50'
+                        className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-200 transform hover:scale-[1.02] ${
+                          isSelected
+                            ? 'border-blue-500 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-lg shadow-blue-100'
+                            : integration.status === 'connected'
+                            ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 hover:border-green-300 hover:shadow-md shadow-green-50'
+                            : integration.status === 'pending'
+                            ? 'border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 hover:border-yellow-300 hover:shadow-md shadow-yellow-50'
+                            : 'border-gray-200 bg-gradient-to-br from-gray-50 to-slate-50 hover:border-gray-300 hover:shadow-md'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <Icon className="h-5 w-5 text-gray-600" />
-                            <div>
-                              <p className="font-medium text-sm">{integration.name}</p>
-                              <Badge className={`text-xs ${getStatusColor(integration.status)}`}>
-                                {getStatusIcon(integration.status)}
-                                <span className="ml-1 capitalize">{integration.status}</span>
-                              </Badge>
+                            <div className={`p-2 rounded-lg ${
+                              isSelected 
+                                ? 'bg-blue-100 text-blue-600' 
+                                : integration.status === 'connected'
+                                ? 'bg-green-100 text-green-600'
+                                : integration.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-600' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1">
+                              <p className={`font-semibold text-sm mb-1 ${
+                                isSelected ? 'text-blue-700' : 'text-gray-800'
+                              }`}>
+                                {integration.name}
+                              </p>
+                              <div className="flex items-center space-x-2">
+                                <Badge className={`text-xs font-medium border ${
+                                  integration.status === 'connected'
+                                    ? 'bg-green-100 text-green-700 border-green-200'
+                                    : integration.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                                }`}>
+                                  {getStatusIcon(integration.status)}
+                                  <span className="ml-1 capitalize">{integration.status}</span>
+                                </Badge>
+                              </div>
                             </div>
                           </div>
+                          {isSelected && (
+                            <div className="flex-shrink-0">
+                              <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
+                            </div>
+                          )}
                         </div>
+                        
+                        {/* Mini features preview for selected item */}
+                        {isSelected && (
+                          <div className="mt-3 pt-3 border-t border-blue-200">
+                            <p className="text-xs text-blue-600 font-medium mb-2">
+                              {integration.features.length} features available
+                            </p>
+                            <div className="grid grid-cols-1 gap-1">
+                              {integration.features.slice(0, 3).map((feature, idx) => (
+                                <div key={idx} className="flex items-center space-x-2">
+                                  <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                  <span className="text-xs text-gray-600 truncate">{feature}</span>
+                                </div>
+                              ))}
+                              {integration.features.length > 3 && (
+                                <p className="text-xs text-blue-500 font-medium">
+                                  +{integration.features.length - 3} more features
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
