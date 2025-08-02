@@ -5,7 +5,8 @@ import {
   Plus, Eye, Edit, Trash2, FileText, Send, CheckCircle, AlertCircle, Clock,
   DollarSign, TrendingUp, Users, Calendar, Filter, Search, Download,
   MoreHorizontal, CreditCard, Zap, Target, Award, ArrowUpRight,
-  BarChart3, PieChart, Timer, Bell, Star, Building
+  BarChart3, PieChart, Timer, Bell, Star, Building, Copy, Mail,
+  Pencil, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { MiniDashboard } from "@/components/MiniDashboard";
@@ -31,6 +34,23 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  
+  // Navigation functions for invoice cards
+  const getNextInvoice = (currentId: number) => {
+    const currentIndex = filteredInvoices.findIndex(inv => inv.id === currentId);
+    if (currentIndex < filteredInvoices.length - 1) {
+      return filteredInvoices[currentIndex + 1];
+    }
+    return null;
+  };
+  
+  const getPreviousInvoice = (currentId: number) => {
+    const currentIndex = filteredInvoices.findIndex(inv => inv.id === currentId);
+    if (currentIndex > 0) {
+      return filteredInvoices[currentIndex - 1];
+    }
+    return null;
+  };
   
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["/api/invoices"],
@@ -426,23 +446,129 @@ export default function Invoices() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2">
-                      <Button asChild className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                        <Link href={`/invoices/${invoice.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Link>
-                      </Button>
-                      {invoice.status === 'draft' && (
-                        <Button className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {/* Enhanced Action Buttons with Tooltips and Dropdown */}
+                    <TooltipProvider>
+                      <div className="flex gap-2 pt-2">
+                        {/* Primary View Button */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button asChild className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                              <Link href={`/invoices/${invoice.id}`}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View invoice details and payment history</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Edit Button */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button asChild className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                              <Link href={`/invoice-create?edit=${invoice.id}`}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Edit invoice details</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Send Button (Draft only) */}
+                        {invoice.status === 'draft' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Send invoice to customer via email</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        {/* More Actions Dropdown */}
+                        <DropdownMenu>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>More actions and options</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/invoices/${invoice.id}/duplicate`} className="flex items-center">
+                                <Copy className="h-4 w-4 mr-2" />
+                                Duplicate Invoice
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Mail className="h-4 w-4 mr-2" />
+                              Send Reminder
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Invoice
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Functional Navigation Arrows */}
+                        <div className="flex gap-1 ml-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {getPreviousInvoice(invoice.id) ? (
+                                <Button asChild size="sm" variant="outline" className="p-1 h-8 w-8 bg-white/80 hover:bg-gray-100 border-gray-200">
+                                  <Link href={`/invoices/${getPreviousInvoice(invoice.id)?.id}`}>
+                                    <ChevronLeft className="h-3 w-3" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant="outline" className="p-1 h-8 w-8 bg-gray-200/50 border-gray-200 cursor-not-allowed opacity-50" disabled>
+                                  <ChevronLeft className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{getPreviousInvoice(invoice.id) ? `Previous: ${getPreviousInvoice(invoice.id)?.invoiceNumber}` : 'No previous invoice'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {getNextInvoice(invoice.id) ? (
+                                <Button asChild size="sm" variant="outline" className="p-1 h-8 w-8 bg-white/80 hover:bg-gray-100 border-gray-200">
+                                  <Link href={`/invoices/${getNextInvoice(invoice.id)?.id}`}>
+                                    <ChevronRight className="h-3 w-3" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant="outline" className="p-1 h-8 w-8 bg-gray-200/50 border-gray-200 cursor-not-allowed opacity-50" disabled>
+                                  <ChevronRight className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{getNextInvoice(invoice.id) ? `Next: ${getNextInvoice(invoice.id)?.invoiceNumber}` : 'No next invoice'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </TooltipProvider>
                   </CardContent>
                 </Card>
               );
@@ -529,18 +655,83 @@ export default function Invoices() {
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="flex gap-2 justify-end">
-                              <Button asChild size="sm" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0">
-                                <Link href={`/invoices/${invoice.id}`}>
-                                  <Eye className="h-3 w-3" />
-                                </Link>
-                              </Button>
-                              {invoice.status === 'draft' && (
-                                <Button size="sm" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0">
-                                  <Send className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
+                            <TooltipProvider>
+                              <div className="flex gap-2 justify-end">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button asChild size="sm" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0">
+                                      <Link href={`/invoices/${invoice.id}`}>
+                                        <Eye className="h-3 w-3" />
+                                      </Link>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>View invoice details</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button asChild size="sm" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0">
+                                      <Link href={`/invoice-create?edit=${invoice.id}`}>
+                                        <Pencil className="h-3 w-3" />
+                                      </Link>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit invoice</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                {invoice.status === 'draft' && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button size="sm" className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white border-0">
+                                        <Send className="h-3 w-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Send invoice</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+
+                                <DropdownMenu>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button size="sm" className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0">
+                                          <MoreHorizontal className="h-3 w-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>More actions</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/invoices/${invoice.id}/duplicate`} className="flex items-center">
+                                        <Copy className="h-4 w-4 mr-2" />
+                                        Duplicate Invoice
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Download PDF
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Mail className="h-4 w-4 mr-2" />
+                                      Send Reminder
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600">
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Invoice
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TooltipProvider>
                           </td>
                         </tr>
                       );
