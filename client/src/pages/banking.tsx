@@ -65,6 +65,8 @@ export default function Banking() {
   const [selectedAccount, setSelectedAccount] = useState<BankAccountWithTransactions | null>(null);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [showTransactionDialog, setShowTransactionDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<BankAccountWithTransactions | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -93,6 +95,20 @@ export default function Banking() {
     },
   });
 
+  const updateAccountMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<BankAccountForm> }) => 
+      apiRequest(`/api/bank-accounts/${id}`, "PATCH", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      setShowEditDialog(false);
+      setEditingAccount(null);
+      toast({ title: "Success", description: "Bank account updated successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: "Failed to update bank account", variant: "destructive" });
+    },
+  });
+
   const createTransactionMutation = useMutation({
     mutationFn: (data: TransactionForm) => apiRequest("/api/bank-transactions", "POST", data),
     onSuccess: () => {
@@ -106,6 +122,20 @@ export default function Banking() {
   });
 
   const accountForm = useForm<BankAccountForm>({
+    resolver: zodResolver(bankAccountSchema),
+    defaultValues: {
+      accountName: "",
+      bankName: "",
+      accountNumber: "",
+      branchCode: "",
+      accountType: "current",
+      currency: "ZAR",
+      openingBalance: "0.00",
+      notes: "",
+    },
+  });
+
+  const editAccountForm = useForm<BankAccountForm>({
     resolver: zodResolver(bankAccountSchema),
     defaultValues: {
       accountName: "",
@@ -138,6 +168,28 @@ export default function Banking() {
 
   const onCreateTransaction = (data: TransactionForm) => {
     createTransactionMutation.mutate(data);
+  };
+
+  const onUpdateAccount = (data: BankAccountForm) => {
+    if (editingAccount) {
+      updateAccountMutation.mutate({ id: editingAccount.id, data });
+    }
+  };
+
+  const handleEditAccount = (account: BankAccountWithTransactions) => {
+    setEditingAccount(account);
+    editAccountForm.reset({
+      accountName: account.accountName,
+      bankName: account.bankName,
+      accountNumber: account.accountNumber,
+      branchCode: account.branchCode || "",
+      accountType: account.accountType,
+      currency: account.currency,
+      openingBalance: account.openingBalance,
+      notes: account.notes || "",
+      chartAccountId: account.chartAccountId || undefined,
+    });
+    setShowEditDialog(true);
   };
 
   const totalBalance = bankAccounts.reduce((sum: number, account: BankAccountWithTransactions) => 
@@ -555,6 +607,7 @@ export default function Banking() {
                       variant="outline" 
                       size="sm" 
                       className="px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                      onClick={() => handleEditAccount(account)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -684,6 +737,176 @@ export default function Banking() {
             </form>
           </Form>
         </DialogContent>
+        </Dialog>
+
+        {/* Edit Account Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Bank Account</DialogTitle>
+            </DialogHeader>
+            <Form {...editAccountForm}>
+              <form onSubmit={editAccountForm.handleSubmit(onUpdateAccount)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editAccountForm.control}
+                    name="accountName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Main Business Account" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editAccountForm.control}
+                    name="bankName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bank Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Standard Bank" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editAccountForm.control}
+                    name="accountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123456789" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editAccountForm.control}
+                    name="branchCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Branch Code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="051001" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={editAccountForm.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="current">Current</SelectItem>
+                            <SelectItem value="savings">Savings</SelectItem>
+                            <SelectItem value="credit">Credit</SelectItem>
+                            <SelectItem value="loan">Loan</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editAccountForm.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Currency</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ZAR" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editAccountForm.control}
+                    name="openingBalance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Opening Balance</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={editAccountForm.control}
+                  name="chartAccountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link to Chart Account (Optional)</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                        value={field.value?.toString() || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select chart account" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {chartAccounts
+                            .filter(account => account.accountType === "Asset")
+                            .map((account) => (
+                              <SelectItem key={account.id} value={account.id.toString()}>
+                                {account.accountCode} - {account.accountName}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editAccountForm.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Additional notes about this account..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateAccountMutation.isPending}>
+                    {updateAccountMutation.isPending ? "Updating..." : "Update Account"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
         </Dialog>
       </div>
     </div>
