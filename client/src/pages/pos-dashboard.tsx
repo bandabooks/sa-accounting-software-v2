@@ -18,8 +18,10 @@ import {
   Calendar
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useLocation } from 'wouter';
 
 export default function POSDashboard() {
+  const [, setLocation] = useLocation();
   // Data Queries
   const { data: terminals = [] } = useQuery<any[]>({
     queryKey: ['/api/pos/terminals'],
@@ -62,7 +64,10 @@ export default function POSDashboard() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-green-300 hover:bg-green-50"
+          onClick={() => setLocation("/business-reports?report=sales")}
+        >
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <DollarSign className="h-8 w-8 text-green-600" />
@@ -74,7 +79,10 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-blue-300 hover:bg-blue-50"
+          onClick={() => setLocation("/pos/terminal")}
+        >
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Receipt className="h-8 w-8 text-blue-600" />
@@ -86,7 +94,10 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-orange-300 hover:bg-orange-50"
+          onClick={() => setLocation("/pos/shifts")}
+        >
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Clock className="h-8 w-8 text-orange-600" />
@@ -98,7 +109,10 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-purple-300 hover:bg-purple-50"
+          onClick={() => setLocation("/pos/terminals")}
+        >
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Terminal className="h-8 w-8 text-purple-600" />

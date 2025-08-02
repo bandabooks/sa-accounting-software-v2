@@ -1,5 +1,6 @@
 import { AlertTriangle, Clock, Package, FileText, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 interface Alert {
   type: 'overdue' | 'stock' | 'vat' | 'compliance';
@@ -13,6 +14,7 @@ interface ComplianceAlertsProps {
 }
 
 export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
+  const [, setLocation] = useLocation();
   const getAlertIcon = (type: string) => {
     switch (type) {
       case 'overdue':
@@ -54,7 +56,7 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
     );
   };
 
-  const getActionButton = (action: string, severity: string) => {
+  const getActionButton = (action: string, severity: string, alertType: string) => {
     const buttonVariant = severity === 'high' ? 'destructive' : severity === 'medium' ? 'default' : 'secondary';
     
     const actionLabels = {
@@ -64,15 +66,56 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
       'review-compliance': 'Review Compliance'
     };
 
+    const handleActionClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      
+      switch (alertType) {
+        case 'overdue':
+          setLocation('/invoices?filter=overdue');
+          break;
+        case 'stock':
+          setLocation('/inventory?filter=low-stock');
+          break;
+        case 'vat':
+          setLocation('/vat-returns');
+          break;
+        case 'compliance':
+          setLocation('/compliance-center');
+          break;
+        default:
+          setLocation('/dashboard');
+      }
+    };
+
     return (
       <Button 
         variant={buttonVariant} 
         size="sm"
         className="h-8 px-3 text-xs"
+        onClick={handleActionClick}
       >
         {actionLabels[action as keyof typeof actionLabels] || 'Take Action'}
       </Button>
     );
+  };
+
+  const handleAlertClick = (alertType: string) => {
+    switch (alertType) {
+      case 'overdue':
+        setLocation('/invoices?filter=overdue');
+        break;
+      case 'stock':
+        setLocation('/inventory?filter=low-stock');
+        break;
+      case 'vat':
+        setLocation('/vat-returns');
+        break;
+      case 'compliance':
+        setLocation('/compliance-center');
+        break;
+      default:
+        setLocation('/dashboard');
+    }
   };
 
   if (!alerts || alerts.length === 0) {
@@ -130,7 +173,11 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
           const colorClass = getAlertColor(alert.severity);
           
           return (
-            <div key={`high-${index}`} className={`border rounded-lg p-4 ${colorClass}`}>
+            <div 
+              key={`high-${index}`} 
+              className={`border rounded-lg p-4 ${colorClass} cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md`}
+              onClick={() => handleAlertClick(alert.type)}
+            >
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
                   <IconComponent size={20} />
@@ -148,7 +195,7 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
                     <p className="text-xs opacity-75">
                       Requires immediate attention
                     </p>
-                    {getActionButton(alert.action, alert.severity)}
+                    {getActionButton(alert.action, alert.severity, alert.type)}
                   </div>
                 </div>
               </div>
@@ -162,7 +209,11 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
           const colorClass = getAlertColor(alert.severity);
           
           return (
-            <div key={`medium-${index}`} className={`border rounded-lg p-4 ${colorClass}`}>
+            <div 
+              key={`medium-${index}`} 
+              className={`border rounded-lg p-4 ${colorClass} cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md`}
+              onClick={() => handleAlertClick(alert.type)}
+            >
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
                   <IconComponent size={20} />
@@ -180,7 +231,7 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
                     <p className="text-xs opacity-75">
                       Should be addressed soon
                     </p>
-                    {getActionButton(alert.action, alert.severity)}
+                    {getActionButton(alert.action, alert.severity, alert.type)}
                   </div>
                 </div>
               </div>
@@ -194,7 +245,11 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
           const colorClass = getAlertColor(alert.severity);
           
           return (
-            <div key={`low-${index}`} className={`border rounded-lg p-3 ${colorClass}`}>
+            <div 
+              key={`low-${index}`} 
+              className={`border rounded-lg p-3 ${colorClass} cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md`}
+              onClick={() => handleAlertClick(alert.type)}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <IconComponent size={16} />
@@ -205,7 +260,7 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
                 </div>
                 <div className="flex items-center space-x-2">
                   {getSeverityBadge(alert.severity)}
-                  {getActionButton(alert.action, alert.severity)}
+                  {getActionButton(alert.action, alert.severity, alert.type)}
                 </div>
               </div>
             </div>

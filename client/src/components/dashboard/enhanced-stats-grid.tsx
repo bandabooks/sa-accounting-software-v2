@@ -1,6 +1,7 @@
 import { ChartLine, Clock, Users, Receipt, TrendingUp, TrendingDown, Banknote, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
 import BankComplianceCard from "./bank-compliance-card";
+import { useLocation } from "wouter";
 
 interface EnhancedStatsGridProps {
   stats: {
@@ -45,6 +46,8 @@ interface EnhancedStatsGridProps {
 }
 
 export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
+  const [, setLocation] = useLocation();
+
   const mainStatCards = [
     {
       title: "Total Revenue",
@@ -53,7 +56,8 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       changeType: "positive",
       icon: ChartLine,
       iconBg: "bg-green-100 dark:bg-green-900/20",
-      iconColor: "text-green-600 dark:text-green-400"
+      iconColor: "text-green-600 dark:text-green-400",
+      onClick: () => setLocation("/financial-reports?report=profit-loss")
     },
     {
       title: "Outstanding Invoices", 
@@ -62,7 +66,8 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       changeType: "neutral",
       icon: Clock,
       iconBg: "bg-amber-100 dark:bg-amber-900/20",
-      iconColor: "text-amber-600 dark:text-amber-400"
+      iconColor: "text-amber-600 dark:text-amber-400",
+      onClick: () => setLocation("/invoices?filter=outstanding")
     },
     {
       title: "Total Customers",
@@ -71,7 +76,8 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       changeType: "positive",
       icon: Users,
       iconBg: "bg-blue-100 dark:bg-blue-900/20",
-      iconColor: "text-blue-600 dark:text-blue-400"
+      iconColor: "text-blue-600 dark:text-blue-400",
+      onClick: () => setLocation("/customers")
     },
     {
       title: "VAT Due",
@@ -80,7 +86,8 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       changeType: "warning",
       icon: Receipt,
       iconBg: "bg-red-100 dark:bg-red-900/20",
-      iconColor: "text-red-600 dark:text-red-400"
+      iconColor: "text-red-600 dark:text-red-400",
+      onClick: () => setLocation("/vat-returns")
     }
   ];
 
@@ -99,7 +106,8 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       },
       icon: TrendingUp,
       iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
-      iconColor: "text-emerald-600 dark:text-emerald-400"
+      iconColor: "text-emerald-600 dark:text-emerald-400",
+      onClick: () => setLocation("/financial-reports?report=aged-receivables")
     });
   }
 
@@ -115,7 +123,8 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       },
       icon: TrendingDown,
       iconBg: "bg-orange-100 dark:bg-orange-900/20",
-      iconColor: "text-orange-600 dark:text-orange-400"
+      iconColor: "text-orange-600 dark:text-orange-400",
+      onClick: () => setLocation("/financial-reports?report=aged-payables")
     });
   }
 
@@ -126,7 +135,11 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
         {mainStatCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div 
+              key={index} 
+              onClick={stat.onClick}
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.title}</p>
@@ -140,7 +153,7 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
                     {stat.change}
                   </p>
                 </div>
-                <div className={`w-12 h-12 ${stat.iconBg} rounded-lg flex items-center justify-center`}>
+                <div className={`w-12 h-12 ${stat.iconBg} rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110`}>
                   <Icon className={`${stat.iconColor}`} size={24} />
                 </div>
               </div>
@@ -155,13 +168,17 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
           {enhancedCards.map((card, index) => {
             const Icon = card.icon;
             return (
-              <div key={index} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+              <div 
+                key={index} 
+                onClick={card.onClick}
+                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{card.title}</h3>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{card.value}</p>
                   </div>
-                  <div className={`w-12 h-12 ${card.iconBg} rounded-lg flex items-center justify-center`}>
+                  <div className={`w-12 h-12 ${card.iconBg} rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110`}>
                     <Icon className={`${card.iconColor}`} size={24} />
                   </div>
                 </div>
@@ -186,7 +203,10 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Cash Flow Summary */}
           {stats.cashFlowSummary && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div 
+              onClick={() => setLocation("/cash-flow-forecasting")}
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Cash Flow Summary</h3>
@@ -194,7 +214,7 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
                     {formatCurrency(stats.cashFlowSummary.currentCashPosition)}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110">
                   <Banknote className="text-purple-600 dark:text-purple-400" size={24} />
                 </div>
               </div>

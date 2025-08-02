@@ -257,7 +257,10 @@ export default function SuperAdminDashboard() {
 
         <TabsContent value="analytics" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
+            <Card 
+              className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-blue-300 hover:bg-blue-50"
+              onClick={() => setLocation("/super-admin/companies")}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Companies</CardTitle>
                 <Building className="h-4 w-4 text-muted-foreground" />
@@ -270,7 +273,10 @@ export default function SuperAdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-green-300 hover:bg-green-50"
+              onClick={() => setLocation("/super-admin/users")}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -283,18 +289,24 @@ export default function SuperAdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-emerald-300 hover:bg-emerald-50"
+              onClick={() => setLocation("/super-admin/revenue-reports")}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Revenue Analytics</CardTitle>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">R {analytics?.totalRevenue || '0.00'}</div>
+                <div className="text-2xl font-bold">R 0.00</div>
                 <p className="text-xs text-muted-foreground">Total system revenue</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-purple-300 hover:bg-purple-50"
+              onClick={() => setLocation("/super-admin/subscriptions")}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
                 <CreditCard className="h-4 w-4 text-muted-foreground" />

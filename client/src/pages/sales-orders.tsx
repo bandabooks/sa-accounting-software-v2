@@ -149,7 +149,10 @@ export default function SalesOrdersPage() {
 
       {/* Stats Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-blue-300 hover:bg-blue-50"
+          onClick={() => setLocation("/sales-orders?status=all")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
@@ -162,7 +165,10 @@ export default function SalesOrdersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-green-300 hover:bg-green-50"
+          onClick={() => setLocation("/business-reports?report=sales-value")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -175,7 +181,10 @@ export default function SalesOrdersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-amber-300 hover:bg-amber-50"
+          onClick={() => setLocation("/sales-orders?status=pending")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
@@ -188,7 +197,10 @@ export default function SalesOrdersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className="cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-emerald-300 hover:bg-emerald-50"
+          onClick={() => setLocation("/deliveries")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
