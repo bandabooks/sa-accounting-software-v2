@@ -340,6 +340,103 @@ export default function Integrations() {
         </div>
       </div>
 
+      {/* Status Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-600 text-sm font-medium">Connected</p>
+                <p className="text-2xl font-bold text-green-700">
+                  {allIntegrations.filter(i => i.status === 'connected').length}
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-yellow-600 text-sm font-medium">Pending</p>
+                <p className="text-2xl font-bold text-yellow-700">
+                  {allIntegrations.filter(i => i.status === 'pending').length}
+                </p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium">Disconnected</p>
+                <p className="text-2xl font-bold text-gray-700">
+                  {allIntegrations.filter(i => i.status === 'disconnected').length}
+                </p>
+              </div>
+              <XCircle className="h-8 w-8 text-gray-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-600 text-sm font-medium">Total Available</p>
+                <p className="text-2xl font-bold text-blue-700">{allIntegrations.length}</p>
+              </div>
+              <Globe className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Important Information Panel */}
+      <Card className="mb-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              <Shield className="h-8 w-8 text-blue-200" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-2">Integration Security & Features</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>All credentials encrypted at rest</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>Test & live environment support</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>Real-time connection testing</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>Automated sync capabilities</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>Official API documentation</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-300" />
+                  <span>Mobile-optimized interface</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Integration List */}
         <div className="lg:col-span-1">
@@ -436,57 +533,164 @@ export default function Integrations() {
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">Connection Status</h3>
-                          {getStatusIcon(selectedIntegrationData.status)}
-                        </div>
-                        <p className="text-2xl font-bold mt-2 capitalize">
-                          {selectedIntegrationData.status}
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Card className={`${
+                        selectedIntegrationData.status === 'connected' 
+                          ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
+                          : selectedIntegrationData.status === 'pending'
+                          ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200'
+                          : 'bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200'
+                      }`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-gray-700">Connection Status</h3>
+                            {getStatusIcon(selectedIntegrationData.status)}
+                          </div>
+                          <div className="text-center">
+                            <p className={`text-2xl font-bold mb-1 ${
+                              selectedIntegrationData.status === 'connected' ? 'text-green-700' :
+                              selectedIntegrationData.status === 'pending' ? 'text-yellow-700' : 'text-gray-700'
+                            }`}>
+                              {selectedIntegrationData.status === 'connected' ? 'Active' :
+                               selectedIntegrationData.status === 'pending' ? 'Setup Required' : 'Not Connected'}
+                            </p>
+                            <Badge className={`${getStatusColor(selectedIntegrationData.status)}`}>
+                              <span className="capitalize">{selectedIntegrationData.status}</span>
+                            </Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
                       
-                      {selectedIntegrationData.lastSync && (
-                        <div className="p-4 border rounded-lg">
-                          <h3 className="font-medium">Last Sync</h3>
-                          <p className="text-2xl font-bold mt-2">
-                            {new Date(selectedIntegrationData.lastSync).toLocaleDateString()}
-                          </p>
-                        </div>
+                      {selectedIntegrationData.lastSync ? (
+                        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="font-semibold text-gray-700">Last Sync</h3>
+                              <RefreshCw className="h-5 w-5 text-purple-600" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-purple-700 mb-1">
+                                {new Date(selectedIntegrationData.lastSync).toLocaleDateString()}
+                              </p>
+                              <p className="text-sm text-purple-600">
+                                {new Date(selectedIntegrationData.lastSync).toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="font-semibold text-gray-700">Integration Type</h3>
+                              <selectedIntegrationData.icon className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-orange-700">
+                                {integrationCategories.find(cat => cat.integrations.includes(selectedIntegrationData.id))?.name}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
                       )}
                       
-                      <div className="p-4 border rounded-lg">
-                        <h3 className="font-medium">Available Features</h3>
-                        <p className="text-2xl font-bold mt-2">
-                          {selectedIntegrationData.features.length}
-                        </p>
-                      </div>
+                      <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-gray-700">Features Available</h3>
+                            <CheckCircle className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-3xl font-bold text-blue-700 mb-1">
+                              {selectedIntegrationData.features.length}
+                            </p>
+                            <p className="text-sm text-blue-600 font-medium">Ready to Use</p>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
 
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Integration Features</CardTitle>
+                        <CardDescription>
+                          Complete feature set available with {selectedIntegrationData.name}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {selectedIntegrationData.features.map((feature, index) => (
+                            <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100 hover:shadow-sm transition-shadow">
+                              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                              <span className="text-sm text-gray-700 font-medium">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
                     {selectedIntegrationData.status === 'disconnected' && (
-                      <Alert>
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                          This integration is not connected. Configure your credentials in the Credentials tab to enable features.
+                      <Alert className="border-yellow-200 bg-yellow-50">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                        <AlertDescription className="text-yellow-800">
+                          <strong>Setup Required:</strong> Configure your credentials in the Credentials tab to enable all features for {selectedIntegrationData.name}.
                         </AlertDescription>
                       </Alert>
                     )}
 
-                    {selectedIntegrationData.connectionUrl && (
-                      <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">Official Website</p>
-                          <p className="text-sm text-gray-600">Visit the official portal for more information</p>
-                        </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={selectedIntegrationData.connectionUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Visit Portal
-                          </a>
-                        </Button>
-                      </div>
-                    )}
+                    {/* Action Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {selectedIntegrationData.connectionUrl && (
+                        <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
+                          <CardHeader>
+                            <CardTitle className="flex items-center text-indigo-700">
+                              <ExternalLink className="h-5 w-5 mr-2" />
+                              Official Documentation
+                            </CardTitle>
+                            <CardDescription>
+                              Visit official resources and setup guides
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Button variant="outline" className="w-full border-indigo-200 hover:bg-indigo-50" asChild>
+                              <a 
+                                href={selectedIntegrationData.connectionUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View Documentation
+                              </a>
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
+                        <CardHeader>
+                          <CardTitle className="flex items-center text-emerald-700">
+                            <Settings className="h-5 w-5 mr-2" />
+                            Quick Configuration
+                          </CardTitle>
+                          <CardDescription>
+                            Set up credentials and test connection
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            className="w-full bg-emerald-600 hover:bg-emerald-700" 
+                            onClick={() => {
+                              const credentialsTab = document.querySelector('[data-value="credentials"]') as HTMLElement;
+                              credentialsTab?.click();
+                            }}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Configure Integration
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="credentials" className="space-y-6">
