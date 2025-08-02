@@ -1,9 +1,6 @@
 /* Import mobile-specific styles */
 @import './styles/mobile.css';
 
-/* Import dashboard enhancements */
-@import './styles/dashboard-enhancements.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

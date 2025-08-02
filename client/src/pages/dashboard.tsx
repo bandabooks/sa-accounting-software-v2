@@ -117,52 +117,54 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      <div className="dashboard-container">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         
-        {/* Priority Compliance Alerts - Always Visible */}
-        {dashboardStats.complianceAlerts && dashboardStats.complianceAlerts.length > 0 && (
-          <div className="compliance-alerts">
-            {dashboardStats.complianceAlerts.slice(0, 2).map((alert: any, index: number) => (
-              <div key={index} className={`compliance-alert ${alert.priority === 'urgent' ? 'compliance-alert-urgent' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                  <div>
-                    <p className="font-medium text-red-900">{alert.title}</p>
-                    <p className="text-sm text-red-700">{alert.description}</p>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50">
-                  Action Required
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Optimized Hero Section - Reduced Height */}
-        <div className="dashboard-hero brand-gradient-primary">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
-          <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
+        {/* Stunning Gradient Hero Section */}
+        <div className="relative overflow-hidden">
+          {/* Animated Background Gradients */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-3xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
           
-          <div className="dashboard-hero-content">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+          {/* Hero Content - Reduced by 45% */}
+          <div className="relative p-4 lg:p-6 text-white">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               
-              {/* Compact Welcome Section */}
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <Activity className="h-4 w-4 text-white" />
+              {/* Welcome Section - Compact */}
+              <div className="space-y-3 flex-1">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg">
+                      <Activity className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-blue-100 text-sm font-medium">Business Dashboard</span>
                   </div>
-                  <span className="text-blue-100 text-sm font-medium">Business Dashboard</span>
-                  <div className="last-updated ml-auto">
-                    <Clock className="h-3 w-3" />
-                    <span>Updated {lastUpdate.toLocaleTimeString()}</span>
-                  </div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                    {getCurrentGreeting()}!
+                  </h1>
+                  <p className="text-blue-100 text-sm">
+                    Here's your business performance overview
+                  </p>
                 </div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
-                  {getCurrentGreeting()}!
-                </h1>
-                <p className="text-blue-100 text-sm">Business performance overview</p>
+
+                {/* Live Status Indicators - Compact */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium">Real-time Data</span>
+                  </div>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-xs font-medium">Updated {lastUpdate.toLocaleTimeString()}</span>
+                  </div>
+                  {priorityNotifications.length > 0 && (
+                    <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-orange-500/80 to-red-500/80 backdrop-blur-sm rounded-full border border-white/30">
+                      <Bell className="h-3 w-3 animate-bounce" />
+                      <span className="text-xs font-medium">{priorityNotifications.length} Alert{priorityNotifications.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Compact Revenue Metrics */}
@@ -307,232 +309,530 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Enhanced Stats Grid - Clickable Enterprise Cards */}
-        <div className="dashboard-grid dashboard-grid-sm">
-          
-          {/* Total Revenue Card - Clickable */}
-          <Link href="/financial-reports">
-            <Card className="stats-card brand-gradient-primary text-white clickable-stat a11y-focus group" role="button" tabIndex={0} aria-label="View revenue details">
-              <div className="enterprise-card-content">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold mb-1 stat-value">
-                      {formatCurrency(dashboardStats.totalRevenue)}
-                    </div>
-                    <p className="text-white/80 text-sm font-medium">Total Revenue</p>
-                    <div className="flex items-center gap-1 text-green-300 mt-2">
-                      <TrendingUp className="h-3 w-3" />
-                      <span className="text-xs">+{getRevenueGrowth()}%</span>
-                    </div>
-                  </div>
-                  <div className="stat-icon p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          {/* Outstanding Invoices Card - Clickable */}
-          <Link href="/invoices?filter=outstanding">
-            <Card className="stats-card brand-gradient-accent text-white clickable-stat a11y-focus group" role="button" tabIndex={0} aria-label="View outstanding invoices">
-              <div className="enterprise-card-content">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold mb-1 stat-value">
-                      {formatCurrency(dashboardStats.outstandingInvoices)}
-                    </div>
-                    <p className="text-white/80 text-sm font-medium">Outstanding</p>
-                    <div className="flex items-center gap-1 text-yellow-200 mt-2">
-                      <Clock className="h-3 w-3" />
-                      <span className="text-xs">Pending</span>
-                    </div>
-                  </div>
-                  <div className="stat-icon p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          {/* Total Customers Card - Clickable */}
-          <Link href="/customers">
-            <Card className="stats-card brand-gradient-secondary text-white clickable-stat a11y-focus group" role="button" tabIndex={0} aria-label="View all customers">
-              <div className="enterprise-card-content">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold mb-1 stat-value">
-                      {dashboardStats.totalCustomers}
-                    </div>
-                    <p className="text-white/80 text-sm font-medium">Active Customers</p>
-                    <div className="flex items-center gap-1 text-blue-200 mt-2">
-                      <Users className="h-3 w-3" />
-                      <span className="text-xs">Growing</span>
-                    </div>
-                  </div>
-                  <div className="stat-icon p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          {/* Pending Estimates Card - Clickable */}
-          <Link href="/estimates?filter=pending">
-            <Card className="stats-card bg-gradient-to-br from-purple-600 to-violet-700 text-white clickable-stat a11y-focus group" role="button" tabIndex={0} aria-label="View pending estimates">
-              <div className="enterprise-card-content">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold mb-1 stat-value">
-                      {dashboardStats.pendingEstimates}
-                    </div>
-                    <p className="text-white/80 text-sm font-medium">Pending Quotes</p>
-                    <div className="flex items-center gap-1 text-purple-200 mt-2">
-                      <Target className="h-3 w-3" />
-                      <span className="text-xs">In Progress</span>
-                    </div>
-                  </div>
-                  <div className="stat-icon p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <Target className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </Link>
-        </div>
-
-        {/* Recent Activities - Enhanced */}
-        {dashboardStats.recentActivities && dashboardStats.recentActivities.length > 0 && (
-          <Card className="activity-card enterprise-card">
-            <div className="enterprise-card-header">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">Recent Activities</h3>
-                <Button variant="outline" size="sm" asChild className="a11y-focus">
-                  <Link href="/activities">
-                    <Activity className="h-4 w-4 mr-2" />
-                    View All
-                  </Link>
-                </Button>
-              </div>
-            </div>
-            <div className="enterprise-card-content space-y-3">
-              {dashboardStats.recentActivities.slice(0, 5).map((activity: any, index: number) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                    <p className="text-xs text-gray-500">{activity.timestamp}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Performance Analytics - Dual Column */}
-        <div className="dashboard-grid dashboard-grid-md">
-          
-          {/* Financial Trends Card */}
-          <Card className="large-card enterprise-card widget-customizable">
-            <div className="enterprise-card-header">
-              <h3 className="text-lg font-semibold text-gray-800">Financial Trends</h3>
-              <p className="text-sm text-gray-600">Monthly performance overview</p>
-            </div>
-            <div className="enterprise-card-content">
-              {dashboardStats.profitLossData && dashboardStats.profitLossData.length > 0 ? (
-                <div className="space-y-4">
-                  {dashboardStats.profitLossData.slice(0, 3).map((item: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-gray-900">{item.month}</p>
-                        <p className="text-sm text-gray-600">{formatCurrency(item.revenue)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-blue-600">{item.profit > 0 ? '+' : ''}{formatCurrency(item.profit)}</p>
-                        <p className="text-xs text-gray-500">Profit</p>
-                      </div>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" asChild className="w-full a11y-focus">
-                    <Link href="/financial-reports">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      View Full Report
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-32 text-gray-500">
-                  <ChartLine className="h-8 w-8 mr-2" />
-                  <span>No financial data available</span>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Bank Balances Card */}
-          <Card className="large-card enterprise-card widget-customizable">
-            <div className="enterprise-card-header">
-              <h3 className="text-lg font-semibold text-gray-800">Bank Balances</h3>
-              <p className="text-sm text-gray-600">Current account balances</p>
-            </div>
-            <div className="enterprise-card-content">
-              {dashboardStats.bankBalances && dashboardStats.bankBalances.length > 0 ? (
-                <div className="space-y-3">
-                  {dashboardStats.bankBalances.map((account: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <DollarSign className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{account.name}</p>
-                          <p className="text-xs text-gray-500">{account.type}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-green-600">{formatCurrency(account.balance)}</p>
-                        <div className="status-indicator status-active inline-block"></div>
-                      </div>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" asChild className="w-full a11y-focus">
-                    <Link href="/banking">
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Manage Accounts
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-32 text-gray-500">
-                  <CreditCard className="h-8 w-8 mr-2" />
-                  <span>No bank accounts configured</span>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* Widget Customization Footer */}
-        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+        {/* Enhanced Performance Metrics Grid */}
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold text-gray-800">Dashboard Customization</h4>
-              <p className="text-sm text-gray-600">Personalize your dashboard layout and widgets</p>
+            <h2 className="text-2xl font-bold text-gray-800">Business Performance</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Revenue Card */}
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 text-white transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-green-100">Total Revenue</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-3xl font-bold text-white mb-2">
+                  {formatCurrency(dashboardStats.totalRevenue)}
+                </div>
+                <div className="flex items-center text-sm text-green-100">
+                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                    <TrendingUp className="h-3 w-3" />
+                    <span>+{getRevenueGrowth()}% from last month</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Outstanding Invoices Card */}
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-orange-600 via-red-600 to-pink-600 text-white transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-orange-100">Outstanding</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <CreditCard className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-3xl font-bold text-white mb-2">
+                  {formatCurrency(dashboardStats.outstandingInvoices)}
+                </div>
+                <div className="flex items-center text-sm text-orange-100">
+                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                    <Clock className="h-3 w-3" />
+                    <span>Needs attention</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Customers Card */}
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-blue-100">Active Customers</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-3xl font-bold text-white mb-2">{dashboardStats.totalCustomers}</div>
+                <div className="flex items-center text-sm text-blue-100">
+                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                    <Star className="h-3 w-3" />
+                    <span>Growing steadily</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Estimates Card */}
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-purple-100">Pending Estimates</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-3xl font-bold text-white mb-2">{dashboardStats.pendingEstimates}</div>
+                <div className="flex items-center text-sm text-purple-100">
+                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
+                    <Target className="h-3 w-3" />
+                    <span>Awaiting response</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Modular Widget System */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-800">Dashboard Widgets</h2>
             <Button 
               onClick={() => setIsCustomizing(!isCustomizing)}
               variant={isCustomizing ? "default" : "outline"}
               size="sm"
-              className="a11y-focus"
             >
               <Settings className="h-4 w-4 mr-2" />
-              {isCustomizing ? "Save Layout" : "Customize"}
+              {isCustomizing ? "Done Customizing" : "Customize Layout"}
             </Button>
           </div>
+
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white/80 backdrop-blur-sm border-0 shadow-lg p-1 rounded-xl">
+              <TabsTrigger 
+                value="overview" 
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger 
+                value="sales" 
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+              >
+                Sales
+              </TabsTrigger>
+              <TabsTrigger 
+                value="finance" 
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-violet-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+              >
+                Finance
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reports" 
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+              >
+                Reports
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* Enhanced Chart Widget */}
+                <div className="xl:col-span-2">
+                  <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-gray-800">Revenue Trends</CardTitle>
+                          <CardDescription>Monthly performance overview</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                    </CardContent>
+                  </Card>
+                  
+                  {/* FILLING THE RED-MARKED GAP: Quick Actions */}
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-6">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                            <Zap className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base font-semibold text-gray-800">Quick Actions</CardTitle>
+                            <CardDescription className="text-xs text-gray-600">Essential operations</CardDescription>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs text-gray-600">
+                          Daily
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/invoices/new">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-xs font-medium">Create Invoice</span>
+                          </Link>
+                        </Button>
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/customers/new">
+                            <Plus className="h-4 w-4" />
+                            <span className="text-xs font-medium">Add Customer</span>
+                          </Link>
+                        </Button>
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/payments/new">
+                            <DollarSign className="h-4 w-4" />
+                            <span className="text-xs font-medium">Record Payment</span>
+                          </Link>
+                        </Button>
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/estimates/new">
+                            <Target className="h-4 w-4" />
+                            <span className="text-xs font-medium">New Estimate</span>
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* FILLING THE RED-MARKED GAP: Compliance Alerts */}
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-3">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
+                            <AlertTriangle className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base font-semibold text-gray-800">Compliance Alerts</CardTitle>
+                            <CardDescription className="text-xs text-gray-600">Important notifications</CardDescription>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                          1 Alert
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-yellow-100 rounded-lg">
+                              <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-800">VAT return due in 5 days</h4>
+                              <p className="text-xs text-gray-600">Action required soon</p>
+                            </div>
+                          </div>
+                          <Button size="sm" className="text-xs bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
+                            Prepare
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Recent Activities Widget */}
+                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
+                    <CardDescription>Latest business updates</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <RecentActivities activities={dashboardStats.recentActivities || []} />
+                  </CardContent>
+                </Card>
+              </div>
+
+
+            </TabsContent>
+
+            <TabsContent value="sales" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-semibold text-gray-800">Recent Invoices</CardTitle>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/invoices">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View All
+                        </Link>
+                      </Button>
+                    </div>
+                    <CardDescription>Latest billing activity</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <RecentInvoices invoices={dashboardStats.recentInvoices || []} />
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-gray-800">Sales Performance</CardTitle>
+                    <CardDescription>Key sales metrics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Monthly Target</span>
+                        <span className="font-medium text-gray-900">R50,000</span>
+                      </div>
+                      <Progress value={75} className="h-2 bg-blue-100" />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Conversion Rate</span>
+                        <span className="font-medium text-green-600">73%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Average Deal Size</span>
+                        <span className="font-medium text-gray-900">R2,150</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-gray-800">Sales Pipeline</CardTitle>
+                    <CardDescription>Opportunities in progress</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm font-medium">Qualified Leads</span>
+                        <span className="font-semibold text-purple-600">12</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm font-medium">In Negotiation</span>
+                        <span className="font-semibold text-blue-600">8</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm font-medium">Closing Soon</span>
+                        <span className="font-semibold text-green-600">5</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="finance" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-teal-50 hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-semibold text-gray-800">Cash Flow</CardTitle>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/financial-reports">
+                          <TrendingUp className="h-4 w-4 mr-2" />
+                          Details
+                        </Link>
+                      </Button>
+                    </div>
+                    <CardDescription>Money in vs money out</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm text-gray-600">Incoming</span>
+                        <span className="font-medium text-green-600">+R24,150</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm text-gray-600">Outgoing</span>
+                        <span className="font-medium text-red-600">-R15,800</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                        <span className="text-sm font-medium text-gray-900">Net Cash Flow</span>
+                        <span className="font-bold text-green-600">+R8,350</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-orange-50 to-red-50 hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-semibold text-gray-800">Expenses Breakdown</CardTitle>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/expenses">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View All
+                        </Link>
+                      </Button>
+                    </div>
+                    <CardDescription>Top spending categories</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm text-gray-600">Operating Costs</span>
+                        <span className="font-medium text-gray-900">R8,200</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm text-gray-600">Marketing</span>
+                        <span className="font-medium text-gray-900">R3,500</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm text-gray-600">Office Supplies</span>
+                        <span className="font-medium text-gray-900">R2,100</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span className="text-sm text-gray-600">Other</span>
+                        <span className="font-medium text-gray-900">R2,000</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-gray-800">Budget Overview</CardTitle>
+                    <CardDescription>Current month progress</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Monthly Budget</span>
+                          <span className="text-sm text-gray-600">R45,000</span>
+                        </div>
+                        <Progress value={65} className="h-2 bg-blue-100" />
+                        <p className="text-xs text-gray-500 mt-1">65% utilized</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-white rounded-lg text-center">
+                          <p className="text-xs text-gray-600">Remaining</p>
+                          <p className="font-semibold text-blue-600">R15,750</p>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg text-center">
+                          <p className="text-xs text-gray-600">Days Left</p>
+                          <p className="font-semibold text-orange-600">12</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="reports" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold text-gray-800">Financial Reports</CardTitle>
+                        <CardDescription>P&L, Balance Sheet, Cash Flow</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
+                      <Link href="/financial-reports">
+                        View Reports
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <PieChart className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold text-gray-800">Sales Analytics</CardTitle>
+                        <CardDescription>Customer insights & trends</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Button asChild className="w-full bg-green-600 hover:bg-green-700">
+                      <Link href="/business-reports">
+                        View Analytics
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-indigo-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Target className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold text-gray-800">Performance KPIs</CardTitle>
+                        <CardDescription>Key business metrics</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                      <Link href="/general-reports">
+                        View KPIs
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
+
+        {/* Removed - Moved to top of dashboard */}
+
+        {/* Onboarding Tooltip Wizard */}
+        <TooltipWizard
+          steps={onboardingSteps}
+          isVisible={isWizardVisible}
+          onComplete={completeOnboarding}
+          onSkip={skipOnboarding}
+        />
       </div>
     </div>
   );
-} 
+}
