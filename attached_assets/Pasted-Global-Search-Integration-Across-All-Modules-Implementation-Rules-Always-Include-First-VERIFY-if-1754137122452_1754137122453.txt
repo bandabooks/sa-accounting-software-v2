@@ -1,0 +1,54 @@
+Global Search Integration Across All Modules
+Implementation Rules (Always Include):
+
+First VERIFY if a global search bar feature already exists before implementing.
+
+If missing, create and integrate it seamlessly into the existing UI structure (header or navigation).
+
+DO NOT duplicate any global search logic.
+
+Ensure search works on both desktop and mobile devices.
+
+Respect user roles, permissions, and module access at all times.
+
+Prompt
+Please verify if a global search bar (universal search) is already available and active across all main pages and modules in the system.
+
+The search bar should be clearly accessible in the main header, navigation bar, or sidebar, and visible at all times regardless of which module the user is currently in.
+
+If a global search is not available:
+
+Implement a single, centralized global search component:
+
+Place it in the system’s main header or persistent sidebar (not duplicated in module UIs).
+
+The search should be immediately accessible after login, on every page.
+
+The search bar must:
+
+Allow searching across all key records and modules:
+
+Customers, Suppliers, Invoices, Products/Inventory, Transactions, Contacts, Projects/Tasks, etc.
+
+Return results grouped by type (e.g., show “Invoices” results, “Clients” results, etc.).
+
+Show clickable result items with links to their detail pages.
+
+Ensure mobile and tablet responsiveness—the search must be easy to access and use on all device sizes.
+
+Search results and data access must respect user roles and permissions:
+
+Only show data the current user is authorized to see, based on their assigned modules/roles.
+
+Avoid any duplication of global search components or logic.
+
+Test global search for speed, accuracy, and correct permissions across different user types.
+
+Notes:
+
+The global search should be scalable and performant (suggest using backend query optimization if large data).
+
+Provide a shortcut (e.g., Ctrl+K or Command+K) for power users.
+
+Document the feature and provide user tips on effective search use.
+
