@@ -249,7 +249,7 @@ export const salesOrders = pgTable("sales_orders", {
   requiredDate: timestamp("required_date"),
   status: text("status").notNull().default("draft"), // draft, confirmed, in_production, ready_to_ship, shipped, delivered, completed, cancelled
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
   // Status tracking timestamps
@@ -578,6 +578,8 @@ export const purchaseOrderItems = pgTable("purchase_order_items", {
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatInclusive: boolean("vat_inclusive").default(false), // Whether the unit price includes VAT
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   expenseCategory: text("expense_category").default("office_supplies"), // Links to expense categories
   createdAt: timestamp("created_at").defaultNow(),

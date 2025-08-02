@@ -183,7 +183,7 @@ const logoUpload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize PayFast service
-  let payFastService;
+  let payFastService: any;
   try {
     payFastService = createPayFastService();
     console.log("PayFast service initialized successfully");
@@ -272,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(response);
       } catch (apiError) {
         console.error('AI API test failed:', apiError);
-        await logAudit(req.user.id, 'TEST', 'ai_connection', 0, {
+        await logAudit(authReq.user?.id || 0, 'TEST', 'ai_connection', 0, {
           provider: 'anthropic',
           model: model,
           success: false,
@@ -723,8 +723,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Get permissions from role assignments for regular users
           try {
-            const permissions = await storage.getUserPermission(user.id);
-            userPermissions = permissions;
+            const permissions = await storage.getUserPermission(user.id, user.companyId || 1);
+            userPermissions = permissions ? [permissions.toString()] : [];
           } catch (error) {
             // Fallback to default permissions based on user role
             userPermissions = getDefaultPermissionsForRole(user.role || 'employee');
@@ -3358,26 +3358,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = req.user!.companyId;
       
       // Get real supplier statistics
-      const suppliers = await storage.getSuppliers(companyId);
-      const activeSuppliers = suppliers.filter(s => s.status === 'active').length;
+      const suppliers = await storage.getAllSuppliers();
+      const companySuppliers = suppliers.filter(s => s.companyId === companyId);
+      const activeSuppliers = companySuppliers.filter(s => s.status === 'active').length;
       
       // Calculate new suppliers this month
       const currentDate = new Date();
       const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const newSuppliers = suppliers.filter(s => 
+      const newSuppliers = companySuppliers.filter(s => 
         s.createdAt && new Date(s.createdAt) >= firstDayOfMonth
       ).length;
       
       // Get real purchase order statistics
-      const purchaseOrders = await storage.getPurchaseOrders(companyId);
-      const pendingOrders = purchaseOrders.filter(po => po.status === 'pending').length;
+      const purchaseOrders = await storage.getAllPurchaseOrders();
+      const companyPurchaseOrders = purchaseOrders.filter(po => po.companyId === companyId);
+      const pendingOrders = companyPurchaseOrders.filter(po => po.status === 'pending').length;
       
       // Calculate total purchases value
-      const totalPurchases = purchaseOrders.reduce((sum, po) => sum + parseFloat(po.total || '0'), 0);
+      const totalPurchases = companyPurchaseOrders.reduce((sum, po) => sum + parseFloat(po.total || '0'), 0);
       
       // Get expenses for outstanding amounts
-      const expenses = await storage.getExpenses(companyId);
-      const outstandingAmount = expenses
+      const expenses = await storage.getAllExpenses();
+      const companyExpenses = expenses.filter(e => e.companyId === companyId);
+      const outstandingAmount = companyExpenses
         .filter(e => e.status === 'pending')
         .reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0);
       
