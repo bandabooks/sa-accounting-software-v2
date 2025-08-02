@@ -480,6 +480,101 @@ export default function FinancialReports() {
     console.log("Emailing report...");
   };
 
+  const handleDownloadExcel = () => {
+    if (!modalReport) return;
+
+    // Create Excel-compatible CSV data
+    let csvContent = "";
+    
+    // Add header
+    csvContent += `${modalReport.title}\n`;
+    csvContent += `Period: ${dateFrom} to ${dateTo}\n`;
+    csvContent += `Generated: ${modalReport.lastGenerated}\n\n`;
+
+    if (modalReport.id === 'trial-balance') {
+      // Trial Balance format
+      csvContent += "Account,Debit,Credit\n";
+      modalReport.data?.accounts?.forEach((account: any) => {
+        csvContent += `"${account.account}",${account.debit || 0},${account.credit || 0}\n`;
+      });
+      
+      // Add totals
+      const totalDebits = modalReport.data?.accounts?.reduce((sum: number, account: any) => sum + (account.debit || 0), 0) || 0;
+      const totalCredits = modalReport.data?.accounts?.reduce((sum: number, account: any) => sum + (account.credit || 0), 0) || 0;
+      csvContent += `"TOTAL",${totalDebits},${totalCredits}\n`;
+      
+    } else if (modalReport.id === 'balance-sheet') {
+      // Balance Sheet format
+      csvContent += "Account,Amount\n";
+      csvContent += "ASSETS\n";
+      modalReport.data?.assets?.current?.forEach((asset: any) => {
+        csvContent += `"${asset.account}",${asset.amount}\n`;
+      });
+      modalReport.data?.assets?.nonCurrent?.forEach((asset: any) => {
+        csvContent += `"${asset.account}",${asset.amount}\n`;
+      });
+      
+      csvContent += "LIABILITIES\n";
+      modalReport.data?.liabilities?.current?.forEach((liability: any) => {
+        csvContent += `"${liability.account}",${liability.amount}\n`;
+      });
+      modalReport.data?.liabilities?.nonCurrent?.forEach((liability: any) => {
+        csvContent += `"${liability.account}",${liability.amount}\n`;
+      });
+      
+      csvContent += "EQUITY\n";
+      modalReport.data?.equity?.forEach((equity: any) => {
+        csvContent += `"${equity.account}",${equity.amount}\n`;
+      });
+      
+    } else if (modalReport.id === 'profit-loss') {
+      // P&L format
+      csvContent += "Account,Amount\n";
+      csvContent += "REVENUE\n";
+      modalReport.data?.revenue?.forEach((item: any) => {
+        csvContent += `"${item.account}",${item.amount}\n`;
+      });
+      
+      csvContent += "EXPENSES\n";
+      modalReport.data?.expenses?.forEach((item: any) => {
+        csvContent += `"${item.account}",${item.amount}\n`;
+      });
+      
+    } else if (modalReport.id === 'aged-receivables') {
+      // Aged Receivables format
+      csvContent += "Customer,Current,30 Days,60 Days,90+ Days,Total\n";
+      modalReport.data?.customers?.forEach((customer: any) => {
+        csvContent += `"${customer.name}",${customer.current},${customer.days30},${customer.days60},${customer.days90},${customer.total}\n`;
+      });
+      
+    } else if (modalReport.id === 'aged-payables') {
+      // Aged Payables format
+      csvContent += "Supplier,Current,30 Days,60 Days,90+ Days,Total\n";
+      modalReport.data?.suppliers?.forEach((supplier: any) => {
+        csvContent += `"${supplier.name}",${supplier.current},${supplier.days30},${supplier.days60},${supplier.days90},${supplier.total}\n`;
+      });
+      
+    } else {
+      // Generic format for other reports
+      csvContent += "Description,Value\n";
+      csvContent += `"Report Type","${modalReport.title}"\n`;
+      csvContent += `"Generated","${modalReport.lastGenerated}"\n`;
+    }
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${modalReport.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const renderReportContent = (reportData: ReportData) => {
     switch (reportData.id) {
       case "balance-sheet":
@@ -768,42 +863,66 @@ export default function FinancialReports() {
     </div>
   );
 
-  const renderTrialBalance = (reportData: ReportData) => (
-    <div className="space-y-6">
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-800">Trial Balance</CardTitle>
-          <CardDescription>Account balances as at {reportData.lastGenerated}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Account</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Debit</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Credit</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {reportData.data?.accounts?.map((account: any, index: number) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-800">{account.account}</td>
-                    <td className="px-4 py-3 text-sm text-right font-medium">
-                      {account.debit > 0 ? formatCurrency(account.debit) : '-'}
+  const renderTrialBalance = (reportData: ReportData) => {
+    // Calculate totals
+    const totalDebits = reportData.data?.accounts?.reduce((sum: number, account: any) => sum + (account.debit || 0), 0) || 0;
+    const totalCredits = reportData.data?.accounts?.reduce((sum: number, account: any) => sum + (account.credit || 0), 0) || 0;
+
+    return (
+      <div className="space-y-6">
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800">Trial Balance</CardTitle>
+            <CardDescription>Account balances as at {reportData.lastGenerated}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Account</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Debit</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Credit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {reportData.data?.accounts?.map((account: any, index: number) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-800">{account.account}</td>
+                      <td className="px-4 py-3 text-sm text-right font-medium">
+                        {account.debit > 0 ? formatCurrency(account.debit) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-medium">
+                        {account.credit > 0 ? formatCurrency(account.credit) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-100 border-t-2 border-gray-300">
+                  <tr>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-800">TOTAL</td>
+                    <td className="px-4 py-3 text-sm text-right font-bold text-gray-800">
+                      {formatCurrency(totalDebits)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-medium">
-                      {account.credit > 0 ? formatCurrency(account.credit) : '-'}
+                    <td className="px-4 py-3 text-sm text-right font-bold text-gray-800">
+                      {formatCurrency(totalCredits)}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+                  {totalDebits !== totalCredits && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-2 text-center text-sm text-red-600 font-medium bg-red-50">
+                        ⚠️ Trial Balance does not balance: Difference of {formatCurrency(Math.abs(totalDebits - totalCredits))}
+                      </td>
+                    </tr>
+                  )}
+                </tfoot>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   const renderGeneralLedger = (reportData: ReportData) => (
     <div className="space-y-6">
@@ -1490,6 +1609,10 @@ export default function FinancialReports() {
                   <Button onClick={handleDownloadPDF} className="bg-blue-600 hover:bg-blue-700">
                     <Download className="h-4 w-4 mr-2" />
                     PDF
+                  </Button>
+                  <Button onClick={handleDownloadExcel} className="bg-green-600 hover:bg-green-700">
+                    <Download className="h-4 w-4 mr-2" />
+                    Excel
                   </Button>
                   <Button onClick={handleEmailReport} className="bg-green-600 hover:bg-green-700">
                     <Mail className="h-4 w-4 mr-2" />
