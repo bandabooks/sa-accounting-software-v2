@@ -491,12 +491,14 @@ export default function InvoiceCreate() {
             <CardContent className="p-0">
               {/* Table Header */}
               <div className="bg-gray-100 dark:bg-gray-800 border-b">
-                <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <div className="col-span-3">Product/Service</div>
+                <div className="grid grid-cols-14 gap-2 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <div className="col-span-2">Product/Service</div>
                   <div className="col-span-3">Description</div>
                   <div className="col-span-1 text-center">Qty</div>
                   <div className="col-span-2 text-center">Unit Price</div>
+                  <div className="col-span-2 text-center">VAT</div>
                   <div className="col-span-2 text-center">Amount</div>
+                  <div className="col-span-2 text-center">Total</div>
                   <div className="col-span-1 text-center">Remove</div>
                 </div>
               </div>
@@ -504,9 +506,9 @@ export default function InvoiceCreate() {
               {/* Table Body */}
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 px-4 py-3 items-center">
+                  <div key={index} className="grid grid-cols-14 gap-2 px-4 py-3 items-center">
                     {/* Product/Service Column */}
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <ProductServiceSelect
                         value={item.productId}
                         onValueChange={(productId) => updateItem(index, 'productId', productId)}
@@ -552,10 +554,31 @@ export default function InvoiceCreate() {
                       </div>
                     </div>
 
-                    {/* Amount Column */}
+                    {/* VAT Column - VAT Type Dropdown */}
+                    <div className="col-span-2">
+                      <VATTypeSelect
+                        value={item.vatTypeId?.toString() || "1"}
+                        onValueChange={(value) => updateItem(index, 'vatTypeId', parseInt(value))}
+                        placeholder="VAT"
+                        className="text-xs"
+                      />
+                    </div>
+
+                    {/* Amount Column (excl. VAT) */}
                     <div className="col-span-2">
                       <div className="text-center font-medium text-gray-900 dark:text-white">
                         R{(parseFloat(item.quantity || "0") * parseFloat(item.unitPrice || "0")).toFixed(2)}
+                      </div>
+                    </div>
+
+                    {/* Total Column (incl. VAT) */}
+                    <div className="col-span-2">
+                      <div className="text-center font-bold text-green-700 dark:text-green-300">
+                        R{(
+                          parseFloat(item.quantity || "0") * 
+                          parseFloat(item.unitPrice || "0") + 
+                          parseFloat(item.vatAmount || "0")
+                        ).toFixed(2)}
                       </div>
                     </div>
 
@@ -650,26 +673,24 @@ export default function InvoiceCreate() {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  {/* VAT Treatment Dropdown - Matching Screenshot */}
-                  {shouldShowVATFields && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        VAT Treatment
-                      </Label>
-                      <VATTypeSelect
-                        value="1" // Default to VAT Exclusive (15%)
-                        onValueChange={(value) => {
-                          // Handle global VAT treatment change
-                          console.log('VAT Treatment changed to:', value);
-                        }}
-                        placeholder="Select VAT treatment..."
-                        className="w-full"
-                      />
-                      <div className="text-xs text-gray-500 mt-1">
-                        Rate: 15% | Exclusive
-                      </div>
+                  {/* VAT Treatment Dropdown - Always Show */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      VAT Treatment
+                    </Label>
+                    <VATTypeSelect
+                      value="1" // Default to VAT Exclusive (15%)
+                      onValueChange={(value) => {
+                        // Handle global VAT treatment change
+                        console.log('VAT Treatment changed to:', value);
+                      }}
+                      placeholder="Select VAT treatment..."
+                      className="w-full"
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      Rate: 15% | Exclusive
                     </div>
-                  )}
+                  </div>
                   
                   <Separator className="my-4" />
                   
@@ -681,14 +702,12 @@ export default function InvoiceCreate() {
                       </span>
                     </div>
                     
-                    {shouldShowVATFields && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">VAT (15%):</span>
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          R {parseFloat(formData.vatAmount).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">VAT (15%):</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        R {parseFloat(formData.vatAmount).toFixed(2)}
+                      </span>
+                    </div>
                     
                     <Separator />
                     
