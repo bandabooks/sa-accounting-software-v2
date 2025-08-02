@@ -247,10 +247,10 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
     return (
       <Link
         href={item.path}
-        className={`group relative flex items-center space-x-4 px-4 py-3 text-slate-700 hover:text-white rounded-xl transition-all duration-300 transform hover:scale-[1.02] ${
+        className={`group relative flex items-center space-x-4 px-4 py-3 text-slate-700 rounded-xl transition-all duration-300 transform hover:scale-[1.02] ${
           isActive 
             ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white shadow-lg shadow-blue-500/25" 
-            : "hover:bg-gradient-to-r hover:from-slate-100 hover:to-slate-200 hover:shadow-md"
+            : "hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:text-green-800 hover:shadow-md"
         }`}
       >
         <div className={`p-2 rounded-lg transition-all duration-300 ${
@@ -275,7 +275,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
         className={`group w-full flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
           hasActiveItem 
             ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-md border border-blue-200/50" 
-            : "text-slate-600 hover:bg-gradient-to-r hover:from-slate-100 hover:to-slate-200 hover:text-slate-800 hover:shadow-sm"
+            : "text-slate-600 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:text-green-800 hover:shadow-sm"
         }`}
       >
         <div className="flex items-center space-x-3">
@@ -311,7 +311,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
                 className={`group relative flex items-center space-x-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-300 transform hover:scale-[1.01] ${
                   isActive 
                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20" 
-                    : "text-slate-600 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 hover:text-slate-800 hover:shadow-sm"
+                    : "text-slate-600 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:text-green-700 hover:shadow-sm"
                 }`}
               >
                 <div className={`p-1.5 rounded-md transition-all duration-300 ${
