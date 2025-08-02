@@ -247,35 +247,58 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
     return (
       <Link
         href={item.path}
-        className={`flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors ${
-          isActive ? "bg-primary text-white hover:bg-primary/90" : ""
+        className={`group relative flex items-center space-x-4 px-4 py-3 text-slate-700 hover:text-white rounded-xl transition-all duration-300 transform hover:scale-[1.02] ${
+          isActive 
+            ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white shadow-lg shadow-blue-500/25" 
+            : "hover:bg-gradient-to-r hover:from-slate-100 hover:to-slate-200 hover:shadow-md"
         }`}
       >
-        <Icon size={18} />
-        <span className="font-medium">{item.label}</span>
+        <div className={`p-2 rounded-lg transition-all duration-300 ${
+          isActive 
+            ? "bg-white/20 shadow-md" 
+            : "bg-slate-100 group-hover:bg-white group-hover:shadow-sm"
+        }`}>
+          <Icon size={18} className={isActive ? "text-white" : "text-slate-600 group-hover:text-slate-700"} />
+        </div>
+        <span className="font-semibold tracking-tight">{item.label}</span>
+        {isActive && (
+          <div className="absolute right-2 w-2 h-2 bg-white rounded-full shadow-sm"></div>
+        )}
       </Link>
     );
   }
 
   return (
-    <div className="mb-2">
+    <div className="mb-1">
       <button
         onClick={onToggle}
-        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
+        className={`group w-full flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
           hasActiveItem 
-            ? "bg-primary/10 text-primary" 
-            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-md border border-blue-200/50" 
+            : "text-slate-600 hover:bg-gradient-to-r hover:from-slate-100 hover:to-slate-200 hover:text-slate-800 hover:shadow-sm"
         }`}
       >
         <div className="flex items-center space-x-3">
-          {group.icon && <group.icon size={18} />}
-          <span>{group.label}</span>
+          <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+            hasActiveItem 
+              ? "bg-blue-100 text-blue-600" 
+              : "bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-600"
+          }`}>
+            {group.icon && <group.icon size={16} />}
+          </div>
+          <span className="tracking-tight">{group.label}</span>
         </div>
-        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} ${
+          hasActiveItem ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+        }`}>
+          <ChevronDown size={16} />
+        </div>
       </button>
       
-      {isExpanded && (
-        <div className="mt-1 ml-4 space-y-1">
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+        isExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+      }`}>
+        <div className="ml-2 pl-4 border-l-2 border-slate-200/60 space-y-1">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
@@ -285,17 +308,28 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
                 key={item.path}
                 href={item.path}
                 data-onboarding={`nav-${item.path.split('/')[1]}`}
-                className={`flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors ${
-                  isActive ? "bg-primary/10 text-primary font-medium" : ""
+                className={`group relative flex items-center space-x-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-300 transform hover:scale-[1.01] ${
+                  isActive 
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20" 
+                    : "text-slate-600 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 hover:text-slate-800 hover:shadow-sm"
                 }`}
               >
-                <Icon size={16} />
-                <span>{item.label}</span>
+                <div className={`p-1.5 rounded-md transition-all duration-300 ${
+                  isActive 
+                    ? "bg-white/20" 
+                    : "bg-slate-100 group-hover:bg-white"
+                }`}>
+                  <Icon size={14} className={isActive ? "text-white" : "text-slate-500 group-hover:text-slate-600"} />
+                </div>
+                <span className="font-medium tracking-tight">{item.label}</span>
+                {isActive && (
+                  <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full shadow-sm"></div>
+                )}
               </Link>
             );
           })}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -321,82 +355,91 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-white shadow-lg border-r border-gray-200 fixed h-full z-30 hidden lg:flex lg:flex-col">
-      <div className="p-6 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <Calculator className="text-white" size={20} />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">Taxnify</h1>
-            <p className="text-sm text-gray-500">Business & Compliance</p>
-            <div className="flex items-center gap-2 mt-1">
-              {isSuperAdminOrOwner ? (
-                <span className="text-xs px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full font-medium">
-                  Super Admin - Full Access
-                </span>
-              ) : currentPlan ? (
-                <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                  {currentPlan.displayName}
-                </span>
-              ) : (
-                <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
-                  No Active Plan
-                </span>
-              )}
+    <aside className="w-72 bg-gradient-to-b from-slate-50 via-white to-slate-50 shadow-2xl border-r border-slate-200/60 fixed h-full z-30 hidden lg:flex lg:flex-col backdrop-blur-sm">
+      {/* Header Section with Enhanced Gradient */}
+      <div className="relative">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        
+        {/* Header Content */}
+        <div className="relative p-6 text-white">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30 shadow-lg">
+              <Calculator className="text-white" size={24} />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-white tracking-tight">Taxnify</h1>
+              <p className="text-blue-100 text-sm font-medium">Business & Compliance</p>
+              <div className="flex items-center gap-2 mt-2">
+                {isSuperAdminOrOwner ? (
+                  <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full font-semibold shadow-lg border border-white/20">
+                    ⚡ Super Admin
+                  </span>
+                ) : currentPlan ? (
+                  <span className="text-xs px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full border border-white/30 font-medium">
+                    {currentPlan.displayName}
+                  </span>
+                ) : (
+                  <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-full font-semibold">
+                    ⚠ No Active Plan
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        
-        {/* Super Admin Quick Access */}
-        {(user?.role === "super_admin" || user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com") && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <Link
-              href="/super-admin"
-              className="flex items-center space-x-3 px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Shield size={16} />
-              <span>Super Admin Panel</span>
-            </Link>
-          </div>
-        )}
-        
-        {/* Subscription Plan Information - Only show for non-super admins without active plans */}
-        {!currentPlan && !isSuperAdminOrOwner && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-yellow-600" />
-                <div>
-                  <p className="text-xs font-medium text-yellow-800">No Active Plan</p>
-                  <p className="text-xs text-yellow-600">Limited features available</p>
-                </div>
-              </div>
+          
+          {/* Super Admin Quick Access */}
+          {(user?.role === "super_admin" || user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com") && (
+            <div className="mt-4">
               <Link
-                href="/subscription"
-                className="mt-2 block text-center text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 py-1 px-2 rounded transition-colors"
+                href="/super-admin"
+                className="flex items-center space-x-3 px-4 py-3 text-sm font-semibold text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl transition-all duration-300 border border-white/20 hover:border-white/40 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
               >
-                Choose Plan
+                <Shield size={18} />
+                <span>Super Admin Panel</span>
               </Link>
             </div>
-          </div>
-        )}
+          )}
+          
+          {/* Subscription Plan Information */}
+          {!currentPlan && !isSuperAdminOrOwner && (
+            <div className="mt-4">
+              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <Lock className="h-4 w-4 text-yellow-200" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">No Active Plan</p>
+                    <p className="text-xs text-blue-100">Limited features available</p>
+                  </div>
+                </div>
+                <Link
+                  href="/subscription"
+                  className="mt-3 block text-center text-sm bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white py-2 px-4 rounded-lg transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-[1.02]"
+                >
+                  Choose Plan
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       
-      <nav data-onboarding="main-nav" className="flex-1 overflow-y-auto overflow-x-hidden mt-6 px-3 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
-        <div className="space-y-2">
-          {navigationGroups.map((group) => (
-            <NavigationGroup
-              key={group.id}
-              group={group}
-              location={location}
-              userPermissions={userPermissions}
-              userRole={user?.role || ""}
-              isExpanded={expandedGroup === group.id}
-              onToggle={() => toggleGroup(group.id)}
-            />
-          ))}
-        </div>
+      {/* Navigation Section */}
+      <nav data-onboarding="main-nav" className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
+        {navigationGroups.map((group) => (
+          <NavigationGroup
+            key={group.id}
+            group={group}
+            location={location}
+            userPermissions={userPermissions}
+            userRole={user?.role || ""}
+            isExpanded={expandedGroup === group.id}
+            onToggle={() => toggleGroup(group.id)}
+          />
+        ))}
       </nav>
     </aside>
   );
