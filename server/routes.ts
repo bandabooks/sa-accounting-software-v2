@@ -2510,10 +2510,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle the case where the result might be a database query result object
       const productsArray = Array.isArray(products) ? products : (products as any)?.rows || [];
       
-      res.json(productsArray);
+      // Import professional services
+      const { accountingServicesData } = await import("@shared/accountingServices");
+      
+      // Transform professional services to product format
+      const professionalServices = accountingServicesData.map(service => ({
+        id: `service_${service.id}`, // Prefix to distinguish from regular products
+        companyId: companyId,
+        name: service.name,
+        description: service.description,
+        sku: `SRV-${String(service.id).padStart(3, '0')}`,
+        barcode: null,
+        unitPrice: service.suggestedPrice.min, // Use minimum suggested price
+        costPrice: "0.00",
+        stockQuantity: null, // Services don't have stock
+        lowStockThreshold: null,
+        type: "service",
+        categoryId: null,
+        supplierId: null,
+        taxable: true,
+        vatRate: "15", // Standard VAT rate for services
+        weight: null,
+        dimensions: null,
+        warranty: null,
+        isActive: service.active,
+        createdAt: new Date().toISOString(),
+        // Additional service-specific fields
+        category: service.category,
+        complexity: service.complexity,
+        estimatedHours: service.estimatedHours,
+        frequency: service.frequency
+      }));
+      
+      // Combine regular products with professional services
+      const combinedProducts = [...productsArray, ...professionalServices];
+      
+      res.json(combinedProducts);
     } catch (error) {
-      console.error("Error fetching products:", error);
-      res.status(500).json({ message: "Failed to fetch products" });
+      console.error("Error fetching products and services:", error);
+      res.status(500).json({ message: "Failed to fetch products and services" });
     }
   });
 

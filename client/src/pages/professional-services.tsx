@@ -139,14 +139,15 @@ export default function ProfessionalServices() {
   const complexityLevels = ['All', 'basic', 'intermediate', 'advanced', 'expert'];
   const roles = ['All', ...userRoles, 'payroll_admin', 'hr_specialist', 'industry_specialist', 'management_accountant', 'auditor', 'chartered_accountant', 'b_bbee_specialist', 'legal_specialist', 'business_advisor', 'tax_specialist'];
 
-  const filteredServices = allServices.filter(service => {
+  const filteredServices = allServices.filter((service, index) => {
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          service.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || service.category === selectedCategory;
     const matchesComplexity = selectedComplexity === 'All' || service.complexity === selectedComplexity;
     const matchesRole = selectedRole === 'All' || (service.roleAccess && service.roleAccess.includes(selectedRole));
-    const isActive = service.active !== false && service.isActive !== false; // Support both active and isActive properties
+    // Fix: Check for active property more safely to avoid undefined access
+    const isActive = (service as any).active !== false && (service as any).isActive !== false;
     
     return matchesSearch && matchesCategory && matchesComplexity && matchesRole && isActive;
   });
