@@ -26,7 +26,10 @@ import {
   ExternalLink,
   Zap,
   Globe,
-  Lock
+  Lock,
+  Banknote,
+  ShoppingCart,
+  Smartphone
 } from "lucide-react";
 
 interface IntegrationStatus {
@@ -114,8 +117,28 @@ export default function Integrations() {
     }
   });
 
-  // Mock integrations data - in real app, this would come from the API
+  // Integration categories for better organization
+  const integrationCategories = [
+    {
+      id: 'compliance',
+      name: 'Compliance & Government',
+      integrations: ['sars', 'cipc']
+    },
+    {
+      id: 'payments',
+      name: 'Payment Gateways',
+      integrations: ['payfast', 'peach', 'paygate', 'stripe', 'yoco', 'ozow']
+    },
+    {
+      id: 'financial',
+      name: 'Financial Services',
+      integrations: ['banking']
+    }
+  ];
+
+  // All integrations data with enhanced payment gateways
   const allIntegrations: IntegrationStatus[] = [
+    // Compliance & Government
     {
       id: 'sars',
       name: 'SARS eFiling',
@@ -134,34 +157,6 @@ export default function Integrations() {
       connectionUrl: 'https://secure.sarsefiling.co.za'
     },
     {
-      id: 'banking',
-      name: 'Banking Integration',
-      description: 'Connect to South African banks for automated transaction import',
-      icon: Landmark,
-      status: 'disconnected',
-      features: [
-        'Automated bank statement import',
-        'Real-time balance updates',
-        'Transaction categorization',
-        'Multi-bank support',
-        'Bank reconciliation'
-      ]
-    },
-    {
-      id: 'payfast',
-      name: 'PayFast Payments',
-      description: 'South African payment gateway for online transactions',
-      icon: CreditCard,
-      status: 'pending',
-      features: [
-        'Online payment processing',
-        'Recurring billing',
-        'Payment notifications',
-        'Fraud protection',
-        'Multi-currency support'
-      ]
-    },
-    {
       id: 'cipc',
       name: 'CIPC Integration',
       description: 'Companies and Intellectual Property Commission integration',
@@ -173,6 +168,135 @@ export default function Integrations() {
         'Annual return submissions',
         'Director verification',
         'Status updates'
+      ],
+      connectionUrl: 'https://www.cipc.co.za'
+    },
+    
+    // Payment Gateways - South African
+    {
+      id: 'payfast',
+      name: 'PayFast',
+      description: 'Leading South African payment gateway with comprehensive features',
+      icon: CreditCard,
+      status: 'pending',
+      features: [
+        'Credit & debit card processing',
+        'EFT payments',
+        'Recurring billing',
+        'Instant payment notifications',
+        '3D Secure authentication',
+        'Mobile-optimized checkout',
+        'Fraud protection',
+        'Multi-currency support'
+      ],
+      connectionUrl: 'https://www.payfast.co.za'
+    },
+    {
+      id: 'peach',
+      name: 'Peach Payments',
+      description: 'Modern payment platform with global reach and local expertise',
+      icon: Globe,
+      status: 'disconnected',
+      features: [
+        'Global payment processing',
+        'Local South African acquiring',
+        'Advanced analytics',
+        'Tokenization',
+        'Risk management',
+        'Multi-channel payments',
+        'API-first approach',
+        'White-label solutions'
+      ],
+      connectionUrl: 'https://www.peachpayments.com'
+    },
+    {
+      id: 'paygate',
+      name: 'PayGate',
+      description: 'Comprehensive payment solution with 3D Secure and multi-currency support',
+      icon: Shield,
+      status: 'disconnected',
+      features: [
+        '3D Secure 2.0 authentication',
+        'Multi-currency processing',
+        'Card-not-present transactions',
+        'Tokenization services',
+        'Recurring payments',
+        'Mobile payments',
+        'Risk management tools',
+        'Comprehensive reporting'
+      ],
+      connectionUrl: 'https://www.paygate.co.za'
+    },
+    {
+      id: 'yoco',
+      name: 'Yoco',
+      description: 'South African-focused card payments with modern POS solutions',
+      icon: Smartphone,
+      status: 'disconnected',
+      features: [
+        'Card reader integration',
+        'Online payments',
+        'In-person payments',
+        'Instant payouts',
+        'Business insights',
+        'Inventory management',
+        'Customer management',
+        'No setup fees'
+      ],
+      connectionUrl: 'https://www.yoco.com'
+    },
+    {
+      id: 'ozow',
+      name: 'Ozow',
+      description: 'Instant EFT payments directly from South African bank accounts',
+      icon: Banknote,
+      status: 'disconnected',
+      features: [
+        'Instant bank-to-bank transfers',
+        'Real-time payment verification',
+        'All major SA banks supported',
+        'No card details required',
+        'Lower transaction fees',
+        'Instant settlement',
+        'Mobile-optimized',
+        'Fraud protection'
+      ],
+      connectionUrl: 'https://www.ozow.com'
+    },
+    
+    // International Payment Gateway
+    {
+      id: 'stripe',
+      name: 'Stripe',
+      description: 'International payment processing with global reach',
+      icon: ShoppingCart,
+      status: 'disconnected',
+      features: [
+        'Global payment processing',
+        'Subscription management',
+        'Advanced fraud detection',
+        'Multi-currency support',
+        'Mobile payments',
+        'Marketplace payments',
+        'Advanced reporting',
+        'Developer-friendly APIs'
+      ],
+      connectionUrl: 'https://stripe.com'
+    },
+    
+    // Financial Services
+    {
+      id: 'banking',
+      name: 'Banking Integration',
+      description: 'Connect to South African banks for automated transaction import',
+      icon: Landmark,
+      status: 'disconnected',
+      features: [
+        'Automated bank statement import',
+        'Real-time balance updates',
+        'Transaction categorization',
+        'Multi-bank support',
+        'Bank reconciliation'
       ]
     }
   ];
@@ -224,34 +348,44 @@ export default function Integrations() {
               <CardTitle className="text-lg">Available Integrations</CardTitle>
               <CardDescription>Select an integration to configure</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {allIntegrations.map((integration) => {
-                const Icon = integration.icon;
-                return (
-                  <button
-                    key={integration.id}
-                    onClick={() => setSelectedIntegration(integration.id)}
-                    className={`w-full p-3 text-left rounded-lg border transition-colors ${
-                      selectedIntegration === integration.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Icon className="h-5 w-5 text-gray-600" />
-                        <div>
-                          <p className="font-medium text-sm">{integration.name}</p>
-                          <Badge className={`text-xs ${getStatusColor(integration.status)}`}>
-                            {getStatusIcon(integration.status)}
-                            <span className="ml-1 capitalize">{integration.status}</span>
-                          </Badge>
+            <CardContent className="space-y-4">
+              {integrationCategories.map((category) => (
+                <div key={category.id} className="space-y-2">
+                  <h3 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">
+                    {category.name}
+                  </h3>
+                  {category.integrations.map((integrationId) => {
+                    const integration = allIntegrations.find(i => i.id === integrationId);
+                    if (!integration) return null;
+                    
+                    const Icon = integration.icon;
+                    return (
+                      <button
+                        key={integration.id}
+                        onClick={() => setSelectedIntegration(integration.id)}
+                        className={`w-full p-3 text-left rounded-lg border transition-colors ${
+                          selectedIntegration === integration.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Icon className="h-5 w-5 text-gray-600" />
+                            <div>
+                              <p className="font-medium text-sm">{integration.name}</p>
+                              <Badge className={`text-xs ${getStatusColor(integration.status)}`}>
+                                {getStatusIcon(integration.status)}
+                                <span className="ml-1 capitalize">{integration.status}</span>
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>
@@ -360,6 +494,13 @@ export default function Integrations() {
                       <SARSCredentialsForm 
                         credentials={sarsCredentials}
                         onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'sars', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
+                    ) : ['payfast', 'peach', 'paygate', 'stripe', 'yoco', 'ozow'].includes(selectedIntegration) ? (
+                      <PaymentGatewayCredentialsForm 
+                        gatewayId={selectedIntegration}
+                        gatewayName={selectedIntegrationData.name}
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: selectedIntegration, data })}
                         isLoading={saveCredentialsMutation.isPending}
                       />
                     ) : (
