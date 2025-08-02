@@ -63,7 +63,7 @@ interface ReportData {
   };
 }
 
-export default function FinancialReports() {
+export default function FinancialReportsEnhanced() {
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedReport, setSelectedReport] = useState<string | null>(null);

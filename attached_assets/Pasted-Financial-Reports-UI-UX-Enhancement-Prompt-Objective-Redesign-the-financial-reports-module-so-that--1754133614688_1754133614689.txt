@@ -1,0 +1,66 @@
+Financial Reports UI/UX Enhancement Prompt
+Objective:
+Redesign the financial reports module so that clicking any report (Balance Sheet, Profit & Loss, Cash Flow, Trial Balance, etc.) opens a dropdown or modal with the detailed content, rather than navigating to a new page. Remove any full-table views or page reloads; all report details must be accessible within the same view, ensuring a seamless, single-page user experience.
+
+Key Requirements:
+Dropdown/Modal Report View:
+
+When a user clicks on any report (e.g., Balance Sheet), open a dropdown section or modal directly below or over the report card.
+
+Display the report details inside this dropdown/modal in a readable, well-formatted manner.
+
+Do not navigate away or open a new window/tab.
+
+Remove Table/Tab Page:
+
+Completely remove the detailed table or tab page that currently opens when a report is selected.
+
+The table view of Balance Sheet or any report must not be available as a separate page.
+
+Integrated Actions (Inside Modal/Dropdown):
+
+Inside the dropdown or modal, provide clear action buttons for:
+
+Print
+
+Download as PDF
+
+Send by Email
+
+These actions should be easily accessible and not require leaving the current view.
+
+Keep Navigation Simple:
+
+The navigation (e.g., Back to Reports, filters) must remain fixed and intuitive.
+
+After closing the dropdown/modal, the user should see the report summary list as before.
+
+No Duplicate or Redundant Content:
+
+Ensure there are no duplicate tables or unnecessary tabs.
+
+The entire workflow should be seamless and contained on a single page.
+
+User Flow Example:
+User visits /financial-reports.
+
+User sees cards for Balance Sheet, Profit & Loss, Cash Flow, Trial Balance.
+
+User clicks Balance Sheet:
+
+A dropdown/modal appears within the same page showing the details.
+
+Options to print, download PDF, or email are available in the modal/dropdown.
+
+User can close the dropdown/modal and select another report without navigating away.
+
+Implementation Notes:
+Use modals for compact screens, dropdowns/expandable sections for desktop.
+
+All report rendering logic should work in the modal/dropdown, fetching up-to-date data.
+
+Maintain a professional, clean UI consistent with the rest of the system.
+
+Prompt for Developers:
+
+“Refactor the /financial-reports page so that clicking on any report card (Balance Sheet, Profit & Loss, etc.) expands a dropdown or opens a modal within the same page. Display the full report content there, along with print, download PDF, and email actions. Remove the existing table/tabbed detail pages and ensure there’s no navigation away from the reports summary list. The user must always remain on the /financial-reports page, and all interactions happen in-place for a seamless user experience.”
