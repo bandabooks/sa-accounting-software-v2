@@ -3360,7 +3360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get real supplier statistics
       const suppliers = await storage.getAllSuppliers();
       const companySuppliers = suppliers.filter(s => s.companyId === companyId);
-      const activeSuppliers = companySuppliers.filter(s => s.status === 'active').length;
+      const activeSuppliers = companySuppliers.filter(s => s.isActive === true).length;
       
       // Calculate new suppliers this month
       const currentDate = new Date();
