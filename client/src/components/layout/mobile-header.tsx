@@ -2,6 +2,7 @@ import { Bell, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MobileMenu from "@/components/ui/mobile-menu";
+import GlobalSearch from "@/components/global-search";
 import { useAuth } from "@/hooks/useAuth";
 import CompanySwitcher from "./company-switcher";
 
@@ -24,6 +25,11 @@ export default function MobileHeader() {
         </div>
         
         <div className="flex items-center space-x-2">
+          {/* Mobile Global Search - Show on mobile only */}
+          <div className="sm:hidden">
+            <GlobalSearch />
+          </div>
+          
           {/* Mobile Company Switcher */}
           <div className="hidden sm:block">
             <CompanySwitcher />

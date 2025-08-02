@@ -356,7 +356,7 @@ import {
   type WarehouseWithStock,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, inArray, gt, asc, ne, like } from "drizzle-orm";
+import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -12032,6 +12032,152 @@ export class DatabaseStorage implements IStorage {
 
       throw error;
     }
+  }
+
+  // Global Search Methods
+  async searchCustomers(companyId: number, searchTerm: string, limit: number = 10) {
+    return await this.db
+      .select({
+        id: customers.id,
+        name: customers.name,
+        email: customers.email,
+        phone: customers.phone,
+        vatNumber: customers.vatNumber,
+      })
+      .from(customers)
+      .where(
+        and(
+          eq(customers.companyId, companyId),
+          or(
+            ilike(customers.name, `%${searchTerm}%`),
+            ilike(customers.email, `%${searchTerm}%`),
+            ilike(customers.phone, `%${searchTerm}%`),
+            ilike(customers.vatNumber, `%${searchTerm}%`)
+          )
+        )
+      )
+      .limit(limit);
+  }
+
+  async searchSuppliers(companyId: number, searchTerm: string, limit: number = 10) {
+    return await this.db
+      .select({
+        id: suppliers.id,
+        name: suppliers.name,
+        email: suppliers.email,
+        phone: suppliers.phone,
+        vatNumber: suppliers.vatNumber,
+      })
+      .from(suppliers)
+      .where(
+        and(
+          eq(suppliers.companyId, companyId),
+          or(
+            ilike(suppliers.name, `%${searchTerm}%`),
+            ilike(suppliers.email, `%${searchTerm}%`),
+            ilike(suppliers.phone, `%${searchTerm}%`),
+            ilike(suppliers.vatNumber, `%${searchTerm}%`)
+          )
+        )
+      )
+      .limit(limit);
+  }
+
+  async searchInvoices(companyId: number, searchTerm: string, limit: number = 10) {
+    return await this.db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        status: invoices.status,
+        total: invoices.total,
+        dueDate: invoices.dueDate,
+        customerName: customers.name,
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .where(
+        and(
+          eq(invoices.companyId, companyId),
+          or(
+            ilike(invoices.invoiceNumber, `%${searchTerm}%`),
+            ilike(customers.name, `%${searchTerm}%`)
+          )
+        )
+      )
+      .limit(limit);
+  }
+
+  async searchProducts(companyId: number, searchTerm: string, limit: number = 10) {
+    return await this.db
+      .select({
+        id: products.id,
+        name: products.name,
+        sku: products.sku,
+        price: products.price,
+        category: products.category,
+        stockQuantity: products.stockQuantity,
+      })
+      .from(products)
+      .where(
+        and(
+          eq(products.companyId, companyId),
+          or(
+            ilike(products.name, `%${searchTerm}%`),
+            ilike(products.sku, `%${searchTerm}%`),
+            ilike(products.description, `%${searchTerm}%`),
+            ilike(products.category, `%${searchTerm}%`)
+          )
+        )
+      )
+      .limit(limit);
+  }
+
+  async searchPurchaseOrders(companyId: number, searchTerm: string, limit: number = 10) {
+    return await this.db
+      .select({
+        id: purchaseOrders.id,
+        orderNumber: purchaseOrders.orderNumber,
+        status: purchaseOrders.status,
+        total: purchaseOrders.total,
+        orderDate: purchaseOrders.orderDate,
+        supplierName: suppliers.name,
+      })
+      .from(purchaseOrders)
+      .leftJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
+      .where(
+        and(
+          eq(purchaseOrders.companyId, companyId),
+          or(
+            ilike(purchaseOrders.orderNumber, `%${searchTerm}%`),
+            ilike(suppliers.name, `%${searchTerm}%`)
+          )
+        )
+      )
+      .limit(limit);
+  }
+
+  async searchEstimates(companyId: number, searchTerm: string, limit: number = 10) {
+    return await this.db
+      .select({
+        id: estimates.id,
+        estimateNumber: estimates.estimateNumber,
+        status: estimates.status,
+        total: estimates.total,
+        validUntil: estimates.validUntil,
+        customerName: customers.name,
+      })
+      .from(estimates)
+      .leftJoin(customers, eq(estimates.customerId, customers.id))
+      .where(
+        and(
+          eq(estimates.companyId, companyId),
+          or(
+            ilike(estimates.estimateNumber, `%${searchTerm}%`),
+            ilike(customers.name, `%${searchTerm}%`)
+          )
+        )
+      )
+      .limit(limit);
   }
 }
 

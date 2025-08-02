@@ -6,6 +6,15 @@ Taxnify is a comprehensive business management platform designed for South Afric
 
 ## Recent Changes (August 2025)
 
+### Global Search Integration Complete
+- **Universal Search Bar** - Integrated existing GlobalSearch component into main header across all modules
+- **Cross-Module Access** - Search bar available on every page after login with consistent positioning
+- **Responsive Design** - Desktop header and mobile header both include global search functionality
+- **Permission-Based Results** - Search respects user roles and only shows authorized data
+- **Advanced Functionality** - Supports Ctrl+K/Cmd+K shortcuts, grouped results, and real-time search
+- **Complete Coverage** - Searches customers, suppliers, invoices, products, purchase orders, and estimates
+- **Professional UI** - Consistent with banking-style interface using existing design system
+
 ### Financial Reports Module Enhancement Complete
 - **Inline Modal/Dropdown Reports** - Completely redesigned to show all report content within same page without navigation
 - **Comprehensive Report Coverage** - All 11 report types now have complete rendering functions with detailed data displays

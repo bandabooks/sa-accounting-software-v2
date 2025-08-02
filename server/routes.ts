@@ -5918,6 +5918,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global Search API
+  app.get("/api/search", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { q: query, limit = 10 } = req.query;
+      const companyId = req.user.companyId;
+      const userPermissions = req.user.permissions || [];
+      
+      if (!query || typeof query !== 'string' || query.trim().length < 2) {
+        return res.json({ results: [], totalCount: 0 });
+      }
+      
+      const searchTerm = query.trim();
+      const searchLimit = Math.min(parseInt(limit as string), 50);
+      
+      const searchResults: any[] = [];
+      
+      // Search Customers (if user has permission)
+      if (userPermissions.includes('customers:view')) {
+        try {
+          const customers = await storage.searchCustomers(companyId, searchTerm, searchLimit);
+          const customerResults = customers.map((customer: any) => ({
+            id: customer.id,
+            type: 'customer',
+            title: customer.name,
+            subtitle: customer.email || customer.phone || 'Customer',
+            url: `/customers/${customer.id}`,
+            icon: 'User',
+            metadata: {
+              email: customer.email,
+              phone: customer.phone,
+              vatNumber: customer.vatNumber
+            }
+          }));
+          searchResults.push(...customerResults);
+        } catch (error) {
+          console.warn('Error searching customers:', error);
+        }
+      }
+      
+      // Search Suppliers (if user has permission)
+      if (userPermissions.includes('suppliers:view')) {
+        try {
+          const suppliers = await storage.searchSuppliers(companyId, searchTerm, searchLimit);
+          const supplierResults = suppliers.map((supplier: any) => ({
+            id: supplier.id,
+            type: 'supplier',
+            title: supplier.name,
+            subtitle: supplier.email || supplier.phone || 'Supplier',
+            url: `/suppliers/${supplier.id}`,
+            icon: 'Building',
+            metadata: {
+              email: supplier.email,
+              phone: supplier.phone,
+              vatNumber: supplier.vatNumber
+            }
+          }));
+          searchResults.push(...supplierResults);
+        } catch (error) {
+          console.warn('Error searching suppliers:', error);
+        }
+      }
+      
+      // Search Invoices (if user has permission)
+      if (userPermissions.includes('invoices:view')) {
+        try {
+          const invoices = await storage.searchInvoices(companyId, searchTerm, searchLimit);
+          const invoiceResults = invoices.map((invoice: any) => ({
+            id: invoice.id,
+            type: 'invoice',
+            title: `Invoice #${invoice.invoiceNumber}`,
+            subtitle: `${invoice.customerName} - R${Number(invoice.total).toFixed(2)}`,
+            url: `/invoices/${invoice.id}`,
+            icon: 'Receipt',
+            metadata: {
+              status: invoice.status,
+              total: invoice.total,
+              dueDate: invoice.dueDate,
+              customerName: invoice.customerName
+            }
+          }));
+          searchResults.push(...invoiceResults);
+        } catch (error) {
+          console.warn('Error searching invoices:', error);
+        }
+      }
+      
+      // Search Products (if user has permission)
+      if (userPermissions.includes('products:view')) {
+        try {
+          const products = await storage.searchProducts(companyId, searchTerm, searchLimit);
+          const productResults = products.map((product: any) => ({
+            id: product.id,
+            type: 'product',
+            title: product.name,
+            subtitle: `${product.category || 'Product'} - R${Number(product.price || 0).toFixed(2)}`,
+            url: `/products/${product.id}/edit`,
+            icon: 'Package',
+            metadata: {
+              sku: product.sku,
+              price: product.price,
+              category: product.category,
+              stockQuantity: product.stockQuantity
+            }
+          }));
+          searchResults.push(...productResults);
+        } catch (error) {
+          console.warn('Error searching products:', error);
+        }
+      }
+      
+      // Search Purchase Orders (if user has permission)
+      if (userPermissions.includes('purchase_orders:view')) {
+        try {
+          const purchaseOrders = await storage.searchPurchaseOrders(companyId, searchTerm, searchLimit);
+          const poResults = purchaseOrders.map((po: any) => ({
+            id: po.id,
+            type: 'purchase_order',
+            title: `PO #${po.orderNumber}`,
+            subtitle: `${po.supplierName} - R${Number(po.total).toFixed(2)}`,
+            url: `/purchase-orders/${po.id}`,
+            icon: 'ShoppingCart',
+            metadata: {
+              status: po.status,
+              total: po.total,
+              supplierName: po.supplierName,
+              orderDate: po.orderDate
+            }
+          }));
+          searchResults.push(...poResults);
+        } catch (error) {
+          console.warn('Error searching purchase orders:', error);
+        }
+      }
+      
+      // Search Estimates (if user has permission)
+      if (userPermissions.includes('estimates:view')) {
+        try {
+          const estimates = await storage.searchEstimates(companyId, searchTerm, searchLimit);
+          const estimateResults = estimates.map((estimate: any) => ({
+            id: estimate.id,
+            type: 'estimate',
+            title: `Estimate #${estimate.estimateNumber}`,
+            subtitle: `${estimate.customerName} - R${Number(estimate.total).toFixed(2)}`,
+            url: `/estimates/${estimate.id}`,
+            icon: 'FileText',
+            metadata: {
+              status: estimate.status,
+              total: estimate.total,
+              validUntil: estimate.validUntil,
+              customerName: estimate.customerName
+            }
+          }));
+          searchResults.push(...estimateResults);
+        } catch (error) {
+          console.warn('Error searching estimates:', error);
+        }
+      }
+      
+      // Sort results by relevance (exact matches first, then partial matches)
+      const sortedResults = searchResults.sort((a, b) => {
+        const aExact = a.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const bExact = b.title.toLowerCase().includes(searchTerm.toLowerCase());
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        return a.title.localeCompare(b.title);
+      });
+      
+      // Limit total results
+      const limitedResults = sortedResults.slice(0, searchLimit);
+      
+      // Group results by type for organized display
+      const groupedResults = limitedResults.reduce((groups: any, item) => {
+        const type = item.type;
+        if (!groups[type]) {
+          groups[type] = [];
+        }
+        groups[type].push(item);
+        return groups;
+      }, {});
+      
+      res.json({
+        results: limitedResults,
+        groupedResults,
+        totalCount: limitedResults.length,
+        query: searchTerm
+      });
+      
+    } catch (error) {
+      console.error("Global search error:", error);
+      res.status(500).json({ message: "Search failed", results: [], totalCount: 0 });
+    }
+  });
+
   // Public Subscription Plans (for company admins to view)
   app.get("/api/subscription-plans", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

@@ -3,6 +3,7 @@ import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { OnboardingHelpButton } from "@/components/onboarding/OnboardingHelpButton";
+import GlobalSearch from "@/components/global-search";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,11 @@ export default function Header() {
           )}
         </div>
         <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+          {/* Global Search - Hidden on very small screens */}
+          <div className="hidden sm:block">
+            <GlobalSearch />
+          </div>
+          
           {/* Company Switcher - Hidden on very small screens */}
           <div className="hidden xs:block">
             <CompanySwitcher />
