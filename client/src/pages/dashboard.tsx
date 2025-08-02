@@ -453,6 +453,92 @@ export default function Dashboard() {
                       <ProfitLossChart data={dashboardStats.profitLossData || []} />
                     </CardContent>
                   </Card>
+                  
+                  {/* FILLING THE RED-MARKED GAP: Quick Actions */}
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-6">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                            <Zap className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base font-semibold text-gray-800">Quick Actions</CardTitle>
+                            <CardDescription className="text-xs text-gray-600">Essential operations</CardDescription>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs text-gray-600">
+                          Daily
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/invoices/new">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-xs font-medium">Create Invoice</span>
+                          </Link>
+                        </Button>
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/customers/new">
+                            <Plus className="h-4 w-4" />
+                            <span className="text-xs font-medium">Add Customer</span>
+                          </Link>
+                        </Button>
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/payments/new">
+                            <DollarSign className="h-4 w-4" />
+                            <span className="text-xs font-medium">Record Payment</span>
+                          </Link>
+                        </Button>
+                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
+                          <Link href="/estimates/new">
+                            <Target className="h-4 w-4" />
+                            <span className="text-xs font-medium">New Estimate</span>
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* FILLING THE RED-MARKED GAP: Compliance Alerts */}
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-3">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
+                            <AlertTriangle className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base font-semibold text-gray-800">Compliance Alerts</CardTitle>
+                            <CardDescription className="text-xs text-gray-600">Important notifications</CardDescription>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                          1 Alert
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-yellow-100 rounded-lg">
+                              <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-800">VAT return due in 5 days</h4>
+                              <p className="text-xs text-gray-600">Action required soon</p>
+                            </div>
+                          </div>
+                          <Button size="sm" className="text-xs bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
+                            Prepare
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Recent Activities Widget */}
@@ -467,126 +553,7 @@ export default function Dashboard() {
                 </Card>
               </div>
 
-              {/* FILLING RED-MARKED EMPTY SPACE BELOW REVENUE TRENDS: Quick Actions */}
-              <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                        <Zap className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-gray-800">Quick Actions</CardTitle>
-                        <CardDescription className="text-sm text-gray-600">Frequently used operations</CardDescription>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-gray-600">
-                      Daily Operations
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/invoices/new">
-                        <FileText className="h-5 w-5" />
-                        <span className="text-xs font-medium">Create Invoice</span>
-                      </Link>
-                    </Button>
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/customers/new">
-                        <Plus className="h-5 w-5" />
-                        <span className="text-xs font-medium">Add Customer</span>
-                      </Link>
-                    </Button>
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/payments/new">
-                        <DollarSign className="h-5 w-5" />
-                        <span className="text-xs font-medium">Record Payment</span>
-                      </Link>
-                    </Button>
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/estimates/new">
-                        <Target className="h-5 w-5" />
-                        <span className="text-xs font-medium">New Estimate</span>
-                      </Link>
-                    </Button>
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/inventory">
-                        <Building className="h-5 w-5" />
-                        <span className="text-xs font-medium">Inventory</span>
-                      </Link>
-                    </Button>
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/financial-reports">
-                        <BarChart3 className="h-5 w-5" />
-                        <span className="text-xs font-medium">Reports</span>
-                      </Link>
-                    </Button>
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/settings">
-                        <Settings className="h-5 w-5" />
-                        <span className="text-xs font-medium">Settings</span>
-                      </Link>
-                    </Button>
-                    <Button asChild className="h-20 flex-col gap-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <Link href="/bulk-capture-enhanced">
-                        <Zap className="h-5 w-5" />
-                        <span className="text-xs font-medium">Bulk Entry</span>
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* FILLING RED-MARKED EMPTY SPACE: Compliance Alerts */}
-              <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
-                        <AlertTriangle className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-gray-800">Compliance & Alerts</CardTitle>
-                        <CardDescription className="text-sm text-gray-600">Important compliance notifications</CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                        1 Alert
-                      </Badge>
-                      <Button variant="outline" size="sm">
-                        <Settings className="h-4 w-4 mr-2" />
-                        Manage
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-yellow-100 rounded-lg">
-                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-800">VAT return due in 5 days</h4>
-                          <p className="text-sm text-gray-600">Should be addressed soon</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
-                          Medium
-                        </Badge>
-                        <Button size="sm" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
-                          Prepare VAT Return
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             <TabsContent value="sales" className="space-y-6">
