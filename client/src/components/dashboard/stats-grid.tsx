@@ -1,5 +1,6 @@
 import { ChartLine, Clock, Users, Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
+import { useLocation } from "wouter";
 
 interface StatsGridProps {
   stats: {
@@ -13,6 +14,8 @@ interface StatsGridProps {
 }
 
 export default function StatsGrid({ stats }: StatsGridProps) {
+  const [, setLocation] = useLocation();
+
   const statCards = [
     {
       title: "Total Revenue",
@@ -21,7 +24,8 @@ export default function StatsGrid({ stats }: StatsGridProps) {
       changeType: "positive",
       icon: ChartLine,
       iconBg: "bg-green-100",
-      iconColor: "text-accent"
+      iconColor: "text-accent",
+      onClick: () => setLocation("/financial-reports?report=profit-loss")
     },
     {
       title: "Outstanding Invoices", 
@@ -30,7 +34,8 @@ export default function StatsGrid({ stats }: StatsGridProps) {
       changeType: "neutral",
       icon: Clock,
       iconBg: "bg-amber-100",
-      iconColor: "text-amber-600"
+      iconColor: "text-amber-600",
+      onClick: () => setLocation("/invoices?filter=outstanding")
     },
     {
       title: "Total Customers",
@@ -39,7 +44,8 @@ export default function StatsGrid({ stats }: StatsGridProps) {
       changeType: "positive",
       icon: Users,
       iconBg: "bg-blue-100",
-      iconColor: "text-primary"
+      iconColor: "text-primary",
+      onClick: () => setLocation("/customers")
     },
     {
       title: "VAT Due",
@@ -48,7 +54,8 @@ export default function StatsGrid({ stats }: StatsGridProps) {
       changeType: "warning",
       icon: Receipt,
       iconBg: "bg-red-100",
-      iconColor: "text-red-600"
+      iconColor: "text-red-600",
+      onClick: () => setLocation("/vat-returns")
     }
   ];
 
@@ -57,11 +64,15 @@ export default function StatsGrid({ stats }: StatsGridProps) {
       {statCards.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <div key={index} className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div 
+            key={index} 
+            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-gray-50 dark:hover:bg-gray-750"
+            onClick={stat.onClick}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{stat.title}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
                 <p className={`text-sm font-medium mt-1 ${
                   stat.changeType === 'positive' ? 'text-accent' :
                   stat.changeType === 'warning' ? 'text-red-600' :
@@ -71,8 +82,8 @@ export default function StatsGrid({ stats }: StatsGridProps) {
                   {stat.change}
                 </p>
               </div>
-              <div className={`w-12 h-12 ${stat.iconBg} rounded-lg flex items-center justify-center`}>
-                <Icon className={`${stat.iconColor}`} size={24} />
+              <div className={`w-12 h-12 ${stat.iconBg} dark:${stat.iconBg}/20 rounded-lg flex items-center justify-center`}>
+                <Icon className={`${stat.iconColor} dark:${stat.iconColor}`} size={24} />
               </div>
             </div>
           </div>
