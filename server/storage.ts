@@ -3798,7 +3798,7 @@ export class DatabaseStorage implements IStorage {
     const [warehouse] = await db.select().from(warehouses)
       .where(and(
         eq(warehouses.companyId, companyId),
-        eq(warehouses.isMainWarehouse, true),
+        eq(warehouses.isDefault, true),
         eq(warehouses.isActive, true)
       ));
     return warehouse || undefined;
@@ -3806,9 +3806,9 @@ export class DatabaseStorage implements IStorage {
 
   async createWarehouse(warehouse: any): Promise<any> {
     // If this is set as main warehouse, unset others
-    if (warehouse.isMainWarehouse) {
+    if (warehouse.isDefault) {
       await db.update(warehouses)
-        .set({ isMainWarehouse: false })
+        .set({ isDefault: false })
         .where(eq(warehouses.companyId, warehouse.companyId));
     }
     
@@ -3818,9 +3818,9 @@ export class DatabaseStorage implements IStorage {
 
   async updateWarehouse(id: number, warehouse: any): Promise<any | undefined> {
     // If this is set as main warehouse, unset others
-    if (warehouse.isMainWarehouse) {
+    if (warehouse.isDefault) {
       await db.update(warehouses)
-        .set({ isMainWarehouse: false })
+        .set({ isDefault: false })
         .where(and(
           eq(warehouses.companyId, warehouse.companyId),
           ne(warehouses.id, id)

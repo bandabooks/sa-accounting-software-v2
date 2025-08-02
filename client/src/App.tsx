@@ -127,10 +127,11 @@ import POSDashboard from "@/pages/pos-dashboard";
 import POSTerminal from "@/pages/pos-terminal";
 import POSShifts from "@/pages/pos-shifts";
 import POSTerminals from "@/pages/pos-terminals";
-import POSCustomerLoyalty from "@/pages/pos-customer-loyalty";
-import POSReports from "@/pages/pos-reports";
-import PayFastPayments from "@/pages/payfast-payments";
-import POSShiftManagement from "@/pages/pos-shift-management";
+// Note: These components don't exist yet, commenting out to fix build
+// import POSCustomerLoyalty from "@/pages/pos-customer-loyalty";
+// import POSReports from "@/pages/pos-reports";
+// import PayFastPayments from "@/pages/payfast-payments";
+// import POSShiftManagement from "@/pages/pos-shift-management";
 import ProfessionalServices from "@/pages/professional-services";
 import AppLayout from "@/components/layout/app-layout";
 

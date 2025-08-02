@@ -658,14 +658,11 @@ export const warehouses = pgTable("warehouses", {
   companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   code: text("code").notNull(), // Unique warehouse code
-  description: text("description"),
   address: text("address"),
-  city: text("city"),
-  postalCode: text("postal_code"),
-  contactPerson: text("contact_person"),
   phone: text("phone"),
   email: text("email"),
-  isMainWarehouse: boolean("is_main_warehouse").default(false),
+  managerId: integer("manager_id"),
+  isDefault: boolean("is_default").default(false),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1504,8 +1501,8 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
   quantity: integer("quantity").notNull(),
   unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }),
-  fromWarehouseId: integer("from_warehouse_id").references(() => warehouses.id), // For transfers
-  toWarehouseId: integer("to_warehouse_id").references(() => warehouses.id), // For transfers
+  // Note: from_warehouse_id and to_warehouse_id columns don't exist in current database
+  // These will be added in future schema migrations if needed
   reference: varchar("reference", { length: 100 }), // invoice, purchase order, adjustment ref
   referenceId: integer("reference_id"), // ID of related document
   journalEntryId: integer("journal_entry_id").references(() => journalEntries.id), // GL posting
