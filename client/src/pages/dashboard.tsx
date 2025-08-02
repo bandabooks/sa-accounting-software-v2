@@ -232,7 +232,7 @@ export default function Dashboard() {
               
               {/* NEW: Bulk Data Entry Shortcut (Orange) */}
               <Button asChild className="bg-gradient-to-r from-orange-500/30 to-amber-600/30 hover:from-orange-500/40 hover:to-amber-600/40 backdrop-blur-sm text-white border border-orange-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-medium">
-                <Link href="/bulk-capture-enhanced">
+                <Link href="/bulk-capture">
                   <Zap className="h-4 w-4 mr-2" />
                   Bulk Entry
                 </Link>
