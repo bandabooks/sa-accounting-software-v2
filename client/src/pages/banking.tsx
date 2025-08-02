@@ -450,7 +450,7 @@ export default function Banking() {
             {bankAccounts.map((account: BankAccountWithTransactions) => (
               <Card key={account.id} className="group relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-gray-100 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02]">
                 {/* Bank Card Style Header */}
-                <div className={`h-32 bg-gradient-to-br ${
+                <div className={`h-40 bg-gradient-to-br ${
                   account.accountType === 'current' 
                     ? 'from-blue-600 via-indigo-600 to-purple-700' 
                     : account.accountType === 'savings'
@@ -463,11 +463,11 @@ export default function Banking() {
                   <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
                   <div className="absolute top-4 right-4 w-12 h-8 bg-white/20 rounded backdrop-blur-sm"></div>
                   
-                  <CardContent className="p-6 relative z-10">
-                    <div className="flex items-start justify-between mb-4">
+                  <CardContent className="p-6 relative z-10 h-full flex flex-col justify-between">
+                    <div className="flex items-start justify-between">
                       <div className="text-white">
                         <p className="text-white/80 text-xs font-medium uppercase tracking-wider">{account.bankName}</p>
-                        <h3 className="text-white font-bold text-lg mt-1">{account.accountName}</h3>
+                        <h3 className="text-white font-bold text-lg mt-1 leading-tight">{account.accountName}</h3>
                       </div>
                       <Badge className={`${
                         account.isActive 
@@ -478,9 +478,9 @@ export default function Banking() {
                       </Badge>
                     </div>
                     
-                    <div className="text-white">
-                      <p className="text-white/70 text-xs mb-1">Available Balance</p>
-                      <p className="text-2xl font-bold">
+                    <div className="text-white mt-4">
+                      <p className="text-white/70 text-sm mb-2 font-medium">Available Balance</p>
+                      <p className="text-3xl font-bold leading-none">
                         R {parseFloat(account.currentBalance).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
