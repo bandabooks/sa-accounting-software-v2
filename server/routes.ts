@@ -3356,16 +3356,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/purchase/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user!.companyId;
+      
+      // Get real supplier statistics
+      const suppliers = await storage.getSuppliers(companyId);
+      const activeSuppliers = suppliers.filter(s => s.status === 'active').length;
+      
+      // Calculate new suppliers this month
+      const currentDate = new Date();
+      const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const newSuppliers = suppliers.filter(s => 
+        s.createdAt && new Date(s.createdAt) >= firstDayOfMonth
+      ).length;
+      
+      // Get real purchase order statistics
+      const purchaseOrders = await storage.getPurchaseOrders(companyId);
+      const pendingOrders = purchaseOrders.filter(po => po.status === 'pending').length;
+      
+      // Calculate total purchases value
+      const totalPurchases = purchaseOrders.reduce((sum, po) => sum + parseFloat(po.total || '0'), 0);
+      
+      // Get expenses for outstanding amounts
+      const expenses = await storage.getExpenses(companyId);
+      const outstandingAmount = expenses
+        .filter(e => e.status === 'pending')
+        .reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0);
+      
       const stats = {
-        totalPurchases: 0,
-        purchaseGrowth: 0,
-        pendingOrders: 0,
-        avgProcessingTime: "0 days",
-        outstandingAmount: 0,
-        overdueInvoices: 0,
-        activeSuppliers: 0,
-        newSuppliers: 0
+        totalPurchases: Math.round(totalPurchases),
+        purchaseGrowth: 0, // TODO: Calculate month-over-month growth
+        pendingOrders,
+        avgProcessingTime: "0 days", // TODO: Calculate average processing time
+        outstandingAmount: Math.round(outstandingAmount),
+        overdueInvoices: 0, // TODO: Calculate overdue invoices
+        activeSuppliers,
+        newSuppliers
       };
+      
       res.json(stats);
     } catch (error) {
       console.error("Error fetching purchase stats:", error);
