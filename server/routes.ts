@@ -201,9 +201,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerOnboardingRoutes(app);
 
   // AI Assistant Routes
-  app.get("/api/ai/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/ai/settings", authenticate, async (req, res) => {
     try {
-      const companyId = req.user.companyId;
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId;
       // For now, return default settings since we may not have AI settings in database yet
       const defaultSettings = {
         enabled: false,
@@ -223,13 +224,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/ai/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.put("/api/ai/settings", authenticate, async (req, res) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const settings = req.body;
       // TODO: Store AI settings in database (encrypted API key)
       console.log('AI settings update:', { ...settings, apiKey: settings.apiKey ? '[REDACTED]' : '' });
       
-      await logAudit(req.user.id, 'UPDATE', 'ai_settings', 0, {
+      await logAudit(authReq.user?.id || 0, 'UPDATE', 'ai_settings', 0, {
         provider: settings.provider,
         model: settings.model,
         enabled: settings.enabled
@@ -242,8 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/ai/test-connection", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/ai/test-connection", authenticate, async (req, res) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { apiKey, model } = req.body;
       
       if (!apiKey) {
@@ -260,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "AI connection test successful! Claude is ready to assist with business insights, compliance guidance, and financial analysis."
         };
 
-        await logAudit(req.user.id, 'TEST', 'ai_connection', 0, {
+        await logAudit(authReq.user?.id || 0, 'TEST', 'ai_connection', 0, {
           provider: 'anthropic',
           model: model,
           success: true
@@ -749,11 +752,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/change-password", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/auth/change-password", authenticate, async (req, res) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
       
-      const user = await storage.getUser(req.user!.id);
+      const user = await storage.getUser(authReq.user!.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
