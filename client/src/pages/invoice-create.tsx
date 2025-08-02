@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,10 +32,16 @@ interface InvoiceItem {
 
 export default function InvoiceCreate() {
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/invoices/create");
   const { toast } = useToast();
   const { showSuccess } = useGlobalNotification();
   const queryClient = useQueryClient();
   const { shouldShowVATFields } = useVATStatus();
+  
+  // Get edit parameter from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const editId = urlParams.get('edit');
+  const isEditing = Boolean(editId);
 
   const [formData, setFormData] = useState({
     customerId: 0,
@@ -62,6 +68,42 @@ export default function InvoiceCreate() {
     queryFn: invoicesApi.getAll
   });
 
+  // Load existing invoice data when editing
+  const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery({
+    queryKey: ["/api/invoices", editId],
+    queryFn: () => invoicesApi.getById(Number(editId)),
+    enabled: Boolean(editId)
+  });
+
+  // Populate form when editing existing invoice
+  useEffect(() => {
+    if (existingInvoice && isEditing) {
+      setFormData({
+        customerId: existingInvoice.customerId,
+        issueDate: new Date(existingInvoice.issueDate),
+        dueDate: new Date(existingInvoice.dueDate),
+        status: existingInvoice.status as "draft" | "sent" | "paid" | "overdue",
+        subtotal: existingInvoice.subtotal,
+        vatAmount: existingInvoice.vatAmount,
+        total: existingInvoice.total,
+        notes: existingInvoice.notes || ""
+      });
+
+      if (existingInvoice.items && existingInvoice.items.length > 0) {
+        const invoiceItems: InvoiceItem[] = existingInvoice.items.map(item => ({
+          productId: undefined, // Reset productId as the schema doesn't include it
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          vatRate: item.vatRate,
+          vatInclusive: item.vatInclusive || false,
+          vatAmount: item.vatAmount
+        }));
+        setItems(invoiceItems);
+      }
+    }
+  }, [existingInvoice, isEditing]);
+
   const createMutation = useMutation({
     mutationFn: (data: { invoice: InsertInvoice; items: Omit<InsertInvoiceItem, 'invoiceId'>[] }) => 
       invoicesApi.create(data),
@@ -78,6 +120,27 @@ export default function InvoiceCreate() {
       toast({
         title: "Error",
         description: "Failed to create invoice. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: number; invoice: Partial<InsertInvoice> }) => 
+      invoicesApi.update(data.id, data.invoice),
+    onSuccess: (invoice) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
+      showSuccess(
+        "Invoice Updated Successfully",
+        `Invoice ${invoice.invoiceNumber} has been updated successfully.`
+      );
+      setLocation(`/invoices/${invoice.id}`);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update invoice. Please try again.",
         variant: "destructive",
       });
     }
@@ -156,25 +219,42 @@ export default function InvoiceCreate() {
       return;
     }
 
-    const invoiceNumber = generateInvoiceNumber(invoices?.length || 0);
-    
-    const invoiceData: InsertInvoice = {
-      ...formData,
-      invoiceNumber
-    };
+    if (isEditing && editId) {
+      // Update existing invoice
+      const invoiceData: Partial<InsertInvoice> = {
+        customerId: formData.customerId,
+        issueDate: formData.issueDate,
+        dueDate: formData.dueDate,
+        status: formData.status,
+        subtotal: formData.subtotal,
+        vatAmount: formData.vatAmount,
+        total: formData.total,
+        notes: formData.notes
+      };
 
-    const itemsData: Omit<InsertInvoiceItem, 'invoiceId'>[] = validItems.map(item => ({
-      companyId: 2, // Using default company for now
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      vatRate: item.vatRate,
-      vatAmount: (parseFloat(item.quantity) * parseFloat(item.unitPrice) * (parseFloat(item.vatRate) / 100)).toFixed(2),
-      vatInclusive: item.vatInclusive || false,
-      total: (parseFloat(item.quantity) * parseFloat(item.unitPrice) * (1 + parseFloat(item.vatRate) / 100)).toFixed(2)
-    }));
+      updateMutation.mutate({ id: Number(editId), invoice: invoiceData });
+    } else {
+      // Create new invoice
+      const invoiceNumber = generateInvoiceNumber(invoices?.length || 0);
+      
+      const invoiceData: InsertInvoice = {
+        ...formData,
+        invoiceNumber
+      };
 
-    createMutation.mutate({ invoice: invoiceData, items: itemsData });
+      const itemsData: Omit<InsertInvoiceItem, 'invoiceId'>[] = validItems.map(item => ({
+        companyId: 2, // Using default company for now
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        vatRate: item.vatRate,
+        vatAmount: (parseFloat(item.quantity) * parseFloat(item.unitPrice) * (parseFloat(item.vatRate) / 100)).toFixed(2),
+        vatInclusive: item.vatInclusive || false,
+        total: (parseFloat(item.quantity) * parseFloat(item.unitPrice) * (1 + parseFloat(item.vatRate) / 100)).toFixed(2)
+      }));
+
+      createMutation.mutate({ invoice: invoiceData, items: itemsData });
+    }
   };
 
   const totals = calculateInvoiceTotal(items);
@@ -184,8 +264,12 @@ export default function InvoiceCreate() {
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div className="mobile-form">
           <div className="mobile-form-header">
-            <h2 className="text-lg sm:text-xl font-bold text-white sm:text-gray-900 dark:text-white">Create Invoice</h2>
-            <p className="text-blue-100 sm:text-gray-600 dark:text-gray-400 text-sm">Fill in the details below</p>
+            <h2 className="text-lg sm:text-xl font-bold text-white sm:text-gray-900 dark:text-white">
+              {isEditing ? 'Edit Invoice' : 'Create Invoice'}
+            </h2>
+            <p className="text-blue-100 sm:text-gray-600 dark:text-gray-400 text-sm">
+              {isEditing ? 'Update the invoice details below' : 'Fill in the details below'}
+            </p>
           </div>
           <div className="mobile-form-content space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -399,9 +483,12 @@ export default function InvoiceCreate() {
             <Button 
               type="submit" 
               className="mobile-btn mobile-btn-primary"
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending || isLoadingInvoice}
             >
-              {createMutation.isPending ? "Creating..." : "Create Invoice"}
+              {isLoadingInvoice ? "Loading..." : 
+               createMutation.isPending ? "Creating..." : 
+               updateMutation.isPending ? "Updating..." :
+               isEditing ? "Update Invoice" : "Create Invoice"}
             </Button>
           </div>
         </div>
