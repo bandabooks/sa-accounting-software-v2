@@ -112,7 +112,7 @@ import CustomerPayments from "@/pages/customer-payments";
 import CustomerPaymentRecord from "@/pages/customer-payment-record";
 import Deliveries from "@/pages/deliveries";
 import Payments from "@/pages/payments";
-import NewPayment from "@/pages/new-payment";
+// import NewPayment from "@/pages/new-payment"; // Commented out - file doesn't exist
 import SalesReports from "@/pages/sales-reports";
 import PurchaseDashboard from "@/pages/purchase-dashboard";
 import PurchaseReports from "@/pages/purchase-reports";
@@ -301,11 +301,7 @@ function AuthenticatedApp() {
             <Payments />
           </ProtectedRoute>
         </Route>
-        <Route path="/payments/new">
-          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
-            <NewPayment />
-          </ProtectedRoute>
-        </Route>
+        {/* Removed /payments/new route - component doesn't exist */}
         <Route path="/sales-reports">
           <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
             <SalesReports />
