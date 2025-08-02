@@ -467,12 +467,464 @@ export default function FinancialReports() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!modalReport) return;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Generate clean HTML for printing
+    const printContent = generatePrintableHTML(modalReport);
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
+  };
+
+  const generatePrintableHTML = (report: ReportData) => {
+    const companyName = "Taxnify - Unified Business, Accounting, Compliance Platform | South Africa";
+    const currentDate = new Date().toLocaleString();
+    
+    let reportContent = "";
+
+    if (report.id === 'trial-balance') {
+      const totalDebits = report.data?.accounts?.reduce((sum: number, account: any) => sum + (account.debit || 0), 0) || 0;
+      const totalCredits = report.data?.accounts?.reduce((sum: number, account: any) => sum + (account.credit || 0), 0) || 0;
+      
+      reportContent = `
+        <div class="report-content">
+          <h2>${report.title}</h2>
+          <p class="period">Account balances as at ${report.lastGenerated}</p>
+          
+          <table class="financial-table">
+            <thead>
+              <tr>
+                <th style="text-align: left;">ACCOUNT</th>
+                <th style="text-align: right;">DEBIT</th>
+                <th style="text-align: right;">CREDIT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${report.data?.accounts?.map((account: any) => `
+                <tr>
+                  <td>${account.account}</td>
+                  <td style="text-align: right;">${account.debit > 0 ? formatCurrency(account.debit) : '-'}</td>
+                  <td style="text-align: right;">${account.credit > 0 ? formatCurrency(account.credit) : '-'}</td>
+                </tr>
+              `).join('') || ''}
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td style="font-weight: bold;">TOTAL</td>
+                <td style="text-align: right; font-weight: bold;">${formatCurrency(totalDebits)}</td>
+                <td style="text-align: right; font-weight: bold;">${formatCurrency(totalCredits)}</td>
+              </tr>
+              ${totalDebits !== totalCredits ? `
+                <tr>
+                  <td colspan="3" style="text-align: center; color: #dc2626; background-color: #fef2f2; padding: 8px;">
+                    ⚠️ Trial Balance does not balance: Difference of ${formatCurrency(Math.abs(totalDebits - totalCredits))}
+                  </td>
+                </tr>
+              ` : ''}
+            </tfoot>
+          </table>
+        </div>
+      `;
+    } else if (report.id === 'profit-loss') {
+      reportContent = `
+        <div class="report-content">
+          <h2>${report.title}</h2>
+          <p class="period">Period: ${dateFrom} to ${dateTo} | Generated: ${report.lastGenerated}</p>
+          
+          <div class="summary-section">
+            <div class="summary-item">
+              <span class="label">Total Revenue:</span>
+              <span class="amount revenue">${formatCurrency(report.summary?.revenue || 0)}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Total Expenses:</span>
+              <span class="amount expense">${formatCurrency(report.summary?.expenses || 0)}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Net Income:</span>
+              <span class="amount net-income">${formatCurrency(report.summary?.netIncome || 0)}</span>
+            </div>
+          </div>
+
+          <div class="detailed-section">
+            <div class="revenue-section">
+              <h3>📈 Revenue</h3>
+              <table class="financial-table">
+                ${report.data?.revenue?.map((item: any) => `
+                  <tr>
+                    <td>${item.account}</td>
+                    <td style="text-align: right; color: #059669;">${formatCurrency(item.amount)}</td>
+                  </tr>
+                `).join('') || ''}
+              </table>
+            </div>
+
+            <div class="expenses-section">
+              <h3>📉 Expenses</h3>
+              <table class="financial-table">
+                ${report.data?.expenses?.map((item: any) => `
+                  <tr>
+                    <td>${item.account}</td>
+                    <td style="text-align: right; color: #dc2626;">${formatCurrency(item.amount)}</td>
+                  </tr>
+                `).join('') || ''}
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (report.id === 'balance-sheet') {
+      reportContent = `
+        <div class="report-content">
+          <h2>${report.title}</h2>
+          <p class="period">As at ${report.lastGenerated}</p>
+          
+          <div class="summary-section">
+            <div class="summary-item">
+              <span class="label">Total Assets:</span>
+              <span class="amount">${formatCurrency(report.summary?.totalAssets || 0)}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Total Liabilities:</span>
+              <span class="amount">${formatCurrency(report.summary?.totalLiabilities || 0)}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Equity:</span>
+              <span class="amount">${formatCurrency(report.summary?.equity || 0)}</span>
+            </div>
+          </div>
+
+          <div class="balance-sheet-sections">
+            <div class="assets-section">
+              <h3>ASSETS</h3>
+              <h4>Current Assets</h4>
+              <table class="financial-table">
+                ${report.data?.assets?.current?.map((asset: any) => `
+                  <tr>
+                    <td>${asset.account}</td>
+                    <td style="text-align: right;">${formatCurrency(asset.amount)}</td>
+                  </tr>
+                `).join('') || ''}
+              </table>
+              
+              <h4>Non-Current Assets</h4>
+              <table class="financial-table">
+                ${report.data?.assets?.nonCurrent?.map((asset: any) => `
+                  <tr>
+                    <td>${asset.account}</td>
+                    <td style="text-align: right;">${formatCurrency(asset.amount)}</td>
+                  </tr>
+                `).join('') || ''}
+              </table>
+            </div>
+
+            <div class="liabilities-section">
+              <h3>LIABILITIES</h3>
+              <h4>Current Liabilities</h4>
+              <table class="financial-table">
+                ${report.data?.liabilities?.current?.map((liability: any) => `
+                  <tr>
+                    <td>${liability.account}</td>
+                    <td style="text-align: right;">${formatCurrency(liability.amount)}</td>
+                  </tr>
+                `).join('') || ''}
+              </table>
+              
+              <h4>Non-Current Liabilities</h4>
+              <table class="financial-table">
+                ${report.data?.liabilities?.nonCurrent?.map((liability: any) => `
+                  <tr>
+                    <td>${liability.account}</td>
+                    <td style="text-align: right;">${formatCurrency(liability.amount)}</td>
+                  </tr>
+                `).join('') || ''}
+              </table>
+            </div>
+
+            <div class="equity-section">
+              <h3>EQUITY</h3>
+              <table class="financial-table">
+                ${report.data?.equity?.map((equity: any) => `
+                  <tr>
+                    <td>${equity.account}</td>
+                    <td style="text-align: right;">${formatCurrency(equity.amount)}</td>
+                  </tr>
+                `).join('') || ''}
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      // Generic format for other reports
+      reportContent = `
+        <div class="report-content">
+          <h2>${report.title}</h2>
+          <p class="period">Period: ${dateFrom} to ${dateTo} | Generated: ${report.lastGenerated}</p>
+          <p class="description">${report.description}</p>
+        </div>
+      `;
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${report.title} - Print</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 2cm;
+          }
+          
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+          }
+          
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 30px;
+          }
+          
+          .header-left {
+            font-size: 10px;
+            color: #666;
+          }
+          
+          .header-right {
+            font-size: 10px;
+            color: #666;
+            text-align: right;
+          }
+          
+          .report-content h2 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+          }
+          
+          .period, .description {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 20px;
+          }
+          
+          .summary-section {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+          }
+          
+          .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-width: 200px;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+          }
+          
+          .summary-item .label {
+            font-weight: 600;
+            color: #374151;
+          }
+          
+          .summary-item .amount {
+            font-weight: bold;
+            font-size: 16px;
+          }
+          
+          .amount.revenue { color: #059669; }
+          .amount.expense { color: #dc2626; }
+          .amount.net-income { color: #3b82f6; }
+          
+          .financial-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          
+          .financial-table th,
+          .financial-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+          }
+          
+          .financial-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #d1d5db;
+          }
+          
+          .financial-table tbody tr:hover {
+            background-color: #f9fafb;
+          }
+          
+          .total-row {
+            border-top: 2px solid #374151;
+            background-color: #f3f4f6;
+          }
+          
+          .total-row td {
+            font-weight: bold;
+            color: #1f2937;
+          }
+          
+          .detailed-section {
+            display: flex;
+            gap: 40px;
+            margin-top: 30px;
+          }
+          
+          .revenue-section,
+          .expenses-section {
+            flex: 1;
+          }
+          
+          .balance-sheet-sections {
+            margin-top: 20px;
+          }
+          
+          .assets-section,
+          .liabilities-section,
+          .equity-section {
+            margin-bottom: 30px;
+          }
+          
+          h3 {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          
+          h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4b5563;
+            margin: 15px 0 8px 0;
+          }
+          
+          .footer {
+            position: fixed;
+            bottom: 1cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10px;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 10px;
+          }
+          
+          @media print {
+            .header {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              background: white;
+              z-index: 1000;
+            }
+            
+            .report-content {
+              margin-top: 80px;
+            }
+            
+            .financial-table {
+              page-break-inside: avoid;
+            }
+            
+            .summary-section {
+              page-break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="header-left">${currentDate}</div>
+          <div class="header-right">${companyName}</div>
+        </div>
+        
+        ${reportContent}
+        
+        <div class="footer">
+          Page 1 of 1 | Generated by Taxnify Financial Reporting System
+        </div>
+      </body>
+      </html>
+    `;
   };
 
   const handleDownloadPDF = () => {
-    // Implementation for PDF download
-    console.log("Downloading PDF...");
+    if (!modalReport) return;
+    
+    // Create a hidden iframe for PDF generation
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.left = '-9999px';
+    iframe.style.width = '210mm'; // A4 width
+    iframe.style.height = '297mm'; // A4 height
+    document.body.appendChild(iframe);
+    
+    const printContent = generatePrintableHTML(modalReport);
+    
+    if (iframe.contentDocument) {
+      iframe.contentDocument.open();
+      iframe.contentDocument.write(printContent);
+      iframe.contentDocument.close();
+      
+      // Wait for content to load
+      iframe.onload = () => {
+        if (iframe.contentWindow) {
+          // Trigger print dialog which will show "Save as PDF" option
+          iframe.contentWindow.print();
+        }
+        
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      };
+    }
   };
 
   const handleEmailReport = () => {
