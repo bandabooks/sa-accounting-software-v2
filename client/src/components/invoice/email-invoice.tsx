@@ -56,7 +56,7 @@ Think Mybiz Accounting Team`
     setIsSubmitting(true);
 
     try {
-      await apiRequest("POST", "/api/invoices/send-email", {
+      await apiRequest("/api/invoices/send-email", "POST", {
         invoiceId: invoice.id,
         to: formData.to,
         subject: formData.subject,
