@@ -129,9 +129,9 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     // EXACTLY MATCH REACT TABLE - Items Table with blue-700 header  
     const tableStartY = 90;
     
-    // Table header background - matching bg-blue-700 aligned with payment box width
+    // Table header background - matching bg-blue-700 extending to payment box edge
     pdf.setFillColor(29, 78, 216); // Blue-700 exactly
-    pdf.rect(20, tableStartY, 165, 10, 'F'); // Width aligned with payment status box
+    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F'); // Full width to match payment box alignment
     
     // Table headers aligned with payment status box width - right-aligned for professional look
     pdf.setFontSize(8);
@@ -156,9 +156,9 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
         pdf.rect(20, currentY - 4, pageWidth - 40, 12, 'F'); // Better height
       }
       
-      // Row border bottom (matching border-b border-gray-100) aligned with table width
+      // Row border bottom (matching border-b border-gray-100) extending full width
       pdf.setDrawColor(243, 244, 246); // Gray-100
-      pdf.line(20, currentY + 6, 185, currentY + 6); // Match table width
+      pdf.line(20, currentY + 6, pageWidth - 20, currentY + 6); // Full width to match header
       
       pdf.setFontSize(8);
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
