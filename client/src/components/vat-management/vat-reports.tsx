@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye } from 'lucide-react';
+import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { generateVatSummaryReport, handleGenerateReport as handleVatReportGeneration, isValidDate } from '@/utils/vatReportGenerator';
 
@@ -17,9 +18,151 @@ interface VATReportsProps {
 const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
   const [selectedReport, setSelectedReport] = useState('summary');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [selectedPeriod, setSelectedPeriod] = useState('');
+  const [showCustomDates, setShowCustomDates] = useState(false);
   const [exportFormat, setExportFormat] = useState('pdf');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+
+  // Fetch VAT settings to get the company's VAT category and period configuration
+  const { data: vatSettings } = useQuery({
+    queryKey: [`/api/companies/${companyId}/vat-settings`],
+  });
+
+  // SARS VAT Categories for period calculation
+  const SARS_VAT_CATEGORIES = [
+    {
+      value: "A",
+      label: "Category A – Bi-Monthly (Even Months)",
+      periodMonths: 2,
+      submissionCycle: "Even months (Jan-Feb, Mar-Apr, May-Jun, Jul-Aug, Sep-Oct, Nov-Dec)"
+    },
+    {
+      value: "B", 
+      label: "Category B – Bi-Monthly (Odd Months)",
+      periodMonths: 2,
+      submissionCycle: "Odd months (Feb-Mar, Apr-May, Jun-Jul, Aug-Sep, Oct-Nov, Dec-Jan)"
+    },
+    {
+      value: "C",
+      label: "Category C – Monthly",
+      periodMonths: 1,
+      submissionCycle: "Monthly (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec)"
+    },
+    {
+      value: "D",
+      label: "Category D – Six-Monthly (Small-scale farmers only)",
+      periodMonths: 6,
+      submissionCycle: "Bi-annual (Feb-Jul, Aug-Jan)"
+    },
+    {
+      value: "E",
+      label: "Category E – Annual (Fixed property or occasional supply vendors)",
+      periodMonths: 12,
+      submissionCycle: "Annual (Jan-Dec)"
+    }
+  ];
+
+  // Month names for display
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Generate VAT periods based on company's VAT category
+  const availablePeriods = useMemo(() => {
+    if (!vatSettings) return [];
+
+    const vatCategory = (vatSettings as any)?.vatCategory || 'A';
+    const vatStartMonth = (vatSettings as any)?.vatStartMonth || 1;
+    const currentYear = new Date().getFullYear();
+    const category = SARS_VAT_CATEGORIES.find(cat => cat.value === vatCategory);
+    
+    if (!category) return [];
+
+    const periods = [];
+    const periodMonths = category.periodMonths;
+
+    // Generate periods for current year and next year
+    for (let year = currentYear - 1; year <= currentYear + 1; year++) {
+      if (periodMonths === 1) {
+        // Monthly periods
+        for (let month = 1; month <= 12; month++) {
+          const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+          const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+          periods.push({
+            label: `${monthNames[month - 1]} ${year}`,
+            value: `${year}-${month}`,
+            startDate,
+            endDate
+          });
+        }
+      } else if (periodMonths === 2) {
+        // Bi-monthly periods
+        const startOffset = vatCategory === 'B' ? 1 : 0; // Odd vs Even months
+        for (let cycle = 0; cycle < 6; cycle++) {
+          const startMonth = (cycle * 2) + 1 + startOffset;
+          const endMonth = startMonth + 1;
+          
+          if (startMonth <= 12 && endMonth <= 12) {
+            const startDate = `${year}-${startMonth.toString().padStart(2, '0')}-01`;
+            const endDate = new Date(year, endMonth, 0).toISOString().split('T')[0];
+            periods.push({
+              label: `${monthNames[startMonth - 1]}–${monthNames[endMonth - 1]} ${year}`,
+              value: `${year}-${startMonth}-${endMonth}`,
+              startDate,
+              endDate
+            });
+          }
+        }
+      } else if (periodMonths === 6) {
+        // Six-monthly periods
+        periods.push({
+          label: `Jan–Jun ${year}`,
+          value: `${year}-1-6`,
+          startDate: `${year}-01-01`,
+          endDate: `${year}-06-30`
+        });
+        periods.push({
+          label: `Jul–Dec ${year}`,
+          value: `${year}-7-12`,
+          startDate: `${year}-07-01`,
+          endDate: `${year}-12-31`
+        });
+      } else if (periodMonths === 12) {
+        // Annual periods
+        periods.push({
+          label: `${year}`,
+          value: `${year}`,
+          startDate: `${year}-01-01`,
+          endDate: `${year}-12-31`
+        });
+      }
+    }
+
+    // Sort periods in reverse chronological order (most recent first)
+    return periods.sort((a, b) => b.value.localeCompare(a.value));
+  }, [vatSettings, SARS_VAT_CATEGORIES, monthNames]);
+
+  // Handle period selection
+  const handlePeriodChange = (periodValue: string) => {
+    setSelectedPeriod(periodValue);
+    
+    if (periodValue === 'custom') {
+      setShowCustomDates(true);
+      // Keep existing date range when switching to custom
+    } else {
+      setShowCustomDates(false);
+      // Find the selected period and set the date range
+      const period = availablePeriods.find(p => p.value === periodValue);
+      if (period) {
+        setDateRange({
+          startDate: period.startDate,
+          endDate: period.endDate
+        });
+      }
+    }
+  };
 
   const reportTypes = [
     {
@@ -163,25 +306,65 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* VAT Period Selector */}
+          <div className="space-y-4">
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              />
+              <Label htmlFor="vatPeriod">VAT Period</Label>
+              <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select VAT period based on your company settings" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePeriods.map((period) => (
+                    <SelectItem key={period.value} value={period.value}>
+                      {period.label}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom Period</SelectItem>
+                </SelectContent>
+              </Select>
+              {vatSettings && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Your company is registered as VAT Category {(vatSettings as any)?.vatCategory || 'A'} - {
+                    SARS_VAT_CATEGORIES.find(cat => cat.value === ((vatSettings as any)?.vatCategory || 'A'))?.submissionCycle
+                  }
+                </p>
+              )}
             </div>
-            <div>
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-              />
-            </div>
+
+            {/* Custom Date Range (only show when "Custom Period" is selected) */}
+            {showCustomDates && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div>
+                  <Label htmlFor="startDate">Custom Start Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={dateRange.startDate}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endDate">Custom End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={dateRange.endDate}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Period Summary Display */}
+            {!showCustomDates && dateRange.startDate && dateRange.endDate && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <Calendar className="inline h-4 w-4 mr-1" />
+                  Selected Period: <strong>{dateRange.startDate}</strong> to <strong>{dateRange.endDate}</strong>
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
@@ -202,7 +385,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           <div className="flex gap-2 pt-4">
             <Button 
               onClick={() => handleGenerateReport(exportFormat)}
-              disabled={isGenerating || !dateRange.startDate || !dateRange.endDate}
+              disabled={isGenerating || !dateRange.startDate || !dateRange.endDate || (!selectedPeriod && !showCustomDates)}
               className="flex-1"
             >
               <Download className="h-4 w-4 mr-2" />
@@ -211,7 +394,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
             <Button 
               variant="outline"
               onClick={() => handleGenerateReport('view')}
-              disabled={isGenerating || !dateRange.startDate || !dateRange.endDate}
+              disabled={isGenerating || !dateRange.startDate || !dateRange.endDate || (!selectedPeriod && !showCustomDates)}
             >
               Preview
             </Button>
