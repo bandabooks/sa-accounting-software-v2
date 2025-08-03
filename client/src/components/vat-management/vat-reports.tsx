@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye, Settings, Receipt, Shield } from 'lucide-react';
+import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -200,42 +200,23 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
     {
       id: 'summary',
       name: 'VAT Summary Report',
-      description: 'Business overview with graphs and comparisons',
+      description: 'Overview of VAT collections and payments',
       icon: BarChart3,
-      color: 'bg-blue-50 border-blue-200 text-blue-800',
-      category: 'Business Summary'
-    },
-    {
-      id: 'sars-vat201',
-      name: 'SARS VAT Report (VAT201)',
-      description: 'SARS-compliant VAT201 layout with blocks A-Z',
-      icon: FileText,
-      color: 'bg-red-50 border-red-200 text-red-800',
-      category: 'SARS-Aligned'
+      color: 'bg-blue-50 border-blue-200 text-blue-800'
     },
     {
       id: 'transactions',
-      name: 'VAT Transaction Report',
-      description: 'All VAT entries with document details and filters',
-      icon: Receipt,
-      color: 'bg-green-50 border-green-200 text-green-800',
-      category: 'SARS-Aligned'
+      name: 'VAT Transaction Analysis',
+      description: 'Detailed breakdown of all VAT transactions',
+      icon: FileText,
+      color: 'bg-green-50 border-green-200 text-green-800'
     },
     {
       id: 'reconciliation',
       name: 'VAT Reconciliation Report',
-      description: 'Compare transactions with VAT block totals',
+      description: 'Reconcile VAT records with SARS submissions',
       icon: TrendingUp,
-      color: 'bg-purple-50 border-purple-200 text-purple-800',
-      category: 'SARS-Aligned'
-    },
-    {
-      id: 'audit-trail',
-      name: 'VAT Audit Trail',
-      description: 'Complete source report for audit reviews',
-      icon: Shield,
-      color: 'bg-orange-50 border-orange-200 text-orange-800',
-      category: 'SARS-Aligned'
+      color: 'bg-purple-50 border-purple-200 text-purple-800'
     }
   ];
 
@@ -278,13 +259,11 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           throw new Error(result.message || 'Failed to load report preview');
         }
       } else if (format === 'pdf') {
-        // Handle PDF generation on client side
-        const result = await response.json();
-        if (result.success) {
-          await generateClientSidePDF(result.data, dateRange.startDate, dateRange.endDate);
-        } else {
-          throw new Error(result.message || 'Failed to generate PDF');
-        }
+        // Open PDF in new tab
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         // Download excel/csv files
         const blob = await response.blob();
@@ -472,16 +451,15 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                   const response = await apiRequest(`/api/vat/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=pdf`, 'GET');
                   
                   if (response.ok) {
-                    const result = await response.json();
-                    if (result.success) {
-                      await generateClientSidePDF(result.data, dateRange.startDate, dateRange.endDate);
-                      toast({
-                        title: "Success",
-                        description: "VAT report generated and opened in new tab",
-                      });
-                    } else {
-                      throw new Error(result.message || 'Failed to generate PDF');
-                    }
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    
+                    toast({
+                      title: "Success",
+                      description: "VAT report generated and opened in new tab",
+                    });
                   } else {
                     const errorResult = await response.json();
                     throw new Error(errorResult.message || 'Failed to generate PDF');

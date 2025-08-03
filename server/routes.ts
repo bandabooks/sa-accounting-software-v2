@@ -4916,12 +4916,12 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
     }
   });
 
-  // VAT Summary Report - Business Overview with Comparisons
   app.get("/api/vat/reports/summary", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
       const { startDate, endDate, format } = req.query;
       
+      // Validate required parameters
       if (!startDate || !endDate) {
         return res.status(400).json({ 
           success: false, 
@@ -4929,75 +4929,23 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
         });
       }
       
+      console.log('VAT Report API called with:', { companyId, startDate, endDate, format });
+      
       const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
       
       if (format === 'pdf') {
-        // Create HTML content that will be converted to PDF on frontend
-        const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>VAT Summary Report</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                .header { text-align: center; margin-bottom: 30px; }
-                .section { margin-bottom: 20px; }
-                .amount { font-weight: bold; color: #2563eb; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background-color: #f8f9fa; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>VAT Summary Report</h1>
-                <p>Period: ${startDate} to ${endDate}</p>
-                <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            </div>
-            
-            <div class="section">
-                <h2>VAT Summary</h2>
-                <table>
-                    <tr><td>Output VAT:</td><td class="amount">R ${summary.summary.outputVat}</td></tr>
-                    <tr><td>Input VAT:</td><td class="amount">R ${summary.summary.inputVat}</td></tr>
-                    <tr><td>Net VAT Payable:</td><td class="amount">R ${summary.summary.netVatPayable}</td></tr>
-                </table>
-            </div>
-            
-            <div class="section">
-                <h2>Sales Summary</h2>
-                <table>
-                    <tr><td>Total Sales (Inc VAT):</td><td class="amount">R ${summary.summary.totalSalesIncVat}</td></tr>
-                    <tr><td>Total Sales (Exc VAT):</td><td class="amount">R ${summary.summary.totalSalesExcVat}</td></tr>
-                    <tr><td>Total Sales VAT:</td><td class="amount">R ${summary.summary.totalSalesVat}</td></tr>
-                </table>
-            </div>
-            
-            <div class="section">
-                <h2>Purchase Summary</h2>
-                <table>
-                    <tr><td>Total Purchases (Inc VAT):</td><td class="amount">R ${summary.summary.totalPurchasesIncVat}</td></tr>
-                    <tr><td>Total Purchases (Exc VAT):</td><td class="amount">R ${summary.summary.totalPurchasesExcVat}</td></tr>
-                    <tr><td>Total Purchases VAT:</td><td class="amount">R ${summary.summary.totalPurchasesVat}</td></tr>
-                </table>
-            </div>
-            
-            <div class="section">
-                <h2>Transaction Summary</h2>
-                <table>
-                    <tr><td>Total Invoices:</td><td>${summary.transactions?.invoiceCount || 0}</td></tr>
-                    <tr><td>Total Expenses:</td><td>${summary.transactions?.expenseCount || 0}</td></tr>
-                </table>
-            </div>
-        </body>
-        </html>`;
+        const pdfContent = `VAT Summary Report
+Period: ${startDate} to ${endDate}
+Output VAT: R ${summary.summary.outputVat}
+Input VAT: R ${summary.summary.inputVat}
+Net VAT Payable: R ${summary.summary.netVatPayable}`;
         
-        res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Content-Disposition', `inline; filename=vat-summary-${startDate}-${endDate}.html`);
-        res.send(htmlContent);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.pdf`);
+        res.send(Buffer.from(pdfContent));
       } else if (format === 'excel' || format === 'csv') {
-        const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable,Output Change %,Input Change %
-${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable},${summary.comparison?.outputVatChange || '0'},${summary.comparison?.inputVatChange || '0'}`;
+        const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable
+${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable}`;
         
         res.setHeader('Content-Type', 'application/octet-stream');
         res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.${format}`);
@@ -5010,188 +4958,6 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       res.status(500).json({ 
         success: false, 
         message: "Failed to generate VAT summary report",
-        error: error.message
-      });
-    }
-  });
-
-  // SARS VAT201 Report - SARS-Compliant Layout with Blocks A-Z
-  app.get("/api/vat/reports/vat201", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const { startDate, endDate, format } = req.query;
-      
-      if (!startDate || !endDate) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Both startDate and endDate are required" 
-        });
-      }
-      
-      const vat201Data = await storage.getVAT201Report(companyId, startDate as string, endDate as string);
-      
-      if (format === 'pdf') {
-        const pdfContent = `SARS VAT201 Report
-Print Date: ${vat201Data.printDate}
-Company: ${vat201Data.companyName}
-VAT Number: ${vat201Data.vatNumber}
-Period: ${vat201Data.period}
-Payment Due: ${vat201Data.paymentDueDate}
-
-VAT BLOCKS:
-Block 1A (Standard Sales Excl VAT): R ${vat201Data.blocks['1A']}
-Block 2 (Zero-Rated Exports): R ${vat201Data.blocks['2']}
-Block 3 (Exempt Supplies): R ${vat201Data.blocks['3']}
-Block 4 (Output VAT): R ${vat201Data.blocks['4']}
-Block 13 (Total Output VAT): R ${vat201Data.blocks['13']}
-Block 15 (VAT on Goods/Services): R ${vat201Data.blocks['15']}
-Block 19 (Total Input VAT): R ${vat201Data.blocks['19']}
-Block 20 (VAT PAYABLE): R ${vat201Data.blocks['20']}`;
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=vat201-${startDate}-${endDate}.pdf`);
-        res.send(Buffer.from(pdfContent));
-      } else if (format === 'xml') {
-        const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<VAT201Return>
-  <CompanyDetails>
-    <Name>${vat201Data.companyName}</Name>
-    <VATNumber>${vat201Data.vatNumber}</VATNumber>
-  </CompanyDetails>
-  <Period>
-    <Start>${startDate}</Start>
-    <End>${endDate}</End>
-  </Period>
-  <Blocks>
-    <Block1A>${vat201Data.blocks['1A']}</Block1A>
-    <Block2>${vat201Data.blocks['2']}</Block2>
-    <Block4>${vat201Data.blocks['4']}</Block4>
-    <Block13>${vat201Data.blocks['13']}</Block13>
-    <Block15>${vat201Data.blocks['15']}</Block15>
-    <Block19>${vat201Data.blocks['19']}</Block19>
-    <Block20>${vat201Data.blocks['20']}</Block20>
-  </Blocks>
-</VAT201Return>`;
-        
-        res.setHeader('Content-Type', 'application/xml');
-        res.setHeader('Content-Disposition', `attachment; filename=vat201-${startDate}-${endDate}.xml`);
-        res.send(xmlContent);
-      } else {
-        res.json({ success: true, data: vat201Data });
-      }
-    } catch (error) {
-      console.error("Error generating VAT201 report:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to generate VAT201 report",
-        error: error.message
-      });
-    }
-  });
-
-  // VAT Transaction Report - Detailed List with Filters
-  app.get("/api/vat/reports/transactions", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const { startDate, endDate, format, vatCode, documentType } = req.query;
-      
-      if (!startDate || !endDate) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Both startDate and endDate are required" 
-        });
-      }
-      
-      const transactions = await storage.getVATTransactionReport(
-        companyId, 
-        startDate as string, 
-        endDate as string,
-        vatCode as string,
-        documentType as string
-      );
-      
-      if (format === 'pdf') {
-        const pdfContent = `VAT Transaction Report
-Period: ${startDate} to ${endDate}
-Total Transactions: ${transactions.summary.totalTransactions}
-Total VAT: R ${transactions.summary.totalVAT}
-
-TRANSACTIONS:
-${transactions.transactions.map(t => 
-  `${t.date} | ${t.transactionType} | ${t.number} | ${t.customerSupplier} | R ${t.vatAmount}`
-).join('\n')}`;
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${startDate}-${endDate}.pdf`);
-        res.send(Buffer.from(pdfContent));
-      } else if (format === 'excel' || format === 'csv') {
-        const csvContent = `Date,Transaction Type,Number,Customer/Supplier,Reference,Tax Rate,Taxable Amount,VAT Amount,Total Amount
-${transactions.transactions.map(t => 
-          `${t.date},${t.transactionType},${t.number},"${t.customerSupplier}",${t.reference},${t.taxRate}%,${t.taxableAmount},${t.vatAmount},${t.totalAmount}`
-        ).join('\n')}`;
-        
-        res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${startDate}-${endDate}.${format}`);
-        res.send(csvContent);
-      } else {
-        res.json({ success: true, data: transactions });
-      }
-    } catch (error) {
-      console.error("Error generating VAT transaction report:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to generate VAT transaction report",
-        error: error.message
-      });
-    }
-  });
-
-  // VAT Reconciliation Report - Compare Transactions with VAT Blocks
-  app.get("/api/vat/reports/reconciliation", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const { startDate, endDate, format } = req.query;
-      
-      if (!startDate || !endDate) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Both startDate and endDate are required" 
-        });
-      }
-      
-      const reconciliation = await storage.getVATReconciliationReport(companyId, startDate as string, endDate as string);
-      
-      if (format === 'pdf') {
-        const pdfContent = `VAT Reconciliation Report
-Period: ${startDate} to ${endDate}
-
-OUTPUT VAT RECONCILIATION:
-Transactions Total: R ${reconciliation.reconciliation.outputVAT.transactions}
-VAT Blocks Total: R ${reconciliation.reconciliation.outputVAT.blocks}
-Difference: R ${reconciliation.reconciliation.outputVAT.difference}
-Status: ${reconciliation.reconciliation.outputVAT.status === 'matched' ? '✓ MATCHED' : '! MISMATCH'}
-
-INPUT VAT RECONCILIATION:
-Transactions Total: R ${reconciliation.reconciliation.inputVAT.transactions}
-VAT Blocks Total: R ${reconciliation.reconciliation.inputVAT.blocks}
-Difference: R ${reconciliation.reconciliation.inputVAT.difference}
-Status: ${reconciliation.reconciliation.inputVAT.status === 'matched' ? '✓ MATCHED' : '! MISMATCH'}
-
-SUMMARY:
-Total Matched: ${reconciliation.summary.totalMatched}
-Total Mismatched: ${reconciliation.summary.totalMismatched}`;
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-reconciliation-${startDate}-${endDate}.pdf`);
-        res.send(Buffer.from(pdfContent));
-      } else {
-        res.json({ success: true, data: reconciliation });
-      }
-    } catch (error) {
-      console.error("Error generating VAT reconciliation report:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to generate VAT reconciliation report",
         error: error.message
       });
     }
