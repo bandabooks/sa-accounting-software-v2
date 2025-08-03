@@ -172,10 +172,22 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     
     // Well-aligned table headers
     pdf.text("DESCRIPTION", 25, tableStartY + 9);
-    pdf.text("QTY", 115, tableStartY + 9);
-    pdf.text("UNIT PRICE", 140, tableStartY + 9);
-    pdf.text("VAT%", 175, tableStartY + 9);
-    pdf.text("TOTAL", pageWidth - 35, tableStartY + 9);
+    
+    // Center-aligned QTY header
+    const qtyHeaderWidth = pdf.getStringUnitWidth("QTY") * 10 / pdf.internal.scaleFactor;
+    pdf.text("QTY", 122 - qtyHeaderWidth/2, tableStartY + 9);
+    
+    // Right-aligned UNIT PRICE header
+    const unitPriceHeaderWidth = pdf.getStringUnitWidth("UNIT PRICE") * 10 / pdf.internal.scaleFactor;
+    pdf.text("UNIT PRICE", 170 - unitPriceHeaderWidth, tableStartY + 9);
+    
+    // Center-aligned VAT% header
+    const vatHeaderWidth = pdf.getStringUnitWidth("VAT%") * 10 / pdf.internal.scaleFactor;
+    pdf.text("VAT%", 182 - vatHeaderWidth/2, tableStartY + 9);
+    
+    // Right-aligned TOTAL header
+    const totalHeaderWidth = pdf.getStringUnitWidth("TOTAL") * 10 / pdf.internal.scaleFactor;
+    pdf.text("TOTAL", pageWidth - 25 - totalHeaderWidth, tableStartY + 9);
 
     // Table Items with Alternating Row Colors
     pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
@@ -232,30 +244,30 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     
-    // Subtotal
+    // Subtotal - properly aligned
     pdf.text("Subtotal:", totalsX + 5, totalsStartY + 8);
     const subtotalText = formatCurrency(invoice.subtotal);
     const subtotalWidth = pdf.getStringUnitWidth(subtotalText) * 11 / pdf.internal.scaleFactor;
-    pdf.text(subtotalText, pageWidth - 15 - subtotalWidth, totalsStartY + 8);
+    pdf.text(subtotalText, totalsX + 75 - subtotalWidth, totalsStartY + 8);
     
-    // VAT
+    // VAT - properly aligned
     pdf.text("VAT:", totalsX + 5, totalsStartY + 18);
     const vatText = formatCurrency(invoice.vatAmount);
     const vatAmountWidth = pdf.getStringUnitWidth(vatText) * 11 / pdf.internal.scaleFactor;
-    pdf.text(vatText, pageWidth - 15 - vatAmountWidth, totalsStartY + 18);
+    pdf.text(vatText, totalsX + 75 - vatAmountWidth, totalsStartY + 18);
     
     // Professional total line with accent
     pdf.setFillColor(accentGold[0], accentGold[1], accentGold[2]);
     pdf.rect(totalsX + 5, totalsStartY + 25, 75, 1, 'F');
     
-    // Total Amount with emphasis
+    // Total Amount with emphasis - properly aligned
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     pdf.text("TOTAL:", totalsX + 5, totalsStartY + 35);
     const finalTotalText = formatCurrency(invoice.total);
     const finalTotalWidth = pdf.getStringUnitWidth(finalTotalText) * 14 / pdf.internal.scaleFactor;
-    pdf.text(finalTotalText, pageWidth - 15 - finalTotalWidth, totalsStartY + 35);
+    pdf.text(finalTotalText, totalsX + 75 - finalTotalWidth, totalsStartY + 35);
 
     // Professional Notes Section
     if (invoice.notes) {
