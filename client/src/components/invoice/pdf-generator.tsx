@@ -241,10 +241,11 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setLineWidth(0.5);
     pdf.rect(paymentStatusX, paymentStatusY, paymentStatusWidth, paymentStatusHeight, 'FD');
     
-    // Payment Status Header with AlertCircle icon
+    // Payment Status Header with clean icon
     pdf.setFontSize(9);
-    pdf.setTextColor(220, 38, 38); // Red-600 for AlertCircle
-    pdf.text("○", paymentStatusX + 3, paymentStatusY + 7); // Circle representing AlertCircle icon
+    pdf.setFont("helvetica", "bold"); // Bold font for header
+    pdf.setTextColor(220, 38, 38); // Red-600 for icon
+    pdf.text("●", paymentStatusX + 3, paymentStatusY + 7); // Clean bullet point icon
     
     pdf.setTextColor(0, 0, 0);
     pdf.text("Payment Status", paymentStatusX + 8, paymentStatusY + 7);
