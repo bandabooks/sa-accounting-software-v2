@@ -6816,8 +6816,8 @@ export class DatabaseStorage implements IStorage {
         .from(invoices)
         .where(and(
           eq(invoices.companyId, companyId),
-          gte(invoices.invoiceDate, new Date(startDate)),
-          lte(invoices.invoiceDate, new Date(endDate))
+          gte(invoices.invoiceDate, startDate),
+          lte(invoices.invoiceDate, endDate)
         ));
 
       // Get all expenses in date range for input VAT
@@ -6825,8 +6825,8 @@ export class DatabaseStorage implements IStorage {
         .from(expenses)
         .where(and(
           eq(expenses.companyId, companyId),
-          gte(expenses.expenseDate, new Date(startDate)),
-          lte(expenses.expenseDate, new Date(endDate))
+          gte(expenses.expenseDate, startDate),
+          lte(expenses.expenseDate, endDate)
         ));
 
       // Calculate totals
@@ -6868,8 +6868,8 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(customers, eq(invoices.customerId, customers.id))
         .where(and(
           eq(invoices.companyId, companyId),
-          gte(invoices.invoiceDate, new Date(startDate)),
-          lte(invoices.invoiceDate, new Date(endDate))
+          gte(invoices.invoiceDate, startDate),
+          lte(invoices.invoiceDate, endDate)
         ))
         .orderBy(desc(invoices.invoiceDate));
 
@@ -6878,8 +6878,8 @@ export class DatabaseStorage implements IStorage {
         .from(expenses)
         .where(and(
           eq(expenses.companyId, companyId),
-          gte(expenses.expenseDate, new Date(startDate)),
-          lte(expenses.expenseDate, new Date(endDate))
+          gte(expenses.expenseDate, startDate),
+          lte(expenses.expenseDate, endDate)
         ))
         .orderBy(desc(expenses.expenseDate));
 

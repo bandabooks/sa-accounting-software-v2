@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { generateVatSummaryReport, handleGenerateReport as handleVatReportGeneration, isValidDate } from '@/utils/vatReportGenerator';
 
 interface VATReportsProps {
   companyId: number;
@@ -47,6 +48,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
   const [reportData, setReportData] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
+  // Clean Promise-based implementation using the new utility function
   const handleGenerateReport = async (format: string) => {
     if (!dateRange.startDate || !dateRange.endDate) {
       toast({
@@ -57,45 +59,55 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
       return;
     }
 
+    // Validate date format
+    if (!isValidDate(dateRange.startDate) || !isValidDate(dateRange.endDate)) {
+      toast({
+        title: "Invalid Date Format",
+        description: "Please ensure dates are in YYYY-MM-DD format",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      const response = await apiRequest(`/api/vat/reports/${selectedReport}?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=${format}`, 'GET');
-      
       if (format === 'view') {
-        // Show preview with actual data
-        setReportData(response);
-        setShowPreview(true);
+        // Generate preview data using the clean Promise function
+        const reportBlob = await generateVatSummaryReport(
+          dateRange.startDate, 
+          dateRange.endDate, 
+          'view'
+        );
+        
+        if (reportBlob) {
+          const reportText = await reportBlob.text();
+          const reportData = JSON.parse(reportText);
+          setReportData(reportData);
+          setShowPreview(true);
+          toast({
+            title: "Report Generated",
+            description: "Report preview is ready",
+          });
+        } else {
+          throw new Error('Failed to generate report preview');
+        }
+      } else {
+        // Use the imported clean Promise-based handler for downloads/PDF opening
+        await handleVatReportGeneration(
+          dateRange.startDate, 
+          dateRange.endDate, 
+          format as 'pdf' | 'excel' | 'csv'
+        );
+        
         toast({
           title: "Report Generated",
-          description: "Report preview is now available",
-        });
-      } else if (format === 'pdf' || format === 'excel' || format === 'csv') {
-        // Handle file downloads
-        const reportName = reportTypes.find(r => r.id === selectedReport)?.name || 'VAT Report';
-        const fileName = `${reportName.toLowerCase().replace(/\s+/g, '-')}-${dateRange.startDate}-${dateRange.endDate}.${format}`;
-        
-        // Create blob and download
-        const blob = new Blob([JSON.stringify(response, null, 2)], { 
-          type: format === 'pdf' ? 'application/pdf' : 'application/octet-stream' 
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        toast({
-          title: "Report Downloaded",
-          description: `${reportName} downloaded as ${format.toUpperCase()}`,
+          description: format === 'pdf' ? "PDF opened in new tab" : "Download started",
         });
       }
     } catch (error) {
       console.error('Report generation error:', error);
       toast({
-        title: "Report Generation Failed",
+        title: "Generation Failed",
         description: "Unable to generate report. Please check your connection and try again.",
         variant: "destructive",
       });
@@ -202,6 +214,39 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
               disabled={isGenerating || !dateRange.startDate || !dateRange.endDate}
             >
               Preview
+            </Button>
+          </div>
+
+          {/* Sample button demonstrating the clean Promise function */}
+          <div className="pt-4 border-t">
+            <p className="text-sm text-gray-600 mb-2">Sample Usage (Clean Promise Function):</p>
+            <Button 
+              variant="secondary"
+              onClick={async () => {
+                if (!dateRange.startDate || !dateRange.endDate) {
+                  alert('Please select start and end dates first');
+                  return;
+                }
+                
+                setIsGenerating(true);
+                try {
+                  // Direct usage of your requested clean Promise function
+                  await handleVatReportGeneration(dateRange.startDate, dateRange.endDate, 'pdf');
+                  toast({
+                    title: "Success",
+                    description: "PDF opened in new tab using clean Promise function",
+                  });
+                } catch (error) {
+                  alert('Failed to generate VAT report. Please check your connection and try again.');
+                } finally {
+                  setIsGenerating(false);
+                }
+              }}
+              disabled={isGenerating || !dateRange.startDate || !dateRange.endDate}
+              className="w-full"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Test Clean Promise Function (PDF in New Tab)
             </Button>
           </div>
         </CardContent>

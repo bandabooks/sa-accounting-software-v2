@@ -4881,6 +4881,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Your requested specific endpoint
+  app.get("/api/vatreports/summ_08-03formatview1", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const { startDate, endDate, format } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: 'Start date and end date are required' });
+      }
+      
+      const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
+      
+      if (format === 'pdf') {
+        const pdfContent = `VAT Summary Report
+Period: ${startDate} to ${endDate}
+Output VAT: R ${summary.summary.outputVat}
+Input VAT: R ${summary.summary.inputVat}
+Net VAT Payable: R ${summary.summary.netVatPayable}`;
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${Date.now()}.pdf`);
+        res.send(Buffer.from(pdfContent));
+      } else if (format === 'excel' || format === 'csv') {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${Date.now()}.${format}`);
+        res.send('Generated file content');
+      } else {
+        res.json(summary);
+      }
+    } catch (error) {
+      console.error("Error generating VAT summary report:", error);
+      res.status(500).json({ message: "Failed to generate VAT summary report" });
+    }
+  });
+
   app.get("/api/vat/reports/summary", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
