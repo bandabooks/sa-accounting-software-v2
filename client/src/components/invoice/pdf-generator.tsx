@@ -26,202 +26,239 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // Professional Header Section with Company Branding
-    pdf.setFillColor(59, 130, 246); // Blue background for logo area
-    pdf.rect(20, 15, 12, 12, 'F');
+    // EXACT MATCH TO REACT LAYOUT - Header Section
+    // Company logo area with gradient background (matches Building2 icon + gradient)
+    pdf.setFillColor(59, 130, 246); // Blue-600 to match gradient start
+    pdf.rect(20, 20, 10, 10, 'F');
     
-    // Company Logo Placeholder (Building icon equivalent)
+    // White building icon representation
     pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(12);
-    pdf.text("⬛", 22, 24);
-    
-    // Company Name and Info
-    pdf.setFontSize(18);
-    pdf.setTextColor(37, 99, 235); // Blue-700
-    pdf.text("Think Mybiz Accounting", 35, 22);
-    
-    pdf.setFontSize(9);
-    pdf.setTextColor(107, 114, 128); // Gray-500
-    pdf.text("Professional Invoice Management", 35, 27);
-    
-    // Company Contact Details
     pdf.setFontSize(8);
-    pdf.setTextColor(75, 85, 99); // Gray-600
+    pdf.text("⬛", 22, 27);
+    
+    // Company name exactly as in React - "Think Mybiz Accounting" with blue-700 color
+    pdf.setFontSize(16);
+    pdf.setTextColor(29, 78, 216); // Blue-700 to match text-blue-700
+    pdf.text("Think Mybiz Accounting", 35, 25);
+    
+    // Subtitle exactly as in React - "Professional Invoice Management" 
+    pdf.setFontSize(8);
+    pdf.setTextColor(107, 114, 128); // Gray-500 to match text-gray-500
+    pdf.text("Professional Invoice Management", 35, 29);
+    
+    // Company contact details matching React layout spacing
+    pdf.setFontSize(7);
+    pdf.setTextColor(75, 85, 99); // Gray-600 to match text-gray-600
     pdf.text("info@thinkmybiz.com | +27 12 345 6789", 20, 35);
-    pdf.text("PO Box 1234, Midrand, 1685", 20, 39);
-    pdf.text("VAT #: 4455667788 | Reg: 2019/123456/07", 20, 43);
+    pdf.text("PO Box 1234, Midrand, 1685", 20, 38);
+    pdf.text("VAT #: 4455667788 | Reg: 2019/123456/07", 20, 41);
 
-    // TAX INVOICE Title (Right Side)
-    pdf.setFontSize(24);
-    pdf.setTextColor(55, 65, 81); // Gray-700
-    pdf.text("TAX INVOICE", pageWidth - 75, 25);
+    // Right side - "TAX INVOICE" title matching React layout
+    pdf.setFontSize(20);
+    pdf.setTextColor(55, 65, 81); // Gray-700 to match text-gray-800
+    pdf.text("TAX INVOICE", pageWidth - 65, 25);
     
-    // Invoice Details (Right Side)
-    pdf.setFontSize(9);
-    pdf.setTextColor(75, 85, 99);
-    pdf.text(`Invoice #: ${invoice.invoiceNumber}`, pageWidth - 75, 35);
-    pdf.text(`Date: ${formatDate(invoice.createdAt || invoice.issueDate)}`, pageWidth - 75, 40);
-    pdf.text(`Due: ${formatDate(invoice.dueDate)}`, pageWidth - 75, 45);
+    // Invoice details exactly as in React component
+    pdf.setFontSize(8);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`Invoice #: ${invoice.invoiceNumber}`, pageWidth - 65, 32);
+    pdf.text(`Date: ${formatDate(invoice.createdAt || invoice.issueDate)}`, pageWidth - 65, 36);
+    pdf.text(`Due: ${formatDate(invoice.dueDate)}`, pageWidth - 65, 40);
     
-    // Status with color
+    // Status with exact color matching from React
     let statusColor = [107, 114, 128]; // Default gray
     const status = invoice.status.toUpperCase();
-    if (status === 'PAID') statusColor = [34, 197, 94]; // Green
-    else if (status === 'SENT') statusColor = [59, 130, 246]; // Blue
-    else if (status === 'OVERDUE') statusColor = [239, 68, 68]; // Red
+    if (status === 'PAID') statusColor = [34, 197, 94]; // Green-500
+    else if (status === 'SENT') statusColor = [59, 130, 246]; // Blue-500  
+    else if (status === 'OVERDUE') statusColor = [239, 68, 68]; // Red-500
+    else if (status === 'DRAFT') statusColor = [107, 114, 128]; // Gray-500
     
     pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-    pdf.text(`Status: ${status}`, pageWidth - 75, 50);
+    pdf.text(`Status: ${status}`, pageWidth - 65, 44);
 
-    // Bill To and From Section (Professional Layout)
-    pdf.setFontSize(11);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text("Bill To:", 20, 65);
-    pdf.text("From:", pageWidth/2 + 10, 65);
+    // EXACT MATCH - Addresses Section (grid-cols-2 gap-8)
+    const addressY = 55;
     
-    // Bill To Details
-    pdf.setFontSize(10);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text(invoice.customer.name.toUpperCase(), 20, 75);
-    pdf.text(invoice.customer.email || "N/A", 20, 82);
-    pdf.text(invoice.customer.phone || "N/A", 20, 89);
-    pdf.text(invoice.customer.address || "N/A", 20, 96);
-    
-    if (invoice.customer.vatNumber) {
-      pdf.text(`VAT #: ${invoice.customer.vatNumber}`, 20, 103);
-    }
-
-    // From Details (Company)
-    pdf.text("Think Mybiz Accounting", pageWidth/2 + 10, 75);
-    pdf.text("info@thinkmybiz.com", pageWidth/2 + 10, 82);
-    pdf.text("+27 12 345 6789", pageWidth/2 + 10, 89);
-    pdf.text("PO Box 1234, Midrand, 1685", pageWidth/2 + 10, 96);
-    pdf.text("VAT #: 4455667788", pageWidth/2 + 10, 103);
-
-    // Professional Items Table with Blue Header
-    const tableStartY = 120;
-    pdf.setFillColor(59, 130, 246); // Blue header
-    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F');
-    
-    // Table Headers
+    // Bill To section with underline border exactly as React
     pdf.setFontSize(9);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text("#", 25, tableStartY + 6);
-    pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 120, tableStartY + 6);
-    pdf.text("Unit Price", 140, tableStartY + 6);
-    pdf.text("VAT Rate", 165, tableStartY + 6);
-    pdf.text("Line VAT", 185, tableStartY + 6);
-    pdf.text("Total", pageWidth - 25, tableStartY + 6);
-
-    // Table Items
-    pdf.setTextColor(0, 0, 0);
-    let currentY = tableStartY + 18;
-    let lineNumber = 1;
+    pdf.setTextColor(55, 65, 81); // Gray-700 for headers
+    pdf.text("Bill To:", 20, addressY);
+    // Draw underline to match border-b border-gray-200
+    pdf.setDrawColor(229, 231, 235); // Gray-200
+    pdf.line(20, addressY + 1, 60, addressY + 1);
     
-    const items = (invoice as any).items || [];
-    items.forEach((item: any) => {
-      // Alternate row backgrounds for better readability
-      if (lineNumber % 2 === 0) {
-        pdf.setFillColor(249, 250, 251); // Light gray
-        pdf.rect(20, currentY - 4, pageWidth - 40, 8, 'F');
-      }
-      
-      pdf.setFontSize(9);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(lineNumber.toString(), 25, currentY);
-      
-      // Truncate description if too long
-      let description = item.description || item.name || "N/A";
-      if (description.length > 25) {
-        description = description.substring(0, 22) + "...";
-      }
-      pdf.text(description, 35, currentY);
-      
-      pdf.text((item.quantity || 1).toString(), 120, currentY);
-      pdf.text(formatCurrency(item.unitPrice || 0), 140, currentY);
-      pdf.text(`${item.vatRate || 15}%`, 165, currentY);
-      pdf.text(formatCurrency(item.vatAmount || 0), 185, currentY);
-      pdf.text(formatCurrency(item.total || 0), pageWidth - 25, currentY);
-      
-      currentY += 12;
-      lineNumber++;
-    });
-
-    // Professional Totals Section
-    const totalsStartY = currentY + 10;
+    // From section with underline
+    pdf.text("From:", pageWidth/2, addressY);
+    pdf.line(pageWidth/2, addressY + 1, pageWidth/2 + 40, addressY + 1);
     
-    // Subtotal
+    // Bill To details exactly as React layout
     pdf.setFontSize(10);
     pdf.setTextColor(0, 0, 0);
-    pdf.text("Subtotal:", pageWidth - 80, totalsStartY);
-    pdf.text(formatCurrency(invoice.subtotal || 0), pageWidth - 25, totalsStartY);
-    
-    // VAT
-    pdf.text("VAT (15%):", pageWidth - 80, totalsStartY + 8);
-    pdf.text(formatCurrency(invoice.vatAmount || 0), pageWidth - 25, totalsStartY + 8);
-    
-    // Total with emphasis
-    pdf.setFillColor(59, 130, 246);
-    pdf.rect(pageWidth - 85, totalsStartY + 15, 65, 10, 'F');
-    pdf.setFontSize(12);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text("TOTAL:", pageWidth - 80, totalsStartY + 21);
-    pdf.text(formatCurrency(invoice.total || 0), pageWidth - 25, totalsStartY + 21);
-
-    // Payment Status Section
-    const paymentY = totalsStartY + 35;
-    pdf.setFillColor(248, 250, 252); // Light blue background
-    pdf.rect(20, paymentY, pageWidth - 40, 25, 'F');
-    
-    pdf.setFontSize(11);
-    pdf.setTextColor(185, 28, 28); // Red color for status icon
-    pdf.text("○ Payment Status", 25, paymentY + 8);
-    
-    pdf.setFontSize(9);
-    pdf.setTextColor(75, 85, 99);
-    pdf.text(`${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}    No payments received`, 30, paymentY + 15);
-    
-    pdf.text(`Invoice Total:`, 30, paymentY + 20);
-    pdf.text(formatCurrency(invoice.total || 0), 80, paymentY + 20);
-    
-    pdf.setTextColor(185, 28, 28);
-    pdf.text(`Outstanding Balance:`, 120, paymentY + 20);
-    pdf.text(formatCurrency(invoice.total || 0), 180, paymentY + 20);
-
-    // Payment Details Section
-    const bankDetailsY = paymentY + 35;
-    pdf.setFillColor(243, 244, 246); // Gray background
-    pdf.rect(20, bankDetailsY, pageWidth - 40, 20, 'F');
-    
-    pdf.setFontSize(10);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text("Payment Details:", 25, bankDetailsY + 8);
+    pdf.text(invoice.customer.name, 20, addressY + 8); // font-bold text-lg
     
     pdf.setFontSize(8);
-    pdf.setTextColor(75, 85, 99);
-    pdf.text("Bank: ABSA Bank | Account: 123456789 | Branch: 632005", 25, bankDetailsY + 13);
-    pdf.text(`Reference: ${invoice.invoiceNumber}`, 25, bankDetailsY + 17);
-    pdf.text("Please use the invoice number as your payment reference for quick allocation.", 25, bankDetailsY + 21);
+    if (invoice.customer.email) {
+      pdf.text(invoice.customer.email, 20, addressY + 13);
+    }
+    if (invoice.customer.phone) {
+      pdf.text(invoice.customer.phone, 20, addressY + 17);
+    }
+    if (invoice.customer.address) {
+      let addressLine = invoice.customer.address;
+      if (invoice.customer.city) addressLine += `, ${invoice.customer.city}`;
+      if (invoice.customer.postalCode) addressLine += `, ${invoice.customer.postalCode}`;
+      pdf.text(addressLine, 20, addressY + 21);
+    }
+    if (invoice.customer.vatNumber) {
+      pdf.setTextColor(107, 114, 128); // Gray-500 for VAT number
+      pdf.text(`VAT #: ${invoice.customer.vatNumber}`, 20, addressY + 26);
+    }
 
-    // Notes Section (if present)
-    let notesY = bankDetailsY + 30;
-    if (invoice.notes) {
-      pdf.setFillColor(254, 243, 199); // Amber background
-      pdf.rect(20, notesY, pageWidth - 40, 15, 'F');
+    // From details (company) exactly as React
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Think Mybiz Accounting", pageWidth/2, addressY + 8);
+    
+    pdf.setFontSize(8);
+    pdf.text("info@thinkmybiz.com", pageWidth/2, addressY + 13);
+    pdf.text("+27 12 345 6789", pageWidth/2, addressY + 17);
+    pdf.text("PO Box 1234, Midrand, 1685", pageWidth/2, addressY + 21);
+    pdf.setTextColor(107, 114, 128); // Gray-500
+    pdf.text("VAT #: 4455667788", pageWidth/2, addressY + 26);
+
+    // EXACTLY MATCH REACT TABLE - Items Table with blue-700 header
+    const tableStartY = 90;
+    
+    // Table header background - matching bg-blue-700
+    pdf.setFillColor(29, 78, 216); // Blue-700 exactly
+    pdf.rect(20, tableStartY, pageWidth - 40, 8, 'F');
+    
+    // Table headers exactly as React with proper alignment
+    pdf.setFontSize(8);
+    pdf.setTextColor(255, 255, 255); // White text
+    pdf.text("#", 23, tableStartY + 5);
+    pdf.text("Description", 30, tableStartY + 5);
+    pdf.text("Qty", 105, tableStartY + 5);
+    pdf.text("Unit Price", 125, tableStartY + 5);
+    pdf.text("VAT Rate", 155, tableStartY + 5);
+    pdf.text("Line VAT", 175, tableStartY + 5);
+    pdf.text("Total", pageWidth - 30, tableStartY + 5);
+
+    // Table rows exactly matching React layout
+    pdf.setTextColor(0, 0, 0);
+    let currentY = tableStartY + 15;
+    
+    const items = (invoice as any).items || [];
+    items.forEach((item: any, index: number) => {
+      // Hover background for alternate rows (matching hover:bg-blue-50)
+      if (index % 2 === 1) {
+        pdf.setFillColor(239, 246, 255); // Blue-50
+        pdf.rect(20, currentY - 3, pageWidth - 40, 8, 'F');
+      }
       
-      pdf.setFontSize(10);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text("Additional Notes:", 25, notesY + 8);
+      // Row border bottom (matching border-b border-gray-100)
+      pdf.setDrawColor(243, 244, 246); // Gray-100
+      pdf.line(20, currentY + 5, pageWidth - 20, currentY + 5);
       
       pdf.setFontSize(8);
-      pdf.setTextColor(75, 85, 99);
-      pdf.text(invoice.notes, 25, notesY + 13);
+      pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
+      pdf.text((index + 1).toString(), 23, currentY);
+      
+      // Description with font-medium styling
+      pdf.setTextColor(0, 0, 0);
+      let description = item.description || "N/A";
+      if (description.length > 30) {
+        description = description.substring(0, 27) + "...";
+      }
+      pdf.text(description, 30, currentY);
+      
+      // Center-aligned quantity
+      pdf.text(item.quantity?.toString() || "1", 107, currentY);
+      
+      // Right-aligned unit price
+      pdf.text(formatCurrency(item.unitPrice || 0), 145, currentY);
+      
+      // Center-aligned VAT rate
+      pdf.text(`${item.vatRate || 15}%`, 160, currentY);
+      
+      // Right-aligned line VAT
+      pdf.text(formatCurrency(item.vatAmount || 0), 185, currentY);
+      
+      // Right-aligned total with font-medium
+      pdf.text(formatCurrency(item.total || 0), pageWidth - 25, currentY);
+      
+      currentY += 10;
+    });
+
+    // EXACTLY MATCH REACT SUMMARY SECTION
+    const summaryY = currentY + 15;
+    const summaryX = pageWidth - 85; // Right-aligned like React (max-w-sm)
+    
+    // Subtotal
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Subtotal:", summaryX, summaryY);
+    pdf.text(formatCurrency(invoice.subtotal || 0), pageWidth - 25, summaryY);
+    
+    // VAT
+    pdf.text("VAT (15%):", summaryX, summaryY + 6);
+    pdf.text(formatCurrency(invoice.vatAmount || 0), pageWidth - 25, summaryY + 6);
+    
+    // Border line matching React (border-t border-gray-300)
+    pdf.setDrawColor(209, 213, 219); // Gray-300
+    pdf.line(summaryX, summaryY + 10, pageWidth - 20, summaryY + 10);
+    
+    // TOTAL with exact styling (font-bold text-lg and text-xl text-blue-700)
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("TOTAL:", summaryX, summaryY + 16);
+    
+    pdf.setFontSize(13);
+    pdf.setTextColor(29, 78, 216); // Blue-700 for total amount
+    pdf.text(formatCurrency(invoice.total || 0), pageWidth - 25, summaryY + 16);
+
+    // EXACT MATCH - Payment Instructions Section (bg-gray-100 rounded-lg)
+    const paymentY = summaryY + 30;
+    pdf.setFillColor(243, 244, 246); // Gray-100 background
+    pdf.rect(20, paymentY, pageWidth - 40, 20, 'F');
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(55, 65, 81); // Gray-700 for header
+    pdf.text("Payment Details:", 25, paymentY + 6);
+    
+    pdf.setFontSize(8);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Bank: ABSA Bank | Account: 123456789 | Branch: 632005", 25, paymentY + 11);
+    pdf.text(`Reference: ${invoice.invoiceNumber}`, 25, paymentY + 15);
+    
+    pdf.setFontSize(7);
+    pdf.setTextColor(75, 85, 99); // Gray-600
+    pdf.text("Please use the invoice number as your payment reference for quick allocation.", 25, paymentY + 19);
+
+    // EXACT MATCH - Notes Section (if present) - bg-amber-50 border-amber-200
+    let notesY = paymentY + 25;
+    if (invoice.notes && invoice.notes.trim()) {
+      pdf.setFillColor(255, 251, 235); // Amber-50
+      pdf.setDrawColor(251, 191, 36); // Amber-200 for border
+      pdf.rect(20, notesY, pageWidth - 40, 15, 'FD');
+      
+      pdf.setFontSize(9);
+      pdf.setTextColor(55, 65, 81); // Gray-700
+      pdf.text("Additional Notes:", 25, notesY + 6);
+      
+      pdf.setFontSize(8);
+      pdf.setTextColor(55, 65, 81); // Gray-700
+      pdf.text(invoice.notes, 25, notesY + 11);
       notesY += 20;
     }
 
-    // Professional Footer
-    const footerY = Math.max(notesY + 10, pageHeight - 25);
+    // EXACT MATCH - Footer (text-xs text-gray-400 border-t)
+    const footerY = Math.max(notesY + 10, pageHeight - 30);
+    
+    // Border top line
+    pdf.setDrawColor(229, 231, 235); // Gray-200
+    pdf.line(20, footerY - 3, pageWidth - 20, footerY - 3);
+    
     pdf.setFontSize(7);
     pdf.setTextColor(156, 163, 175); // Gray-400
     pdf.text("Thank you for your business! For queries, contact info@thinkmybiz.com or call +27 12 345 6789.", 20, footerY);
