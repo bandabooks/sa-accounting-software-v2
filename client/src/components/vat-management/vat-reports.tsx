@@ -219,9 +219,13 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
       
       if (format === 'view') {
         // Parse JSON for preview
-        const reportData = await response.json();
-        setReportData(reportData);
-        setShowPreview(true);
+        const result = await response.json();
+        if (result.success) {
+          setReportData(result.data);
+          setShowPreview(true);
+        } else {
+          throw new Error(result.message || 'Failed to load report preview');
+        }
       } else if (format === 'pdf') {
         // Open PDF in new tab
         const blob = await response.blob();
@@ -414,15 +418,20 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                   // Use apiRequest for proper authentication
                   const response = await apiRequest(`/api/vat/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=pdf`, 'GET');
                   
-                  const blob = await response.blob();
-                  const url = URL.createObjectURL(blob);
-                  window.open(url, '_blank');
-                  setTimeout(() => URL.revokeObjectURL(url), 1000);
-                  
-                  toast({
-                    title: "Success",
-                    description: "VAT report generated and opened in new tab",
-                  });
+                  if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    
+                    toast({
+                      title: "Success",
+                      description: "VAT report generated and opened in new tab",
+                    });
+                  } else {
+                    const errorResult = await response.json();
+                    throw new Error(errorResult.message || 'Failed to generate PDF');
+                  }
                 } catch (error) {
                   console.error('VAT report generation error:', error);
                   toast({

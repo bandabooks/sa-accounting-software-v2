@@ -4921,20 +4921,45 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
       const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
       const { startDate, endDate, format } = req.query;
       
+      // Validate required parameters
+      if (!startDate || !endDate) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Both startDate and endDate are required" 
+        });
+      }
+      
+      console.log('VAT Report API called with:', { companyId, startDate, endDate, format });
+      
       const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
       
-      if (format === 'pdf' || format === 'excel' || format === 'csv') {
-        // Generate and send file based on format
-        res.setHeader('Content-Type', format === 'pdf' ? 'application/pdf' : 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${Date.now()}.${format}`);
-        // File generation logic would go here
-        res.send('Generated file content');
+      if (format === 'pdf') {
+        const pdfContent = `VAT Summary Report
+Period: ${startDate} to ${endDate}
+Output VAT: R ${summary.summary.outputVat}
+Input VAT: R ${summary.summary.inputVat}
+Net VAT Payable: R ${summary.summary.netVatPayable}`;
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.pdf`);
+        res.send(Buffer.from(pdfContent));
+      } else if (format === 'excel' || format === 'csv') {
+        const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable
+${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable}`;
+        
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.${format}`);
+        res.send(csvContent);
       } else {
-        res.json(summary);
+        res.json({ success: true, data: summary });
       }
     } catch (error) {
       console.error("Error generating VAT summary report:", error);
-      res.status(500).json({ message: "Failed to generate VAT summary report" });
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate VAT summary report",
+        error: error.message
+      });
     }
   });
 

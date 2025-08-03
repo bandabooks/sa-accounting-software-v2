@@ -6811,22 +6811,32 @@ export class DatabaseStorage implements IStorage {
   // VAT Report Generation Functions
   async getVatSummaryReport(companyId: number, startDate: string, endDate: string): Promise<any> {
     try {
-      // Get all invoices in date range for output VAT
+      console.log('Generating VAT summary report for dates:', { companyId, startDate, endDate });
+      
+      // Validate date format and ensure they're proper Date objects
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new Error('Invalid date format provided');
+      }
+      
+      // Get all invoices in date range for output VAT (using issueDate instead of invoiceDate)
       const invoicesResult = await db.select()
         .from(invoices)
         .where(and(
           eq(invoices.companyId, companyId),
-          gte(invoices.invoiceDate, startDate),
-          lte(invoices.invoiceDate, endDate)
+          gte(invoices.issueDate, start),
+          lte(invoices.issueDate, end)
         ));
 
-      // Get all expenses in date range for input VAT
+      // Get all expenses in date range for input VAT (using expenseDate field)
       const expensesResult = await db.select()
-        .from(expenses)
+        .from(expenses) 
         .where(and(
           eq(expenses.companyId, companyId),
-          gte(expenses.expenseDate, startDate),
-          lte(expenses.expenseDate, endDate)
+          gte(expenses.expenseDate, start),
+          lte(expenses.expenseDate, end)
         ));
 
       // Calculate totals
