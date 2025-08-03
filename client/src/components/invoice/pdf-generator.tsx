@@ -53,19 +53,19 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.text("PO Box 1234, Midrand, 1685", 20, 38);
     pdf.text("VAT #: 4455667788 | Reg: 2019/123456/07", 20, 41);
 
-    // Right side - "TAX INVOICE" title matching React layout
+    // Right side - "TAX INVOICE" title matching React layout (right-aligned)
     pdf.setFontSize(20);
     pdf.setTextColor(55, 65, 81); // Gray-700 to match text-gray-800
-    pdf.text("TAX INVOICE", pageWidth - 65, 25);
+    pdf.text("TAX INVOICE", pageWidth - 20, 25, { align: 'right' });
     
-    // Invoice details exactly as in React component
+    // Invoice details exactly as in React component (right-aligned)
     pdf.setFontSize(8);
     pdf.setTextColor(0, 0, 0);
-    pdf.text(`Invoice #: ${invoice.invoiceNumber}`, pageWidth - 65, 32);
-    pdf.text(`Date: ${formatDate(invoice.createdAt || invoice.issueDate)}`, pageWidth - 65, 36);
-    pdf.text(`Due: ${formatDate(invoice.dueDate)}`, pageWidth - 65, 40);
+    pdf.text(`Invoice #: ${invoice.invoiceNumber}`, pageWidth - 20, 32, { align: 'right' });
+    pdf.text(`Date: ${formatDate(invoice.createdAt || invoice.issueDate)}`, pageWidth - 20, 36, { align: 'right' });
+    pdf.text(`Due: ${formatDate(invoice.dueDate)}`, pageWidth - 20, 40, { align: 'right' });
     
-    // Status with exact color matching from React
+    // Status with exact color matching from React (right-aligned)
     let statusColor = [107, 114, 128]; // Default gray
     const status = invoice.status.toUpperCase();
     if (status === 'PAID') statusColor = [34, 197, 94]; // Green-500
@@ -74,7 +74,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     else if (status === 'DRAFT') statusColor = [107, 114, 128]; // Gray-500
     
     pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-    pdf.text(`Status: ${status}`, pageWidth - 65, 44);
+    pdf.text(`Status: ${status}`, pageWidth - 20, 44, { align: 'right' });
 
     // EXACT MATCH - Addresses Section (grid-cols-2 gap-8)
     const addressY = 55;
@@ -192,10 +192,10 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       const lineVatWidth = pdf.getTextWidth(lineVatText);
       pdf.text(lineVatText, 170 - lineVatWidth, currentY);
       
-      // Right-aligned total matching header position
+      // Right-aligned total matching header position exactly
       const totalText = formatCurrency(item.total || 0);
       const totalWidth = pdf.getTextWidth(totalText);
-      pdf.text(totalText, 190 - totalWidth, currentY);
+      pdf.text(totalText, 200 - totalWidth, currentY); // Align under "Total" header
       
       currentY += 12; // Better row spacing
     });
