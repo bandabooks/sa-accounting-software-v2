@@ -26,239 +26,202 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     
-    // Professional Color Scheme
-    const primaryColor = [45, 55, 72]; // Dark blue-gray
-    const accentColor = [59, 130, 246]; // Modern blue
-    const lightGray = [248, 250, 252]; // Very light gray
-    const mediumGray = [148, 163, 184]; // Medium gray
-    const darkGray = [71, 85, 105]; // Dark gray
+    // Clean, Professional Design - Simple and Well-Aligned
     
-    // Header Background
-    pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-    pdf.rect(0, 0, pageWidth, 50, 'F');
-    
-    // Company Logo Area (Left Side)
-    pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-    pdf.roundedRect(20, 15, 12, 12, 2, 2, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14);
+    // Company Header (Left Side)
+    pdf.setFontSize(22);
+    pdf.setTextColor(59, 130, 246); // Clean blue
     pdf.setFont('helvetica', 'bold');
-    pdf.text("TB", 23, 24);
-    
-    // Company Name and Tagline
-    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    pdf.setFontSize(20);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text("Think Mybiz Accounting", 40, 25);
+    pdf.text("Think Mybiz Accounting", 20, 25);
     
     pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-    pdf.text("Professional Invoice Management Solutions", 40, 32);
-    
-    // Invoice Title (Right Side)
-    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    pdf.setFontSize(32);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text("INVOICE", pageWidth - 65, 30);
-    
-    // Professional Border Line
-    pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
-    pdf.setLineWidth(2);
-    pdf.line(20, 55, pageWidth - 20, 55);
-    
-    // Invoice Information Section (Right Side)
-    const infoStartY = 70;
-    pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-    pdf.roundedRect(pageWidth - 85, infoStartY, 65, 50, 3, 3, 'F');
-    
-    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text("INVOICE NUMBER", pageWidth - 80, infoStartY + 8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(invoice.invoiceNumber, pageWidth - 80, infoStartY + 15);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text("ISSUE DATE", pageWidth - 80, infoStartY + 23);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(formatDate(invoice.issueDate), pageWidth - 80, infoStartY + 30);
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text("DUE DATE", pageWidth - 80, infoStartY + 38);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(formatDate(invoice.dueDate), pageWidth - 80, infoStartY + 45);
-    
-    // Status Badge
-    const statusY = infoStartY + 50;
-    const statusColors = {
-      'draft': [156, 163, 175],
-      'sent': [59, 130, 246],
-      'paid': [34, 197, 94],
-      'overdue': [239, 68, 68]
-    };
-    const statusColor = statusColors[invoice.status as keyof typeof statusColors] || statusColors.draft;
-    
-    pdf.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
-    pdf.roundedRect(pageWidth - 85, statusY + 5, 65, 8, 2, 2, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    const statusText = invoice.status.toUpperCase();
-    const statusWidth = pdf.getStringUnitWidth(statusText) * 8 / pdf.internal.scaleFactor;
-    pdf.text(statusText, pageWidth - 52.5 - statusWidth/2, statusY + 10);
+    pdf.text("Professional Invoice Management", 20, 32);
 
-    // Bill To Section
-    const billToStartY = 80;
-    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    pdf.setFontSize(12);
+    // Invoice Title (Right Side)
+    pdf.setFontSize(24);
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
-    pdf.text("BILL TO", 20, billToStartY);
-    
-    // Bill To Background
-    pdf.setFillColor(255, 255, 255);
-    pdf.setDrawColor(lightGray[0], lightGray[1], lightGray[2]);
-    pdf.roundedRect(20, billToStartY + 5, 120, 60, 3, 3, 'FD');
-    
-    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'bold');
-    let billToY = billToStartY + 18;
-    pdf.text(invoice.customer.name, 25, billToY);
-    
+    pdf.text("INVOICE", pageWidth - 60, 25);
+
+    // Clean separator line
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(1);
+    pdf.line(20, 40, pageWidth - 20, 40);
+
+    // Invoice Details Box (Right Side) - Clean and Aligned
+    const detailsStartY = 50;
     pdf.setFontSize(9);
+    pdf.setTextColor(60, 60, 60);
+    pdf.setFont('helvetica', 'bold');
+    
+    pdf.text("Invoice Number:", pageWidth - 80, detailsStartY);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
+    pdf.text(invoice.invoiceNumber, pageWidth - 80, detailsStartY + 7);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text("Issue Date:", pageWidth - 80, detailsStartY + 17);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(formatDate(invoice.issueDate), pageWidth - 80, detailsStartY + 24);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text("Due Date:", pageWidth - 80, detailsStartY + 34);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(formatDate(invoice.dueDate), pageWidth - 80, detailsStartY + 41);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text("Status:", pageWidth - 80, detailsStartY + 51);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(invoice.status.toUpperCase(), pageWidth - 80, detailsStartY + 58);
+
+    // Bill To Section - Clean Layout
+    const billToY = 60;
+    pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text("Bill To:", 20, billToY);
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(invoice.customer.name, 20, billToY + 12);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(60, 60, 60);
+    let customerY = billToY + 20;
     
     if (invoice.customer.email) {
-      billToY += 10;
-      pdf.text(`✉ ${invoice.customer.email}`, 25, billToY);
+      pdf.text(invoice.customer.email, 20, customerY);
+      customerY += 8;
     }
     if (invoice.customer.phone) {
-      billToY += 8;
-      pdf.text(`☎ ${invoice.customer.phone}`, 25, billToY);
+      pdf.text(invoice.customer.phone, 20, customerY);
+      customerY += 8;
     }
     if (invoice.customer.address) {
-      billToY += 8;
-      pdf.text(`⌂ ${invoice.customer.address}`, 25, billToY);
+      pdf.text(invoice.customer.address, 20, customerY);
+      customerY += 6;
       if (invoice.customer.city) {
-        billToY += 6;
-        pdf.text(`   ${invoice.customer.city}${invoice.customer.postalCode ? ', ' + invoice.customer.postalCode : ''}`, 25, billToY);
+        pdf.text(`${invoice.customer.city}${invoice.customer.postalCode ? ', ' + invoice.customer.postalCode : ''}`, 20, customerY);
+        customerY += 8;
       }
     }
     if (invoice.customer.vatNumber) {
-      billToY += 8;
-      pdf.text(`VAT: ${invoice.customer.vatNumber}`, 25, billToY);
+      pdf.text(`VAT: ${invoice.customer.vatNumber}`, 20, customerY);
     }
 
-    // Items Table
-    const tableStartY = 160;
+    // Items Table - Clean and Well-Aligned
+    const tableStartY = 130;
     
-    // Table Header
-    pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    pdf.roundedRect(20, tableStartY, pageWidth - 40, 12, 2, 2, 'F');
+    // Table Header - Simple and Professional
+    pdf.setFillColor(59, 130, 246);
+    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F');
     
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
-    pdf.text("DESCRIPTION", 25, tableStartY + 8);
-    pdf.text("QTY", pageWidth - 140, tableStartY + 8);
-    pdf.text("UNIT PRICE", pageWidth - 110, tableStartY + 8);
-    pdf.text("VAT %", pageWidth - 75, tableStartY + 8);
-    pdf.text("TOTAL", pageWidth - 45, tableStartY + 8);
+    
+    // Properly aligned columns
+    pdf.text("Description", 25, tableStartY + 7);
+    pdf.text("Qty", 110, tableStartY + 7);
+    pdf.text("Unit Price", 130, tableStartY + 7);
+    pdf.text("VAT%", 160, tableStartY + 7);
+    pdf.text("Total", pageWidth - 35, tableStartY + 7);
 
-    // Table Items
-    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    // Table Items - Clean rows with proper alignment
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'normal');
-    let currentY = tableStartY + 20;
+    let itemY = tableStartY + 18;
     
     (invoice as any).items?.forEach((item: any, index: number) => {
-      // Alternating row colors
-      if (index % 2 === 0) {
-        pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-        pdf.rect(20, currentY - 6, pageWidth - 40, 12, 'F');
-      }
-      
       pdf.setFontSize(9);
-      pdf.text(item.description, 25, currentY);
-      pdf.text(item.quantity.toString(), pageWidth - 135, currentY);
-      pdf.text(formatCurrency(item.unitPrice), pageWidth - 110, currentY);
-      pdf.text(`${item.vatRate}%`, pageWidth - 75, currentY);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(formatCurrency(item.total), pageWidth - 45, currentY);
-      pdf.setFont('helvetica', 'normal');
-      currentY += 12;
+      
+      // Description (left-aligned)
+      pdf.text(item.description, 25, itemY);
+      
+      // Quantity (center-aligned)
+      const qtyText = item.quantity.toString();
+      const qtyWidth = pdf.getStringUnitWidth(qtyText) * 9 / pdf.internal.scaleFactor;
+      pdf.text(qtyText, 115 - qtyWidth/2, itemY);
+      
+      // Unit Price (right-aligned)
+      const unitPriceText = formatCurrency(item.unitPrice);
+      const unitPriceWidth = pdf.getStringUnitWidth(unitPriceText) * 9 / pdf.internal.scaleFactor;
+      pdf.text(unitPriceText, 155 - unitPriceWidth, itemY);
+      
+      // VAT Rate (center-aligned)
+      const vatText = `${item.vatRate}%`;
+      const vatWidth = pdf.getStringUnitWidth(vatText) * 9 / pdf.internal.scaleFactor;
+      pdf.text(vatText, 165 - vatWidth/2, itemY);
+      
+      // Total (right-aligned)
+      const totalText = formatCurrency(item.total);
+      const totalWidth = pdf.getStringUnitWidth(totalText) * 9 / pdf.internal.scaleFactor;
+      pdf.text(totalText, pageWidth - 25 - totalWidth, itemY);
+      
+      itemY += 12;
     });
 
-    // Totals Section
-    const totalsStartY = currentY + 15;
-    const totalsX = pageWidth - 85;
+    // Totals Section - Clean and Right-Aligned
+    const totalsStartY = itemY + 15;
+    const rightAlign = pageWidth - 25;
     
-    // Totals Background
-    pdf.setFillColor(255, 255, 255);
-    pdf.setDrawColor(lightGray[0], lightGray[1], lightGray[2]);
-    pdf.roundedRect(totalsX - 5, totalsStartY - 5, 70, 45, 3, 3, 'FD');
-    
-    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(60, 60, 60);
     
     // Subtotal
-    pdf.text("Subtotal:", totalsX, totalsStartY + 5);
-    pdf.text(formatCurrency(invoice.subtotal), pageWidth - 25, totalsStartY + 5);
+    pdf.text("Subtotal:", rightAlign - 50, totalsStartY);
+    const subtotalText = formatCurrency(invoice.subtotal);
+    const subtotalWidth = pdf.getStringUnitWidth(subtotalText) * 10 / pdf.internal.scaleFactor;
+    pdf.text(subtotalText, rightAlign - subtotalWidth, totalsStartY);
     
     // VAT
-    pdf.text("VAT:", totalsX, totalsStartY + 15);
-    pdf.text(formatCurrency(invoice.vatAmount), pageWidth - 25, totalsStartY + 15);
+    pdf.text("VAT:", rightAlign - 50, totalsStartY + 10);
+    const vatText = formatCurrency(invoice.vatAmount);
+    const vatAmountWidth = pdf.getStringUnitWidth(vatText) * 10 / pdf.internal.scaleFactor;
+    pdf.text(vatText, rightAlign - vatAmountWidth, totalsStartY + 10);
     
-    // Total Line
-    pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
-    pdf.setLineWidth(1);
-    pdf.line(totalsX, totalsStartY + 20, pageWidth - 20, totalsStartY + 20);
+    // Total line separator
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.5);
+    pdf.line(rightAlign - 80, totalsStartY + 15, rightAlign, totalsStartY + 15);
     
     // Total Amount
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    pdf.text("TOTAL:", totalsX, totalsStartY + 30);
-    pdf.text(formatCurrency(invoice.total), pageWidth - 25, totalsStartY + 30);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("TOTAL:", rightAlign - 50, totalsStartY + 25);
+    const finalTotalText = formatCurrency(invoice.total);
+    const finalTotalWidth = pdf.getStringUnitWidth(finalTotalText) * 12 / pdf.internal.scaleFactor;
+    pdf.text(finalTotalText, rightAlign - finalTotalWidth, totalsStartY + 25);
 
-    // Notes Section (if exists)
+    // Notes Section (if exists) - Clean formatting
     if (invoice.notes) {
-      const notesY = totalsStartY + 50;
-      pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      const notesY = totalsStartY + 45;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
-      pdf.text("NOTES", 20, notesY);
-      
-      pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-      pdf.roundedRect(20, notesY + 5, pageWidth - 40, 20, 3, 3, 'F');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Notes:", 20, notesY);
       
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
-      
-      // Wrap text for notes
-      const noteLines = pdf.splitTextToSize(invoice.notes, pageWidth - 50);
-      pdf.text(noteLines, 25, notesY + 15);
+      pdf.setTextColor(60, 60, 60);
+      const noteLines = pdf.splitTextToSize(invoice.notes, pageWidth - 40);
+      pdf.text(noteLines, 20, notesY + 10);
     }
 
-    // Professional Footer
-    const footerY = pageHeight - 30;
+    // Footer - Simple and Professional
+    const footerY = pageHeight - 25;
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.5);
+    pdf.line(20, footerY - 10, pageWidth - 20, footerY - 10);
     
-    // Footer separator line
-    pdf.setDrawColor(lightGray[0], lightGray[1], lightGray[2]);
-    pdf.setLineWidth(1);
-    pdf.line(20, footerY - 5, pageWidth - 20, footerY - 5);
-    
-    pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     pdf.setFontSize(8);
+    pdf.setTextColor(100, 100, 100);
     pdf.setFont('helvetica', 'normal');
-    pdf.text("Thank you for choosing Think Mybiz Accounting!", 20, footerY + 5);
-    pdf.text("Professional Invoice Management | VAT Compliant | SARS Ready", 20, footerY + 12);
-    
-    // Page number (if needed for multi-page invoices)
-    pdf.text(`Page 1 of 1`, pageWidth - 30, footerY + 12);
+    pdf.text("Thank you for your business!", 20, footerY);
+    pdf.text("Think Mybiz Accounting - Professional Invoice Management", 20, footerY + 6);
 
     resolve(pdf);
   });
