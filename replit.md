@@ -6,6 +6,17 @@ Taxnify is a comprehensive business management platform designed for South Afric
 
 ## Recent Changes (August 2025)
 
+### Professional Invoice PDF Generator Complete Overhaul (August 2025)
+- **Exact Web Layout Match** - PDF generator completely rewritten to mirror the professional JSX invoice layout pixel-perfectly
+- **Identical Branding & Styling** - Same company logo, colors, fonts, spacing, and professional design elements as web preview
+- **Consistent Table Design** - Blue header rows, precise column alignment, and clean data formatting matching web interface
+- **Professional Payment Sections** - Payment status and bank details sections with identical background colors and styling
+- **Single Source of Truth** - Both web preview and PDF export now use same professional template and data structure
+- **Authentic Data Integration** - All VAT calculations, customer details, and invoice totals consistent across both formats
+- **World-Class Client Presentation** - PDF output now suitable for professional client delivery with banking-quality formatting
+
+## Recent Changes (August 2025)
+
 ### Production Readiness Testing & System Cleanup Complete (August 2025)
 - **Comprehensive Onboarding Validation** - Verified all required fields enforced, users cannot skip mandatory information
 - **Database Naming Standardization** - All VAT/tax fields now consistently use `vatAmount` across entire codebase
