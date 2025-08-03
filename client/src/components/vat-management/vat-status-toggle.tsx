@@ -19,6 +19,7 @@ const vatSettingsSchema = z.object({
   vatNumber: z.string().optional(),
   vatRegistrationDate: z.string().optional(),
   vatPeriodMonths: z.coerce.number().min(1).max(12),
+  vatStartMonth: z.coerce.number().min(1).max(12),
   vatSubmissionDay: z.coerce.number().min(1).max(31),
   defaultVatCalculationMethod: z.enum(["inclusive", "exclusive"]).default("inclusive"),
 });
@@ -32,6 +33,7 @@ interface VatStatusToggleProps {
     vatNumber?: string;
     vatRegistrationDate?: string;
     vatPeriodMonths: number;
+    vatStartMonth: number;
     vatSubmissionDay: number;
     defaultVatCalculationMethod?: "inclusive" | "exclusive";
   };
@@ -54,6 +56,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
       vatNumber: initialSettings.vatNumber || "",
       vatRegistrationDate: initialSettings.vatRegistrationDate || "",
       vatPeriodMonths: initialSettings.vatPeriodMonths,
+      vatStartMonth: initialSettings.vatStartMonth || 1,
       vatSubmissionDay: initialSettings.vatSubmissionDay,
       defaultVatCalculationMethod: initialSettings.defaultVatCalculationMethod || "inclusive",
     },
@@ -67,6 +70,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
         vatNumber: (freshVatSettings as any).vatNumber || "",
         vatRegistrationDate: (freshVatSettings as any).vatRegistrationDate || "",
         vatPeriodMonths: (freshVatSettings as any).vatPeriodMonths || 2,
+        vatStartMonth: (freshVatSettings as any).vatStartMonth || 1,
         vatSubmissionDay: (freshVatSettings as any).vatSubmissionDay || 25,
         defaultVatCalculationMethod: (freshVatSettings as any).defaultVatCalculationMethod || "inclusive",
       });
@@ -99,6 +103,31 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
   };
 
   const isVatRegistered = form.watch("isVatRegistered");
+  const vatPeriodMonths = form.watch("vatPeriodMonths");
+  const vatStartMonth = form.watch("vatStartMonth");
+
+  // Month names for display
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Calculate VAT period preview
+  const calculateVatPeriods = (startMonth: number, periodMonths: number) => {
+    const periods = [];
+    let currentMonth = startMonth;
+    
+    for (let i = 0; i < 3; i++) { // Show first 3 periods
+      const startMonthName = monthNames[currentMonth - 1];
+      const endMonth = ((currentMonth - 1 + periodMonths - 1) % 12) + 1;
+      const endMonthName = monthNames[endMonth - 1];
+      
+      periods.push(`${startMonthName}–${endMonthName}`);
+      currentMonth = ((currentMonth - 1 + periodMonths) % 12) + 1;
+    }
+    
+    return periods.join(", ") + "...";
+  };
 
   return (
     <Card className="mb-6">
@@ -243,6 +272,34 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
 
                   <FormField
                     control={form.control}
+                    name="vatStartMonth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>VAT Start Period</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select start month" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {monthNames.map((month, index) => (
+                              <SelectItem key={index + 1} value={(index + 1).toString()}>
+                                {month}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Starting month of your VAT cycle
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="vatSubmissionDay"
                     render={({ field }) => (
                       <FormItem>
@@ -264,6 +321,22 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
                     )}
                   />
                 </div>
+
+                {/* VAT Period Preview */}
+                {vatPeriodMonths && vatStartMonth && (
+                  <div className="p-3 bg-white border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-blue-700 mb-2">
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="font-medium">VAT Cycle Preview</span>
+                    </div>
+                    <p className="text-sm text-blue-600">
+                      <strong>Your VAT periods:</strong> {calculateVatPeriods(vatStartMonth, vatPeriodMonths)}
+                    </p>
+                    <p className="text-xs text-blue-500 mt-1">
+                      First VAT Period: {monthNames[vatStartMonth - 1]} – {monthNames[((vatStartMonth - 1 + vatPeriodMonths - 1) % 12)]}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
