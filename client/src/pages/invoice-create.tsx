@@ -78,10 +78,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "0.00", // Initialize with 0, will be set by VAT type
-      vatInclusive: false, 
+      vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
+      vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: 2 // Default to VAT Inclusive
+      vatTypeId: 2 // Default to VAT Inclusive (15%)
     }
   ]);
 
@@ -113,7 +113,8 @@ export default function InvoiceCreate() {
         subtotal: existingInvoice.subtotal,
         vatAmount: existingInvoice.vatAmount,
         total: existingInvoice.total,
-        notes: existingInvoice.notes || ""
+        notes: existingInvoice.notes || "",
+        globalVatType: "2" // Default to VAT Inclusive for existing invoices
       });
 
       if (existingInvoice.items && existingInvoice.items.length > 0) {
@@ -124,7 +125,8 @@ export default function InvoiceCreate() {
           unitPrice: item.unitPrice,
           vatRate: item.vatRate,
           vatInclusive: item.vatInclusive || false,
-          vatAmount: item.vatAmount
+          vatAmount: item.vatAmount,
+          vatTypeId: item.vatInclusive ? 2 : 1 // Convert to VAT type (2=inclusive, 1=exclusive)
         }));
         setItems(invoiceItems);
       }
@@ -179,10 +181,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "0.00", // Initialize with 0, will be set by VAT type
-      vatInclusive: false, 
+      vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
+      vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: 2 // Default to VAT Inclusive
+      vatTypeId: 2 // Default to VAT Inclusive (15%)
     }]);
   };
 
@@ -490,24 +492,25 @@ export default function InvoiceCreate() {
               </Button>
             </CardHeader>
             <CardContent className="p-0">
-              {/* Professional Table Header - Matching Screenshot */}
+              {/* Professional Table Header - With VAT Column */}
               <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200">
-                <div className="grid grid-cols-12 gap-3 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  <div className="col-span-3">Product/Service</div>
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <div className="col-span-2">Product/Service</div>
                   <div className="col-span-3">Description</div>
                   <div className="col-span-1 text-center">Qty</div>
                   <div className="col-span-2 text-center">Unit Price</div>
-                  <div className="col-span-2 text-center">Amount</div>
+                  <div className="col-span-2 text-center">VAT Type</div>
+                  <div className="col-span-1 text-center">Amount</div>
                   <div className="col-span-1 text-center">Remove</div>
                 </div>
               </div>
 
-              {/* Professional Table Body - Matching Screenshot */}
+              {/* Professional Table Body - With VAT Dropdown per Line */}
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-3 px-4 py-4 items-center bg-white dark:bg-gray-900">
+                  <div key={index} className="grid grid-cols-12 gap-2 px-4 py-4 items-center bg-white dark:bg-gray-900">
                     {/* Product/Service Column */}
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <ProductServiceSelect
                         value={item.productId}
                         onValueChange={(productId) => updateItem(index, 'productId', productId)}
@@ -553,9 +556,19 @@ export default function InvoiceCreate() {
                       </div>
                     </div>
 
-                    {/* Amount Column - Calculated automatically */}
+                    {/* VAT Type Column - New Line-Level VAT Control */}
                     <div className="col-span-2">
-                      <div className="text-right font-medium text-gray-900 dark:text-white px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded">
+                      <VATTypeSelect
+                        value={item.vatTypeId?.toString()}
+                        onValueChange={(value) => updateItem(index, 'vatTypeId', parseInt(value))}
+                        placeholder="VAT Type"
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Amount Column - Calculated with VAT applied */}
+                    <div className="col-span-1">
+                      <div className="text-right font-medium text-gray-900 dark:text-white px-2 py-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
                         R{(parseFloat(item.quantity || "0") * parseFloat(item.unitPrice || "0")).toFixed(2)}
                       </div>
                     </div>
@@ -651,64 +664,31 @@ export default function InvoiceCreate() {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  {/* Global VAT Treatment - Controls All Items */}
+                  {/* Line-Level VAT Summary - Shows calculated totals from individual line items */}
                   <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border">
-                    <Label className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      Invoice VAT Treatment
+                    <Label className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+                      Line-Level VAT Control
                     </Label>
-                    <Select 
-                      value={formData.globalVatType || "1"}
-                      onValueChange={(value) => {
-                        // Apply VAT treatment to all items and update calculations
-                        const newItems = items.map(item => ({
-                          ...item,
-                          vatTypeId: parseInt(value)
-                        }));
-                        setItems(newItems);
-                        setFormData(prev => ({ ...prev, globalVatType: value }));
-                        
-                        // Recalculate totals based on new VAT treatment
-                        const totals = calculateInvoiceTotal(newItems);
-                        setFormData(prev => ({
-                          ...prev,
-                          subtotal: totals.subtotal.toFixed(2),
-                          vatAmount: totals.vatAmount.toFixed(2),
-                          total: totals.total.toFixed(2)
-                        }));
-                      }}
-                    >
-                      <SelectTrigger className="w-full bg-white">
-                        <SelectValue placeholder="Select VAT treatment for all items..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">STD</Badge>
-                            <span>VAT Exclusive (15%)</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">INC</Badge>
-                            <span>VAT Inclusive (15%)</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="3">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">ZER</Badge>
-                            <span>Zero-rated (0%)</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="4">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">EXM</Badge>
-                            <span>Exempt (0%)</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="text-xs text-blue-700 dark:text-blue-300">
-                      This applies to all invoice items. Individual item VAT can be adjusted if needed.
+                    <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                      <p>✓ VAT is now controlled per line item for granular control</p>
+                      <p>✓ Each item can have different VAT types (Standard, Zero-rated, Exempt)</p>
+                      <p>✓ Global totals are calculated from individual line VAT amounts</p>
+                    </div>
+                    <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">VAT Breakdown by Type:</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex justify-between">
+                          <span>Standard (15%):</span>
+                          <span className="font-mono">R {items.filter(item => item.vatTypeId === 1 || item.vatTypeId === 2)
+                            .reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Zero/Exempt:</span>
+                          <span className="font-mono">R {items.filter(item => item.vatTypeId === 3 || item.vatTypeId === 4)
+                            .reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
@@ -724,10 +704,7 @@ export default function InvoiceCreate() {
                     
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        VAT ({formData.globalVatType === "1" ? "15% Excl" : 
-                              formData.globalVatType === "2" ? "15% Incl" : 
-                              formData.globalVatType === "3" ? "0% Zero" : 
-                              formData.globalVatType === "4" ? "0% Exempt" : "0%"}):
+                        Total VAT (from line items):
                       </span>
                       <span className="font-medium text-gray-900 dark:text-white">
                         R {parseFloat(formData.vatAmount).toFixed(2)}

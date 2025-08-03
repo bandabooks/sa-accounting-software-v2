@@ -36,7 +36,7 @@ export const VATTypeSelect: React.FC<VATTypeSelectProps> = ({
   });
 
   // Use API data if available, otherwise use default types
-  const vatTypes = apiVatTypes.length > 0 ? apiVatTypes : DEFAULT_VAT_TYPES;
+  const vatTypes = (Array.isArray(apiVatTypes) && apiVatTypes.length > 0) ? apiVatTypes : DEFAULT_VAT_TYPES;
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
