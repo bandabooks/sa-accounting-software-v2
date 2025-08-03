@@ -203,12 +203,16 @@ export default function InvoiceCreate() {
     const lineAmount = quantity * unitPrice;
     
     if (item.vatTypeId && shouldShowVATFields) {
-      // Convert vatTypeId to vatType string for calculation
-      const vatType = item.vatTypeId === 1 ? "vat_exclusive" : 
-                     item.vatTypeId === 2 ? "vat_inclusive" :
-                     item.vatTypeId === 3 ? "zero_rated" :
-                     item.vatTypeId === 4 ? "exempt" : "no_vat";
-      return calculateVATAmount(lineAmount, vatType);
+      // Fixed VAT type ID mapping based on actual database values
+      const vatType = item.vatTypeId === 1 ? "vat_exclusive" :  // STD_EX - VAT Exclusive (15%)
+                     item.vatTypeId === 2 ? "vat_inclusive" :   // STD - VAT Inclusive (15%) 
+                     item.vatTypeId === 3 ? "zero_rated" :      // ZER - Zero Rated (0%)
+                     item.vatTypeId === 4 ? "exempt" :          // EXE - Exempt (0%)
+                     "no_vat";                                  // OUT - No VAT (0%)
+      
+      const calculatedVAT = calculateVATAmount(lineAmount, vatType);
+      console.log(`VAT Calculation: lineAmount=${lineAmount}, vatTypeId=${item.vatTypeId}, vatType=${vatType}, calculatedVAT=${calculatedVAT}`);
+      return calculatedVAT;
     }
     
     // Fallback to traditional calculation
