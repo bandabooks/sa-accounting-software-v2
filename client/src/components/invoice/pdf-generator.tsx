@@ -188,9 +188,9 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       const lineVatText = formatCurrency(item.vatAmount || 0);
       pdf.text(lineVatText, 160, currentY, { align: 'right' });
       
-      // Right-aligned total matching header position exactly - positioned to prevent cutoff
+      // Right-aligned total aligned with subtotal position for consistency
       const totalText = formatCurrency(item.total || 0);
-      pdf.text(totalText, pageWidth - 38, currentY, { align: 'right' }); // Moved left to match header
+      pdf.text(totalText, pageWidth - 20, currentY, { align: 'right' }); // Aligned with subtotal
       
       currentY += 12; // Better row spacing
     });
