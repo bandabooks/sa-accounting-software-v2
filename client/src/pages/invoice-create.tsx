@@ -199,33 +199,29 @@ export default function InvoiceCreate() {
     }
   };
 
-  // VAT calculation using standard inclusive/exclusive options
+  // VAT calculation using system VAT types with inclusive/exclusive options
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
-    if (!shouldShowVATFields) return 0;
+    if (!shouldShowVATFields || !item.vatTypeId) return 0;
     
-    // Handle VAT calculation based on VAT type selection
     const vatTypeId = typeof item.vatTypeId === 'string' ? item.vatTypeId : item.vatTypeId?.toString();
     
-    switch (vatTypeId) {
-      case "vat_inclusive":
-        // VAT Inclusive: VAT = Amount × (15 ÷ 115)
-        return Number((lineAmount * (15 / 115)).toFixed(2));
-      case "vat_exclusive":
-        // VAT Exclusive: VAT = Amount × 0.15
-        return Number((lineAmount * 0.15).toFixed(2));
-      case "zero_rated":
-      case "exempt":
-        return 0;
-      default:
-        // Fallback to vatInclusive field
-        const vatRate = parseFloat(item.vatRate || "15") / 100;
-        return item.vatInclusive ? 
-          Number((lineAmount * (vatRate / (1 + vatRate))).toFixed(2)) : 
-          Number((lineAmount * vatRate).toFixed(2));
+    // Handle inclusive/exclusive VAT types
+    if (vatTypeId.includes('_inc')) {
+      // VAT Inclusive: Extract rate from VAT type and calculate
+      const rate = parseFloat(item.vatRate || "15");
+      return Number((lineAmount * (rate / (100 + rate))).toFixed(2));
+    } else if (vatTypeId.includes('_exc')) {
+      // VAT Exclusive: Direct calculation
+      const rate = parseFloat(item.vatRate || "15");
+      return Number((lineAmount * (rate / 100)).toFixed(2));
+    } else {
+      // Zero-rated, Exempt, etc. (no inclusive/exclusive variants)
+      const rate = parseFloat(item.vatRate || "0");
+      return Number((lineAmount * (rate / 100)).toFixed(2));
     }
   };
 
