@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
-import { FileText, Shield, AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { FileText, Shield, AlertTriangle, CheckCircle } from "lucide-react";
 
 const vatSettingsSchema = z.object({
   isVatRegistered: z.boolean(),
@@ -480,7 +480,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
                   />
                 </div>
 
-                {/* Clean SARS VAT Category Display */}
+                {/* Enhanced SARS VAT Category Preview */}
                 {vatCategory && (
                   <div className={`
                     p-4 rounded-lg border-l-4 transition-all duration-300
@@ -490,66 +490,64 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
                     ${vatCategory === 'D' ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-yellow-500 border border-yellow-200' : ''}
                     ${vatCategory === 'E' ? 'bg-gradient-to-r from-purple-50 to-purple-100 border-l-purple-500 border border-purple-200' : ''}
                   `}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`
-                          inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full shadow-sm
-                          ${vatCategory === 'A' ? 'bg-blue-500' : ''}
-                          ${vatCategory === 'B' ? 'bg-gray-500' : ''}
-                          ${vatCategory === 'C' ? 'bg-green-500' : ''}
-                          ${vatCategory === 'D' ? 'bg-yellow-500' : ''}
-                          ${vatCategory === 'E' ? 'bg-purple-500' : ''}
-                        `}>
-                          {vatCategory}
-                        </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`
+                        inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full shadow-sm
+                        ${vatCategory === 'A' ? 'bg-blue-500' : ''}
+                        ${vatCategory === 'B' ? 'bg-gray-500' : ''}
+                        ${vatCategory === 'C' ? 'bg-green-500' : ''}
+                        ${vatCategory === 'D' ? 'bg-yellow-500' : ''}
+                        ${vatCategory === 'E' ? 'bg-purple-500' : ''}
+                      `}>
+                        {vatCategory}
+                      </div>
+                      <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-5 w-5 text-green-600" />
                           <span className="font-semibold text-gray-900">Selected Category</span>
                         </div>
                       </div>
-                      
-                      {/* Info Icon with Tooltip */}
-                      <div className="group relative">
-                        <Info className="h-5 w-5 text-blue-500 cursor-help hover:text-blue-600 transition-colors" />
-                        <div className="invisible group-hover:visible absolute right-0 top-8 w-80 p-4 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-20">
-                          {(() => {
-                            const selectedCategory = SARS_VAT_CATEGORIES.find(cat => cat.value === vatCategory);
-                            return selectedCategory ? (
-                              <div className="space-y-2">
-                                <h4 className="font-bold text-white mb-2">
-                                  {selectedCategory.label}
-                                </h4>
-                                <p className="text-gray-200 leading-relaxed">
-                                  {selectedCategory.description}
-                                </p>
-                                <div className="pt-2 border-t border-gray-700">
-                                  <p className="text-gray-300">
-                                    <strong>Submission:</strong> {selectedCategory.submissionCycle}
-                                  </p>
-                                  {vatStartMonth && (
-                                    <p className="text-gray-300 mt-1">
-                                      <strong>Your periods:</strong> {calculateVatPeriods(vatStartMonth, selectedCategory.periodMonths)}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      </div>
                     </div>
                     
-                    {/* Simple Category Name Display */}
-                    <div className="mt-3 bg-white/80 p-3 rounded-md border border-white/50">
-                      {(() => {
-                        const selectedCategory = SARS_VAT_CATEGORIES.find(cat => cat.value === vatCategory);
-                        return selectedCategory ? (
-                          <h4 className="font-bold text-gray-900 text-base">
-                            {selectedCategory.label}
-                          </h4>
-                        ) : null;
-                      })()}
-                    </div>
+                    {(() => {
+                      const selectedCategory = SARS_VAT_CATEGORIES.find(cat => cat.value === vatCategory);
+                      return selectedCategory ? (
+                        <div className="space-y-3">
+                          <div className="bg-white/80 p-3 rounded-md border border-white/50">
+                            <h4 className="font-bold text-gray-900 mb-1">
+                              {selectedCategory.label}
+                            </h4>
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                              {selectedCategory.description}
+                            </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="bg-white/80 p-3 rounded-md border border-white/50">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-blue-600">🔄</span>
+                                <span className="text-xs font-semibold text-gray-700">SUBMISSION CYCLE</span>
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                {selectedCategory.submissionCycle}
+                              </p>
+                            </div>
+                            
+                            {vatStartMonth && (
+                              <div className="bg-white/80 p-3 rounded-md border border-white/50">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-green-600">📅</span>
+                                  <span className="text-xs font-semibold text-gray-700">YOUR VAT PERIODS</span>
+                                </div>
+                                <p className="text-sm text-gray-600">
+                                  {calculateVatPeriods(vatStartMonth, selectedCategory.periodMonths)}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>
