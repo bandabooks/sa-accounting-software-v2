@@ -6812,12 +6812,8 @@ export class DatabaseStorage implements IStorage {
   async getVatSummaryReport(companyId: number, startDate: string, endDate: string): Promise<any> {
     try {
       // Get all invoices in date range for output VAT
-      const invoicesResult = await db.select({
-        vatAmount: invoices.vatAmount,
-        total: invoices.total,
-        subtotal: invoices.subtotal,
-        invoiceDate: invoices.invoiceDate
-      }).from(invoices)
+      const invoicesResult = await db.select()
+        .from(invoices)
         .where(and(
           eq(invoices.companyId, companyId),
           gte(invoices.invoiceDate, new Date(startDate)),
@@ -6825,11 +6821,8 @@ export class DatabaseStorage implements IStorage {
         ));
 
       // Get all expenses in date range for input VAT
-      const expensesResult = await db.select({
-        vatAmount: expenses.vatAmount,
-        amount: expenses.amount,
-        expenseDate: expenses.expenseDate
-      }).from(expenses)
+      const expensesResult = await db.select()
+        .from(expenses)
         .where(and(
           eq(expenses.companyId, companyId),
           gte(expenses.expenseDate, new Date(startDate)),
@@ -6870,17 +6863,8 @@ export class DatabaseStorage implements IStorage {
   async getVatTransactionReport(companyId: number, startDate: string, endDate: string): Promise<any> {
     try {
       // Get detailed VAT transactions from invoices
-      const invoiceTransactions = await db.select({
-        id: invoices.id,
-        type: sql<string>`'Sale'`,
-        date: invoices.invoiceDate,
-        reference: invoices.invoiceNumber,
-        description: sql<string>`CONCAT('Invoice - ', ${customers.name})`,
-        netAmount: invoices.subtotal,
-        vatAmount: invoices.vatAmount,
-        grossAmount: invoices.total,
-        vatRate: sql<number>`15`
-      }).from(invoices)
+      const invoiceTransactions = await db.select()
+        .from(invoices)
         .leftJoin(customers, eq(invoices.customerId, customers.id))
         .where(and(
           eq(invoices.companyId, companyId),
@@ -6890,17 +6874,8 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(invoices.invoiceDate));
 
       // Get detailed VAT transactions from expenses
-      const expenseTransactions = await db.select({
-        id: expenses.id,
-        type: sql<string>`'Purchase'`,
-        date: expenses.expenseDate,
-        reference: expenses.description,
-        description: expenses.description,
-        netAmount: sql<string>`(${expenses.amount} - ${expenses.vatAmount})::text`,
-        vatAmount: expenses.vatAmount,
-        grossAmount: expenses.amount,
-        vatRate: sql<number>`15`
-      }).from(expenses)
+      const expenseTransactions = await db.select()
+        .from(expenses)
         .where(and(
           eq(expenses.companyId, companyId),
           gte(expenses.expenseDate, new Date(startDate)),
@@ -6908,14 +6883,42 @@ export class DatabaseStorage implements IStorage {
         ))
         .orderBy(desc(expenses.expenseDate));
 
+      // Format invoice transactions
+      const formattedInvoices = invoiceTransactions.map(inv => ({
+        id: inv.invoices.id,
+        type: 'Sale',
+        date: inv.invoices.invoiceDate,
+        reference: inv.invoices.invoiceNumber,
+        description: `Invoice - ${inv.customers?.name || 'Unknown Customer'}`,
+        netAmount: inv.invoices.subtotal?.toString() || '0.00',
+        vatAmount: inv.invoices.vatAmount?.toString() || '0.00',
+        grossAmount: inv.invoices.total?.toString() || '0.00',
+        vatRate: 15
+      }));
+
+      // Format expense transactions
+      const formattedExpenses = expenseTransactions.map(exp => ({
+        id: exp.id,
+        type: 'Purchase',
+        date: exp.expenseDate,
+        reference: exp.description || 'Expense',
+        description: exp.description || 'Expense',
+        netAmount: (parseFloat(exp.amount?.toString() || '0') - parseFloat(exp.vatAmount?.toString() || '0')).toFixed(2),
+        vatAmount: exp.vatAmount?.toString() || '0.00',
+        grossAmount: exp.amount?.toString() || '0.00',
+        vatRate: 15
+      }));
+
+      const allTransactions = [...formattedInvoices, ...formattedExpenses]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       return {
         period: { startDate, endDate },
-        transactions: [...invoiceTransactions, ...expenseTransactions]
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        transactions: allTransactions,
         summary: {
-          totalTransactions: invoiceTransactions.length + expenseTransactions.length,
-          salesTransactions: invoiceTransactions.length,
-          purchaseTransactions: expenseTransactions.length
+          totalTransactions: allTransactions.length,
+          salesTransactions: formattedInvoices.length,
+          purchaseTransactions: formattedExpenses.length
         }
       };
     } catch (error) {
