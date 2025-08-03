@@ -27,7 +27,46 @@ export const VATTypeSelect: React.FC<VATTypeSelectProps> = ({
   });
 
   // Ensure we have array of VAT types from the system
-  const vatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
+  const systemVatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
+
+  // Create comprehensive VAT options with inclusive/exclusive variants
+  const vatOptions = [];
+  
+  // Add system VAT types with inclusive/exclusive variants where applicable
+  systemVatTypes.forEach((vatType: any) => {
+    const rate = parseFloat(vatType.rate || "0");
+    
+    if (rate > 0) {
+      // For VAT rates > 0, provide both inclusive and exclusive options
+      vatOptions.push({
+        id: `${vatType.id}_inc`,
+        code: `${vatType.code}_INC`,
+        name: `${vatType.name} (VAT Inclusive)`,
+        rate: rate,
+        isInclusive: true,
+        systemVatTypeId: vatType.id
+      });
+      
+      vatOptions.push({
+        id: `${vatType.id}_exc`,
+        code: `${vatType.code}_EXC`,
+        name: `${vatType.name} (VAT Exclusive)`,
+        rate: rate,
+        isInclusive: false,
+        systemVatTypeId: vatType.id
+      });
+    } else {
+      // For 0% rates (Zero-rated, Exempt), just add single option
+      vatOptions.push({
+        id: `${vatType.id}_single`,
+        code: vatType.code,
+        name: vatType.name,
+        rate: rate,
+        isInclusive: false,
+        systemVatTypeId: vatType.id
+      });
+    }
+  });
 
   // Show loading state while fetching VAT types
   if (isLoading) {
@@ -46,14 +85,14 @@ export const VATTypeSelect: React.FC<VATTypeSelectProps> = ({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {vatTypes.map((vatType: any) => (
-          <SelectItem key={vatType.id} value={vatType.id.toString()}>
+        {vatOptions.map((option) => (
+          <SelectItem key={option.id} value={option.id}>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="font-mono text-xs">
-                {vatType.code}
+                {option.code}
               </Badge>
-              <span>{vatType.name}</span>
-              <span className="text-gray-500">({vatType.rate}%)</span>
+              <span>{option.name}</span>
+              <span className="text-gray-500">({option.rate}%)</span>
             </div>
           </SelectItem>
         ))}

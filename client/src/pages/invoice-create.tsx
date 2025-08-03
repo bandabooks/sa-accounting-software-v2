@@ -199,7 +199,7 @@ export default function InvoiceCreate() {
     }
   };
 
-  // Enhanced VAT calculation using system VAT types with proper inclusive/exclusive handling
+  // Enhanced VAT calculation using comprehensive VAT type system with inclusive/exclusive handling
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
@@ -207,20 +207,30 @@ export default function InvoiceCreate() {
     
     if (!shouldShowVATFields || !item.vatTypeId) return 0;
     
-    // Find the VAT type from fetched data to get rate and determine if inclusive
-    const vatTypesData = Array.isArray(vatTypesQuery.data) ? vatTypesQuery.data : [];
-    const selectedVATType = vatTypesData.find((vt: any) => vt.id === item.vatTypeId);
+    // Parse the vatTypeId which now contains inclusive/exclusive info
+    const vatTypeString = item.vatTypeId.toString();
     
-    if (!selectedVATType) {
-      // Fallback calculation using item's vatRate
-      const vatRate = parseFloat(item.vatRate || "0") / 100;
-      return item.vatInclusive ? 
-        Number((lineAmount * (vatRate / (1 + vatRate))).toFixed(2)) : 
-        Number((lineAmount * vatRate).toFixed(2));
+    // Extract rate and inclusivity from the VAT type selection
+    let rate = 0;
+    let isInclusive = false;
+    
+    if (vatTypeString.includes('_inc')) {
+      // VAT Inclusive option selected
+      isInclusive = true;
+      rate = parseFloat(item.vatRate || "15"); // Use item's vatRate
+    } else if (vatTypeString.includes('_exc')) {
+      // VAT Exclusive option selected
+      isInclusive = false;
+      rate = parseFloat(item.vatRate || "15"); // Use item's vatRate
+    } else if (vatTypeString.includes('_single')) {
+      // Zero-rated or exempt (single option)
+      rate = 0;
+      isInclusive = false;
+    } else {
+      // Fallback to traditional calculation
+      rate = parseFloat(item.vatRate || "0");
+      isInclusive = item.vatInclusive;
     }
-    
-    const rate = parseFloat(selectedVATType.rate || "0");
-    const isInclusive = selectedVATType.code === "INC" || selectedVATType.name?.toLowerCase().includes("inclusive");
     
     // Handle different VAT calculations
     if (rate === 0) {
