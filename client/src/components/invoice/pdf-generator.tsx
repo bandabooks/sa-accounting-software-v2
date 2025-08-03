@@ -143,7 +143,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.text("Unit Price", 120, tableStartY + 6, { align: 'right' });
     pdf.text("VAT Rate", 145, tableStartY + 6, { align: 'right' });
     pdf.text("Line VAT", 170, tableStartY + 6, { align: 'right' });
-    pdf.text("Total", pageWidth - 20, tableStartY + 6, { align: 'right' }); // Right-aligned like React
+    pdf.text("Total", pageWidth - 25, tableStartY + 6, { align: 'right' }); // Adjusted to prevent cutoff
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
