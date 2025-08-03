@@ -314,8 +314,23 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       notesY += 20;
     }
 
+    // Terms & Conditions Section
+    const termsY = notesY + 10;
+    pdf.setFontSize(8);
+    pdf.setTextColor(75, 85, 99); // Gray-600
+    pdf.text("Payment due within 30 days. Late payments may incur interest.", 20, termsY);
+    
+    // Professional Signature Line
+    const signatureY = termsY + 15;
+    pdf.setFontSize(8);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("_____________________________", 20, signatureY);
+    pdf.setFontSize(7);
+    pdf.setTextColor(75, 85, 99); // Gray-600
+    pdf.text("Authorized Signature", 20, signatureY + 6);
+    
     // EXACT MATCH - Footer (text-xs text-gray-400 border-t)
-    const footerY = Math.max(notesY + 10, pageHeight - 30);
+    const footerY = Math.max(signatureY + 20, pageHeight - 30);
     
     // Border top line
     pdf.setDrawColor(229, 231, 235); // Gray-200
