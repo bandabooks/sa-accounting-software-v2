@@ -43,7 +43,7 @@ interface InvoiceItem {
   vatRate: string;
   vatInclusive: boolean;
   vatAmount: string;
-  vatTypeId: number; // Changed to match bulk module format
+  vatTypeId: string | number; // Support both string-based VAT types and legacy numeric IDs
 }
 
 export default function InvoiceCreate() {
@@ -83,10 +83,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
+      vatRate: "15.00", 
       vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: 2 // Default to VAT Inclusive (15%)
+      vatTypeId: "vat_inclusive" // Default to VAT Inclusive
     }
   ]);
 
@@ -186,10 +186,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
+      vatRate: "15.00", 
       vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: 2 // Default to VAT Inclusive (15%)
+      vatTypeId: "vat_inclusive" // Default to VAT Inclusive
     }]);
   };
 
@@ -199,50 +199,33 @@ export default function InvoiceCreate() {
     }
   };
 
-  // Enhanced VAT calculation using comprehensive VAT type system with inclusive/exclusive handling
+  // VAT calculation using standard inclusive/exclusive options
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
-    if (!shouldShowVATFields || !item.vatTypeId) return 0;
+    if (!shouldShowVATFields) return 0;
     
-    // Parse the vatTypeId which now contains inclusive/exclusive info
-    const vatTypeString = item.vatTypeId.toString();
+    // Handle VAT calculation based on VAT type selection
+    const vatTypeId = typeof item.vatTypeId === 'string' ? item.vatTypeId : item.vatTypeId?.toString();
     
-    // Extract rate and inclusivity from the VAT type selection
-    let rate = 0;
-    let isInclusive = false;
-    
-    if (vatTypeString.includes('_inc')) {
-      // VAT Inclusive option selected
-      isInclusive = true;
-      rate = parseFloat(item.vatRate || "15"); // Use item's vatRate
-    } else if (vatTypeString.includes('_exc')) {
-      // VAT Exclusive option selected
-      isInclusive = false;
-      rate = parseFloat(item.vatRate || "15"); // Use item's vatRate
-    } else if (vatTypeString.includes('_single')) {
-      // Zero-rated or exempt (single option)
-      rate = 0;
-      isInclusive = false;
-    } else {
-      // Fallback to traditional calculation
-      rate = parseFloat(item.vatRate || "0");
-      isInclusive = item.vatInclusive;
-    }
-    
-    // Handle different VAT calculations
-    if (rate === 0) {
-      return 0; // Zero-rated, Exempt, etc.
-    }
-    
-    if (isInclusive) {
-      // VAT Inclusive: VAT = Amount × (Rate ÷ (100 + Rate))
-      return Number((lineAmount * (rate / (100 + rate))).toFixed(2));
-    } else {
-      // VAT Exclusive: VAT = Amount × (Rate ÷ 100)
-      return Number((lineAmount * (rate / 100)).toFixed(2));
+    switch (vatTypeId) {
+      case "vat_inclusive":
+        // VAT Inclusive: VAT = Amount × (15 ÷ 115)
+        return Number((lineAmount * (15 / 115)).toFixed(2));
+      case "vat_exclusive":
+        // VAT Exclusive: VAT = Amount × 0.15
+        return Number((lineAmount * 0.15).toFixed(2));
+      case "zero_rated":
+      case "exempt":
+        return 0;
+      default:
+        // Fallback to vatInclusive field
+        const vatRate = parseFloat(item.vatRate || "15") / 100;
+        return item.vatInclusive ? 
+          Number((lineAmount * (vatRate / (1 + vatRate))).toFixed(2)) : 
+          Number((lineAmount * vatRate).toFixed(2));
     }
   };
 
