@@ -133,16 +133,17 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setFillColor(29, 78, 216); // Blue-700 exactly
     pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F'); // Full width to match payment box alignment
     
-    // Professional table headers with optimal spacing and alignment
+    // Crystal white bold headers matching React component exactly
     pdf.setFontSize(8);
-    pdf.setTextColor(255, 255, 255); // White text
+    pdf.setFont("helvetica", "bold"); // Bold font for headers
+    pdf.setTextColor(255, 255, 255); // Crystal white text
     pdf.text("#", 25, tableStartY + 6);
     pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 85, tableStartY + 6, { align: 'right' }); // Optimized spacing
-    pdf.text("Unit Price", 120, tableStartY + 6, { align: 'right' }); // Professional alignment
-    pdf.text("VAT Rate", 145, tableStartY + 6, { align: 'right' }); // Balanced position
-    pdf.text("Line VAT", 170, tableStartY + 6, { align: 'right' }); // Clear spacing
-    pdf.text("Total", pageWidth - 30, tableStartY + 6, { align: 'right' }); // Perfect balance
+    pdf.text("Qty", 85, tableStartY + 6, { align: 'right' });
+    pdf.text("Unit Price", 120, tableStartY + 6, { align: 'right' });
+    pdf.text("VAT Rate", 145, tableStartY + 6, { align: 'right' });
+    pdf.text("Line VAT", 170, tableStartY + 6, { align: 'right' });
+    pdf.text("Total", pageWidth - 20, tableStartY + 6, { align: 'right' }); // Right-aligned like React
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
@@ -161,6 +162,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       pdf.line(20, currentY + 6, pageWidth - 20, currentY + 6); // Full width to match header
       
       pdf.setFontSize(8);
+      pdf.setFont("helvetica", "normal"); // Reset to normal font for data
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
       pdf.text((index + 1).toString(), 25, currentY);
       
