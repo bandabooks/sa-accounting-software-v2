@@ -69,7 +69,7 @@ export default function InvoiceCreate() {
     vatAmount: "0.00", 
     total: "0.00",
     notes: "",
-    globalVatType: "1" // Default to VAT Exclusive
+    globalVatType: "2" // Default to VAT Inclusive
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -81,7 +81,7 @@ export default function InvoiceCreate() {
       vatRate: "0.00", // Initialize with 0, will be set by VAT type
       vatInclusive: false, 
       vatAmount: "0.00",
-      vatTypeId: parseInt(formData.globalVatType) // Use global VAT type as default
+      vatTypeId: 2 // Default to VAT Inclusive
     }
   ]);
 
@@ -182,7 +182,7 @@ export default function InvoiceCreate() {
       vatRate: "0.00", // Initialize with 0, will be set by VAT type
       vatInclusive: false, 
       vatAmount: "0.00",
-      vatTypeId: parseInt(formData.globalVatType) // Use current global VAT type
+      vatTypeId: 2 // Default to VAT Inclusive
     }]);
   };
 
@@ -244,7 +244,7 @@ export default function InvoiceCreate() {
       description: product.description || product.name,
       unitPrice: product.unitPrice,
       vatRate: product.vatRate || "15",
-      vatTypeId: product.vatRate === "0" ? 3 : 1 // Smart VAT type detection (3=zero_rated, 1=vat_exclusive)
+      vatTypeId: product.vatRate === "0" ? 3 : 2 // Smart VAT type detection (3=zero_rated, 2=vat_inclusive)
     };
     
     // Calculate VAT amount for the updated item
