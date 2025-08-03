@@ -19,6 +19,7 @@ const vatSettingsSchema = z.object({
   vatNumber: z.string().optional(),
   vatRegistrationDate: z.string().optional(),
   vatPeriodMonths: z.coerce.number().min(1).max(12),
+  vatCategory: z.enum(["A", "B", "C", "D", "E"]).default("A"),
   vatStartMonth: z.coerce.number().min(1).max(12),
   vatSubmissionDay: z.coerce.number().min(1).max(31),
   defaultVatCalculationMethod: z.enum(["inclusive", "exclusive"]).default("inclusive"),
@@ -33,6 +34,7 @@ interface VatStatusToggleProps {
     vatNumber?: string;
     vatRegistrationDate?: string;
     vatPeriodMonths: number;
+    vatCategory?: "A" | "B" | "C" | "D" | "E";
     vatStartMonth: number;
     vatSubmissionDay: number;
     defaultVatCalculationMethod?: "inclusive" | "exclusive";
@@ -56,6 +58,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
       vatNumber: initialSettings.vatNumber || "",
       vatRegistrationDate: initialSettings.vatRegistrationDate || "",
       vatPeriodMonths: initialSettings.vatPeriodMonths,
+      vatCategory: initialSettings.vatCategory || "A",
       vatStartMonth: initialSettings.vatStartMonth || 1,
       vatSubmissionDay: initialSettings.vatSubmissionDay,
       defaultVatCalculationMethod: initialSettings.defaultVatCalculationMethod || "inclusive",
@@ -70,6 +73,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
         vatNumber: (freshVatSettings as any).vatNumber || "",
         vatRegistrationDate: (freshVatSettings as any).vatRegistrationDate || "",
         vatPeriodMonths: (freshVatSettings as any).vatPeriodMonths || 2,
+        vatCategory: (freshVatSettings as any).vatCategory || "A",
         vatStartMonth: (freshVatSettings as any).vatStartMonth || 1,
         vatSubmissionDay: (freshVatSettings as any).vatSubmissionDay || 25,
         defaultVatCalculationMethod: (freshVatSettings as any).defaultVatCalculationMethod || "inclusive",
@@ -104,7 +108,47 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
 
   const isVatRegistered = form.watch("isVatRegistered");
   const vatPeriodMonths = form.watch("vatPeriodMonths");
+  const vatCategory = form.watch("vatCategory");
   const vatStartMonth = form.watch("vatStartMonth");
+
+  // SARS VAT Categories with full compliance information
+  const SARS_VAT_CATEGORIES = [
+    {
+      value: "A",
+      label: "Category A – Bi-Monthly (Even Months)",
+      description: "Standard vendors. Submit every 2 months (Jan-Feb, Mar-Apr, etc.). Turnover under R30 million.",
+      periodMonths: 2,
+      submissionCycle: "Even months (Jan-Feb, Mar-Apr, May-Jun, Jul-Aug, Sep-Oct, Nov-Dec)"
+    },
+    {
+      value: "B", 
+      label: "Category B – Bi-Monthly (Odd Months)",
+      description: "Submit every 2 months (Feb-Mar, Apr-May, etc.) based on registration cycle.",
+      periodMonths: 2,
+      submissionCycle: "Odd months (Feb-Mar, Apr-May, Jun-Jul, Aug-Sep, Oct-Nov, Dec-Jan)"
+    },
+    {
+      value: "C",
+      label: "Category C – Monthly",
+      description: "Compulsory for vendors with taxable turnover over R30 million. Submit every month.",
+      periodMonths: 1,
+      submissionCycle: "Monthly (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec)"
+    },
+    {
+      value: "D",
+      label: "Category D – Six-Monthly (Small-scale farmers only)",
+      description: "Submit twice a year (Feb-Jul, Aug-Jan). Only for approved small-scale farmers.", 
+      periodMonths: 6,
+      submissionCycle: "Bi-annual (Feb-Jul, Aug-Jan)"
+    },
+    {
+      value: "E",
+      label: "Category E – Annual (Fixed property or occasional supply vendors)",
+      description: "Submit once per year. Used by vendors who only occasionally supply fixed property.",
+      periodMonths: 12,
+      submissionCycle: "Annual (Jan-Dec)"
+    }
+  ];
 
   // Month names for display
   const monthNames = [
@@ -128,6 +172,14 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
     
     return periods.join(", ") + "...";
   };
+
+  // Auto-update vatPeriodMonths when vatCategory changes
+  useEffect(() => {
+    const selectedCategory = SARS_VAT_CATEGORIES.find(cat => cat.value === vatCategory);
+    if (selectedCategory && selectedCategory.periodMonths !== vatPeriodMonths) {
+      form.setValue('vatPeriodMonths', selectedCategory.periodMonths);
+    }
+  }, [vatCategory, vatPeriodMonths, form]);
 
   return (
     <Card className="mb-6">
@@ -246,24 +298,41 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
 
                   <FormField
                     control={form.control}
-                    name="vatPeriodMonths"
+                    name="vatCategory"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>VAT Period</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                        <FormLabel className="flex items-center gap-2">
+                          SARS VAT Category
+                          <div className="group relative">
+                            <AlertTriangle className="h-4 w-4 text-blue-500 cursor-help" />
+                            <div className="invisible group-hover:visible absolute left-6 top-0 w-80 p-3 bg-gray-900 text-white text-xs rounded-md shadow-lg z-10">
+                              <strong>SARS VAT Categories:</strong><br/>
+                              • Category A/B: Bi-Monthly (Standard vendors under R30m)<br/>
+                              • Category C: Monthly (Mandatory over R30m turnover)<br/>
+                              • Category D: Bi-Annual (Small farmers only)<br/>
+                              • Category E: Annual (Fixed property vendors)
+                            </div>
+                          </div>
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select VAT period" />
+                              <SelectValue placeholder="Select SARS VAT category" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="1">Monthly</SelectItem>
-                            <SelectItem value="2">Bi-Monthly (2 months)</SelectItem>
-                            <SelectItem value="6">Bi-Annual (6 months)</SelectItem>
+                            {SARS_VAT_CATEGORIES.map((category) => (
+                              <SelectItem key={category.value} value={category.value}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{category.label}</span>
+                                  <span className="text-xs text-gray-500">{category.description}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          How often you submit VAT returns to SARS
+                          Official SARS VAT submission category based on your turnover and business type
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -322,19 +391,36 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
                   />
                 </div>
 
-                {/* VAT Period Preview */}
-                {vatPeriodMonths && vatStartMonth && (
-                  <div className="p-3 bg-white border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-blue-700 mb-2">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="font-medium">VAT Cycle Preview</span>
+                {/* SARS VAT Category Information */}
+                {vatCategory && (
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-blue-800 mb-3">
+                      <CheckCircle className="h-5 w-5" />
+                      <span className="font-semibold">Selected Category: {vatCategory}</span>
                     </div>
-                    <p className="text-sm text-blue-600">
-                      <strong>Your VAT periods:</strong> {calculateVatPeriods(vatStartMonth, vatPeriodMonths)}
-                    </p>
-                    <p className="text-xs text-blue-500 mt-1">
-                      First VAT Period: {monthNames[vatStartMonth - 1]} – {monthNames[((vatStartMonth - 1 + vatPeriodMonths - 1) % 12)]}
-                    </p>
+                    {(() => {
+                      const selectedCategory = SARS_VAT_CATEGORIES.find(cat => cat.value === vatCategory);
+                      return selectedCategory ? (
+                        <div className="space-y-2">
+                          <p className="text-sm text-blue-700">
+                            <strong>{selectedCategory.label}</strong>
+                          </p>
+                          <p className="text-sm text-blue-600">
+                            {selectedCategory.description}
+                          </p>
+                          <div className="p-2 bg-white rounded border border-blue-100">
+                            <p className="text-xs text-blue-500">
+                              <strong>Submission Cycle:</strong> {selectedCategory.submissionCycle}
+                            </p>
+                          </div>
+                          {vatStartMonth && (
+                            <p className="text-xs text-blue-500 mt-2">
+                              <strong>Your VAT periods:</strong> {calculateVatPeriods(vatStartMonth, selectedCategory.periodMonths)}
+                            </p>
+                          )}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>

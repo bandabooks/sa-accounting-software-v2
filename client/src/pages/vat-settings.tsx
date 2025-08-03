@@ -43,6 +43,7 @@ const VATSettings: React.FC = () => {
           vatNumber: (vatSettings as any)?.vatNumber || "",
           vatRegistrationDate: (vatSettings as any)?.vatRegistrationDate || "",
           vatPeriodMonths: (vatSettings as any)?.vatPeriodMonths || 2,
+          vatCategory: (vatSettings as any)?.vatCategory || "A",
           vatStartMonth: (vatSettings as any)?.vatStartMonth || 1,
           vatSubmissionDay: (vatSettings as any)?.vatSubmissionDay || 25,
           defaultVatCalculationMethod: (vatSettings as any)?.defaultVatCalculationMethod || "inclusive"

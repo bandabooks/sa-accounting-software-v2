@@ -20,6 +20,7 @@ export const companies = pgTable("companies", {
   isVatRegistered: boolean("is_vat_registered").default(false),
   vatRegistrationDate: date("vat_registration_date"),
   vatPeriodMonths: integer("vat_period_months").default(2), // 1=monthly, 2=bi-monthly, 6=bi-annual
+  vatCategory: text("vat_category").default("A"), // SARS VAT Categories: A, B, C, D, E
   vatStartMonth: integer("vat_start_month").default(1), // 1=January, 2=February, etc. - Starting month for VAT cycles
   vatSubmissionDay: integer("vat_submission_day").default(25), // Day of month for VAT submissions
   logo: text("logo"), // URL to company logo

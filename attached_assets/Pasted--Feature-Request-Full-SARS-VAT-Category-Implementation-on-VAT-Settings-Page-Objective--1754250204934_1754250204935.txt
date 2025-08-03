@@ -1,0 +1,61 @@
+// 📌 Feature Request: Full SARS VAT Category Implementation on VAT Settings Page
+
+// Objective:
+// Replace or extend the current VAT Category dropdown with all SARS-compliant VAT categories (A–E),
+// along with clear descriptions to guide both professionals and non-accountants in their selection.
+
+// ✅ Required Enhancement:
+
+1. Update the **"VAT Period" dropdown** to include the full set of SARS VAT categories:
+
+[
+  {
+    label: "Category A – Bi-Monthly (Even Months)",
+    value: "A",
+    description: "Standard vendors. Submit every 2 months (Jan-Feb, Mar-Apr, etc.). Turnover under R30 million."
+  },
+  {
+    label: "Category B – Bi-Monthly (Odd Months)",
+    value: "B",
+    description: "Submit every 2 months (Feb-Mar, Apr-May, etc.) based on registration cycle."
+  },
+  {
+    label: "Category C – Monthly",
+    value: "C",
+    description: "Compulsory for vendors with taxable turnover over R30 million. Submit every month."
+  },
+  {
+    label: "Category D – Six-Monthly (Small-scale farmers only)",
+    value: "D",
+    description: "Submit twice a year (Feb-Jul, Aug-Jan). Only for approved small-scale farmers."
+  },
+  {
+    label: "Category E – Annual (Fixed property or occasional supply vendors)",
+    value: "E",
+    description: "Submit once per year. Used by vendors who only occasionally supply fixed property."
+  }
+]
+
+// 2. Add a help icon or info block next to the dropdown to show:
+   - What each VAT category means
+   - Who should use it
+   - Example submission periods (auto-calculate cycle preview)
+
+// 3. Save the VAT category code (A, B, C, D, E) in the company’s profile to:
+   - Drive automated reminders
+   - Pre-fill VAT return due dates
+   - Control access to VAT Return (VAT201) cycles
+
+// ✅ Example UI Preview (Dropdown Option View):
+-------------------------------------------------------
+| VAT Period: [▼]                                      |
+| - Category A – Bi-Monthly (Even Months)              |
+|     → Submit Jan-Feb, Mar-Apr, etc. (Turnover < R30m)|
+| - Category B – Bi-Monthly (Odd Months)               |
+| - Category C – Monthly (Turnover > R30m)             |
+| - Category D – Six-Monthly (Small Farmers)           |
+| - Category E – Annual (Occasional Sellers)           |
+-------------------------------------------------------
+
+This ensures that all South African VAT vendors — regardless of turnover, industry, or accounting experience — can configure their VAT registration accurately and legally.
+
