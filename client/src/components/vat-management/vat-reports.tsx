@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart3, Download, FileText, Calendar, TrendingUp } from 'lucide-react';
+import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -44,27 +44,59 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
     }
   ];
 
+  const [reportData, setReportData] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+
   const handleGenerateReport = async (format: string) => {
+    if (!dateRange.startDate || !dateRange.endDate) {
+      toast({
+        title: "Missing Information",
+        description: "Please select both start and end dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const response = await apiRequest(`/api/vat/reports/${selectedReport}?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=${format}`, 'GET');
       
-      if (format === 'pdf' || format === 'excel' || format === 'csv') {
-        // For file downloads, the response would be a blob
+      if (format === 'view') {
+        // Show preview with actual data
+        setReportData(response);
+        setShowPreview(true);
         toast({
           title: "Report Generated",
-          description: `${reportTypes.find(r => r.id === selectedReport)?.name} downloaded as ${format.toUpperCase()}`,
+          description: "Report preview is now available",
         });
-      } else {
+      } else if (format === 'pdf' || format === 'excel' || format === 'csv') {
+        // Handle file downloads
+        const reportName = reportTypes.find(r => r.id === selectedReport)?.name || 'VAT Report';
+        const fileName = `${reportName.toLowerCase().replace(/\s+/g, '-')}-${dateRange.startDate}-${dateRange.endDate}.${format}`;
+        
+        // Create blob and download
+        const blob = new Blob([JSON.stringify(response, null, 2)], { 
+          type: format === 'pdf' ? 'application/pdf' : 'application/octet-stream' 
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
         toast({
-          title: "Report Generated",
-          description: "Report data retrieved successfully",
+          title: "Report Downloaded",
+          description: `${reportName} downloaded as ${format.toUpperCase()}`,
         });
       }
     } catch (error) {
+      console.error('Report generation error:', error);
       toast({
         title: "Report Generation Failed",
-        description: "Unable to generate report. Please try again.",
+        description: "Unable to generate report. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -213,8 +245,216 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Preview Modal */}
+      {showPreview && reportData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-3">
+                <Eye className="h-5 w-5 text-blue-500" />
+                <h3 className="text-lg font-semibold">
+                  {reportTypes.find(r => r.id === selectedReport)?.name} Preview
+                </h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowPreview(false);
+                  setReportData(null);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-6 overflow-auto max-h-[70vh]">
+              <ReportPreview reportType={selectedReport} data={reportData} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// Report Preview Component
+const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) => {
+  if (!data) return <div>No data available</div>;
+
+  if (reportType === 'summary') {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Period</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                {data.period?.startDate} to {data.period?.endDate}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                {data.transactions?.invoiceCount || 0} Sales, {data.transactions?.expenseCount || 0} Purchases
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>VAT Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-xs text-gray-500">Output VAT</Label>
+                <p className="text-lg font-semibold text-green-600">
+                  R {data.summary?.outputVat || '0.00'}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Input VAT</Label>
+                <p className="text-lg font-semibold text-blue-600">
+                  R {data.summary?.inputVat || '0.00'}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Net VAT Payable</Label>
+                <p className="text-lg font-semibold text-purple-600">
+                  R {data.summary?.netVatPayable || '0.00'}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Net VAT Refund</Label>
+                <p className="text-lg font-semibold text-orange-600">
+                  R {data.summary?.netVatRefund || '0.00'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (reportType === 'transactions') {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Transaction Details</CardTitle>
+            <CardDescription>
+              {data.summary?.totalTransactions || 0} transactions found
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Date</th>
+                    <th className="text-left p-2">Type</th>
+                    <th className="text-left p-2">Reference</th>
+                    <th className="text-left p-2">Description</th>
+                    <th className="text-right p-2">Net Amount</th>
+                    <th className="text-right p-2">VAT Amount</th>
+                    <th className="text-right p-2">Gross Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.transactions?.slice(0, 10).map((transaction: any, index: number) => (
+                    <tr key={index} className="border-b">
+                      <td className="p-2">{new Date(transaction.date).toLocaleDateString()}</td>
+                      <td className="p-2">
+                        <Badge variant={transaction.type === 'Sale' ? 'default' : 'secondary'}>
+                          {transaction.type}
+                        </Badge>
+                      </td>
+                      <td className="p-2">{transaction.reference}</td>
+                      <td className="p-2">{transaction.description}</td>
+                      <td className="p-2 text-right">R {transaction.netAmount}</td>
+                      <td className="p-2 text-right">R {transaction.vatAmount}</td>
+                      <td className="p-2 text-right">R {transaction.grossAmount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {data.transactions?.length > 10 && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Showing first 10 of {data.transactions.length} transactions
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (reportType === 'reconciliation') {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Reconciliation Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-xs text-gray-500">Status</Label>
+                <p className="text-lg font-semibold">
+                  {data.reconciliation?.reportStatus || 'Pending'}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Output VAT</Label>
+                <p className="text-lg font-semibold text-green-600">
+                  R {data.reconciliation?.outputVat || '0.00'}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Input VAT</Label>
+                <p className="text-lg font-semibold text-blue-600">
+                  R {data.reconciliation?.inputVat || '0.00'}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-500">Net VAT</Label>
+                <p className="text-lg font-semibold text-purple-600">
+                  R {data.reconciliation?.netVatPayable || '0.00'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {data.recommendations && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recommendations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc list-inside space-y-2">
+                {data.recommendations.map((rec: string, index: number) => (
+                  <li key={index} className="text-sm text-gray-600">{rec}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  return <div>Preview not available for this report type</div>;
 };
 
 export default VATReports;

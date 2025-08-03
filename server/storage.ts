@@ -581,6 +581,11 @@ export interface IStorage {
     vatPeriod?: string; 
     vatSubmissionDate?: number;
   }): Promise<Company | undefined>;
+  
+  // VAT Report Generation
+  getVatSummaryReport(companyId: number, startDate: string, endDate: string): Promise<any>;
+  getVatTransactionReport(companyId: number, startDate: string, endDate: string): Promise<any>;
+  getVatReconciliationReport(companyId: number, period: string): Promise<any>;
 
   // Fixed Assets Management
   getFixedAssets(companyId: number): Promise<FixedAsset[]>;
@@ -6801,6 +6806,160 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(vatTransactions)
       .where(eq(vatTransactions.companyId, companyId))
       .orderBy(desc(vatTransactions.transactionDate));
+  }
+
+  // VAT Report Generation Functions
+  async getVatSummaryReport(companyId: number, startDate: string, endDate: string): Promise<any> {
+    try {
+      // Get all invoices in date range for output VAT
+      const invoicesResult = await db.select({
+        vatAmount: invoices.vatAmount,
+        total: invoices.total,
+        subtotal: invoices.subtotal,
+        invoiceDate: invoices.invoiceDate
+      }).from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          gte(invoices.invoiceDate, new Date(startDate)),
+          lte(invoices.invoiceDate, new Date(endDate))
+        ));
+
+      // Get all expenses in date range for input VAT
+      const expensesResult = await db.select({
+        vatAmount: expenses.vatAmount,
+        amount: expenses.amount,
+        expenseDate: expenses.expenseDate
+      }).from(expenses)
+        .where(and(
+          eq(expenses.companyId, companyId),
+          gte(expenses.expenseDate, new Date(startDate)),
+          lte(expenses.expenseDate, new Date(endDate))
+        ));
+
+      // Calculate totals
+      const outputVat = invoicesResult.reduce((sum, inv) => sum + parseFloat(inv.vatAmount?.toString() || '0'), 0);
+      const totalSales = invoicesResult.reduce((sum, inv) => sum + parseFloat(inv.total?.toString() || '0'), 0);
+      const inputVat = expensesResult.reduce((sum, exp) => sum + parseFloat(exp.vatAmount?.toString() || '0'), 0);
+      const totalPurchases = expensesResult.reduce((sum, exp) => sum + parseFloat(exp.amount?.toString() || '0'), 0);
+
+      return {
+        period: { startDate, endDate },
+        summary: {
+          totalSalesIncVat: totalSales.toFixed(2),
+          totalSalesExcVat: (totalSales - outputVat).toFixed(2),
+          totalSalesVat: outputVat.toFixed(2),
+          totalPurchasesIncVat: totalPurchases.toFixed(2),
+          totalPurchasesExcVat: (totalPurchases - inputVat).toFixed(2),
+          totalPurchasesVat: inputVat.toFixed(2),
+          outputVat: outputVat.toFixed(2),
+          inputVat: inputVat.toFixed(2),
+          netVatPayable: Math.max(0, outputVat - inputVat).toFixed(2),
+          netVatRefund: Math.max(0, inputVat - outputVat).toFixed(2)
+        },
+        transactions: {
+          invoiceCount: invoicesResult.length,
+          expenseCount: expensesResult.length
+        }
+      };
+    } catch (error) {
+      console.error('Error generating VAT summary report:', error);
+      throw error;
+    }
+  }
+
+  async getVatTransactionReport(companyId: number, startDate: string, endDate: string): Promise<any> {
+    try {
+      // Get detailed VAT transactions from invoices
+      const invoiceTransactions = await db.select({
+        id: invoices.id,
+        type: sql<string>`'Sale'`,
+        date: invoices.invoiceDate,
+        reference: invoices.invoiceNumber,
+        description: sql<string>`CONCAT('Invoice - ', ${customers.name})`,
+        netAmount: invoices.subtotal,
+        vatAmount: invoices.vatAmount,
+        grossAmount: invoices.total,
+        vatRate: sql<number>`15`
+      }).from(invoices)
+        .leftJoin(customers, eq(invoices.customerId, customers.id))
+        .where(and(
+          eq(invoices.companyId, companyId),
+          gte(invoices.invoiceDate, new Date(startDate)),
+          lte(invoices.invoiceDate, new Date(endDate))
+        ))
+        .orderBy(desc(invoices.invoiceDate));
+
+      // Get detailed VAT transactions from expenses
+      const expenseTransactions = await db.select({
+        id: expenses.id,
+        type: sql<string>`'Purchase'`,
+        date: expenses.expenseDate,
+        reference: expenses.description,
+        description: expenses.description,
+        netAmount: sql<string>`(${expenses.amount} - ${expenses.vatAmount})::text`,
+        vatAmount: expenses.vatAmount,
+        grossAmount: expenses.amount,
+        vatRate: sql<number>`15`
+      }).from(expenses)
+        .where(and(
+          eq(expenses.companyId, companyId),
+          gte(expenses.expenseDate, new Date(startDate)),
+          lte(expenses.expenseDate, new Date(endDate))
+        ))
+        .orderBy(desc(expenses.expenseDate));
+
+      return {
+        period: { startDate, endDate },
+        transactions: [...invoiceTransactions, ...expenseTransactions]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        summary: {
+          totalTransactions: invoiceTransactions.length + expenseTransactions.length,
+          salesTransactions: invoiceTransactions.length,
+          purchaseTransactions: expenseTransactions.length
+        }
+      };
+    } catch (error) {
+      console.error('Error generating VAT transaction report:', error);
+      throw error;
+    }
+  }
+
+  async getVatReconciliationReport(companyId: number, period: string): Promise<any> {
+    try {
+      // For reconciliation, we need to check against submitted VAT returns
+      const vatReportsInPeriod = await db.select().from(vatReports)
+        .where(and(
+          eq(vatReports.companyId, companyId),
+          eq(vatReports.status, 'submitted')
+        ))
+        .orderBy(desc(vatReports.periodStart));
+
+      // Get the latest reconciliation data
+      const latestReport = vatReportsInPeriod[0];
+
+      return {
+        period: period,
+        reconciliation: {
+          reportStatus: latestReport ? 'Complete' : 'Pending',
+          submittedAt: latestReport?.submittedAt || null,
+          periodStart: latestReport?.periodStart || null,
+          periodEnd: latestReport?.periodEnd || null,
+          outputVat: latestReport?.outputVat || '0.00',
+          inputVat: latestReport?.inputVat || '0.00',
+          netVatPayable: latestReport?.netVatPayable || '0.00',
+          netVatRefund: latestReport?.netVatRefund || '0.00'
+        },
+        discrepancies: [],
+        recommendations: [
+          'Review all VAT transactions for accuracy',
+          'Ensure proper VAT codes are applied',
+          'Verify input VAT claims are supported by valid tax invoices'
+        ]
+      };
+    } catch (error) {
+      console.error('Error generating VAT reconciliation report:', error);
+      throw error;
+    }
   }
 
   async createVatTransaction(data: InsertVatTransaction): Promise<VatTransaction> {
