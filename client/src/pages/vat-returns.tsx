@@ -69,7 +69,7 @@ const VATReturns: React.FC = () => {
                     {vatSettings.vatPeriodMonths === 1 ? "Monthly" : 
                      vatSettings.vatPeriodMonths === 2 ? "Bi-Monthly" : "Bi-Annual"} VAT Return
                   </p>
-                  <Button size="sm">
+                  <Button size="sm" onClick={() => window.location.href = '/vat-preparation'}>
                     <Calendar className="h-4 w-4 mr-2" />
                     Prepare VAT201
                   </Button>
@@ -80,7 +80,7 @@ const VATReturns: React.FC = () => {
                   <p className="text-sm text-gray-600 mb-3">
                     View and manage previously submitted VAT returns
                   </p>
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="outline" onClick={() => window.location.href = '/vat-history'}>
                     <BarChart3 className="h-4 w-4 mr-2" />
                     View History
                   </Button>
@@ -93,7 +93,7 @@ const VATReturns: React.FC = () => {
                   <div className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">VAT Registration Number</span>
-                      <Badge variant="outline">{vatSettings.vatRegistrationNumber || 'Not Set'}</Badge>
+                      <Badge variant="outline">{vatSettings.vatNumber || 'Not Set'}</Badge>
                     </div>
                   </div>
                   <div className="p-3 border rounded-lg">

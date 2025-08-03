@@ -68,6 +68,8 @@ import VATSettings from "@/pages/vat-settings";
 import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
 import VATReportsPage from "@/pages/vat-reports";
+import VATPreparation from "@/pages/vat-preparation";
+import VATHistory from "@/pages/vat-history";
 
 import EnterpriseSettings from "@/pages/enterprise-settings";
 import Landing from "@/pages/landing";
@@ -577,6 +579,16 @@ function AuthenticatedApp() {
         <Route path="/vat-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <VATReportsPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-preparation">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VATPreparation />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-history">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VATHistory />
           </ProtectedRoute>
         </Route>
         <Route path="/enterprise-settings">
