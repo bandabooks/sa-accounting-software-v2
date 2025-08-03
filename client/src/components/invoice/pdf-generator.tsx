@@ -34,11 +34,11 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     const darkGray = [71, 85, 105]; // Dark gray
     
     // Header Background
-    pdf.setFillColor(...lightGray);
+    pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
     pdf.rect(0, 0, pageWidth, 50, 'F');
     
     // Company Logo Area (Left Side)
-    pdf.setFillColor(...accentColor);
+    pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
     pdf.roundedRect(20, 15, 12, 12, 2, 2, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
@@ -46,33 +46,33 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.text("TB", 23, 24);
     
     // Company Name and Tagline
-    pdf.setTextColor(...primaryColor);
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     pdf.setFontSize(20);
     pdf.setFont('helvetica', 'bold');
     pdf.text("Think Mybiz Accounting", 40, 25);
     
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(...mediumGray);
+    pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     pdf.text("Professional Invoice Management Solutions", 40, 32);
     
     // Invoice Title (Right Side)
-    pdf.setTextColor(...primaryColor);
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     pdf.setFontSize(32);
     pdf.setFont('helvetica', 'bold');
     pdf.text("INVOICE", pageWidth - 65, 30);
     
     // Professional Border Line
-    pdf.setDrawColor(...accentColor);
+    pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
     pdf.setLineWidth(2);
     pdf.line(20, 55, pageWidth - 20, 55);
     
     // Invoice Information Section (Right Side)
     const infoStartY = 70;
-    pdf.setFillColor(...lightGray);
+    pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
     pdf.roundedRect(pageWidth - 85, infoStartY, 65, 50, 3, 3, 'F');
     
-    pdf.setTextColor(...darkGray);
+    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
     pdf.text("INVOICE NUMBER", pageWidth - 80, infoStartY + 8);
@@ -99,7 +99,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     };
     const statusColor = statusColors[invoice.status as keyof typeof statusColors] || statusColors.draft;
     
-    pdf.setFillColor(...statusColor);
+    pdf.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
     pdf.roundedRect(pageWidth - 85, statusY + 5, 65, 8, 2, 2, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(8);
@@ -110,17 +110,17 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
 
     // Bill To Section
     const billToStartY = 80;
-    pdf.setTextColor(...primaryColor);
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
     pdf.text("BILL TO", 20, billToStartY);
     
     // Bill To Background
     pdf.setFillColor(255, 255, 255);
-    pdf.setDrawColor(...lightGray);
+    pdf.setDrawColor(lightGray[0], lightGray[1], lightGray[2]);
     pdf.roundedRect(20, billToStartY + 5, 120, 60, 3, 3, 'FD');
     
-    pdf.setTextColor(...darkGray);
+    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     let billToY = billToStartY + 18;
@@ -128,7 +128,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(...mediumGray);
+    pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     
     if (invoice.customer.email) {
       billToY += 10;
@@ -155,7 +155,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     const tableStartY = 160;
     
     // Table Header
-    pdf.setFillColor(...primaryColor);
+    pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     pdf.roundedRect(20, tableStartY, pageWidth - 40, 12, 2, 2, 'F');
     
     pdf.setTextColor(255, 255, 255);
@@ -168,14 +168,14 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.text("TOTAL", pageWidth - 45, tableStartY + 8);
 
     // Table Items
-    pdf.setTextColor(...darkGray);
+    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     pdf.setFont('helvetica', 'normal');
     let currentY = tableStartY + 20;
     
     (invoice as any).items?.forEach((item: any, index: number) => {
       // Alternating row colors
       if (index % 2 === 0) {
-        pdf.setFillColor(...lightGray);
+        pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
         pdf.rect(20, currentY - 6, pageWidth - 40, 12, 'F');
       }
       
@@ -196,10 +196,10 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     
     // Totals Background
     pdf.setFillColor(255, 255, 255);
-    pdf.setDrawColor(...lightGray);
+    pdf.setDrawColor(lightGray[0], lightGray[1], lightGray[2]);
     pdf.roundedRect(totalsX - 5, totalsStartY - 5, 70, 45, 3, 3, 'FD');
     
-    pdf.setTextColor(...darkGray);
+    pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     
@@ -212,31 +212,31 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.text(formatCurrency(invoice.vatAmount), pageWidth - 25, totalsStartY + 15);
     
     // Total Line
-    pdf.setDrawColor(...accentColor);
+    pdf.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
     pdf.setLineWidth(1);
     pdf.line(totalsX, totalsStartY + 20, pageWidth - 20, totalsStartY + 20);
     
     // Total Amount
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(...primaryColor);
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     pdf.text("TOTAL:", totalsX, totalsStartY + 30);
     pdf.text(formatCurrency(invoice.total), pageWidth - 25, totalsStartY + 30);
 
     // Notes Section (if exists)
     if (invoice.notes) {
       const notesY = totalsStartY + 50;
-      pdf.setTextColor(...darkGray);
+      pdf.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
       pdf.text("NOTES", 20, notesY);
       
-      pdf.setFillColor(...lightGray);
+      pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       pdf.roundedRect(20, notesY + 5, pageWidth - 40, 20, 3, 3, 'F');
       
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(...mediumGray);
+      pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
       
       // Wrap text for notes
       const noteLines = pdf.splitTextToSize(invoice.notes, pageWidth - 50);
@@ -247,11 +247,11 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     const footerY = pageHeight - 30;
     
     // Footer separator line
-    pdf.setDrawColor(...lightGray);
+    pdf.setDrawColor(lightGray[0], lightGray[1], lightGray[2]);
     pdf.setLineWidth(1);
     pdf.line(20, footerY - 5, pageWidth - 20, footerY - 5);
     
-    pdf.setTextColor(...mediumGray);
+    pdf.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.text("Thank you for choosing Think Mybiz Accounting!", 20, footerY + 5);

@@ -38,7 +38,10 @@ export default function PDFPreviewModal({
     try {
       const pdf = await generateInvoicePDF(invoice);
       const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
+      
+      // Create a proper blob URL with PDF MIME type to avoid Chrome blocking
+      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+      const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
     } catch (error) {
       console.error("Error generating PDF preview:", error);
@@ -147,9 +150,10 @@ export default function PDFPreviewModal({
             </div>
           ) : pdfUrl ? (
             <iframe
-              src={pdfUrl}
+              src={`${pdfUrl}#toolbar=1&navpanes=0&scrollbar=1`}
               className="w-full h-full border-0"
               title="Invoice PDF Preview"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
             />
           ) : (
             <div className="flex items-center justify-center h-full">
