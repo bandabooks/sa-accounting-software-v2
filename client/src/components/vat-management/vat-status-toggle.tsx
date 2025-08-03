@@ -20,6 +20,7 @@ const vatSettingsSchema = z.object({
   vatRegistrationDate: z.string().optional(),
   vatPeriodMonths: z.coerce.number().min(1).max(12),
   vatSubmissionDay: z.coerce.number().min(1).max(31),
+  defaultVatCalculationMethod: z.enum(["inclusive", "exclusive"]).default("inclusive"),
 });
 
 type VatSettingsForm = z.infer<typeof vatSettingsSchema>;
@@ -32,6 +33,7 @@ interface VatStatusToggleProps {
     vatRegistrationDate?: string;
     vatPeriodMonths: number;
     vatSubmissionDay: number;
+    defaultVatCalculationMethod?: "inclusive" | "exclusive";
   };
 }
 
@@ -53,6 +55,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
       vatRegistrationDate: initialSettings.vatRegistrationDate || "",
       vatPeriodMonths: initialSettings.vatPeriodMonths,
       vatSubmissionDay: initialSettings.vatSubmissionDay,
+      defaultVatCalculationMethod: initialSettings.defaultVatCalculationMethod || "inclusive",
     },
   });
 
@@ -65,6 +68,7 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
         vatRegistrationDate: (freshVatSettings as any).vatRegistrationDate || "",
         vatPeriodMonths: (freshVatSettings as any).vatPeriodMonths || 2,
         vatSubmissionDay: (freshVatSettings as any).vatSubmissionDay || 25,
+        defaultVatCalculationMethod: (freshVatSettings as any).defaultVatCalculationMethod || "inclusive",
       });
     }
   }, [freshVatSettings, form]);
@@ -135,6 +139,33 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
                 </FormItem>
               )}
             />
+
+            {isVatRegistered && (
+              <FormField
+                control={form.control}
+                name="defaultVatCalculationMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default VAT Calculation Method</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select calculation method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="inclusive">VAT Inclusive - VAT included in price (e.g., R115 includes R15 VAT)</SelectItem>
+                        <SelectItem value="exclusive">VAT Exclusive - VAT added to price (e.g., R100 + R15 VAT = R115)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Choose how VAT should be calculated by default for new invoices and products. This can be overridden per invoice.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {isVatRegistered && (
               <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">

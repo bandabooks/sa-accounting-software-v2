@@ -69,7 +69,8 @@ export default function InvoiceCreate() {
     vatAmount: "0.00", 
     total: "0.00",
     notes: "",
-    globalVatType: "2" // Default to VAT Inclusive
+    globalVatType: "2", // Default to VAT Inclusive
+    vatCalculationMethod: "inclusive" as "inclusive" | "exclusive" // New VAT calculation method
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -114,7 +115,8 @@ export default function InvoiceCreate() {
         vatAmount: existingInvoice.vatAmount,
         total: existingInvoice.total,
         notes: existingInvoice.notes || "",
-        globalVatType: "2" // Default to VAT Inclusive for existing invoices
+        globalVatType: "2", // Default to VAT Inclusive for existing invoices
+        vatCalculationMethod: (existingInvoice as any).vatCalculationMethod || "inclusive"
       });
 
       if (existingInvoice.items && existingInvoice.items.length > 0) {
@@ -426,6 +428,37 @@ export default function InvoiceCreate() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {shouldShowVATFields && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                        <Calculator className="h-4 w-4 mr-2" />
+                        VAT Calculation Method
+                      </Label>
+                      <Select 
+                        value={formData.vatCalculationMethod} 
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, vatCalculationMethod: value as "inclusive" | "exclusive" }))}
+                      >
+                        <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">
+                            <div className="flex flex-col">
+                              <span className="font-medium">VAT Inclusive</span>
+                              <span className="text-xs text-gray-500">VAT included in price (R115 includes R15 VAT)</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="exclusive">
+                            <div className="flex flex-col">
+                              <span className="font-medium">VAT Exclusive</span>
+                              <span className="text-xs text-gray-500">VAT added to price (R100 + R15 VAT = R115)</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">
