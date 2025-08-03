@@ -33,6 +33,7 @@ import { VATConditionalWrapper, VATFieldWrapper } from "@/components/vat/VATCond
 import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
 import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
 import { useVATStatus } from "@/hooks/useVATStatus";
+import { UNIFIED_VAT_TYPES, getVATTypeConfig, calculateVATAmount } from "@shared/vat-constants";
 import type { InsertInvoice, InsertInvoiceItem, Customer, Product } from "@shared/schema";
 
 interface InvoiceItem {
@@ -43,7 +44,7 @@ interface InvoiceItem {
   vatRate: string;
   vatInclusive: boolean;
   vatAmount: string;
-  vatTypeId: string | number; // Support both string-based VAT types and legacy numeric IDs
+  vatTypeId: number; // Changed to match bulk module format
 }
 
 export default function InvoiceCreate() {
@@ -53,12 +54,6 @@ export default function InvoiceCreate() {
   const { showSuccess } = useGlobalNotification();
   const queryClient = useQueryClient();
   const { shouldShowVATFields } = useVATStatus();
-  
-  // Fetch VAT types for calculations
-  const vatTypesQuery = useQuery({
-    queryKey: ["/api/companies", 2, "vat-types"], // Using company ID 2 from system
-    retry: false,
-  });
   
   // Get edit parameter from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -83,10 +78,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "15.00", 
+      vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
       vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: "vat_inclusive" // Default to VAT Inclusive
+      vatTypeId: 2 // Default to VAT Inclusive (15%)
     }
   ]);
 
@@ -186,10 +181,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "15.00", 
+      vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
       vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: "vat_inclusive" // Default to VAT Inclusive
+      vatTypeId: 2 // Default to VAT Inclusive (15%)
     }]);
   };
 
@@ -199,30 +194,26 @@ export default function InvoiceCreate() {
     }
   };
 
-  // VAT calculation using system VAT types with inclusive/exclusive options
+  // Enhanced VAT calculation with type support
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
-    if (!shouldShowVATFields || !item.vatTypeId) return 0;
-    
-    const vatTypeId = typeof item.vatTypeId === 'string' ? item.vatTypeId : item.vatTypeId?.toString();
-    
-    // Handle inclusive/exclusive VAT types
-    if (vatTypeId.includes('_inc')) {
-      // VAT Inclusive: Extract rate from VAT type and calculate
-      const rate = parseFloat(item.vatRate || "15");
-      return Number((lineAmount * (rate / (100 + rate))).toFixed(2));
-    } else if (vatTypeId.includes('_exc')) {
-      // VAT Exclusive: Direct calculation
-      const rate = parseFloat(item.vatRate || "15");
-      return Number((lineAmount * (rate / 100)).toFixed(2));
-    } else {
-      // Zero-rated, Exempt, etc. (no inclusive/exclusive variants)
-      const rate = parseFloat(item.vatRate || "0");
-      return Number((lineAmount * (rate / 100)).toFixed(2));
+    if (item.vatTypeId && shouldShowVATFields) {
+      // Convert vatTypeId to vatType string for calculation
+      const vatType = item.vatTypeId === 1 ? "vat_exclusive" : 
+                     item.vatTypeId === 2 ? "vat_inclusive" :
+                     item.vatTypeId === 3 ? "zero_rated" :
+                     item.vatTypeId === 4 ? "exempt" : "no_vat";
+      return calculateVATAmount(lineAmount, vatType);
     }
+    
+    // Fallback to traditional calculation
+    const vatRate = parseFloat(item.vatRate || "0") / 100;
+    return item.vatInclusive ? 
+      lineAmount * (vatRate / (1 + vatRate)) : 
+      lineAmount * vatRate;
   };
 
   const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
@@ -569,7 +560,7 @@ export default function InvoiceCreate() {
                     <div className="col-span-2">
                       <VATTypeSelect
                         value={item.vatTypeId?.toString()}
-                        onValueChange={(value) => updateItem(index, 'vatTypeId', value)}
+                        onValueChange={(value) => updateItem(index, 'vatTypeId', parseInt(value))}
                         placeholder="VAT Type"
                         className="w-full"
                       />
@@ -689,15 +680,13 @@ export default function InvoiceCreate() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="flex justify-between">
                           <span>Standard (15%):</span>
-                          <span className="font-mono">R {items.filter(item => 
-                            item.vatTypeId === "vat_inclusive" || item.vatTypeId === "vat_exclusive"
-                          ).reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
+                          <span className="font-mono">R {items.filter(item => item.vatTypeId === 1 || item.vatTypeId === 2)
+                            .reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Zero/Exempt:</span>
-                          <span className="font-mono">R {items.filter(item => 
-                            item.vatTypeId === "zero_rated" || item.vatTypeId === "exempt"
-                          ).reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
+                          <span className="font-mono">R {items.filter(item => item.vatTypeId === 3 || item.vatTypeId === 4)
+                            .reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
