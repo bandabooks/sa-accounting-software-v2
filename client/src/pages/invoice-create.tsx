@@ -78,10 +78,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "15.00", 
+      vatRate: "0.00", // Initialize with 0, will be set by VAT type
       vatInclusive: false, 
       vatAmount: "0.00",
-      vatTypeId: 1 // Default to VAT Exclusive (15%)
+      vatTypeId: parseInt(formData.globalVatType) // Use global VAT type as default
     }
   ]);
 
@@ -179,10 +179,10 @@ export default function InvoiceCreate() {
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
-      vatRate: "15.00", 
+      vatRate: "0.00", // Initialize with 0, will be set by VAT type
       vatInclusive: false, 
       vatAmount: "0.00",
-      vatTypeId: 1 // Default to first VAT type (usually VAT Exclusive)
+      vatTypeId: parseInt(formData.globalVatType) // Use current global VAT type
     }]);
   };
 
@@ -723,7 +723,12 @@ export default function InvoiceCreate() {
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">VAT (15%):</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        VAT ({formData.globalVatType === "1" ? "15% Excl" : 
+                              formData.globalVatType === "2" ? "15% Incl" : 
+                              formData.globalVatType === "3" ? "0% Zero" : 
+                              formData.globalVatType === "4" ? "0% Exempt" : "0%"}):
+                      </span>
                       <span className="font-medium text-gray-900 dark:text-white">
                         R {parseFloat(formData.vatAmount).toFixed(2)}
                       </span>

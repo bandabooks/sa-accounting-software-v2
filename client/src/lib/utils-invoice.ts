@@ -18,6 +18,8 @@ export function calculateInvoiceTotal(items: Array<{
   quantity: string | number;
   unitPrice: string | number;
   vatRate?: string | number;
+  vatTypeId?: number;
+  vatAmount?: string | number;
 }>): {
   subtotal: number;
   vatAmount: number;
@@ -29,18 +31,50 @@ export function calculateInvoiceTotal(items: Array<{
   items.forEach(item => {
     const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
     const price = typeof item.unitPrice === 'string' ? parseFloat(item.unitPrice) : item.unitPrice;
-    const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 15);
 
     // Handle NaN values to prevent RNaN display
-    if (isNaN(qty) || isNaN(price) || isNaN(vatRate)) {
+    if (isNaN(qty) || isNaN(price)) {
       return; // Skip invalid items
     }
 
     const itemSubtotal = qty * price;
-    const itemVat = itemSubtotal * (vatRate / 100);
-
     subtotal += itemSubtotal;
-    vatAmount += itemVat;
+
+    // Calculate VAT based on vatTypeId (if provided) or fallback to vatRate
+    if (item.vatTypeId) {
+      // Use vatTypeId for precise VAT calculation
+      switch (item.vatTypeId) {
+        case 1: // VAT Exclusive (15%)
+          vatAmount += itemSubtotal * 0.15;
+          break;
+        case 2: // VAT Inclusive (15%) - VAT is already included, extract it
+          vatAmount += itemSubtotal * (0.15 / 1.15);
+          break;
+        case 3: // Zero-rated (0%)
+        case 4: // Exempt (0%)
+        case 5: // No VAT (0%)
+          // No VAT applied
+          break;
+        default:
+          // Fallback to traditional calculation
+          const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 0);
+          if (!isNaN(vatRate)) {
+            vatAmount += itemSubtotal * (vatRate / 100);
+          }
+      }
+    } else if (item.vatAmount) {
+      // Use pre-calculated VAT amount if available
+      const itemVatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : item.vatAmount;
+      if (!isNaN(itemVatAmount)) {
+        vatAmount += itemVatAmount;
+      }
+    } else {
+      // Fallback to traditional vatRate calculation
+      const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 0);
+      if (!isNaN(vatRate)) {
+        vatAmount += itemSubtotal * (vatRate / 100);
+      }
+    }
   });
 
   return {
