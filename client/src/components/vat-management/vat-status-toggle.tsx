@@ -320,104 +320,36 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
                               <SelectValue placeholder="Select SARS VAT category" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="w-full max-w-lg">
-                            {/* Standard Vendors Header */}
-                            <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b">
-                              📊 Standard Vendors
-                            </div>
-                            
-                            {SARS_VAT_CATEGORIES.slice(0, 2).map((category) => (
-                              <SelectItem 
-                                key={category.value} 
-                                value={category.value}
-                                className={`
-                                  p-0 mb-1 rounded-md overflow-hidden cursor-pointer
-                                  hover:ring-2 hover:ring-blue-400 hover:ring-opacity-50
-                                  focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
-                                  ${field.value === category.value ? 'ring-2 ring-blue-500' : ''}
-                                `}
-                              >
-                                <div className={`
-                                  p-3 w-full transition-all duration-200 border-l-4
-                                  ${category.value === 'A' ? 'bg-blue-50 border-l-blue-500 hover:bg-blue-100' : ''}
-                                  ${category.value === 'B' ? 'bg-gray-50 border-l-gray-500 hover:bg-gray-100' : ''}
-                                  ${field.value === category.value ? 'shadow-md' : 'hover:shadow-sm'}
-                                `}>
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className={`
-                                          inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white rounded-full
-                                          ${category.value === 'A' ? 'bg-blue-500' : ''}
-                                          ${category.value === 'B' ? 'bg-gray-500' : ''}
-                                        `}>
-                                          {category.value}
-                                        </span>
-                                        <span className="font-bold text-gray-900 text-sm overflow-wrap break-word">
-                                          {category.label}
-                                        </span>
-                                      </div>
-                                      <p className="text-xs text-gray-600 leading-relaxed overflow-wrap break-word">
-                                        {category.description}
-                                      </p>
-                                      <div className="mt-2 text-xs text-blue-600 font-medium">
-                                        🔄 {category.submissionCycle}
-                                      </div>
-                                    </div>
+                          <SelectContent className="w-full max-w-md">
+                            {SARS_VAT_CATEGORIES.map((category) => {
+                              // Background colors for each category
+                              const categoryColors = {
+                                A: "#e8f4fd", // Light blue
+                                B: "#f7f7f7", // Light gray  
+                                C: "#e7f8ef", // Light green
+                                D: "#fffbe6", // Light yellow
+                                E: "#f4f0fa"  // Light lavender
+                              };
+                              
+                              return (
+                                <SelectItem 
+                                  key={category.value} 
+                                  value={category.value}
+                                  className="p-0 mb-1 rounded-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all duration-200"
+                                >
+                                  <div 
+                                    className="w-full p-3 border-l-4 border-transparent hover:border-blue-600 transition-all duration-200"
+                                    style={{ 
+                                      backgroundColor: categoryColors[category.value as keyof typeof categoryColors]
+                                    }}
+                                  >
+                                    <span className="font-bold text-gray-800 text-sm">
+                                      {category.label}
+                                    </span>
                                   </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                            
-                            {/* High Turnover & Special Use Header */}
-                            <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-t mt-2">
-                              ⚡ High Turnover & Special Use
-                            </div>
-                            
-                            {SARS_VAT_CATEGORIES.slice(2).map((category) => (
-                              <SelectItem 
-                                key={category.value} 
-                                value={category.value}
-                                className={`
-                                  p-0 mb-1 rounded-md overflow-hidden cursor-pointer
-                                  hover:ring-2 hover:ring-blue-400 hover:ring-opacity-50
-                                  focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
-                                  ${field.value === category.value ? 'ring-2 ring-blue-500' : ''}
-                                `}
-                              >
-                                <div className={`
-                                  p-3 w-full transition-all duration-200 border-l-4
-                                  ${category.value === 'C' ? 'bg-green-50 border-l-green-500 hover:bg-green-100' : ''}
-                                  ${category.value === 'D' ? 'bg-yellow-50 border-l-yellow-500 hover:bg-yellow-100' : ''}
-                                  ${category.value === 'E' ? 'bg-purple-50 border-l-purple-500 hover:bg-purple-100' : ''}
-                                  ${field.value === category.value ? 'shadow-md' : 'hover:shadow-sm'}
-                                `}>
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className={`
-                                          inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white rounded-full
-                                          ${category.value === 'C' ? 'bg-green-500' : ''}
-                                          ${category.value === 'D' ? 'bg-yellow-500' : ''}
-                                          ${category.value === 'E' ? 'bg-purple-500' : ''}
-                                        `}>
-                                          {category.value}
-                                        </span>
-                                        <span className="font-bold text-gray-900 text-sm overflow-wrap break-word">
-                                          {category.label}
-                                        </span>
-                                      </div>
-                                      <p className="text-xs text-gray-600 leading-relaxed overflow-wrap break-word">
-                                        {category.description}
-                                      </p>
-                                      <div className="mt-2 text-xs text-blue-600 font-medium">
-                                        🔄 {category.submissionCycle}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                         <FormDescription>
