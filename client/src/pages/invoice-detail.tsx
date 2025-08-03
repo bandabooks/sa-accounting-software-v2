@@ -71,7 +71,7 @@ function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPayme
   );
 }
 
-export default function InvoiceDetail() {
+function InvoiceDetail() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -138,6 +138,16 @@ export default function InvoiceDetail() {
         block: 'center' 
       });
     }, 500);
+  }
+
+  function getStatusTextColor(status: string) {
+    switch (status) {
+      case 'paid': return 'text-green-600';
+      case 'sent': return 'text-blue-600';
+      case 'overdue': return 'text-red-600';
+      case 'draft': return 'text-gray-600';
+      default: return 'text-gray-600';
+    }
   }
 
   const { data: invoice, isLoading } = useQuery({
@@ -281,192 +291,218 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Invoice Details */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Customer & Invoice Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b">
-                  <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                    <Building2 className="h-5 w-5 mr-2 text-blue-600" />
-                    Bill To
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="font-bold text-lg text-gray-900 dark:text-white">{invoice.customer.name}</div>
-                    {invoice.customer.email && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                        <Mail className="h-4 w-4 mr-2 text-blue-500" />
-                        {invoice.customer.email}
-                      </div>
-                    )}
-                    {invoice.customer.phone && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-green-500" />
-                        {invoice.customer.phone}
-                      </div>
-                    )}
-                    {invoice.customer.address && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 flex items-start">
-                        <MapPin className="h-4 w-4 mr-2 mt-0.5 text-red-500" />
-                        <div>
-                          {invoice.customer.address}
-                          {invoice.customer.city && `, ${invoice.customer.city}`}
-                          {invoice.customer.postalCode && ` ${invoice.customer.postalCode}`}
-                        </div>
-                      </div>
-                    )}
-                    {invoice.customer.vatNumber && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                        <strong>VAT Number:</strong> {invoice.customer.vatNumber}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-b">
-                  <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                    <FileText className="h-5 w-5 mr-2 text-purple-600" />
-                    Invoice Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                      <span className="text-gray-600 dark:text-gray-400 font-medium">Invoice Number:</span>
-                      <span className="font-bold text-gray-900 dark:text-white">{invoice.invoiceNumber}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                      <span className="text-gray-600 dark:text-gray-400 font-medium">Issue Date:</span>
-                      <span className="text-gray-900 dark:text-white">{formatDate(invoice.issueDate)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                      <span className="text-gray-600 dark:text-gray-400 font-medium">Due Date:</span>
-                      <span className="text-gray-900 dark:text-white">{formatDate(invoice.dueDate)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-600 dark:text-gray-400 font-medium">Status:</span>
-                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
-                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Items Table */}
-            <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b">
-                <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                  <CreditCard className="h-5 w-5 mr-2 text-green-600" />
-                  Invoice Items
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-gray-700/50">
-                        <th className="text-left py-4 px-6 font-semibold text-gray-900 dark:text-white">Description</th>
-                        <th className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-white">Qty</th>
-                        <th className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-white">Unit Price</th>
-                        <th className="text-right py-4 px-4 font-semibold text-gray-900 dark:text-white">VAT %</th>
-                        <th className="text-right py-4 px-6 font-semibold text-gray-900 dark:text-white">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoice.items.map((item, index) => (
-                        <tr 
-                          key={item.id} 
-                          className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors ${
-                            index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-700/20'
-                          }`}
-                        >
-                          <td className="py-4 px-6 text-gray-900 dark:text-white">{item.description}</td>
-                          <td className="text-right py-4 px-4 text-gray-700 dark:text-gray-300">{item.quantity}</td>
-                          <td className="text-right py-4 px-4 text-gray-700 dark:text-gray-300">{formatCurrency(item.unitPrice)}</td>
-                          <td className="text-right py-4 px-4 text-gray-700 dark:text-gray-300">{item.vatRate}%</td>
-                          <td className="text-right py-4 px-6 font-bold text-gray-900 dark:text-white">{formatCurrency(item.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+      {/* Main Content - Professional Invoice Layout */}
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        
+        {/* Professional Invoice Document */}
+        <div className="bg-white rounded-2xl shadow-lg p-10 font-sans border border-gray-200">
+          
+          {/* Header Section */}
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <div className="flex items-center mb-2">
+                <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white mr-3">
+                  <Building2 className="h-8 w-8" />
                 </div>
-                
-                {/* Totals Section */}
-                <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-700 dark:to-gray-600 p-6 border-t border-gray-200 dark:border-gray-600">
-                  <div className="flex justify-end">
-                    <div className="w-80 space-y-3">
-                      <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-500">
-                        <span className="text-gray-600 dark:text-gray-300 font-medium">Subtotal:</span>
-                        <span className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(invoice.subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-500">
-                        <span className="text-gray-600 dark:text-gray-300 font-medium">VAT:</span>
-                        <span className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(invoice.vatAmount)}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-3 bg-gradient-to-r from-blue-600 to-indigo-600 -mx-6 px-6 rounded-lg">
-                        <span className="text-white font-bold text-lg">Total:</span>
-                        <span className="text-white font-bold text-xl">{formatCurrency(invoice.total)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Notes */}
-            {invoice.notes && (
-              <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-                <CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-b">
-                  <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                    <FileText className="h-5 w-5 mr-2 text-amber-600" />
-                    Notes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                <p className="text-gray-700">{invoice.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Summary and Payment */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(invoice.subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>VAT:</span>
-                  <span>{formatCurrency(invoice.vatAmount)}</span>
-                </div>
-                <div className="border-t pt-3">
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total:</span>
-                    <span>{formatCurrency(invoice.total)}</span>
-                  </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-blue-700">Think Mybiz Accounting</h1>
+                  <p className="text-sm text-gray-500">Professional Invoice Management</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-xs text-gray-600 mt-2">
+                <div>info@thinkmybiz.com | +27 12 345 6789</div>
+                <div>PO Box 1234, Midrand, 1685</div>
+                <div>VAT #: 4455667788 | Reg: 2019/123456/07</div>
+              </div>
+            </div>
+            
+            <div className="text-right">
+              <h2 className="text-3xl font-bold tracking-wide text-gray-800">TAX INVOICE</h2>
+              <div className="mt-3 text-sm space-y-1">
+                <div>Invoice #: <span className="font-semibold">{invoice.invoiceNumber}</span></div>
+                <div>Date: <span>{formatDate(invoice.createdAt!)}</span></div>
+                <div>Due: <span>{formatDate(invoice.dueDate!)}</span></div>
+                <div>Status: <span className={`font-medium ${getStatusTextColor(invoice.status)}`}>
+                  {invoice.status.toUpperCase()}
+                </span></div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Addresses Section */}
+          <div className="grid grid-cols-2 gap-8 mb-8">
+            <div>
+              <div className="font-semibold mb-2 text-gray-700 border-b border-gray-200 pb-1">Bill To:</div>
+              <div className="space-y-1">
+                <div className="font-bold text-lg">{invoice.customer.name}</div>
+                {invoice.customer.email && (
+                  <div className="text-sm">{invoice.customer.email}</div>
+                )}
+                {invoice.customer.phone && (
+                  <div className="text-sm">{invoice.customer.phone}</div>
+                )}
+                {invoice.customer.address && (
+                  <div className="text-sm">
+                    {invoice.customer.address}
+                    {invoice.customer.city && `, ${invoice.customer.city}`}
+                    {invoice.customer.postalCode && `, ${invoice.customer.postalCode}`}
+                  </div>
+                )}
+                {invoice.customer.vatNumber && (
+                  <div className="text-xs text-gray-500 mt-2">VAT #: {invoice.customer.vatNumber}</div>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <div className="font-semibold mb-2 text-gray-700 border-b border-gray-200 pb-1">From:</div>
+              <div className="space-y-1">
+                <div className="font-bold">Think Mybiz Accounting</div>
+                <div className="text-sm">info@thinkmybiz.com</div>
+                <div className="text-sm">+27 12 345 6789</div>
+                <div className="text-sm">PO Box 1234, Midrand, 1685</div>
+                <div className="text-xs text-gray-500 mt-2">VAT #: 4455667788</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Items Table */}
+          <div className="mb-6">
+            <table className="w-full text-sm border-t border-b border-gray-200">
+              <thead>
+                <tr className="bg-blue-700 text-white">
+                  <th className="py-3 px-3 font-semibold text-left">#</th>
+                  <th className="py-3 px-3 font-semibold text-left">Description</th>
+                  <th className="py-3 px-3 font-semibold text-center">Qty</th>
+                  <th className="py-3 px-3 font-semibold text-right">Unit Price</th>
+                  <th className="py-3 px-3 font-semibold text-center">VAT Rate</th>
+                  <th className="py-3 px-3 font-semibold text-right">Line VAT</th>
+                  <th className="py-3 px-3 font-semibold text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(invoice as any).items?.map((item: any, index: number) => (
+                  <tr key={index} className="hover:bg-blue-50 border-b border-gray-100">
+                    <td className="py-3 px-3 text-gray-600">{index + 1}</td>
+                    <td className="py-3 px-3">
+                      <div className="font-medium">{item.description}</div>
+                      {item.notes && (
+                        <div className="text-xs text-gray-500 mt-1">{item.notes}</div>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-center">{item.quantity}</td>
+                    <td className="py-3 px-3 text-right">{formatCurrency(item.unitPrice)}</td>
+                    <td className="py-3 px-3 text-center">{item.vatRate}%</td>
+                    <td className="py-3 px-3 text-right">{formatCurrency(item.vatAmount || 0)}</td>
+                    <td className="py-3 px-3 text-right font-medium">{formatCurrency(item.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          {/* Payment Status Summary */}
-          <PaymentStatusSummary invoiceId={invoiceId} invoiceTotal={invoice.total} />
+          {/* Summary Section */}
+          <div className="flex justify-end mb-8">
+            <div className="w-full max-w-sm">
+              <div className="space-y-2">
+                <div className="flex justify-between py-1">
+                  <span>Subtotal:</span>
+                  <span className="font-semibold">{formatCurrency(invoice.subtotal)}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span>VAT (15%):</span>
+                  <span className="font-semibold">{formatCurrency(invoice.vatAmount)}</span>
+                </div>
+                <div className="flex justify-between py-3 border-t border-gray-300 mt-3">
+                  <span className="font-bold text-lg">TOTAL:</span>
+                  <span className="font-bold text-xl text-blue-700">{formatCurrency(invoice.total)}</span>
+                </div>
+                
+                {/* Payment Status */}
+                <PaymentStatusSummary invoiceId={invoiceId} invoiceTotal={invoice.total} />
+              </div>
+            </div>
+          </div>
 
+          {/* Payment Instructions */}
+          <div className="mt-8 p-4 bg-gray-100 rounded-lg border text-sm">
+            <div className="font-bold text-gray-700 mb-2">Payment Details:</div>
+            <div className="space-y-1">
+              <div>Bank: ABSA Bank | Account: 123456789 | Branch: 632005</div>
+              <div>Reference: <span className="font-semibold">{invoice.invoiceNumber}</span></div>
+              <div className="text-xs text-gray-600 mt-2">
+                Please use the invoice number as your payment reference for quick allocation.
+              </div>
+            </div>
+          </div>
+
+          {/* Notes Section */}
+          {invoice.notes && (
+            <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="font-semibold text-gray-700 mb-2">Additional Notes:</div>
+              <div className="text-sm text-gray-700">{invoice.notes}</div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="mt-8 text-xs text-gray-400 border-t pt-4 space-y-2">
+            <div>
+              Thank you for your business! For queries, contact info@thinkmybiz.com or call +27 12 345 6789.
+            </div>
+            <div>
+              Company Reg: 2019/123456/07 | VAT: 4455667788 | Tax Clearance: Valid
+            </div>
+            <div>
+              This is a computer-generated document. No signature required.
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons Below Invoice */}
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <Button 
+            onClick={() => setIsPDFPreviewOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
+          >
+            <Eye size={18} className="mr-2" />
+            Preview PDF
+          </Button>
+          
+          <Button 
+            onClick={() => setIsEmailModalOpen(true)}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3"
+          >
+            <Mail size={18} className="mr-2" />
+            Send Invoice
+          </Button>
+          
+          <Button 
+            onClick={handlePrintPDF}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3"
+          >
+            <Download size={18} className="mr-2" />
+            Download PDF
+          </Button>
+          
+          <Button 
+            onClick={() => setIsRecurringModalOpen(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3"
+          >
+            <Repeat size={18} className="mr-2" />
+            Set Recurring
+          </Button>
+          
+          <Button 
+            onClick={() => setLocation(`/invoices/create?edit=${invoice.id}`)}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3"
+          >
+            <Edit size={18} className="mr-2" />
+            Edit Invoice
+          </Button>
+        </div>
+
+        {/* Payment Management Section */}
+        <div className="mt-12 space-y-6">
           {/* Payment History */}
           <div ref={paymentHistoryRef}>
             <PaymentHistory invoiceId={invoiceId} />
@@ -474,14 +510,14 @@ export default function InvoiceDetail() {
 
           {/* Record Payment Button */}
           {invoice.status !== "paid" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+                <CardTitle className="flex items-center gap-2 text-green-800">
                   <CreditCard className="w-5 h-5" />
                   Record Payment
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <p className="text-gray-600 mb-4">
                   Click the button below to record a payment for this invoice.
                 </p>
@@ -496,7 +532,6 @@ export default function InvoiceDetail() {
             </Card>
           )}
         </div>
-      </div>
       </div>
 
       {/* Modals */}
@@ -531,3 +566,5 @@ export default function InvoiceDetail() {
     </div>
   );
 }
+
+export default InvoiceDetail;

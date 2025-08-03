@@ -1,0 +1,117 @@
+// ModernInvoice.jsx
+export default function ModernInvoice() {
+  return (
+    <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-10 font-sans border border-gray-200">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <img src="/your-logo.png" alt="Logo" className="h-12 mb-2" />
+          <h1 className="text-2xl font-bold text-blue-700">Think Mybiz Accounting</h1>
+          <p className="text-sm text-gray-500">Professional Invoice Management</p>
+        </div>
+        <div className="text-right">
+          <h2 className="text-3xl font-bold tracking-wide text-gray-800">TAX INVOICE</h2>
+          <div className="mt-2 text-sm">
+            <div>Invoice #: <span className="font-semibold">INV-2025-014</span></div>
+            <div>Date: <span>2025/08/03</span></div>
+            <div>Due: <span>2025/09/02</span></div>
+            <div>Status: <span className="font-medium text-green-600">SENT</span></div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Addresses */}
+      <div className="grid grid-cols-2 gap-6 mb-8">
+        <div>
+          <div className="font-semibold mb-1 text-gray-700">Bill To:</div>
+          <div className="font-bold">Malesela Fanny Banda</div>
+          <div>bandabookkeepers@gmail.com</div>
+          <div>+27662106531</div>
+          <div>no 48 Rabe Street</div>
+          <div>Mokopane, 0600</div>
+          <div className="text-xs text-gray-400 mt-2">VAT #: 4123456789</div>
+        </div>
+        <div>
+          <div className="font-semibold mb-1 text-gray-700">From:</div>
+          <div className="font-bold">Think Mybiz Accounting</div>
+          <div>info@thinkmybiz.com</div>
+          <div>+27 12 345 6789</div>
+          <div>PO Box 1234, Midrand, 1685</div>
+          <div>VAT #: 4455667788</div>
+        </div>
+      </div>
+      
+      {/* Items Table */}
+      <table className="w-full text-sm mb-6 border-t border-b border-gray-200">
+        <thead>
+          <tr className="bg-blue-700 text-white">
+            <th className="py-2 px-2 font-semibold text-left">#</th>
+            <th className="py-2 px-2 font-semibold text-left">Description</th>
+            <th className="py-2 px-2 font-semibold">Qty</th>
+            <th className="py-2 px-2 font-semibold">Unit Price</th>
+            <th className="py-2 px-2 font-semibold">VAT Rate</th>
+            <th className="py-2 px-2 font-semibold">Line VAT</th>
+            <th className="py-2 px-2 font-semibold">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="hover:bg-blue-50">
+            <td className="py-2 px-2">1</td>
+            <td className="py-2 px-2">Consulting Service</td>
+            <td className="py-2 px-2 text-center">1</td>
+            <td className="py-2 px-2 text-right">R 10,000.00</td>
+            <td className="py-2 px-2 text-center">15%</td>
+            <td className="py-2 px-2 text-right">R 1,304.35</td>
+            <td className="py-2 px-2 text-right">R 11,304.35</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Summary */}
+      <div className="flex justify-end mb-6">
+        <div className="w-full max-w-xs">
+          <div className="flex justify-between py-1">
+            <span>Subtotal:</span>
+            <span className="font-semibold">R 10,000.00</span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span>VAT (15%):</span>
+            <span className="font-semibold">R 1,304.35</span>
+          </div>
+          <div className="flex justify-between py-2 border-t border-gray-300 mt-2">
+            <span className="font-bold text-lg">TOTAL:</span>
+            <span className="font-bold text-xl text-blue-700">R 11,304.35</span>
+          </div>
+          <div className="flex justify-between py-1 text-green-700">
+            <span>Amount Paid:</span>
+            <span>R 0.00</span>
+          </div>
+          <div className="flex justify-between py-1 font-semibold text-red-600">
+            <span>Balance Due:</span>
+            <span>R 11,304.35</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Instructions */}
+      <div className="mt-8 p-4 bg-gray-100 rounded-lg border text-sm">
+        <div className="font-bold text-gray-700 mb-1">Payment Details:</div>
+        <div>Bank: ABSA Bank | Account: 123456789 | Branch: 632005</div>
+        <div>Reference: <span className="font-semibold">INV-2025-014</span></div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 text-xs text-gray-400 border-t pt-4">
+        <div>
+          Thank you for your business! For queries, contact info@thinkmybiz.com or call +27 12 345 6789.
+        </div>
+        <div className="mt-2">
+          Company Reg: 2019/123456/07 &nbsp;|&nbsp; VAT: 4455667788 &nbsp;|&nbsp; Tax Clearance: Valid
+        </div>
+        <div className="mt-1">
+          This is a computer-generated document. No signature required.
+        </div>
+      </div>
+    </div>
+  );
+}
