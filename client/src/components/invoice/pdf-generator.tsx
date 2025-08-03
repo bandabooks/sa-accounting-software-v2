@@ -133,16 +133,16 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setFillColor(29, 78, 216); // Blue-700 exactly
     pdf.rect(20, tableStartY, 165, 10, 'F'); // Width aligned with payment status box
     
-    // Table headers aligned with payment status box width
+    // Table headers aligned with payment status box width - right-aligned for professional look
     pdf.setFontSize(8);
     pdf.setTextColor(255, 255, 255); // White text
     pdf.text("#", 25, tableStartY + 6);
     pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 78, tableStartY + 6); // Tighter spacing
-    pdf.text("Unit Price", 98, tableStartY + 6); // Compact fit
-    pdf.text("VAT Rate", 125, tableStartY + 6); // Aligned spacing
-    pdf.text("Line VAT", 145, tableStartY + 6); // Proper fit
-    pdf.text("Total", 165, tableStartY + 6); // Aligned with payment box edge
+    pdf.text("Qty", 88, tableStartY + 6, { align: 'right' }); // Right-aligned
+    pdf.text("Unit Price", 118, tableStartY + 6, { align: 'right' }); // Right-aligned
+    pdf.text("VAT Rate", 140, tableStartY + 6, { align: 'right' }); // Right-aligned
+    pdf.text("Line VAT", 160, tableStartY + 6, { align: 'right' }); // Right-aligned
+    pdf.text("Total", 180, tableStartY + 6, { align: 'right' }); // Right-aligned
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
@@ -172,30 +172,25 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       }
       pdf.text(description, 35, currentY);
       
-      // Center-aligned quantity matching header position
+      // Right-aligned quantity matching header position
       const qtyText = (item.quantity?.toString() || "1");
-      const qtyWidth = pdf.getTextWidth(qtyText);
-      pdf.text(qtyText, 83 - qtyWidth/2, currentY);
+      pdf.text(qtyText, 88, currentY, { align: 'right' });
       
       // Right-aligned unit price matching header position
       const unitPriceText = formatCurrency(item.unitPrice || 0);
-      const unitPriceWidth = pdf.getTextWidth(unitPriceText);
-      pdf.text(unitPriceText, 118 - unitPriceWidth, currentY);
+      pdf.text(unitPriceText, 118, currentY, { align: 'right' });
       
-      // Center-aligned VAT rate matching header position
+      // Right-aligned VAT rate matching header position
       const vatRateText = `${item.vatRate || 15}%`;
-      const vatRateWidth = pdf.getTextWidth(vatRateText);
-      pdf.text(vatRateText, 135 - vatRateWidth/2, currentY);
+      pdf.text(vatRateText, 140, currentY, { align: 'right' });
       
       // Right-aligned line VAT matching header position
       const lineVatText = formatCurrency(item.vatAmount || 0);
-      const lineVatWidth = pdf.getTextWidth(lineVatText);
-      pdf.text(lineVatText, 160 - lineVatWidth, currentY);
+      pdf.text(lineVatText, 160, currentY, { align: 'right' });
       
       // Right-aligned total matching header position exactly
       const totalText = formatCurrency(item.total || 0);
-      const totalWidth = pdf.getTextWidth(totalText);
-      pdf.text(totalText, 180 - totalWidth, currentY); // Aligned with payment box edge
+      pdf.text(totalText, 180, currentY, { align: 'right' }); // Perfectly aligned
       
       currentY += 12; // Better row spacing
     });
