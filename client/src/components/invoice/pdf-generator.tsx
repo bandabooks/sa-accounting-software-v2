@@ -126,100 +126,118 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setTextColor(107, 114, 128); // Gray-500
     pdf.text("VAT #: 4455667788", pageWidth/2, addressY + 26);
 
-    // EXACTLY MATCH REACT TABLE - Items Table with blue-700 header
+    // EXACTLY MATCH REACT TABLE - Items Table with blue-700 header  
     const tableStartY = 90;
     
     // Table header background - matching bg-blue-700
     pdf.setFillColor(29, 78, 216); // Blue-700 exactly
-    pdf.rect(20, tableStartY, pageWidth - 40, 8, 'F');
+    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F'); // Increased height for better spacing
     
-    // Table headers exactly as React with proper alignment
+    // Table headers with proper spacing and alignment
     pdf.setFontSize(8);
     pdf.setTextColor(255, 255, 255); // White text
-    pdf.text("#", 23, tableStartY + 5);
-    pdf.text("Description", 30, tableStartY + 5);
-    pdf.text("Qty", 105, tableStartY + 5);
-    pdf.text("Unit Price", 125, tableStartY + 5);
-    pdf.text("VAT Rate", 155, tableStartY + 5);
-    pdf.text("Line VAT", 175, tableStartY + 5);
-    pdf.text("Total", pageWidth - 30, tableStartY + 5);
+    pdf.text("#", 25, tableStartY + 6);
+    pdf.text("Description", 35, tableStartY + 6);
+    pdf.text("Qty", 100, tableStartY + 6); // Better spacing
+    pdf.text("Unit Price", 120, tableStartY + 6); // Better spacing
+    pdf.text("VAT Rate", 150, tableStartY + 6); // Better spacing
+    pdf.text("Line VAT", 170, tableStartY + 6); // Better spacing
+    pdf.text("Total", pageWidth - 35, tableStartY + 6); // Better spacing
 
-    // Table rows exactly matching React layout
+    // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
-    let currentY = tableStartY + 15;
+    let currentY = tableStartY + 18; // More space after header
     
     const items = (invoice as any).items || [];
     items.forEach((item: any, index: number) => {
       // Hover background for alternate rows (matching hover:bg-blue-50)
       if (index % 2 === 1) {
         pdf.setFillColor(239, 246, 255); // Blue-50
-        pdf.rect(20, currentY - 3, pageWidth - 40, 8, 'F');
+        pdf.rect(20, currentY - 4, pageWidth - 40, 12, 'F'); // Better height
       }
       
       // Row border bottom (matching border-b border-gray-100)
       pdf.setDrawColor(243, 244, 246); // Gray-100
-      pdf.line(20, currentY + 5, pageWidth - 20, currentY + 5);
+      pdf.line(20, currentY + 6, pageWidth - 20, currentY + 6);
       
       pdf.setFontSize(8);
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
-      pdf.text((index + 1).toString(), 23, currentY);
+      pdf.text((index + 1).toString(), 25, currentY);
       
       // Description with font-medium styling
       pdf.setTextColor(0, 0, 0);
       let description = item.description || "N/A";
-      if (description.length > 30) {
-        description = description.substring(0, 27) + "...";
+      if (description.length > 25) { // Shorter to prevent overlap
+        description = description.substring(0, 22) + "...";
       }
-      pdf.text(description, 30, currentY);
+      pdf.text(description, 35, currentY);
       
       // Center-aligned quantity
-      pdf.text(item.quantity?.toString() || "1", 107, currentY);
+      const qtyText = (item.quantity?.toString() || "1");
+      const qtyWidth = pdf.getTextWidth(qtyText);
+      pdf.text(qtyText, 105 - qtyWidth/2, currentY);
       
       // Right-aligned unit price
-      pdf.text(formatCurrency(item.unitPrice || 0), 145, currentY);
+      const unitPriceText = formatCurrency(item.unitPrice || 0);
+      const unitPriceWidth = pdf.getTextWidth(unitPriceText);
+      pdf.text(unitPriceText, 145 - unitPriceWidth, currentY);
       
       // Center-aligned VAT rate
-      pdf.text(`${item.vatRate || 15}%`, 160, currentY);
+      const vatRateText = `${item.vatRate || 15}%`;
+      const vatRateWidth = pdf.getTextWidth(vatRateText);
+      pdf.text(vatRateText, 155 - vatRateWidth/2, currentY);
       
       // Right-aligned line VAT
-      pdf.text(formatCurrency(item.vatAmount || 0), 185, currentY);
+      const lineVatText = formatCurrency(item.vatAmount || 0);
+      const lineVatWidth = pdf.getTextWidth(lineVatText);
+      pdf.text(lineVatText, 185 - lineVatWidth, currentY);
       
       // Right-aligned total with font-medium
-      pdf.text(formatCurrency(item.total || 0), pageWidth - 25, currentY);
+      const totalText = formatCurrency(item.total || 0);
+      const totalWidth = pdf.getTextWidth(totalText);
+      pdf.text(totalText, pageWidth - 25 - totalWidth, currentY);
       
-      currentY += 10;
+      currentY += 12; // Better row spacing
     });
 
     // EXACTLY MATCH REACT SUMMARY SECTION
-    const summaryY = currentY + 15;
-    const summaryX = pageWidth - 85; // Right-aligned like React (max-w-sm)
+    const summaryY = currentY + 20; // More space after table
+    const summaryX = pageWidth - 90; // Better positioning
+    const summaryWidth = 70; // Fixed width for alignment
     
-    // Subtotal
+    // Subtotal with proper alignment
     pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
     pdf.text("Subtotal:", summaryX, summaryY);
-    pdf.text(formatCurrency(invoice.subtotal || 0), pageWidth - 25, summaryY);
+    const subtotalText = formatCurrency(invoice.subtotal || 0);
+    const subtotalWidth = pdf.getTextWidth(subtotalText);
+    pdf.text(subtotalText, summaryX + summaryWidth - subtotalWidth, summaryY);
     
-    // VAT
-    pdf.text("VAT (15%):", summaryX, summaryY + 6);
-    pdf.text(formatCurrency(invoice.vatAmount || 0), pageWidth - 25, summaryY + 6);
+    // VAT with proper alignment
+    pdf.text("VAT (15%):", summaryX, summaryY + 8);
+    const vatText = formatCurrency(invoice.vatAmount || 0);
+    const vatWidth = pdf.getTextWidth(vatText);
+    pdf.text(vatText, summaryX + summaryWidth - vatWidth, summaryY + 8);
     
     // Border line matching React (border-t border-gray-300)
     pdf.setDrawColor(209, 213, 219); // Gray-300
-    pdf.line(summaryX, summaryY + 10, pageWidth - 20, summaryY + 10);
+    pdf.setLineWidth(0.5);
+    pdf.line(summaryX, summaryY + 12, summaryX + summaryWidth, summaryY + 12);
     
     // TOTAL with exact styling (font-bold text-lg and text-xl text-blue-700)
     pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0);
-    pdf.text("TOTAL:", summaryX, summaryY + 16);
+    pdf.text("TOTAL:", summaryX, summaryY + 20);
     
     pdf.setFontSize(13);
     pdf.setTextColor(29, 78, 216); // Blue-700 for total amount
-    pdf.text(formatCurrency(invoice.total || 0), pageWidth - 25, summaryY + 16);
+    const totalText = formatCurrency(invoice.total || 0);
+    const totalWidth = pdf.getTextWidth(totalText);
+    pdf.text(totalText, summaryX + summaryWidth - totalWidth, summaryY + 20);
 
     // EXACT MATCH - Payment Status Box (matching PaymentStatusSummary component)
-    const paymentStatusY = summaryY + 25;
-    const paymentStatusX = summaryX - 10; // Align with summary section
+    const paymentStatusY = summaryY + 30; // More space after summary
+    const paymentStatusX = summaryX; // Align with summary section
     const paymentStatusWidth = 75;
     const paymentStatusHeight = 35;
     
