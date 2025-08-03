@@ -75,7 +75,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
 
     const vatCategory = (vatSettings as any)?.vatCategory || 'A';
     const vatStartMonth = (vatSettings as any)?.vatStartMonth || 1;
-    const currentYear = new Date().getFullYear();
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
     const category = SARS_VAT_CATEGORIES.find(cat => cat.value === vatCategory);
     
     if (!category) return [];
@@ -83,11 +85,28 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
     const periods = [];
     const periodMonths = category.periodMonths;
 
-    // Generate periods for current year and next year
-    for (let year = currentYear - 1; year <= currentYear + 1; year++) {
+    // Helper function to check if a period is valid (not in the future)
+    const isPeriodValid = (year: number, startMonth: number) => {
+      // Allow all past years
+      if (year < currentYear) return true;
+      
+      // For current year, only allow periods that have started
+      if (year === currentYear) {
+        return startMonth <= currentMonth;
+      }
+      
+      // Don't allow future years
+      return false;
+    };
+
+    // Generate periods for past 2 years and current year only
+    for (let year = currentYear - 2; year <= currentYear; year++) {
       if (periodMonths === 1) {
         // Monthly periods
         for (let month = 1; month <= 12; month++) {
+          // Only include valid periods (not in the future)
+          if (!isPeriodValid(year, month)) continue;
+          
           const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
           // Get the last day of the month using more reliable method
           const lastDayOfMonth = new Date(year, month, 0).getDate();
@@ -107,6 +126,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           const endMonth = startMonth + 1;
           
           if (startMonth <= 12 && endMonth <= 12) {
+            // Only include valid periods (not in the future)
+            if (!isPeriodValid(year, startMonth)) continue;
+            
             const startDate = `${year}-${startMonth.toString().padStart(2, '0')}-01`;
             // Get the last day of the end month using more reliable method
             const lastDayOfEndMonth = new Date(year, endMonth, 0).getDate();
@@ -121,26 +143,32 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
         }
       } else if (periodMonths === 6) {
         // Six-monthly periods
-        periods.push({
-          label: `Jan–Jun ${year}`,
-          value: `${year}-1-6`,
-          startDate: `${year}-01-01`,
-          endDate: `${year}-06-30`
-        });
-        periods.push({
-          label: `Jul–Dec ${year}`,
-          value: `${year}-7-12`,
-          startDate: `${year}-07-01`,
-          endDate: `${year}-12-31`
-        });
+        if (isPeriodValid(year, 1)) {
+          periods.push({
+            label: `Jan–Jun ${year}`,
+            value: `${year}-1-6`,
+            startDate: `${year}-01-01`,
+            endDate: `${year}-06-30`
+          });
+        }
+        if (isPeriodValid(year, 7)) {
+          periods.push({
+            label: `Jul–Dec ${year}`,
+            value: `${year}-7-12`,
+            startDate: `${year}-07-01`,
+            endDate: `${year}-12-31`
+          });
+        }
       } else if (periodMonths === 12) {
         // Annual periods
-        periods.push({
-          label: `${year}`,
-          value: `${year}`,
-          startDate: `${year}-01-01`,
-          endDate: `${year}-12-31`
-        });
+        if (isPeriodValid(year, 1)) {
+          periods.push({
+            label: `${year}`,
+            value: `${year}`,
+            startDate: `${year}-01-01`,
+            endDate: `${year}-12-31`
+          });
+        }
       }
     }
 
