@@ -27,6 +27,7 @@ export function calculateInvoiceTotal(items: Array<{
 } {
   let subtotal = 0;
   let vatAmount = 0;
+  let total = 0;
 
   items.forEach(item => {
     const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity;
@@ -37,42 +38,68 @@ export function calculateInvoiceTotal(items: Array<{
       return; // Skip invalid items
     }
 
-    const itemSubtotal = qty * price;
-    subtotal += itemSubtotal;
+    const lineAmount = qty * price;
 
     // Calculate VAT based on vatTypeId (if provided) or fallback to vatRate
     if (item.vatTypeId) {
-      // Use vatTypeId for precise VAT calculation
+      // Use vatTypeId for precise VAT calculation following bulk capture logic
       switch (item.vatTypeId) {
-        case 1: // VAT Exclusive (15%)
-          vatAmount += itemSubtotal * 0.15;
+        case 1: // VAT Exclusive (15%) - Add VAT to line amount
+          const netAmount = lineAmount;
+          const vatForLine = lineAmount * 0.15;
+          subtotal += netAmount;
+          vatAmount += vatForLine;
+          total += netAmount + vatForLine;
           break;
-        case 2: // VAT Inclusive (15%) - VAT is already included, extract it
-          vatAmount += itemSubtotal * (0.15 / 1.15);
+        case 2: // VAT Inclusive (15%) - Extract VAT from inclusive amount
+          // For inclusive: VAT = amount * (rate / (100 + rate))
+          // Net = amount - VAT
+          const inclusiveVAT = lineAmount * (15 / (100 + 15)); // 15/115 = 0.1304
+          const netFromInclusive = lineAmount - inclusiveVAT;
+          subtotal += netFromInclusive;
+          vatAmount += inclusiveVAT;
+          total += lineAmount; // Total stays the same as the inclusive amount
           break;
         case 3: // Zero-rated (0%)
         case 4: // Exempt (0%)
         case 5: // No VAT (0%)
-          // No VAT applied
+          // No VAT applied - line amount is the net amount
+          subtotal += lineAmount;
+          vatAmount += 0;
+          total += lineAmount;
           break;
         default:
           // Fallback to traditional calculation
           const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 0);
           if (!isNaN(vatRate)) {
-            vatAmount += itemSubtotal * (vatRate / 100);
+            const fallbackVAT = lineAmount * (vatRate / 100);
+            subtotal += lineAmount;
+            vatAmount += fallbackVAT;
+            total += lineAmount + fallbackVAT;
+          } else {
+            subtotal += lineAmount;
+            total += lineAmount;
           }
       }
     } else if (item.vatAmount) {
       // Use pre-calculated VAT amount if available
       const itemVatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : item.vatAmount;
       if (!isNaN(itemVatAmount)) {
+        subtotal += lineAmount;
         vatAmount += itemVatAmount;
+        total += lineAmount + itemVatAmount;
       }
     } else {
       // Fallback to traditional vatRate calculation
       const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 0);
       if (!isNaN(vatRate)) {
-        vatAmount += itemSubtotal * (vatRate / 100);
+        const fallbackVAT = lineAmount * (vatRate / 100);
+        subtotal += lineAmount;
+        vatAmount += fallbackVAT;
+        total += lineAmount + fallbackVAT;
+      } else {
+        subtotal += lineAmount;
+        total += lineAmount;
       }
     }
   });
@@ -80,7 +107,7 @@ export function calculateInvoiceTotal(items: Array<{
   return {
     subtotal: isNaN(subtotal) ? 0 : subtotal,
     vatAmount: isNaN(vatAmount) ? 0 : vatAmount,
-    total: isNaN(subtotal + vatAmount) ? 0 : subtotal + vatAmount
+    total: isNaN(total) ? 0 : total
   };
 }
 
