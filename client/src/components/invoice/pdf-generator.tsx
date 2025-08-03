@@ -142,7 +142,7 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.text("Unit Price", 118, tableStartY + 6, { align: 'right' }); // Right-aligned
     pdf.text("VAT Rate", 140, tableStartY + 6, { align: 'right' }); // Right-aligned
     pdf.text("Line VAT", 160, tableStartY + 6, { align: 'right' }); // Right-aligned
-    pdf.text("Total", 180, tableStartY + 6, { align: 'right' }); // Right-aligned
+    pdf.text("Total", pageWidth - 20, tableStartY + 6, { align: 'right' }); // Align with subtotal position
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
@@ -188,9 +188,9 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       const lineVatText = formatCurrency(item.vatAmount || 0);
       pdf.text(lineVatText, 160, currentY, { align: 'right' });
       
-      // Right-aligned total matching header position exactly
+      // Right-aligned total matching header position exactly - aligned with subtotal
       const totalText = formatCurrency(item.total || 0);
-      pdf.text(totalText, 180, currentY, { align: 'right' }); // Perfectly aligned
+      pdf.text(totalText, pageWidth - 20, currentY, { align: 'right' }); // Align with subtotal position
       
       currentY += 12; // Better row spacing
     });
