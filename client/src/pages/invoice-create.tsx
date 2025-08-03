@@ -54,6 +54,12 @@ export default function InvoiceCreate() {
   const queryClient = useQueryClient();
   const { shouldShowVATFields } = useVATStatus();
   
+  // Fetch VAT types for calculations
+  const vatTypesQuery = useQuery({
+    queryKey: ["/api/companies", 2, "vat-types"], // Using company ID 2 from system
+    retry: false,
+  });
+  
   // Get edit parameter from URL
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get('edit');
@@ -193,31 +199,40 @@ export default function InvoiceCreate() {
     }
   };
 
-  // Enhanced VAT calculation using system VAT types directly
+  // Enhanced VAT calculation using system VAT types with proper inclusive/exclusive handling
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
-    if (!shouldShowVATFields) return 0;
+    if (!shouldShowVATFields || !item.vatTypeId) return 0;
     
-    // Use system VAT types directly based on vatTypeId
-    // ID 1 = STD (VAT Exclusive 15%), ID 2 = INC (VAT Inclusive 15%), ID 3 = ZER (Zero-rated 0%), ID 4 = EXM (Exempt 0%)
-    switch (item.vatTypeId) {
-      case 1: // STD - VAT Exclusive (15%)
-        return Number((lineAmount * 0.15).toFixed(2));
-      case 2: // INC - VAT Inclusive (15%) 
-        return Number((lineAmount * (15 / 115)).toFixed(2));
-      case 3: // ZER - Zero-rated (0%)
-        return 0;
-      case 4: // EXM - Exempt (0%)
-        return 0;
-      default:
-        // Fallback to traditional calculation
-        const vatRate = parseFloat(item.vatRate || "0") / 100;
-        return item.vatInclusive ? 
-          lineAmount * (vatRate / (1 + vatRate)) : 
-          lineAmount * vatRate;
+    // Find the VAT type from fetched data to get rate and determine if inclusive
+    const vatTypesData = Array.isArray(vatTypesQuery.data) ? vatTypesQuery.data : [];
+    const selectedVATType = vatTypesData.find((vt: any) => vt.id === item.vatTypeId);
+    
+    if (!selectedVATType) {
+      // Fallback calculation using item's vatRate
+      const vatRate = parseFloat(item.vatRate || "0") / 100;
+      return item.vatInclusive ? 
+        Number((lineAmount * (vatRate / (1 + vatRate))).toFixed(2)) : 
+        Number((lineAmount * vatRate).toFixed(2));
+    }
+    
+    const rate = parseFloat(selectedVATType.rate || "0");
+    const isInclusive = selectedVATType.code === "INC" || selectedVATType.name?.toLowerCase().includes("inclusive");
+    
+    // Handle different VAT calculations
+    if (rate === 0) {
+      return 0; // Zero-rated, Exempt, etc.
+    }
+    
+    if (isInclusive) {
+      // VAT Inclusive: VAT = Amount × (Rate ÷ (100 + Rate))
+      return Number((lineAmount * (rate / (100 + rate))).toFixed(2));
+    } else {
+      // VAT Exclusive: VAT = Amount × (Rate ÷ 100)
+      return Number((lineAmount * (rate / 100)).toFixed(2));
     }
   };
 
