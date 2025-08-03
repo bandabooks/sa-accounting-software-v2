@@ -4932,25 +4932,69 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
       const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
       
       if (format === 'pdf') {
-        const pdfContent = `VAT Summary Report
-Period: ${startDate} to ${endDate}
-Company: ${summary.companyName || 'Company Name'}
-Output VAT: R ${summary.summary.outputVat}
-Input VAT: R ${summary.summary.inputVat}
-Net VAT Payable: R ${summary.summary.netVatPayable}
-
-Previous Period Comparison:
-Output VAT Change: ${summary.comparison?.outputVatChange || '0'}%
-Input VAT Change: ${summary.comparison?.inputVatChange || '0'}%
-
-VAT Breakdown:
-Standard Rate: ${summary.breakdown?.standardRate?.amount || '0.00'} (${summary.breakdown?.standardRate?.percentage || '0%'})
-Zero Rated: ${summary.breakdown?.zeroRated?.amount || '0.00'} (${summary.breakdown?.zeroRated?.percentage || '0%'})
-Exempt: ${summary.breakdown?.exempt?.amount || '0.00'} (${summary.breakdown?.exempt?.percentage || '0%'})`;
+        // Create HTML content that will be converted to PDF on frontend
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>VAT Summary Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .section { margin-bottom: 20px; }
+                .amount { font-weight: bold; color: #2563eb; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                th { background-color: #f8f9fa; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>VAT Summary Report</h1>
+                <p>Period: ${startDate} to ${endDate}</p>
+                <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            </div>
+            
+            <div class="section">
+                <h2>VAT Summary</h2>
+                <table>
+                    <tr><td>Output VAT:</td><td class="amount">R ${summary.summary.outputVat}</td></tr>
+                    <tr><td>Input VAT:</td><td class="amount">R ${summary.summary.inputVat}</td></tr>
+                    <tr><td>Net VAT Payable:</td><td class="amount">R ${summary.summary.netVatPayable}</td></tr>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h2>Sales Summary</h2>
+                <table>
+                    <tr><td>Total Sales (Inc VAT):</td><td class="amount">R ${summary.summary.totalSalesIncVat}</td></tr>
+                    <tr><td>Total Sales (Exc VAT):</td><td class="amount">R ${summary.summary.totalSalesExcVat}</td></tr>
+                    <tr><td>Total Sales VAT:</td><td class="amount">R ${summary.summary.totalSalesVat}</td></tr>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h2>Purchase Summary</h2>
+                <table>
+                    <tr><td>Total Purchases (Inc VAT):</td><td class="amount">R ${summary.summary.totalPurchasesIncVat}</td></tr>
+                    <tr><td>Total Purchases (Exc VAT):</td><td class="amount">R ${summary.summary.totalPurchasesExcVat}</td></tr>
+                    <tr><td>Total Purchases VAT:</td><td class="amount">R ${summary.summary.totalPurchasesVat}</td></tr>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h2>Transaction Summary</h2>
+                <table>
+                    <tr><td>Total Invoices:</td><td>${summary.transactions?.invoiceCount || 0}</td></tr>
+                    <tr><td>Total Expenses:</td><td>${summary.transactions?.expenseCount || 0}</td></tr>
+                </table>
+            </div>
+        </body>
+        </html>`;
         
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.pdf`);
-        res.send(Buffer.from(pdfContent));
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', `inline; filename=vat-summary-${startDate}-${endDate}.html`);
+        res.send(htmlContent);
       } else if (format === 'excel' || format === 'csv') {
         const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable,Output Change %,Input Change %
 ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable},${summary.comparison?.outputVatChange || '0'},${summary.comparison?.inputVatChange || '0'}`;

@@ -278,11 +278,13 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           throw new Error(result.message || 'Failed to load report preview');
         }
       } else if (format === 'pdf') {
-        // Open PDF in new tab
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        // Handle PDF generation on client side
+        const result = await response.json();
+        if (result.success) {
+          await generateClientSidePDF(result.data, dateRange.startDate, dateRange.endDate);
+        } else {
+          throw new Error(result.message || 'Failed to generate PDF');
+        }
       } else {
         // Download excel/csv files
         const blob = await response.blob();
@@ -470,15 +472,16 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                   const response = await apiRequest(`/api/vat/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=pdf`, 'GET');
                   
                   if (response.ok) {
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    
-                    toast({
-                      title: "Success",
-                      description: "VAT report generated and opened in new tab",
-                    });
+                    const result = await response.json();
+                    if (result.success) {
+                      await generateClientSidePDF(result.data, dateRange.startDate, dateRange.endDate);
+                      toast({
+                        title: "Success",
+                        description: "VAT report generated and opened in new tab",
+                      });
+                    } else {
+                      throw new Error(result.message || 'Failed to generate PDF');
+                    }
                   } else {
                     const errorResult = await response.json();
                     throw new Error(errorResult.message || 'Failed to generate PDF');
