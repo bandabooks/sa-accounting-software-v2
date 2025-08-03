@@ -37,10 +37,9 @@ export default function PDFPreviewModal({
     setIsGenerating(true);
     try {
       const pdf = await generateInvoicePDF(invoice);
-      
-      // Convert to data URL instead of blob URL to avoid Chrome blocking
-      const pdfDataUri = pdf.output('datauristring');
-      setPdfUrl(pdfDataUri);
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
     } catch (error) {
       console.error("Error generating PDF preview:", error);
       toast({
