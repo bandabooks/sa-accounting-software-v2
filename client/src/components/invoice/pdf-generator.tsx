@@ -133,16 +133,16 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setFillColor(29, 78, 216); // Blue-700 exactly
     pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F'); // Increased height for better spacing
     
-    // Table headers properly fitted for A4 page width with clear spacing
+    // Table headers optimized for A4 page width (210mm = ~595pts, working width ~170mm = ~480pts)
     pdf.setFontSize(8);
     pdf.setTextColor(255, 255, 255); // White text
     pdf.text("#", 25, tableStartY + 6);
     pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 95, tableStartY + 6); // Reduced but readable
-    pdf.text("Unit Price", 115, tableStartY + 6); // Fits within A4
-    pdf.text("VAT Rate", 145, tableStartY + 6); // Proper spacing
-    pdf.text("Line VAT", 165, tableStartY + 6); // Fits well
-    pdf.text("Total", 185, tableStartY + 6); // Visible within A4 bounds
+    pdf.text("Qty", 88, tableStartY + 6); // Compact spacing
+    pdf.text("Unit Price", 108, tableStartY + 6); // Tighter fit
+    pdf.text("VAT Rate", 135, tableStartY + 6); // Reduced spacing
+    pdf.text("Line VAT", 155, tableStartY + 6); // Compact
+    pdf.text("Total", 175, tableStartY + 6); // Well within A4 bounds
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
@@ -167,35 +167,35 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       // Description with font-medium styling
       pdf.setTextColor(0, 0, 0);
       let description = item.description || "N/A";
-      if (description.length > 25) { // Adjusted for proper fit
-        description = description.substring(0, 22) + "...";
+      if (description.length > 20) { // Shorter to prevent overlap
+        description = description.substring(0, 17) + "...";
       }
       pdf.text(description, 35, currentY);
       
       // Center-aligned quantity matching header position
       const qtyText = (item.quantity?.toString() || "1");
       const qtyWidth = pdf.getTextWidth(qtyText);
-      pdf.text(qtyText, 100 - qtyWidth/2, currentY);
+      pdf.text(qtyText, 93 - qtyWidth/2, currentY);
       
       // Right-aligned unit price matching header position
       const unitPriceText = formatCurrency(item.unitPrice || 0);
       const unitPriceWidth = pdf.getTextWidth(unitPriceText);
-      pdf.text(unitPriceText, 140 - unitPriceWidth, currentY);
+      pdf.text(unitPriceText, 128 - unitPriceWidth, currentY);
       
       // Center-aligned VAT rate matching header position
       const vatRateText = `${item.vatRate || 15}%`;
       const vatRateWidth = pdf.getTextWidth(vatRateText);
-      pdf.text(vatRateText, 155 - vatRateWidth/2, currentY);
+      pdf.text(vatRateText, 145 - vatRateWidth/2, currentY);
       
       // Right-aligned line VAT matching header position
       const lineVatText = formatCurrency(item.vatAmount || 0);
       const lineVatWidth = pdf.getTextWidth(lineVatText);
-      pdf.text(lineVatText, 180 - lineVatWidth, currentY);
+      pdf.text(lineVatText, 170 - lineVatWidth, currentY);
       
       // Right-aligned total matching header position
       const totalText = formatCurrency(item.total || 0);
       const totalWidth = pdf.getTextWidth(totalText);
-      pdf.text(totalText, 200 - totalWidth, currentY);
+      pdf.text(totalText, 190 - totalWidth, currentY);
       
       currentY += 12; // Better row spacing
     });
