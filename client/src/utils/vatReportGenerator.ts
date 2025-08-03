@@ -35,16 +35,40 @@ export async function generateVatSummaryReport(
       format
     });
 
-    const response = await fetch(`/api/vatreports/summ_08-03formatview1?${params}`, {
+    // Get authentication tokens like other API calls
+    const token = localStorage.getItem('authToken');
+    const sessionToken = localStorage.getItem('sessionToken');
+    
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (sessionToken) {
+      headers['X-Session-Token'] = sessionToken;
+    }
+
+    const response = await fetch(`/api/vat/reports/summary?${params}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'include', // Include session cookies
     });
 
     // Handle HTTP errors
     if (!response.ok) {
+      // Handle authentication errors specifically
+      if (response.status === 401) {
+        console.error('Authentication failed - redirecting to login');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+        return null;
+      }
+      
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
       console.error('VAT report generation failed:', errorMessage);

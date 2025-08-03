@@ -191,7 +191,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
   const [reportData, setReportData] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Clean Promise-based implementation using the new utility function
+  // Fixed implementation using apiRequest for proper authentication
   const handleGenerateReport = async (format: string) => {
     if (!dateRange.startDate || !dateRange.endDate) {
       toast({
@@ -214,44 +214,42 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
 
     setIsGenerating(true);
     try {
+      // Use apiRequest for proper authentication handling
+      const response = await apiRequest(`/api/vat/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=${format}`, 'GET');
+      
       if (format === 'view') {
-        // Generate preview data using the clean Promise function
-        const reportBlob = await generateVatSummaryReport(
-          dateRange.startDate, 
-          dateRange.endDate, 
-          'view'
-        );
-        
-        if (reportBlob) {
-          const reportText = await reportBlob.text();
-          const reportData = JSON.parse(reportText);
-          setReportData(reportData);
-          setShowPreview(true);
-          toast({
-            title: "Report Generated",
-            description: "Report preview is ready",
-          });
-        } else {
-          throw new Error('Failed to generate report preview');
-        }
+        // Parse JSON for preview
+        const reportData = await response.json();
+        setReportData(reportData);
+        setShowPreview(true);
+      } else if (format === 'pdf') {
+        // Open PDF in new tab
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
-        // Use the imported clean Promise-based handler for downloads/PDF opening
-        await handleVatReportGeneration(
-          dateRange.startDate, 
-          dateRange.endDate, 
-          format as 'pdf' | 'excel' | 'csv'
-        );
-        
-        toast({
-          title: "Report Generated",
-          description: format === 'pdf' ? "PDF opened in new tab" : "Download started",
-        });
+        // Download excel/csv files
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `vat-summary-${dateRange.startDate}-to-${dateRange.endDate}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
+      
+      toast({
+        title: "Report Generated",
+        description: `VAT ${selectedReport} report has been ${format === 'view' ? 'loaded' : 'generated'} successfully`,
+      });
     } catch (error) {
       console.error('Report generation error:', error);
       toast({
         title: "Generation Failed",
-        description: "Unable to generate report. Please check your connection and try again.",
+        description: "Failed to generate VAT report. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -413,14 +411,25 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                 
                 setIsGenerating(true);
                 try {
-                  // Direct usage of your requested clean Promise function
-                  await handleVatReportGeneration(dateRange.startDate, dateRange.endDate, 'pdf');
+                  // Use apiRequest for proper authentication
+                  const response = await apiRequest(`/api/vat/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=pdf`, 'GET');
+                  
+                  const blob = await response.blob();
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, '_blank');
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  
                   toast({
                     title: "Success",
-                    description: "PDF opened in new tab using clean Promise function",
+                    description: "VAT report generated and opened in new tab",
                   });
                 } catch (error) {
-                  alert('Failed to generate VAT report. Please check your connection and try again.');
+                  console.error('VAT report generation error:', error);
+                  toast({
+                    title: "Error", 
+                    description: "Failed to generate VAT report. Please try again.",
+                    variant: "destructive"
+                  });
                 } finally {
                   setIsGenerating(false);
                 }
