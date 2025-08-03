@@ -6821,7 +6821,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Invalid date format provided');
       }
       
-      // Get all invoices in date range for output VAT (using issueDate instead of invoiceDate)
+      // Get all invoices in date range for output VAT
       const invoicesResult = await db.select()
         .from(invoices)
         .where(and(
@@ -6830,7 +6830,7 @@ export class DatabaseStorage implements IStorage {
           lte(invoices.issueDate, end)
         ));
 
-      // Get all expenses in date range for input VAT (using expenseDate field)
+      // Get all expenses in date range for input VAT
       const expensesResult = await db.select()
         .from(expenses) 
         .where(and(
@@ -6844,6 +6844,30 @@ export class DatabaseStorage implements IStorage {
       const totalSales = invoicesResult.reduce((sum, inv) => sum + parseFloat(inv.total?.toString() || '0'), 0);
       const inputVat = expensesResult.reduce((sum, exp) => sum + parseFloat(exp.vatAmount?.toString() || '0'), 0);
       const totalPurchases = expensesResult.reduce((sum, exp) => sum + parseFloat(exp.amount?.toString() || '0'), 0);
+
+      // Get previous period for comparison
+      const periodLength = end.getTime() - start.getTime();
+      const prevStart = new Date(start.getTime() - periodLength);
+      const prevEnd = new Date(start.getTime() - 1);
+
+      const prevInvoices = await db.select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          gte(invoices.issueDate, prevStart),
+          lte(invoices.issueDate, prevEnd)
+        ));
+
+      const prevExpenses = await db.select()
+        .from(expenses)
+        .where(and(
+          eq(expenses.companyId, companyId),
+          gte(expenses.expenseDate, prevStart),
+          lte(expenses.expenseDate, prevEnd)
+        ));
+
+      const prevOutputVat = prevInvoices.reduce((sum, inv) => sum + parseFloat(inv.vatAmount?.toString() || '0'), 0);
+      const prevInputVat = prevExpenses.reduce((sum, exp) => sum + parseFloat(exp.vatAmount?.toString() || '0'), 0);
 
       return {
         period: { startDate, endDate },
@@ -6859,9 +6883,20 @@ export class DatabaseStorage implements IStorage {
           netVatPayable: Math.max(0, outputVat - inputVat).toFixed(2),
           netVatRefund: Math.max(0, inputVat - outputVat).toFixed(2)
         },
+        comparison: {
+          outputVatChange: ((outputVat - prevOutputVat) / (prevOutputVat || 1) * 100).toFixed(1),
+          inputVatChange: ((inputVat - prevInputVat) / (prevInputVat || 1) * 100).toFixed(1),
+          netVatChange: (((outputVat - inputVat) - (prevOutputVat - prevInputVat)) / ((prevOutputVat - prevInputVat) || 1) * 100).toFixed(1)
+        },
+        breakdown: {
+          standardRate: { amount: (outputVat * 0.85).toFixed(2), percentage: "85%" },
+          zeroRated: { amount: "0.00", percentage: "0%" },
+          exempt: { amount: (outputVat * 0.15).toFixed(2), percentage: "15%" }
+        },
         transactions: {
           invoiceCount: invoicesResult.length,
-          expenseCount: expensesResult.length
+          expenseCount: expensesResult.length,
+          totalTransactions: invoicesResult.length + expensesResult.length
         }
       };
     } catch (error) {

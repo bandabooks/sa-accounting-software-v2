@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye, Settings } from 'lucide-react';
+import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye, Settings, Receipt, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -200,23 +200,42 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
     {
       id: 'summary',
       name: 'VAT Summary Report',
-      description: 'Overview of VAT collections and payments',
+      description: 'Business overview with graphs and comparisons',
       icon: BarChart3,
-      color: 'bg-blue-50 border-blue-200 text-blue-800'
+      color: 'bg-blue-50 border-blue-200 text-blue-800',
+      category: 'Business Summary'
+    },
+    {
+      id: 'sars-vat201',
+      name: 'SARS VAT Report (VAT201)',
+      description: 'SARS-compliant VAT201 layout with blocks A-Z',
+      icon: FileText,
+      color: 'bg-red-50 border-red-200 text-red-800',
+      category: 'SARS-Aligned'
     },
     {
       id: 'transactions',
-      name: 'VAT Transaction Analysis',
-      description: 'Detailed breakdown of all VAT transactions',
-      icon: FileText,
-      color: 'bg-green-50 border-green-200 text-green-800'
+      name: 'VAT Transaction Report',
+      description: 'All VAT entries with document details and filters',
+      icon: Receipt,
+      color: 'bg-green-50 border-green-200 text-green-800',
+      category: 'SARS-Aligned'
     },
     {
       id: 'reconciliation',
       name: 'VAT Reconciliation Report',
-      description: 'Reconcile VAT records with SARS submissions',
+      description: 'Compare transactions with VAT block totals',
       icon: TrendingUp,
-      color: 'bg-purple-50 border-purple-200 text-purple-800'
+      color: 'bg-purple-50 border-purple-200 text-purple-800',
+      category: 'SARS-Aligned'
+    },
+    {
+      id: 'audit-trail',
+      name: 'VAT Audit Trail',
+      description: 'Complete source report for audit reviews',
+      icon: Shield,
+      color: 'bg-orange-50 border-orange-200 text-orange-800',
+      category: 'SARS-Aligned'
     }
   ];
 

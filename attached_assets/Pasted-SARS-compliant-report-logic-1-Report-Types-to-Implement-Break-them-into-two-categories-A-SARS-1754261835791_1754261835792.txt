@@ -1,0 +1,94 @@
+SARS-compliant report logic:
+✅ 1. Report Types to Implement
+Break them into two categories:
+
+A. SARS-Aligned Reports (Detailed submission-ready)
+These follow the structure required by SARS for VAT201 or audit reviews.
+
+SARS VAT Report (VAT201 View):
+
+Output must include blocks A–Z
+
+Fields: Output VAT, Input VAT, Adjustments, Imports/Exports, Fuel levy if applicable
+
+Show submission period, entity name, VAT number, payment due date
+
+Option to export PDF & XML (for manual SARS eFiling or archive)
+
+Optional: Include “Reason for Adjustment” section if applicable.
+
+VAT Reconciliation Report:
+
+Cross-match source documents (invoices, purchases) with submitted blocks
+
+Clearly indicate any unmatched or excluded items
+
+Use highlighting or color indicators (✓ = matched, ! = mismatch)
+
+VAT Audit Trail / Source Report:
+
+All VAT entries: Invoice number, Customer/Vendor, Date, Amount, VAT code, VAT amount
+
+Filters by:
+
+Date range
+
+VAT code
+
+Document type (invoice, credit note, purchase, etc.)
+
+Export: Excel, CSV, PDF
+
+B. Business Summary Reports (QuickBooks-style)
+For management view and financial clarity.
+
+VAT Summary Report:
+
+Shows Input vs Output VAT totals
+
+Net VAT Payable/Refundable
+
+Comparison graph: current period vs previous period
+
+Breakdown by VAT codes (e.g., Standard, Zero-rated, Exempt)
+
+Export: PDF, Excel
+
+VAT Transaction Analysis Report:
+
+Grouped by document type:
+
+Sales Invoices
+
+Credit Notes
+
+Purchases
+
+Expenses
+
+Totals per type, plus drill-down capabilities
+
+VAT Variance Report (Optional but powerful):
+
+Compare expected VAT from turnover vs actual
+
+Helps detect anomalies or missed transactions
+
+✅ 2. VAT Period Handling
+Based on your current implementation:
+
+Fetch period config from VAT Settings
+
+Dynamically map to:
+
+js
+Copy
+Edit
+const startDate = VAT_PERIODS[selectedPeriod].start;
+const endDate = VAT_PERIODS[selectedPeriod].end;
+Always validate:
+
+Selected period must not be in the future
+
+If current month is incomplete (e.g., August on 3rd), allow only up to July–August
+

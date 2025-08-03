@@ -1,0 +1,65 @@
+// Sample: VAT Summary PDF Layout using pdfmake
+const generateVATSummaryPDF = (vatData) => {
+  return {
+    content: [
+      {
+        text: 'VAT Summary',
+        style: 'header',
+        alignment: 'left',
+      },
+      {
+        columns: [
+          { text: `Print Out Date: ${vatData.printDate}`, style: 'info' },
+          { text: vatData.companyName, alignment: 'right', style: 'info' },
+        ]
+      },
+      {
+        columns: [
+          { text: `Fiscal Year: ${vatData.fiscalYear}`, style: 'info' },
+          { text: `Period: ${vatData.period}`, alignment: 'right', style: 'info' },
+        ]
+      },
+      {
+        text: `Type: VAT Summary`,
+        margin: [0, 5],
+        style: 'subheader'
+      },
+      {
+        table: {
+          widths: ['*', 'auto'],
+          body: [
+            ['Name', 'Total'],
+            ['S Standard Sales (Excl. VAT)', vatData.sales.standard],
+            ['C Capital Sales (Excl. VAT)', vatData.sales.capital],
+            [{ text: 'BLOCK 1A STANDARD RATE (Capital Goods/Services)', bold: true }, ''],
+            ['Block 1A', vatData.blocks['1A']],
+            ['Block 2 Zero Rated (Exported)', vatData.blocks['2']],
+            ['Block 3 Exempt / Non-supplies', vatData.blocks['3']],
+            ['Block 4 VAT on Standard Sales', vatData.blocks['4']],
+            ['Block 10 Export/Use Change', vatData.blocks['10']],
+            ['Block 11 VAT on Export/Change of Goods', vatData.blocks['11']],
+            ['Block 12 Other Adjustments', vatData.blocks['12']],
+            [{ text: 'BLOCK 13: TOTAL OUTPUT VAT', bold: true }, vatData.blocks['13']],
+            ['Block 14 VAT on Capital Goods', vatData.blocks['14']],
+            ['Block 15 VAT on Other Goods/Services', vatData.blocks['15']],
+            ['Block 16 Change in Use', vatData.blocks['16']],
+            ['Block 17 Bad Debts', vatData.blocks['17']],
+            ['Block 18 Other Input Adjustments', vatData.blocks['18']],
+            [{ text: 'BLOCK 19: TOTAL INPUT VAT', bold: true }, vatData.blocks['19']],
+            [{ text: 'BLOCK 20: VAT PAYABLE', bold: true }, { text: vatData.blocks['20'], bold: true, color: 'red' }]
+          ]
+        },
+        layout: 'lightHorizontalLines',
+        margin: [0, 10]
+      }
+    ],
+    styles: {
+      header: { fontSize: 16, bold: true },
+      subheader: { fontSize: 13, bold: true },
+      info: { fontSize: 10, margin: [0, 2] }
+    },
+    defaultStyle: {
+      fontSize: 9
+    }
+  };
+};
