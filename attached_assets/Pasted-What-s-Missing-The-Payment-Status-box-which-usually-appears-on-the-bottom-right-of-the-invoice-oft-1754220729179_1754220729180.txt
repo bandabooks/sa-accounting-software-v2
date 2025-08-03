@@ -1,0 +1,70 @@
+What’s Missing
+The Payment Status box (which usually appears on the bottom right of the invoice, often in a bordered or colored container).
+
+This section includes:
+
+Current status (e.g., “Draft”, “Sent”, “Paid”)
+
+Invoice Total
+
+Outstanding Balance
+
+Sometimes extra labels like “No payments received”
+
+Direct Fix for Payment Status Section (jsPDF)
+1. Open your client/src/components/invoice/pdf-generator.tsx.
+
+2. Find the section of the code where the invoice summary, total, and payment details are drawn.
+
+3. Add this block to render the Payment Status box—directly below the total, aligned right, just as in your React preview:
+
+javascript
+Copy
+Edit
+// Example starting Y position for Payment Status, adjust as needed
+const paymentStatusY = totalSectionY + 20;
+
+// Draw payment status box
+pdf.setDrawColor(220, 53, 69); // Bootstrap 'danger' red border (optional, adjust for your design)
+pdf.setLineWidth(0.7);
+pdf.rect(380, paymentStatusY, 160, 45); // x, y, width, height
+
+// Title
+pdf.setFontSize(11);
+pdf.setTextColor(220, 53, 69); // Red
+pdf.text('Payment Status', 390, paymentStatusY + 10);
+
+// Status (e.g., Draft, Sent, Paid)
+pdf.setFontSize(9);
+pdf.setTextColor(0, 0, 0);
+pdf.text(`Status: ${invoice.status}`, 390, paymentStatusY + 20);
+
+// Payments received
+pdf.setFontSize(9);
+pdf.setTextColor(120, 120, 120);
+pdf.text('No payments received', 390, paymentStatusY + 27); // Adjust or use actual status
+
+// Invoice total
+pdf.setFontSize(10);
+pdf.setTextColor(0, 0, 0);
+pdf.text('Invoice Total:', 390, paymentStatusY + 37);
+pdf.setTextColor(33, 37, 41); // Bootstrap dark
+pdf.text(`R ${invoice.total.toFixed(2)}`, 470, paymentStatusY + 37, { align: 'right' });
+
+// Outstanding Balance
+pdf.setFontSize(10);
+pdf.setTextColor(220, 53, 69); // Red
+pdf.text('Outstanding Balance:', 390, paymentStatusY + 45);
+pdf.text(`R ${invoice.outstanding.toFixed(2)}`, 540, paymentStatusY + 45, { align: 'right' });
+Note:
+
+Adjust coordinates and sizing (rect, text positions) to match your exact layout.
+
+Use your actual variable names for invoice.status, invoice.total, invoice.outstanding.
+
+Key Point for Developer/AI Prompt
+Prompt:
+
+Add the "Payment Status" box to the invoice PDF using jsPDF so it appears on the bottom right, below the totals section, styled and positioned exactly as it is in the React invoice preview. The box must include the invoice status, payments received (if any), invoice total, and outstanding balance, with labels and colors matching the on-screen layout.
+
+Once this section is added, your PDF will be 100% identical to your React invoice.

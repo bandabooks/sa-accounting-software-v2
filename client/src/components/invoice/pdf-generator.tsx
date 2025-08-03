@@ -217,8 +217,52 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setTextColor(29, 78, 216); // Blue-700 for total amount
     pdf.text(formatCurrency(invoice.total || 0), pageWidth - 25, summaryY + 16);
 
+    // EXACT MATCH - Payment Status Box (matching PaymentStatusSummary component)
+    const paymentStatusY = summaryY + 25;
+    const paymentStatusX = summaryX - 10; // Align with summary section
+    const paymentStatusWidth = 75;
+    const paymentStatusHeight = 35;
+    
+    // Payment Status Card background and border
+    pdf.setFillColor(255, 255, 255); // White background
+    pdf.setDrawColor(229, 231, 235); // Gray-200 border
+    pdf.setLineWidth(0.5);
+    pdf.rect(paymentStatusX, paymentStatusY, paymentStatusWidth, paymentStatusHeight, 'FD');
+    
+    // Payment Status Header with AlertCircle icon
+    pdf.setFontSize(9);
+    pdf.setTextColor(220, 38, 38); // Red-600 for AlertCircle
+    pdf.text("○", paymentStatusX + 3, paymentStatusY + 7); // Circle representing AlertCircle icon
+    
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Payment Status", paymentStatusX + 8, paymentStatusY + 7);
+    
+    // Status badge and message
+    pdf.setFontSize(7);
+    pdf.setTextColor(107, 114, 128); // Gray-500
+    const statusMessage = invoice.status === 'paid' ? 'Invoice is fully paid' : 
+                         invoice.status === 'sent' ? 'Invoice is sent' : 'No payments received';
+    pdf.text(`${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}    ${statusMessage}`, paymentStatusX + 3, paymentStatusY + 12);
+    
+    // Payment breakdown background (matching bg-gray-50)
+    pdf.setFillColor(249, 250, 251); // Gray-50
+    pdf.rect(paymentStatusX + 2, paymentStatusY + 15, paymentStatusWidth - 4, 17, 'F');
+    
+    // Invoice Total
+    pdf.setFontSize(7);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Invoice Total:", paymentStatusX + 4, paymentStatusY + 20);
+    pdf.text(formatCurrency(invoice.total || 0), paymentStatusX + paymentStatusWidth - 5, paymentStatusY + 20);
+    
+    // Outstanding Balance (assuming no payments for now)
+    const totalAmount = parseFloat(invoice.total || '0');
+    pdf.text("Outstanding Balance:", paymentStatusX + 4, paymentStatusY + 28);
+    pdf.setTextColor(185, 28, 28); // Red-700 for outstanding amount
+    pdf.setFontSize(8);
+    pdf.text(formatCurrency(totalAmount.toFixed(2)), paymentStatusX + paymentStatusWidth - 5, paymentStatusY + 28);
+
     // EXACT MATCH - Payment Instructions Section (bg-gray-100 rounded-lg)
-    const paymentY = summaryY + 30;
+    const paymentY = paymentStatusY + paymentStatusHeight + 10;
     pdf.setFillColor(243, 244, 246); // Gray-100 background
     pdf.rect(20, paymentY, pageWidth - 40, 20, 'F');
     
