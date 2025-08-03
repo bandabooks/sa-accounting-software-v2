@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import { InvoiceWithCustomer } from "@shared/schema";
 
 // Helper functions
@@ -14,192 +15,232 @@ const formatDate = (dateStr: string | Date) => {
   return new Date(dateStr).toLocaleDateString('en-ZA');
 };
 
+interface PDFGeneratorProps {
+  invoice: InvoiceWithCustomer;
+  onGenerate: (pdf: jsPDF) => void;
+}
+
 export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF> {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log('Starting PDF generation for invoice:', invoice.invoiceNumber);
-      console.log('Invoice data:', JSON.stringify(invoice, null, 2));
-      
-      const pdf = new jsPDF();
-      console.log('PDF instance created successfully');
-      
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      console.log('Page dimensions retrieved:', pageWidth);
-      
-      // Header Section
-      pdf.setFillColor(59, 130, 246);
-      pdf.rect(20, 15, 12, 12, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(10);
-      pdf.text("C", 24.5, 23);
-      
-      pdf.setFontSize(18);
-      pdf.setTextColor(59, 130, 246);
-      pdf.text("Think Mybiz Accounting", 38, 22);
-      
-      pdf.setFontSize(9);
-      pdf.setTextColor(107, 114, 128);
-      pdf.text("Professional Invoice Management", 38, 28);
-      
-      // Company details
-      pdf.setFontSize(8);
-      pdf.setTextColor(75, 85, 99);
-      pdf.text("info@thinkmybiz.com | +27 12 345 6789", 20, 35);
-      pdf.text("PO Box 1234, Midrand, 1685", 20, 39);
-      pdf.text("VAT #: 4455667788 | Reg: 2019/123456/07", 20, 43);
+  return new Promise((resolve) => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
 
-      // Invoice title
-      pdf.setFontSize(22);
-      pdf.setTextColor(55, 65, 81);
-      pdf.text("TAX INVOICE", pageWidth - 85, 23);
-      
-      // Invoice details
-      pdf.setFontSize(9);
-      pdf.setTextColor(75, 85, 99);
-      const rightColumnX = pageWidth - 85;
-      pdf.text(`Invoice #: ${invoice.invoiceNumber || 'N/A'}`, rightColumnX, 33);
-      
-      const issueDate = invoice.createdAt || invoice.issueDate;
-      pdf.text(`Date: ${issueDate ? formatDate(issueDate) : 'N/A'}`, rightColumnX, 37);
-      
-      const dueDate = invoice.dueDate;
-      pdf.text(`Due: ${dueDate ? formatDate(dueDate) : 'N/A'}`, rightColumnX, 41);
-      
-      const status = (invoice.status || 'DRAFT').toUpperCase();
-      pdf.setTextColor(59, 130, 246);
-      pdf.text(`Status: ${status}`, rightColumnX, 45);
+    // Professional Header Section with Company Branding
+    pdf.setFillColor(59, 130, 246); // Blue background for logo area
+    pdf.rect(20, 15, 12, 12, 'F');
+    
+    // Company Logo Placeholder (Building icon equivalent)
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.text("⬛", 22, 24);
+    
+    // Company Name and Info
+    pdf.setFontSize(18);
+    pdf.setTextColor(37, 99, 235); // Blue-700
+    pdf.text("Think Mybiz Accounting", 35, 22);
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(107, 114, 128); // Gray-500
+    pdf.text("Professional Invoice Management", 35, 27);
+    
+    // Company Contact Details
+    pdf.setFontSize(8);
+    pdf.setTextColor(75, 85, 99); // Gray-600
+    pdf.text("info@thinkmybiz.com | +27 12 345 6789", 20, 35);
+    pdf.text("PO Box 1234, Midrand, 1685", 20, 39);
+    pdf.text("VAT #: 4455667788 | Reg: 2019/123456/07", 20, 43);
 
-      // Bill To section
-      pdf.setFontSize(11);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text("Bill To:", 20, 60);
-      pdf.text("From:", pageWidth/2 + 10, 60);
-      
-      pdf.setFontSize(9);
-      let billToY = 70;
-      const customerName = invoice.customer?.name || 'No Customer';
-      pdf.text(customerName.toUpperCase(), 20, billToY);
-      
-      if (invoice.customer?.email) {
-        billToY += 6;
-        pdf.text(invoice.customer.email, 20, billToY);
-      }
+    // TAX INVOICE Title (Right Side)
+    pdf.setFontSize(24);
+    pdf.setTextColor(55, 65, 81); // Gray-700
+    pdf.text("TAX INVOICE", pageWidth - 75, 25);
+    
+    // Invoice Details (Right Side)
+    pdf.setFontSize(9);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text(`Invoice #: ${invoice.invoiceNumber}`, pageWidth - 75, 35);
+    pdf.text(`Date: ${formatDate(invoice.createdAt || invoice.issueDate)}`, pageWidth - 75, 40);
+    pdf.text(`Due: ${formatDate(invoice.dueDate)}`, pageWidth - 75, 45);
+    
+    // Status with color
+    let statusColor = [107, 114, 128]; // Default gray
+    const status = invoice.status.toUpperCase();
+    if (status === 'PAID') statusColor = [34, 197, 94]; // Green
+    else if (status === 'SENT') statusColor = [59, 130, 246]; // Blue
+    else if (status === 'OVERDUE') statusColor = [239, 68, 68]; // Red
+    
+    pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+    pdf.text(`Status: ${status}`, pageWidth - 75, 50);
 
-      // From section
-      const fromX = pageWidth/2 + 10;
-      let fromY = 70;
-      pdf.text("Think Mybiz Accounting", fromX, fromY);
-      fromY += 6;
-      pdf.text("info@thinkmybiz.com", fromX, fromY);
-      fromY += 6;
-      pdf.text("+27 12 345 6789", fromX, fromY);
-
-      // Items table
-      const tableStartY = 115;
-      pdf.setFillColor(59, 130, 246);
-      pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F');
-      
-      pdf.setFontSize(9);
-      pdf.setTextColor(255, 255, 255);
-      const headerY = tableStartY + 6;
-      pdf.text("#", 25, headerY);
-      pdf.text("Description", 40, headerY);
-      pdf.text("Qty", 120, headerY);
-      pdf.text("Unit Price", 135, headerY);
-      pdf.text("Total", pageWidth - 30, headerY);
-
-      // Items
-      pdf.setTextColor(0, 0, 0);
-      let currentY = tableStartY + 18;
-      
-      // Access items through type assertion since TypeScript doesn't recognize the items property
-      const items = (invoice as any).items || [];
-      console.log('Processing items:', items);
-      
-      items.forEach((item: any, index: number) => {
-        pdf.text((index + 1).toString(), 25, currentY);
-        pdf.text(item.description || item.name || "Item", 40, currentY);
-        pdf.text((item.quantity || 1).toString(), 120, currentY);
-        pdf.text(formatCurrency(item.unitPrice || 0), 135, currentY);
-        pdf.text(formatCurrency(item.total || 0), pageWidth - 30, currentY);
-        currentY += 12;
-      });
-
-      // Totals
-      const totalsStartY = currentY + 12;
-      pdf.setFontSize(10);
-      pdf.text("Subtotal:", pageWidth - 80, totalsStartY);
-      pdf.text(formatCurrency(invoice.subtotal || 0), pageWidth - 30, totalsStartY);
-      
-      pdf.text("VAT (15%):", pageWidth - 80, totalsStartY + 10);
-      pdf.text(formatCurrency(invoice.vatAmount || 0), pageWidth - 30, totalsStartY + 10);
-      
-      pdf.setFontSize(12);
-      pdf.setTextColor(59, 130, 246);
-      pdf.text("TOTAL:", pageWidth - 80, totalsStartY + 22);
-      pdf.text(formatCurrency(invoice.total || 0), pageWidth - 30, totalsStartY + 22);
-
-      // Payment section
-      const paymentY = totalsStartY + 40;
-      pdf.setFillColor(248, 250, 252);
-      pdf.rect(20, paymentY, pageWidth - 40, 24, 'F');
-      
-      pdf.setFontSize(11);
-      pdf.setTextColor(239, 68, 68);
-      pdf.text("●", 25, paymentY + 8);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text("Payment Status", 32, paymentY + 8);
-      
-      pdf.setFontSize(9);
-      pdf.setTextColor(75, 85, 99);
-      pdf.text("Outstanding", 25, paymentY + 15);
-      pdf.text(formatCurrency(invoice.total || 0), pageWidth - 50, paymentY + 21);
-
-      // Bank details
-      const bankDetailsY = paymentY + 30;
-      pdf.setFillColor(243, 244, 246);
-      pdf.rect(20, bankDetailsY, pageWidth - 40, 18, 'F');
-      
-      pdf.setFontSize(10);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text("Payment Details:", 25, bankDetailsY + 8);
-      
-      pdf.setFontSize(8);
-      pdf.setTextColor(75, 85, 99);
-      pdf.text("Bank: ABSA Bank | Account: 123456789", 25, bankDetailsY + 14);
-      pdf.text(`Reference: ${invoice.invoiceNumber || 'INV-001'}`, 25, bankDetailsY + 18);
-
-      // Footer
-      const footerY = bankDetailsY + 35;
-      pdf.setFontSize(7);
-      pdf.setTextColor(156, 163, 175);
-      pdf.text("Thank you for your business! Contact: info@thinkmybiz.com | +27 12 345 6789", 20, footerY);
-      pdf.text("Company Reg: 2019/123456/07 | VAT: 4455667788", 20, footerY + 4);
-
-      console.log('PDF generation completed successfully');
-      resolve(pdf);
-    } catch (error: any) {
-      console.error('PDF Generation Error Details:', {
-        message: error?.message || 'Unknown error',
-        stack: error?.stack || 'No stack trace',
-        name: error?.name || 'Unknown error type',
-        fullError: error
-      });
-      reject(error);
+    // Bill To and From Section (Professional Layout)
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Bill To:", 20, 65);
+    pdf.text("From:", pageWidth/2 + 10, 65);
+    
+    // Bill To Details
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(invoice.customer.name.toUpperCase(), 20, 75);
+    pdf.text(invoice.customer.email || "N/A", 20, 82);
+    pdf.text(invoice.customer.phone || "N/A", 20, 89);
+    pdf.text(invoice.customer.address || "N/A", 20, 96);
+    
+    if (invoice.customer.vatNumber) {
+      pdf.text(`VAT #: ${invoice.customer.vatNumber}`, 20, 103);
     }
+
+    // From Details (Company)
+    pdf.text("Think Mybiz Accounting", pageWidth/2 + 10, 75);
+    pdf.text("info@thinkmybiz.com", pageWidth/2 + 10, 82);
+    pdf.text("+27 12 345 6789", pageWidth/2 + 10, 89);
+    pdf.text("PO Box 1234, Midrand, 1685", pageWidth/2 + 10, 96);
+    pdf.text("VAT #: 4455667788", pageWidth/2 + 10, 103);
+
+    // Professional Items Table with Blue Header
+    const tableStartY = 120;
+    pdf.setFillColor(59, 130, 246); // Blue header
+    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F');
+    
+    // Table Headers
+    pdf.setFontSize(9);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("#", 25, tableStartY + 6);
+    pdf.text("Description", 35, tableStartY + 6);
+    pdf.text("Qty", 120, tableStartY + 6);
+    pdf.text("Unit Price", 140, tableStartY + 6);
+    pdf.text("VAT Rate", 165, tableStartY + 6);
+    pdf.text("Line VAT", 185, tableStartY + 6);
+    pdf.text("Total", pageWidth - 25, tableStartY + 6);
+
+    // Table Items
+    pdf.setTextColor(0, 0, 0);
+    let currentY = tableStartY + 18;
+    let lineNumber = 1;
+    
+    const items = (invoice as any).items || [];
+    items.forEach((item: any) => {
+      // Alternate row backgrounds for better readability
+      if (lineNumber % 2 === 0) {
+        pdf.setFillColor(249, 250, 251); // Light gray
+        pdf.rect(20, currentY - 4, pageWidth - 40, 8, 'F');
+      }
+      
+      pdf.setFontSize(9);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(lineNumber.toString(), 25, currentY);
+      
+      // Truncate description if too long
+      let description = item.description || item.name || "N/A";
+      if (description.length > 25) {
+        description = description.substring(0, 22) + "...";
+      }
+      pdf.text(description, 35, currentY);
+      
+      pdf.text((item.quantity || 1).toString(), 120, currentY);
+      pdf.text(formatCurrency(item.unitPrice || 0), 140, currentY);
+      pdf.text(`${item.vatRate || 15}%`, 165, currentY);
+      pdf.text(formatCurrency(item.vatAmount || 0), 185, currentY);
+      pdf.text(formatCurrency(item.total || 0), pageWidth - 25, currentY);
+      
+      currentY += 12;
+      lineNumber++;
+    });
+
+    // Professional Totals Section
+    const totalsStartY = currentY + 10;
+    
+    // Subtotal
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Subtotal:", pageWidth - 80, totalsStartY);
+    pdf.text(formatCurrency(invoice.subtotal || 0), pageWidth - 25, totalsStartY);
+    
+    // VAT
+    pdf.text("VAT (15%):", pageWidth - 80, totalsStartY + 8);
+    pdf.text(formatCurrency(invoice.vatAmount || 0), pageWidth - 25, totalsStartY + 8);
+    
+    // Total with emphasis
+    pdf.setFillColor(59, 130, 246);
+    pdf.rect(pageWidth - 85, totalsStartY + 15, 65, 10, 'F');
+    pdf.setFontSize(12);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("TOTAL:", pageWidth - 80, totalsStartY + 21);
+    pdf.text(formatCurrency(invoice.total || 0), pageWidth - 25, totalsStartY + 21);
+
+    // Payment Status Section
+    const paymentY = totalsStartY + 35;
+    pdf.setFillColor(248, 250, 252); // Light blue background
+    pdf.rect(20, paymentY, pageWidth - 40, 25, 'F');
+    
+    pdf.setFontSize(11);
+    pdf.setTextColor(185, 28, 28); // Red color for status icon
+    pdf.text("○ Payment Status", 25, paymentY + 8);
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text(`${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}    No payments received`, 30, paymentY + 15);
+    
+    pdf.text(`Invoice Total:`, 30, paymentY + 20);
+    pdf.text(formatCurrency(invoice.total || 0), 80, paymentY + 20);
+    
+    pdf.setTextColor(185, 28, 28);
+    pdf.text(`Outstanding Balance:`, 120, paymentY + 20);
+    pdf.text(formatCurrency(invoice.total || 0), 180, paymentY + 20);
+
+    // Payment Details Section
+    const bankDetailsY = paymentY + 35;
+    pdf.setFillColor(243, 244, 246); // Gray background
+    pdf.rect(20, bankDetailsY, pageWidth - 40, 20, 'F');
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("Payment Details:", 25, bankDetailsY + 8);
+    
+    pdf.setFontSize(8);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text("Bank: ABSA Bank | Account: 123456789 | Branch: 632005", 25, bankDetailsY + 13);
+    pdf.text(`Reference: ${invoice.invoiceNumber}`, 25, bankDetailsY + 17);
+    pdf.text("Please use the invoice number as your payment reference for quick allocation.", 25, bankDetailsY + 21);
+
+    // Notes Section (if present)
+    let notesY = bankDetailsY + 30;
+    if (invoice.notes) {
+      pdf.setFillColor(254, 243, 199); // Amber background
+      pdf.rect(20, notesY, pageWidth - 40, 15, 'F');
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Additional Notes:", 25, notesY + 8);
+      
+      pdf.setFontSize(8);
+      pdf.setTextColor(75, 85, 99);
+      pdf.text(invoice.notes, 25, notesY + 13);
+      notesY += 20;
+    }
+
+    // Professional Footer
+    const footerY = Math.max(notesY + 10, pageHeight - 25);
+    pdf.setFontSize(7);
+    pdf.setTextColor(156, 163, 175); // Gray-400
+    pdf.text("Thank you for your business! For queries, contact info@thinkmybiz.com or call +27 12 345 6789.", 20, footerY);
+    pdf.text("Company Reg: 2019/123456/07 | VAT: 4455667788 | Tax Clearance: Valid", 20, footerY + 4);
+    pdf.text("This is a computer-generated document. No signature required.", 20, footerY + 8);
+
+    resolve(pdf);
   });
 }
 
-export const PDFGenerator = ({ invoice, onGenerate }: { invoice: InvoiceWithCustomer; onGenerate: (pdf: jsPDF) => void }) => {
-  const handleGenerate = async () => {
+export default function PDFGenerator({ invoice, onGenerate }: PDFGeneratorProps) {
+  const handleGeneratePDF = async () => {
     try {
       const pdf = await generateInvoicePDF(invoice);
       onGenerate(pdf);
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
+      console.error("Error generating PDF:", error);
     }
   };
 
-  return null;
-};
+  return { generatePDF: handleGeneratePDF };
+}
