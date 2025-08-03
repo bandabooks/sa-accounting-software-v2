@@ -129,20 +129,20 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     // EXACTLY MATCH REACT TABLE - Items Table with blue-700 header  
     const tableStartY = 90;
     
-    // Table header background - matching bg-blue-700
+    // Table header background - matching bg-blue-700 aligned with payment box width
     pdf.setFillColor(29, 78, 216); // Blue-700 exactly
-    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F'); // Increased height for better spacing
+    pdf.rect(20, tableStartY, 165, 10, 'F'); // Width aligned with payment status box
     
-    // Table headers optimized for A4 page width (210mm = ~595pts, working width ~170mm = ~480pts)
+    // Table headers aligned with payment status box width
     pdf.setFontSize(8);
     pdf.setTextColor(255, 255, 255); // White text
     pdf.text("#", 25, tableStartY + 6);
     pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 88, tableStartY + 6); // Compact spacing
-    pdf.text("Unit Price", 108, tableStartY + 6); // Tighter fit
-    pdf.text("VAT Rate", 135, tableStartY + 6); // Reduced spacing
-    pdf.text("Line VAT", 155, tableStartY + 6); // Compact
-    pdf.text("Total", 175, tableStartY + 6); // Well within A4 bounds
+    pdf.text("Qty", 78, tableStartY + 6); // Tighter spacing
+    pdf.text("Unit Price", 98, tableStartY + 6); // Compact fit
+    pdf.text("VAT Rate", 125, tableStartY + 6); // Aligned spacing
+    pdf.text("Line VAT", 145, tableStartY + 6); // Proper fit
+    pdf.text("Total", 165, tableStartY + 6); // Aligned with payment box edge
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
@@ -156,9 +156,9 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
         pdf.rect(20, currentY - 4, pageWidth - 40, 12, 'F'); // Better height
       }
       
-      // Row border bottom (matching border-b border-gray-100)
+      // Row border bottom (matching border-b border-gray-100) aligned with table width
       pdf.setDrawColor(243, 244, 246); // Gray-100
-      pdf.line(20, currentY + 6, pageWidth - 20, currentY + 6);
+      pdf.line(20, currentY + 6, 185, currentY + 6); // Match table width
       
       pdf.setFontSize(8);
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
@@ -175,27 +175,27 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
       // Center-aligned quantity matching header position
       const qtyText = (item.quantity?.toString() || "1");
       const qtyWidth = pdf.getTextWidth(qtyText);
-      pdf.text(qtyText, 93 - qtyWidth/2, currentY);
+      pdf.text(qtyText, 83 - qtyWidth/2, currentY);
       
       // Right-aligned unit price matching header position
       const unitPriceText = formatCurrency(item.unitPrice || 0);
       const unitPriceWidth = pdf.getTextWidth(unitPriceText);
-      pdf.text(unitPriceText, 128 - unitPriceWidth, currentY);
+      pdf.text(unitPriceText, 118 - unitPriceWidth, currentY);
       
       // Center-aligned VAT rate matching header position
       const vatRateText = `${item.vatRate || 15}%`;
       const vatRateWidth = pdf.getTextWidth(vatRateText);
-      pdf.text(vatRateText, 145 - vatRateWidth/2, currentY);
+      pdf.text(vatRateText, 135 - vatRateWidth/2, currentY);
       
       // Right-aligned line VAT matching header position
       const lineVatText = formatCurrency(item.vatAmount || 0);
       const lineVatWidth = pdf.getTextWidth(lineVatText);
-      pdf.text(lineVatText, 170 - lineVatWidth, currentY);
+      pdf.text(lineVatText, 160 - lineVatWidth, currentY);
       
       // Right-aligned total matching header position exactly
       const totalText = formatCurrency(item.total || 0);
       const totalWidth = pdf.getTextWidth(totalText);
-      pdf.text(totalText, 200 - totalWidth, currentY); // Align under "Total" header
+      pdf.text(totalText, 180 - totalWidth, currentY); // Aligned with payment box edge
       
       currentY += 12; // Better row spacing
     });
