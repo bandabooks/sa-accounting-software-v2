@@ -33,7 +33,6 @@ import { VATConditionalWrapper, VATFieldWrapper } from "@/components/vat/VATCond
 import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
 import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
 import { useVATStatus } from "@/hooks/useVATStatus";
-import { UNIFIED_VAT_TYPES, getVATTypeConfig, calculateVATAmount } from "@shared/vat-constants";
 import type { InsertInvoice, InsertInvoiceItem, Customer, Product } from "@shared/schema";
 
 interface InvoiceItem {
@@ -194,26 +193,32 @@ export default function InvoiceCreate() {
     }
   };
 
-  // Enhanced VAT calculation with type support
+  // Enhanced VAT calculation using system VAT types directly
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
-    if (item.vatTypeId && shouldShowVATFields) {
-      // Convert vatTypeId to vatType string for calculation
-      const vatType = item.vatTypeId === 1 ? "vat_exclusive" : 
-                     item.vatTypeId === 2 ? "vat_inclusive" :
-                     item.vatTypeId === 3 ? "zero_rated" :
-                     item.vatTypeId === 4 ? "exempt" : "no_vat";
-      return calculateVATAmount(lineAmount, vatType);
-    }
+    if (!shouldShowVATFields) return 0;
     
-    // Fallback to traditional calculation
-    const vatRate = parseFloat(item.vatRate || "0") / 100;
-    return item.vatInclusive ? 
-      lineAmount * (vatRate / (1 + vatRate)) : 
-      lineAmount * vatRate;
+    // Use system VAT types directly based on vatTypeId
+    // ID 1 = STD (VAT Exclusive 15%), ID 2 = INC (VAT Inclusive 15%), ID 3 = ZER (Zero-rated 0%), ID 4 = EXM (Exempt 0%)
+    switch (item.vatTypeId) {
+      case 1: // STD - VAT Exclusive (15%)
+        return Number((lineAmount * 0.15).toFixed(2));
+      case 2: // INC - VAT Inclusive (15%) 
+        return Number((lineAmount * (15 / 115)).toFixed(2));
+      case 3: // ZER - Zero-rated (0%)
+        return 0;
+      case 4: // EXM - Exempt (0%)
+        return 0;
+      default:
+        // Fallback to traditional calculation
+        const vatRate = parseFloat(item.vatRate || "0") / 100;
+        return item.vatInclusive ? 
+          lineAmount * (vatRate / (1 + vatRate)) : 
+          lineAmount * vatRate;
+    }
   };
 
   const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
