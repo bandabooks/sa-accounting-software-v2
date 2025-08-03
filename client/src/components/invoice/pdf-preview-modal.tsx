@@ -36,15 +36,25 @@ export default function PDFPreviewModal({
   const generatePreview = async () => {
     setIsGenerating(true);
     try {
+      console.log('Generating preview for invoice:', invoice);
       const pdf = await generateInvoicePDF(invoice);
+      console.log('PDF generated, creating blob...');
       const blob = pdf.output('blob');
+      console.log('Blob created, size:', blob.size);
       const url = URL.createObjectURL(blob);
+      console.log('Object URL created:', url);
       setPdfUrl(url);
-    } catch (error) {
-      console.error("Error generating PDF preview:", error);
+      console.log('PDF URL set successfully');
+    } catch (error: any) {
+      console.error("Error generating PDF preview - Full details:", {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack || 'No stack trace',
+        name: error?.name || 'Unknown error type',
+        fullError: error
+      });
       toast({
-        title: "Preview Error",
-        description: "Failed to generate PDF preview. Please try again.",
+        title: "Preview Error", 
+        description: `Failed to generate PDF: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -56,17 +66,25 @@ export default function PDFPreviewModal({
     if (!invoice) return;
     
     try {
+      console.log('Starting download for invoice:', invoice.invoiceNumber);
       const pdf = await generateInvoicePDF(invoice);
+      console.log('PDF generated for download, saving...');
       pdf.save(`invoice-${invoice.invoiceNumber}.pdf`);
+      console.log('PDF saved successfully');
       toast({
         title: "Download Complete",
         description: "Invoice PDF has been downloaded to your computer.",
       });
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
+    } catch (error: any) {
+      console.error("Error downloading PDF - Full details:", {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack || 'No stack trace',
+        name: error?.name || 'Unknown error type',
+        fullError: error
+      });
       toast({
         title: "Download Failed",
-        description: "Please try again later.",
+        description: `Error: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     }

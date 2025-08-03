@@ -18,9 +18,13 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
   return new Promise((resolve, reject) => {
     try {
       console.log('Starting PDF generation for invoice:', invoice.invoiceNumber);
+      console.log('Invoice data:', JSON.stringify(invoice, null, 2));
       
       const pdf = new jsPDF();
+      console.log('PDF instance created successfully');
+      
       const pageWidth = pdf.internal.pageSize.getWidth();
+      console.log('Page dimensions retrieved:', pageWidth);
       
       // Header Section
       pdf.setFillColor(59, 130, 246);
@@ -175,8 +179,13 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
 
       console.log('PDF generation completed successfully');
       resolve(pdf);
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
+    } catch (error: any) {
+      console.error('PDF Generation Error Details:', {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack || 'No stack trace',
+        name: error?.name || 'Unknown error type',
+        fullError: error
+      });
       reject(error);
     }
   });
