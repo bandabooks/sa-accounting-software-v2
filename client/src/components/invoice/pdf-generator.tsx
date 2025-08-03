@@ -227,10 +227,10 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     const totalWidth = pdf.getTextWidth(totalText);
     pdf.text(totalText, summaryX + summaryWidth - totalWidth, summaryY + 20);
 
-    // EXACT MATCH - Payment Status Box (matching PaymentStatusSummary component)
+    // Payment Status Box - aligned with Total column for professional layout
     const paymentStatusY = summaryY + 30; // More space after summary
-    const paymentStatusX = summaryX; // Align with summary section
-    const paymentStatusWidth = 75;
+    const paymentStatusX = pageWidth - 85; // Align with Total amount column
+    const paymentStatusWidth = 65; // Reduced width for better alignment
     const paymentStatusHeight = 35;
     
     // Payment Status Card background and border
