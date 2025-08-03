@@ -252,14 +252,20 @@ export function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<jsPDF>
     pdf.setFontSize(7);
     pdf.setTextColor(0, 0, 0);
     pdf.text("Invoice Total:", paymentStatusX + 4, paymentStatusY + 20);
-    pdf.text(formatCurrency(invoice.total || 0), paymentStatusX + paymentStatusWidth - 5, paymentStatusY + 20);
+    // Right-align the currency value
+    const invoiceTotalText = formatCurrency(invoice.total || 0);
+    const invoiceTotalWidth = pdf.getTextWidth(invoiceTotalText);
+    pdf.text(invoiceTotalText, paymentStatusX + paymentStatusWidth - 4 - invoiceTotalWidth, paymentStatusY + 20);
     
     // Outstanding Balance (assuming no payments for now)
     const totalAmount = parseFloat(invoice.total || '0');
     pdf.text("Outstanding Balance:", paymentStatusX + 4, paymentStatusY + 28);
     pdf.setTextColor(185, 28, 28); // Red-700 for outstanding amount
     pdf.setFontSize(8);
-    pdf.text(formatCurrency(totalAmount.toFixed(2)), paymentStatusX + paymentStatusWidth - 5, paymentStatusY + 28);
+    // Right-align the outstanding balance amount
+    const outstandingText = formatCurrency(totalAmount.toFixed(2));
+    const outstandingWidth = pdf.getTextWidth(outstandingText);
+    pdf.text(outstandingText, paymentStatusX + paymentStatusWidth - 4 - outstandingWidth, paymentStatusY + 28);
 
     // EXACT MATCH - Payment Instructions Section (bg-gray-100 rounded-lg)
     const paymentY = paymentStatusY + paymentStatusHeight + 10;
