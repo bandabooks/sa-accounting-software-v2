@@ -12,13 +12,12 @@ interface VATTypeSelectProps {
   companyId?: number;
 }
 
-// Default South African VAT types for fallback
+// Default South African VAT types matching original invoice system
 const DEFAULT_VAT_TYPES = [
-  { id: 1, code: "STD", name: "VAT Exclusive", rate: 15, description: "Standard VAT rate (exclusive)" },
-  { id: 2, code: "INC", name: "VAT Inclusive", rate: 15, description: "Standard VAT rate (inclusive)" },
-  { id: 3, code: "ZER", name: "Zero-rated", rate: 0, description: "Zero-rated supplies" },
-  { id: 4, code: "EXM", name: "Exempt", rate: 0, description: "VAT exempt supplies" },
-  { id: 5, code: "NOV", name: "No VAT", rate: 0, description: "No VAT applicable" }
+  { id: 1, code: "STD", name: "VAT Exclusive (15%)", rate: 15, description: "Standard VAT rate (exclusive)" },
+  { id: 2, code: "INC", name: "VAT Inclusive (15%)", rate: 15, description: "Standard VAT rate (inclusive)" },
+  { id: 3, code: "ZER", name: "Zero-rated (0%)", rate: 0, description: "Zero-rated supplies" },
+  { id: 4, code: "EXM", name: "Exempt (0%)", rate: 0, description: "VAT exempt supplies" }
 ];
 
 export const VATTypeSelect: React.FC<VATTypeSelectProps> = ({
