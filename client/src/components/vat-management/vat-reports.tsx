@@ -89,7 +89,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
         // Monthly periods
         for (let month = 1; month <= 12; month++) {
           const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-          const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+          // Get the last day of the month using more reliable method
+          const lastDayOfMonth = new Date(year, month, 0).getDate();
+          const endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDayOfMonth.toString().padStart(2, '0')}`;
           periods.push({
             label: `${monthNames[month - 1]} ${year}`,
             value: `${year}-${month}`,
@@ -106,7 +108,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           
           if (startMonth <= 12 && endMonth <= 12) {
             const startDate = `${year}-${startMonth.toString().padStart(2, '0')}-01`;
-            const endDate = new Date(year, endMonth, 0).toISOString().split('T')[0];
+            // Get the last day of the end month using more reliable method
+            const lastDayOfEndMonth = new Date(year, endMonth, 0).getDate();
+            const endDate = `${year}-${endMonth.toString().padStart(2, '0')}-${lastDayOfEndMonth.toString().padStart(2, '0')}`;
             periods.push({
               label: `${monthNames[startMonth - 1]}–${monthNames[endMonth - 1]} ${year}`,
               value: `${year}-${startMonth}-${endMonth}`,
