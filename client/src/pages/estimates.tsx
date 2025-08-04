@@ -48,10 +48,7 @@ export default function Estimates() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number; status: string; notes?: string }) => {
-      return apiRequest(`/api/estimates/${id}/status`, {
-        method: "PUT",
-        body: { status, notes }
-      });
+      return apiRequest(`/api/estimates/${id}/status`, "PUT", { status, notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
@@ -72,9 +69,7 @@ export default function Estimates() {
 
   const sendEstimateMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/estimates/${id}/send`, {
-        method: "POST"
-      });
+      return apiRequest(`/api/estimates/${id}/send`, "POST");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
@@ -93,12 +88,13 @@ export default function Estimates() {
     },
   });
 
-  const filteredEstimates = estimates?.filter(estimate => {
-    const matchesSearch = estimate.estimateNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredEstimates = estimates.filter(estimate => {
+    const matchesSearch = !searchTerm || 
+      estimate.estimateNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       estimate.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || estimate.status === statusFilter;
     return matchesSearch && matchesStatus;
-  }) || [];
+  });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -380,12 +376,12 @@ export default function Estimates() {
                               </div>
                               
                               <div>
-                                <p className="font-medium text-gray-800">{estimate.customer.name}</p>
+                                <p className="font-medium text-gray-800">{estimate.customerName}</p>
                                 <p className="text-sm text-gray-600">{formatCurrency(estimate.total || "0")}</p>
                               </div>
                               
                               <div className="flex items-center justify-between text-xs text-gray-500">
-                                <span>{formatDate(estimate.createdAt)}</span>
+                                <span>{formatDate(estimate.createdAt || estimate.issueDate)}</span>
                                 {estimate.status === 'draft' && (
                                   <Button 
                                     size="sm" 
@@ -441,8 +437,8 @@ export default function Estimates() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-800">{estimate.customer.name}</div>
-                          <div className="text-sm text-gray-600">{estimate.customer.email}</div>
+                          <div className="font-medium text-gray-800">{estimate.customerName}</div>
+                          <div className="text-sm text-gray-600">{estimate.customerEmail}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="font-bold text-lg text-gray-800">{formatCurrency(estimate.total || "0")}</div>
@@ -453,7 +449,7 @@ export default function Estimates() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-800">{formatDate(estimate.createdAt)}</div>
+                          <div className="text-sm text-gray-800">{formatDate(estimate.createdAt || estimate.issueDate)}</div>
                           <div className="text-xs text-gray-500">Created</div>
                         </td>
                         <td className="px-6 py-4 text-right">

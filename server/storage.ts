@@ -1733,10 +1733,17 @@ export class DatabaseStorage implements IStorage {
         const customer = allCustomers.find(c => c.id === estimate.customerId);
         return {
           ...estimate,
-          customerName: customer?.name || 'Unknown Customer',
-          customerEmail: customer?.email || '',
-          customerPhone: customer?.phone || '',
-          customerVatNumber: customer?.vatNumber || ''
+          customer: customer || {
+            id: 0,
+            companyId: estimate.companyId,
+            name: 'Unknown Customer',
+            email: '',
+            phone: '',
+            address: '',
+            vatNumber: '',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
         };
       });
       
