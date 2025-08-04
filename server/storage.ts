@@ -1713,24 +1713,37 @@ export class DatabaseStorage implements IStorage {
   // Estimates
   async getAllEstimates(companyId?: number): Promise<EstimateWithCustomer[]> {
     try {
-      const query = `
-        SELECT 
-          e.*,
-          c.name as customer_name,
-          c.email as customer_email,
-          c.phone as customer_phone,
-          c.address as customer_address,
-          c.city as customer_city,
-          c.postal_code as customer_postal_code,
-          c.vat_number as customer_vat_number
-        FROM estimates e
-        LEFT JOIN customers c ON e.customer_id = c.id
-        ${companyId ? `WHERE e.company_id = ${companyId}` : ''}
-        ORDER BY e.created_at DESC
-      `;
+      let query = db.select({
+        id: estimates.id,
+        companyId: estimates.companyId,
+        customerId: estimates.customerId,
+        estimateNumber: estimates.estimateNumber,
+        issueDate: estimates.issueDate,
+        expiryDate: estimates.expiryDate,
+        status: estimates.status,
+        subtotal: estimates.subtotal,
+        vatAmount: estimates.vatAmount,
+        total: estimates.total,
+        notes: estimates.notes,
+        createdAt: estimates.createdAt,
+        updatedAt: estimates.updatedAt,
+        customerName: customers.name,
+        customerEmail: customers.email,
+        customerPhone: customers.phone,
+        customerVatNumber: customers.vatNumber
+      })
+      .from(estimates)
+      .leftJoin(customers, eq(estimates.customerId, customers.id));
+
+      // Apply company filtering if provided
+      if (companyId) {
+        query = query.where(eq(estimates.companyId, companyId));
+      }
+
+      const result = await query.orderBy(desc(estimates.createdAt));
       
-      // Since there are no estimates in the database, return empty array for now
-      return [];
+      console.log(`Retrieved ${result.length} estimates for company ${companyId || 'all'}`);
+      return result as EstimateWithCustomer[];
     } catch (error) {
       console.error("Error in getAllEstimates:", error);
       throw error;
@@ -1932,28 +1945,44 @@ export class DatabaseStorage implements IStorage {
     rejected: number;
     expired: number;
   }> {
-    const allEstimates = await db
-      .select()
-      .from(estimates)
-      .where(eq(estimates.companyId, companyId));
+    try {
+      const allEstimates = await db
+        .select()
+        .from(estimates)
+        .where(eq(estimates.companyId, companyId));
 
-    const stats = {
-      total: allEstimates.length,
-      draft: 0,
-      sent: 0,
-      viewed: 0,
-      accepted: 0,
-      rejected: 0,
-      expired: 0
-    };
+      const stats = {
+        total: allEstimates.length,
+        draft: 0,
+        sent: 0,
+        viewed: 0,
+        accepted: 0,
+        rejected: 0,
+        expired: 0
+      };
 
-    allEstimates.forEach(estimate => {
-      if (estimate.status in stats) {
-        (stats as any)[estimate.status]++;
-      }
-    });
+      allEstimates.forEach(estimate => {
+        const status = estimate.status || 'draft'; // Default to draft if no status
+        if (status in stats) {
+          (stats as any)[status]++;
+        }
+      });
 
-    return stats;
+      console.log(`Estimate stats for company ${companyId}:`, stats);
+      return stats;
+    } catch (error) {
+      console.error('Error in getEstimateStats:', error);
+      // Return default stats on error
+      return {
+        total: 0,
+        draft: 0,
+        sent: 0,
+        viewed: 0,
+        accepted: 0,
+        rejected: 0,
+        expired: 0
+      };
+    }
   }
 
   // Enhanced Dashboard Stats for List Pages
