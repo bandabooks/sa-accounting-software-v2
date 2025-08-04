@@ -38,7 +38,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useSuccessModal } from "@/hooks/use-success-modal";
 import { SuccessModal } from "@/components/ui/success-modal";
 import PDFPreviewModal from "@/components/estimate/pdf-preview-modal";
-import { EstimateWithCustomer } from "@/components/estimate/pdf-generator";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function EstimateDetail() {
@@ -506,7 +505,7 @@ export default function EstimateDetail() {
       
       {estimate && (
         <PDFPreviewModal
-          estimate={estimate as EstimateWithCustomer}
+          estimate={estimate}
           isOpen={isPDFPreviewOpen}
           onClose={() => setIsPDFPreviewOpen(false)}
           onSendEmail={sendEstimate}

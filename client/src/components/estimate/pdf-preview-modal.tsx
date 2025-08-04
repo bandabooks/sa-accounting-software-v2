@@ -13,7 +13,7 @@ import { generateEstimatePDF, EstimateWithCustomer } from "./pdf-generator";
 import { Download, Mail, Loader2, Eye } from "lucide-react";
 
 interface PDFPreviewModalProps {
-  estimate: EstimateWithCustomer;
+  estimate: any; // Accept any estimate data structure like invoice system
   isOpen: boolean;
   onClose: () => void;
   onSendEmail?: () => void;
@@ -43,7 +43,36 @@ export default function PDFPreviewModal({
   const generatePreview = async () => {
     setIsGenerating(true);
     try {
-      const pdf = await generateEstimatePDF(estimate);
+      // Transform estimate data to match the PDF generator interface
+      const transformedEstimate: EstimateWithCustomer = {
+        id: estimate.id,
+        estimateNumber: estimate.estimateNumber,
+        issueDate: estimate.issueDate || estimate.createdAt,
+        expiryDate: estimate.expiryDate,
+        status: estimate.status,
+        subtotal: parseFloat(estimate.subtotal || '0'),
+        vatAmount: parseFloat(estimate.vatAmount || '0'),
+        total: parseFloat(estimate.total || '0'),
+        notes: estimate.notes,
+        terms: estimate.terms,
+        customer: {
+          id: estimate.customer?.id || 0,
+          name: estimate.customer?.name || 'Unknown Customer',
+          email: estimate.customer?.email,
+          phone: estimate.customer?.phone,
+          address: estimate.customer?.address,
+        },
+        items: estimate.items?.map((item: any) => ({
+          id: item.id,
+          description: item.description || 'No description',
+          quantity: parseFloat(item.quantity || '1'),
+          unitPrice: parseFloat(item.unitPrice || '0'),
+          vatType: item.vatType || 'standard',
+          lineTotal: parseFloat(item.lineTotal || '0'),
+        })) || []
+      };
+
+      const pdf = await generateEstimatePDF(transformedEstimate);
       const blob = pdf.output('blob');
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
@@ -61,13 +90,43 @@ export default function PDFPreviewModal({
 
   const handleDownload = async () => {
     try {
-      const pdf = await generateEstimatePDF(estimate);
+      // Transform estimate data to match the PDF generator interface
+      const transformedEstimate: EstimateWithCustomer = {
+        id: estimate.id,
+        estimateNumber: estimate.estimateNumber,
+        issueDate: estimate.issueDate || estimate.createdAt,
+        expiryDate: estimate.expiryDate,
+        status: estimate.status,
+        subtotal: parseFloat(estimate.subtotal || '0'),
+        vatAmount: parseFloat(estimate.vatAmount || '0'),
+        total: parseFloat(estimate.total || '0'),
+        notes: estimate.notes,
+        terms: estimate.terms,
+        customer: {
+          id: estimate.customer?.id || 0,
+          name: estimate.customer?.name || 'Unknown Customer',
+          email: estimate.customer?.email,
+          phone: estimate.customer?.phone,
+          address: estimate.customer?.address,
+        },
+        items: estimate.items?.map((item: any) => ({
+          id: item.id,
+          description: item.description || 'No description',
+          quantity: parseFloat(item.quantity || '1'),
+          unitPrice: parseFloat(item.unitPrice || '0'),
+          vatType: item.vatType || 'standard',
+          lineTotal: parseFloat(item.lineTotal || '0'),
+        })) || []
+      };
+
+      const pdf = await generateEstimatePDF(transformedEstimate);
       pdf.save(`estimate-${estimate.estimateNumber}.pdf`);
       toast({
         title: "Download Started",
         description: `Estimate ${estimate.estimateNumber} is being downloaded.`,
       });
     } catch (error) {
+      console.error("Error downloading PDF:", error);
       toast({
         title: "Download Error", 
         description: "Failed to download PDF. Please try again.",
@@ -91,9 +150,11 @@ export default function PDFPreviewModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Eye className="h-5 w-5 text-emerald-600" />
-            <span>Estimate Preview - {estimate.estimateNumber}</span>
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Eye className="h-5 w-5 text-emerald-600" />
+              <span>Estimate Preview - {estimate?.estimateNumber}</span>
+            </div>
           </DialogTitle>
           <DialogDescription>
             Professional PDF preview of your estimate document
