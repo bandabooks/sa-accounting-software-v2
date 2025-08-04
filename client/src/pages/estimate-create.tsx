@@ -30,6 +30,7 @@ import { ProductServiceSelect } from "@/components/ProductServiceSelect";
 import { VATTypeSelect } from "@/components/ui/vat-type-select";
 import { VATConditionalWrapper, VATFieldWrapper } from "@/components/vat/VATConditionalWrapper";
 import { useVATStatus } from "@/hooks/useVATStatus";
+import { apiRequest } from "@/lib/queryClient";
 import type { InsertEstimate, InsertEstimateItem, Customer, Product } from "@shared/schema";
 
 interface EstimateItem {
@@ -268,13 +269,8 @@ export default function EstimateCreate() {
   // Mutations for create and update
   const createEstimate = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/estimates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create estimate");
-      return response.json();
+      const response = await apiRequest('/api/estimates', 'POST', data);
+      return response;
     },
     onSuccess: (estimate) => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
@@ -295,13 +291,8 @@ export default function EstimateCreate() {
 
   const updateEstimate = useMutation({
     mutationFn: async ({ id, data, items }: { id: number; data: any; items: any[] }) => {
-      const response = await fetch(`/api/estimates/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, items }),
-      });
-      if (!response.ok) throw new Error("Failed to update estimate");
-      return response.json();
+      const response = await apiRequest(`/api/estimates/${id}`, 'PUT', { ...data, items });
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
