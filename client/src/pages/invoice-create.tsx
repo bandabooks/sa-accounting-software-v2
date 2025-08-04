@@ -196,28 +196,52 @@ export default function InvoiceCreate() {
     }
   };
 
-  // Enhanced VAT calculation with type support
+  // Fixed VAT calculation respecting global method and line item types
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
     if (item.vatTypeId && shouldShowVATFields) {
-      // Fixed VAT type ID mapping based on actual database values
-      const vatType = item.vatTypeId === 1 ? "vat_exclusive" :  // STD_EX - VAT Exclusive (15%)
-                     item.vatTypeId === 2 ? "vat_inclusive" :   // STD - VAT Inclusive (15%) 
-                     item.vatTypeId === 3 ? "zero_rated" :      // ZER - Zero Rated (0%)
-                     item.vatTypeId === 4 ? "exempt" :          // EXE - Exempt (0%)
-                     "no_vat";                                  // OUT - No VAT (0%)
+      // Map VAT type ID to get the VAT rate and type
+      const vatTypeMapping = {
+        1: { rate: 15, type: 'standard', name: 'STD_EX - VAT Exclusive' },
+        2: { rate: 15, type: 'standard', name: 'STD - VAT Inclusive' },
+        3: { rate: 0, type: 'zero_rated', name: 'ZER - Zero Rated' },
+        4: { rate: 0, type: 'exempt', name: 'EXE - Exempt' },
+        5: { rate: 0, type: 'no_vat', name: 'OUT - No VAT' }
+      };
       
-      const calculatedVAT = calculateVATAmount(lineAmount, vatType);
-      console.log(`VAT Calculation: lineAmount=${lineAmount}, vatTypeId=${item.vatTypeId}, vatType=${vatType}, calculatedVAT=${calculatedVAT}`);
+      const vatConfig = vatTypeMapping[item.vatTypeId as keyof typeof vatTypeMapping];
+      
+      // CRITICAL: If line item is Zero-Rated, Exempt, or No VAT, return 0 regardless of global method
+      if (!vatConfig || vatConfig.rate === 0) {
+        console.log(`VAT Calculation: lineAmount=R${lineAmount}, vatTypeId=${item.vatTypeId}, ${vatConfig?.name || 'Unknown'}, VAT=R0.00 (${vatConfig?.type || 'zero rate'})`);
+        return 0;
+      }
+      
+      // For Standard rate items (15%), ALWAYS respect the global VAT calculation method
+      // This is the key fix: ignore individual VAT type (inclusive/exclusive) and use global setting
+      let calculatedVAT = 0;
+      if (formData.vatCalculationMethod === 'inclusive') {
+        // For inclusive method: VAT = lineAmount * (rate / (100 + rate))
+        // This extracts the VAT from an amount that already includes it
+        calculatedVAT = lineAmount * (vatConfig.rate / (100 + vatConfig.rate));
+      } else {
+        // For exclusive method: VAT = lineAmount * (rate / 100)
+        // This adds VAT to an amount that doesn't include it
+        calculatedVAT = lineAmount * (vatConfig.rate / 100);
+      }
+      
+      console.log(`VAT Calculation: lineAmount=R${lineAmount}, ${vatConfig.name}, global_method=${formData.vatCalculationMethod}, VAT=R${calculatedVAT.toFixed(2)}`);
       return calculatedVAT;
     }
     
-    // Fallback to traditional calculation
+    // Fallback to traditional calculation if no VAT type ID
     const vatRate = parseFloat(item.vatRate || "0") / 100;
-    return item.vatInclusive ? 
+    if (vatRate === 0) return 0; // Zero rate items always have zero VAT
+    
+    return formData.vatCalculationMethod === 'inclusive' ? 
       lineAmount * (vatRate / (1 + vatRate)) : 
       lineAmount * vatRate;
   };
@@ -234,8 +258,8 @@ export default function InvoiceCreate() {
     
     setItems(newItems);
     
-    // Recalculate totals
-    const totals = calculateInvoiceTotal(newItems);
+    // Recalculate totals using the global VAT calculation method
+    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod);
     setFormData(prev => ({
       ...prev,
       subtotal: totals.subtotal.toFixed(2),
@@ -261,8 +285,8 @@ export default function InvoiceCreate() {
     
     setItems(newItems);
     
-    // Recalculate totals
-    const totals = calculateInvoiceTotal(newItems);
+    // Recalculate totals using the global VAT calculation method
+    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod);
     setFormData(prev => ({
       ...prev,
       subtotal: totals.subtotal.toFixed(2),

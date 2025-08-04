@@ -14,13 +14,16 @@ export function calculateItemTotal(quantity: number, unitPrice: number, vatRate:
   };
 }
 
-export function calculateInvoiceTotal(items: Array<{
-  quantity: string | number;
-  unitPrice: string | number;
-  vatRate?: string | number;
-  vatTypeId?: number;
-  vatAmount?: string | number;
-}>): {
+export function calculateInvoiceTotal(
+  items: Array<{
+    quantity: string | number;
+    unitPrice: string | number;
+    vatRate?: string | number;
+    vatTypeId?: number;
+    vatAmount?: string | number;
+  }>, 
+  vatCalculationMethod: 'inclusive' | 'exclusive' = 'inclusive'
+): {
   subtotal: number;
   vatAmount: number;
   total: number;
@@ -40,57 +43,38 @@ export function calculateInvoiceTotal(items: Array<{
 
     const lineAmount = qty * price;
 
-    // Calculate VAT based on vatTypeId (if provided) or fallback to vatRate
     if (item.vatTypeId) {
-      // Use vatTypeId for precise VAT calculation following bulk capture logic
-      switch (item.vatTypeId) {
-        case 1: // VAT Exclusive (15%) - Add VAT to line amount
-          const netAmount = lineAmount;
-          const vatForLine = lineAmount * 0.15;
-          subtotal += netAmount;
-          vatAmount += vatForLine;
-          total += netAmount + vatForLine;
-          break;
-        case 2: // VAT Inclusive (15%) - Extract VAT from inclusive amount
-          // For inclusive: VAT = amount * (rate / (100 + rate))
-          // Net = amount - VAT
-          const inclusiveVAT = lineAmount * (15 / (100 + 15)); // 15/115 = 0.1304
-          const netFromInclusive = lineAmount - inclusiveVAT;
-          subtotal += netFromInclusive;
-          vatAmount += inclusiveVAT;
-          total += lineAmount; // Total stays the same as the inclusive amount
-          break;
-        case 3: // Zero-rated (0%)
-        case 4: // Exempt (0%)
-        case 5: // No VAT (0%)
-          // No VAT applied - line amount is the net amount
-          subtotal += lineAmount;
-          vatAmount += 0;
-          total += lineAmount;
-          break;
-        default:
-          // Fallback to traditional calculation
-          const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 0);
-          if (!isNaN(vatRate)) {
-            const fallbackVAT = lineAmount * (vatRate / 100);
-            subtotal += lineAmount;
-            vatAmount += fallbackVAT;
-            total += lineAmount + fallbackVAT;
-          } else {
-            subtotal += lineAmount;
-            total += lineAmount;
-          }
-      }
-    } else if (item.vatAmount) {
-      // Use pre-calculated VAT amount if available
-      const itemVatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : item.vatAmount;
-      if (!isNaN(itemVatAmount)) {
+      // Get VAT rate from VAT type ID
+      const vatRate = item.vatTypeId === 1 ? 15 :  // STD_EX - VAT Exclusive (15%)
+                     item.vatTypeId === 2 ? 15 :   // STD - VAT Inclusive (15%) 
+                     item.vatTypeId === 3 ? 0 :    // ZER - Zero Rated (0%)
+                     item.vatTypeId === 4 ? 0 :    // EXE - Exempt (0%)
+                     0;                            // OUT - No VAT (0%)
+      
+      // CRITICAL: For zero-rated items, always use 0 VAT regardless of calculation method
+      if (vatRate === 0) {
         subtotal += lineAmount;
-        vatAmount += itemVatAmount;
-        total += lineAmount + itemVatAmount;
+        vatAmount += 0; // Zero VAT for zero-rated/exempt items
+        total += lineAmount;
+      } else {
+        // Apply global VAT calculation method for standard VAT items
+        if (vatCalculationMethod === 'inclusive') {
+          // Inclusive: VAT is extracted from the line amount
+          const extractedVAT = lineAmount * (vatRate / (100 + vatRate));
+          const netAmount = lineAmount - extractedVAT;
+          subtotal += netAmount;
+          vatAmount += extractedVAT;
+          total += lineAmount; // Total remains the inclusive amount
+        } else {
+          // Exclusive: VAT is added to the line amount
+          const addedVAT = lineAmount * (vatRate / 100);
+          subtotal += lineAmount;
+          vatAmount += addedVAT;
+          total += lineAmount + addedVAT;
+        }
       }
     } else {
-      // Fallback to traditional vatRate calculation
+      // Fallback to traditional calculation using vatRate
       const vatRate = typeof item.vatRate === 'string' ? parseFloat(item.vatRate) : (item.vatRate || 0);
       if (!isNaN(vatRate)) {
         const fallbackVAT = lineAmount * (vatRate / 100);
