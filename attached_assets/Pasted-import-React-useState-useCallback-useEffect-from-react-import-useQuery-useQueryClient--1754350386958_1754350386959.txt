@@ -1,0 +1,1734 @@
+import React, { useState, useCallback, useEffect } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useLocation } from 'wouter';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Textarea } from "@/components/ui/textarea";
+import { ProfessionalDatePicker } from "@/components/ui/professional-date-picker";
+import { 
+  Plus, 
+  Upload, 
+  TrendingUp, 
+  Calendar,
+  FileSpreadsheet,
+  Download,
+  Eye,
+  Banknote,
+  CreditCard,
+  Trash2,
+  CheckCircle,
+  AlertCircle,
+  Building2,
+  Check,
+  ChevronsUpDown,
+  Save,
+  Loader2,
+  Calculator,
+  PieChart,
+  BarChart3,
+  FileText
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
+
+// South African Major Banks
+const SA_BANKS = [
+  { id: 'fnb', name: 'First National Bank (FNB)', color: 'from-blue-600 to-blue-700', icon: Building2 },
+  { id: 'absa', name: 'Absa Bank', color: 'from-red-600 to-red-700', icon: CreditCard },
+  { id: 'standard', name: 'Standard Bank', color: 'from-blue-800 to-blue-900', icon: Banknote },
+  { id: 'nedbank', name: 'Nedbank', color: 'from-green-600 to-green-700', icon: Building2 },
+  { id: 'capitec', name: 'Capitec Bank', color: 'from-blue-500 to-blue-600', icon: CreditCard },
+  { id: 'discovery', name: 'Discovery Bank', color: 'from-orange-500 to-orange-600', icon: Building2 },
+];
+
+// Bank Statement Upload Interface
+interface BankStatement {
+  id: string;
+  bankId: string;
+  fileName: string;
+  uploadDate: Date;
+  transactions: BankTransaction[];
+  status: 'processing' | 'completed' | 'error';
+}
+
+interface BankTransaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  balance: number;
+  reference: string;
+  type: 'debit' | 'credit';
+  matched: boolean;
+  suggestedCategory?: number;
+  confidence?: number;
+}
+
+// Bulk Entry Row interfaces
+interface BulkExpenseRow {
+  id: string;
+  date: string;
+  categoryId: number | null;
+  description: string;
+  amount: string;
+  supplierId: number | null;
+  vatTransactionType: string;
+  vatRate: number;
+  bankAccountId: number | null;
+  bankAccountOpen?: boolean;
+  notes: string;
+  status?: 'draft' | 'validated' | 'saved';
+  confidence?: number;
+  fromBankStatement?: boolean;
+}
+
+interface BulkIncomeRow {
+  id: string;
+  date: string;
+  incomeAccount: string;
+  description: string;
+  amount: string;
+  clientId: number | null;
+  vatTransactionType: string;
+  vatRate: number;
+  bankAccountId: number | null;
+  bankAccountOpen?: boolean;
+  notes: string;
+  status?: 'draft' | 'validated' | 'saved';
+  fromBankStatement?: boolean;
+}
+
+export default function BulkCaptureTesting() {
+  const [activeTab, setActiveTab] = useState("bulk-income");
+  const [uploadedStatements, setUploadedStatements] = useState<BankStatement[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedBank, setSelectedBank] = useState<string>('');
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  // Create bulk capture session mutation
+  const createSessionMutation = useMutation({
+    mutationFn: async (sessionType: string) => {
+      return apiRequest('/api/bulk-capture/sessions', 'POST', {
+        sessionType,
+        batchNotes: `Bulk ${sessionType} capture session - ${new Date().toLocaleString()}`
+      });
+    },
+    onSuccess: (data) => {
+      setCurrentBatchId(data.batchId);
+      toast({
+        title: "Session Created",
+        description: `Batch ID: ${data.batchId}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create capture session",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Save bulk income entries mutation
+  const saveBulkIncomesMutation = useMutation({
+    mutationFn: async (entries: any[]) => {
+      return apiRequest('/api/bulk-capture/income/batch', 'POST', { entries });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Income entries saved to database",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/income'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/incomes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save income entries",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Initialize income rows state
+  const [incomeRows, setIncomeRows] = useState<BulkIncomeRow[]>([
+    {
+      id: '1',
+      date: new Date().toISOString().split('T')[0],
+      incomeAccount: '',
+      description: '',
+      amount: '',
+      clientId: null,
+      vatTransactionType: 'vat_inclusive',
+      vatRate: 15,
+      bankAccountId: null,
+      notes: '',
+      status: 'draft'
+    }
+  ]);
+
+  // Handle save bulk incomes
+  const handleSaveBulkIncomes = async () => {
+    // Validate entries before saving
+    const validEntries = incomeRows.filter(row => 
+      row.description.trim() && 
+      row.amount && 
+      parseFloat(row.amount) > 0 &&
+      row.incomeAccount &&
+      row.date
+    );
+
+    if (validEntries.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please complete at least one income entry with description, amount, and income account",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert to API format with proper string formatting for decimal fields
+    const batchId = `BULK_INC_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const entries = validEntries.map(row => {
+      const amount = parseFloat(row.amount);
+      const vatAmount = calculateVATAmount(amount, row.vatRate, row.vatTransactionType);
+      const netAmount = calculateNetAmount(amount, row.vatRate, row.vatTransactionType);
+
+      return {
+        batchId: batchId,
+        transactionDate: row.date,
+        incomeAccountId: parseInt(row.incomeAccount),
+        description: row.description,
+        amount: amount.toFixed(2), // Convert to string with 2 decimal places
+        clientId: row.clientId,
+        vatTransactionType: row.vatTransactionType,
+        vatRate: row.vatRate.toFixed(2), // Convert to string
+        vatAmount: vatAmount.toFixed(2), // Convert to string
+        netAmount: netAmount.toFixed(2), // Convert to string
+        bankAccountId: row.bankAccountId,
+        reference: `BULK_INC_${Date.now()}`,
+        notes: row.notes || null,
+        status: 'validated'
+      };
+    });
+
+    saveBulkIncomesMutation.mutate(entries);
+  };
+
+  // VAT calculation functions
+  const calculateVATAmount = (amount: number, vatRate: number, vatType: string): number => {
+    if (vatType === 'zero_rated' || vatType === 'exempt' || vatType === 'no_vat') {
+      return 0;
+    }
+    if (vatType === 'vat_inclusive') {
+      return (amount * vatRate) / (100 + vatRate);
+    }
+    if (vatType === 'vat_exclusive') {
+      return (amount * vatRate) / 100;
+    }
+    return 0;
+  };
+
+  const calculateNetAmount = (amount: number, vatRate: number, vatType: string): number => {
+    if (vatType === 'zero_rated' || vatType === 'exempt' || vatType === 'no_vat') {
+      return amount;
+    }
+    if (vatType === 'vat_inclusive') {
+      return amount - calculateVATAmount(amount, vatRate, vatType);
+    }
+    if (vatType === 'vat_exclusive') {
+      return amount;
+    }
+    return amount;
+  };
+
+  // Update income row helper
+  const updateIncomeRow = (index: number, field: string, value: any) => {
+    setIncomeRows(prev => prev.map((row, i) => 
+      i === index ? { ...row, [field]: value } : row
+    ));
+  };
+
+  // Add new income row
+  const addIncomeRow = () => {
+    const newRow: BulkIncomeRow = {
+      id: `income_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      date: new Date().toISOString().split('T')[0],
+      incomeAccount: '',
+      description: '',
+      amount: '',
+      clientId: null,
+      vatTransactionType: 'vat_inclusive',
+      vatRate: 15,
+      bankAccountId: null,
+      notes: '',
+      status: 'draft'
+    };
+    setIncomeRows(prev => [...prev, newRow]);
+  };
+
+  // Remove income row
+  const removeIncomeRow = (index: number) => {
+    if (incomeRows.length > 1) {
+      setIncomeRows(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Fetch required data
+  const { data: suppliers = [], isLoading: suppliersLoading, error: suppliersError } = useQuery({
+    queryKey: ["/api/suppliers"],
+    retry: 3,
+    refetchOnMount: true,
+  });
+
+  // Debug suppliers loading
+  React.useEffect(() => {
+    console.log('Suppliers loading state:', { suppliersLoading, suppliersError, suppliersCount: suppliers.length });
+    console.log('Suppliers data:', suppliers);
+    if (suppliersError) {
+      console.error('Suppliers fetch error:', suppliersError);
+    }
+  }, [suppliers, suppliersLoading, suppliersError]);
+
+  const { data: chartOfAccounts = [] } = useQuery({
+    queryKey: ["/api/chart-of-accounts"],
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ["/api/clients"],
+  });
+
+  // Filter accounts
+  const expenseCategories = chartOfAccounts.filter(account => 
+    account.accountType?.toLowerCase() === 'expense' || 
+    account.type?.toLowerCase() === 'expense' || 
+    account.category?.toLowerCase() === 'expense'
+  );
+
+  const incomeAccounts = chartOfAccounts.filter(account => 
+    account.accountType?.toLowerCase() === 'income' || 
+    account.type?.toLowerCase() === 'income' || 
+    account.category?.toLowerCase() === 'income' ||
+    account.accountCode?.startsWith('4') // Standard income account codes
+  );
+
+  const bankAccounts = chartOfAccounts.filter(account => 
+    account.accountType?.toLowerCase() === 'asset' && 
+    (account.accountName?.toLowerCase().includes('bank') || 
+     account.accountName?.toLowerCase().includes('cash') ||
+     account.accountCode?.startsWith('1100') || 
+     account.accountCode?.startsWith('1200'))
+  );
+
+  // Bank Statement Upload Handler
+  const handleBankStatementUpload = useCallback(async (files: FileList | null, bankId: string) => {
+    if (!files || !bankId) return;
+
+    setIsProcessing(true);
+    const file = files[0];
+
+    try {
+      // Simulate bank statement processing
+      const mockTransactions: BankTransaction[] = [
+        {
+          id: '1',
+          date: '2024-01-15',
+          description: 'MONTHLY OFFICE RENT',
+          amount: -8500,
+          balance: 45000,
+          reference: 'PMT12345',
+          type: 'debit',
+          matched: false,
+          suggestedCategory: expenseCategories.find(cat => cat.accountName?.toLowerCase().includes('rent'))?.id,
+          confidence: 95
+        },
+        {
+          id: '2',
+          date: '2024-01-16',
+          description: 'ELECTRICITY PREPAID TOP-UP',
+          amount: -1200,
+          balance: 43800,
+          reference: 'PMT12346',
+          type: 'debit',
+          matched: false,
+          suggestedCategory: expenseCategories.find(cat => cat.accountName?.toLowerCase().includes('utilities'))?.id,
+          confidence: 88
+        },
+        {
+          id: '3',
+          date: '2024-01-17',
+          description: 'CLIENT PAYMENT - INV001',
+          amount: 15000,
+          balance: 58800,
+          reference: 'DEP12347',
+          type: 'credit',
+          matched: false,
+          suggestedCategory: incomeAccounts.find(acc => acc.accountName?.toLowerCase().includes('sales'))?.id,
+          confidence: 92
+        }
+      ];
+
+      const newStatement: BankStatement = {
+        id: Date.now().toString(),
+        bankId,
+        fileName: file.name,
+        uploadDate: new Date(),
+        transactions: mockTransactions,
+        status: 'completed'
+      };
+
+      setUploadedStatements(prev => [...prev, newStatement]);
+
+      toast({
+        title: "Statement Processed",
+        description: `Successfully processed ${mockTransactions.length} transactions from ${file.name}`,
+      });
+
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to process bank statement. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [expenseCategories, incomeAccounts, toast]);
+
+  // Bank Statement Upload Component
+  const BankStatementUpload = () => {
+    return (
+      <div className="space-y-8">
+        {/* Header Section */}
+        <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-2xl p-8 border border-slate-200">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Bank Statement Import</h2>
+              <p className="text-slate-600 text-lg">Import and automatically categorize transactions from major South African banks</p>
+            </div>
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-white/50">
+              <FileSpreadsheet className="h-12 w-12 text-blue-600" />
+            </div>
+          </div>
+
+          {/* Bank Selection Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            {SA_BANKS.map((bank) => {
+              const IconComponent = bank.icon;
+              return (
+                <button
+                  key={bank.id}
+                  onClick={() => setSelectedBank(bank.id)}
+                  className={cn(
+                    "group relative overflow-hidden rounded-xl p-4 transition-all duration-300 border-2",
+                    selectedBank === bank.id
+                      ? "border-blue-500 bg-blue-50 shadow-lg scale-105"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md hover:scale-102"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute inset-0 bg-gradient-to-br opacity-10 transition-opacity",
+                    bank.color,
+                    selectedBank === bank.id ? "opacity-20" : "group-hover:opacity-15"
+                  )} />
+                  <div className="relative z-10 flex flex-col items-center space-y-2">
+                    <IconComponent className={cn(
+                      "h-8 w-8 transition-colors",
+                      selectedBank === bank.id ? "text-blue-600" : "text-slate-600 group-hover:text-slate-700"
+                    )} />
+                    <span className={cn(
+                      "text-xs font-medium text-center transition-colors",
+                      selectedBank === bank.id ? "text-blue-700" : "text-slate-600 group-hover:text-slate-700"
+                    )}>
+                      {bank.name.split(' ')[0]}
+                    </span>
+                  </div>
+                  {selectedBank === bank.id && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Upload Area */}
+          {selectedBank && (
+            <div className="bg-white rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-400 transition-colors">
+              <label className="block cursor-pointer">
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls,.pdf"
+                  className="hidden"
+                  onChange={(e) => handleBankStatementUpload(e.target.files, selectedBank)}
+                  disabled={isProcessing}
+                />
+                <div className="p-8 text-center">
+                  <Upload className={cn(
+                    "h-12 w-12 mx-auto mb-4 transition-colors",
+                    isProcessing ? "text-blue-500 animate-pulse" : "text-slate-400"
+                  )} />
+                  <h3 className="text-lg font-semibold text-slate-700 mb-2">
+                    {isProcessing ? "Processing Statement..." : `Upload ${SA_BANKS.find(b => b.id === selectedBank)?.name} Statement`}
+                  </h3>
+                  <p className="text-slate-500 mb-4">
+                    Drag and drop your bank statement or click to browse
+                  </p>
+                  <div className="flex items-center justify-center space-x-2 text-sm text-slate-400">
+                    <span>Supports:</span>
+                    <Badge variant="secondary">CSV</Badge>
+                    <Badge variant="secondary">XLSX</Badge>
+                    <Badge variant="secondary">PDF</Badge>
+                  </div>
+                  {isProcessing && (
+                    <Progress value={65} className="w-64 mx-auto mt-4" />
+                  )}
+                </div>
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* Uploaded Statements */}
+        {uploadedStatements.length > 0 && (
+          <Card className="shadow-lg border-0">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Processed Statements
+                  </CardTitle>
+                  <CardDescription>Ready for categorization and import</CardDescription>
+                </div>
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  {uploadedStatements.reduce((acc, stmt) => acc + stmt.transactions.length, 0)} transactions
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {uploadedStatements.map((statement) => (
+                  <div key={statement.id} className="p-6 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center",
+                          SA_BANKS.find(b => b.id === statement.bankId)?.color || "from-slate-400 to-slate-500"
+                        )}>
+                          <FileSpreadsheet className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-slate-800">{statement.fileName}</h4>
+                          <p className="text-sm text-slate-500">
+                            {SA_BANKS.find(b => b.id === statement.bankId)?.name} • {statement.transactions.length} transactions
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => setActiveTab('bulk-expenses')}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Import
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Transaction Preview */}
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        {statement.transactions.slice(0, 3).map((transaction) => (
+                          <div key={transaction.id} className="bg-white rounded-lg p-3 border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={cn(
+                                "font-semibold",
+                                transaction.type === 'debit' ? "text-red-600" : "text-green-600"
+                              )}>
+                                R {Math.abs(transaction.amount).toLocaleString()}
+                              </span>
+                              {transaction.confidence && (
+                                <Badge variant={transaction.confidence > 90 ? "default" : "secondary"} className="text-xs">
+                                  {transaction.confidence}% match
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-slate-600 text-xs truncate">{transaction.description}</p>
+                            <p className="text-slate-400 text-xs">{transaction.date}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {statement.transactions.length > 3 && (
+                        <p className="text-center text-slate-500 text-sm mt-3">
+                          +{statement.transactions.length - 3} more transactions
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  // Modern Bulk Expense Capture Component
+  const BulkExpenseCapture = () => {
+    const [bulkRows, setBulkRows] = React.useState<BulkExpenseRow[]>([]);
+    const [selectedDateRange, setSelectedDateRange] = React.useState({ start: '', end: '' });
+    const [smartFillEnabled, setSmartFillEnabled] = React.useState(true);
+    const [expenseBatchNotes, setExpenseBatchNotes] = React.useState('');
+
+    // Get default bank account
+    const defaultBankAccount = bankAccounts.find(acc => 
+      acc.accountName?.toLowerCase().includes('current') ||
+      acc.accountName?.toLowerCase().includes('cheque') ||
+      acc.isDefault === true
+    ) || bankAccounts[0];
+
+    // Calculate real-time totals
+    const totals = React.useMemo(() => {
+      const validRows = bulkRows.filter(row => row.amount && parseFloat(row.amount) > 0);
+
+      let subtotal = 0;
+      let totalVAT = 0;
+      let grandTotal = 0;
+
+      validRows.forEach(row => {
+        const amount = parseFloat(row.amount || '0');
+
+        // Check if VAT should be zero for these transaction types
+        if (row.vatTransactionType === 'zero_rated' || 
+            row.vatTransactionType === 'no_vat' || 
+            row.vatTransactionType === 'exempt') {
+          // No VAT for these types
+          subtotal += amount;
+          totalVAT += 0;
+          grandTotal += amount;
+        } else if (row.vatTransactionType === 'vat_inclusive') {
+          const vatAmount = (amount * row.vatRate) / (100 + row.vatRate);
+          const netAmount = amount - vatAmount;
+          subtotal += netAmount;
+          totalVAT += vatAmount;
+          grandTotal += amount;
+        } else if (row.vatTransactionType === 'vat_exclusive') {
+          const vatAmount = (amount * row.vatRate) / 100;
+          subtotal += amount;
+          totalVAT += vatAmount;
+          grandTotal += amount + vatAmount;
+        }
+      });
+
+      return {
+        subtotal: subtotal.toFixed(2),
+        totalVAT: totalVAT.toFixed(2),
+        grandTotal: grandTotal.toFixed(2),
+        entryCount: validRows.length
+      };
+    }, [bulkRows]);
+
+    React.useEffect(() => {
+      const today = new Date().toISOString().split('T')[0];
+      const initialRows: BulkExpenseRow[] = Array.from({ length: 10 }, (_, index) => ({
+        id: `row-${index}`,
+        date: today,
+        categoryId: null,
+        description: '',
+        amount: '',
+        supplierId: null,
+        vatTransactionType: 'vat_inclusive',
+        vatRate: 15,
+        bankAccountId: defaultBankAccount?.id || null,
+        bankAccountOpen: false,
+        notes: ''
+      }));
+      setBulkRows(initialRows);
+    }, [defaultBankAccount]);
+
+    const addMoreRows = () => {
+      const today = new Date().toISOString().split('T')[0];
+      const newRows: BulkExpenseRow[] = Array.from({ length: 5 }, (_, index) => ({
+        id: `row-${bulkRows.length + index}`,
+        date: today,
+        categoryId: null,
+        description: '',
+        amount: '',
+        supplierId: null,
+        vatTransactionType: 'vat_inclusive',
+        vatRate: 15,
+        bankAccountId: defaultBankAccount?.id || null,
+        bankAccountOpen: false,
+        notes: ''
+      }));
+      setBulkRows([...bulkRows, ...newRows]);
+    };
+
+    const updateRow = (index: number, field: keyof BulkExpenseRow, value: any) => {
+      const updatedRows = [...bulkRows];
+      updatedRows[index] = { ...updatedRows[index], [field]: value };
+
+      if (smartFillEnabled && field === 'categoryId' && value) {
+        const category = expenseCategories.find(cat => cat.id === value);
+        if (category && !updatedRows[index].description) {
+          updatedRows[index].description = `${category.accountName} expense`;
+        }
+      }
+
+      setBulkRows(updatedRows);
+    };
+
+    const applyDateRange = () => {
+      if (selectedDateRange.start) {
+        const updatedRows = bulkRows.map(row => ({
+          ...row,
+          date: row.date || selectedDateRange.start
+        }));
+        setBulkRows(updatedRows);
+      }
+    };
+
+    const saveBulkExpenses = async () => {
+      // Validate entries before saving
+      const validEntries = bulkRows.filter(row => 
+        row.description.trim() && 
+        row.amount && 
+        parseFloat(row.amount) > 0 &&
+        row.categoryId &&
+        row.date
+      );
+
+      if (validEntries.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please complete at least one expense entry with description, amount, and category",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert to API format with proper string formatting for decimal fields
+      const batchId = `BULK_EXP_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      const entries = validEntries.map(row => {
+        const amount = parseFloat(row.amount);
+        const vatAmount = calculateVATAmount(amount, row.vatRate, row.vatTransactionType);
+        const netAmount = calculateNetAmount(amount, row.vatRate, row.vatTransactionType);
+
+        return {
+          batchId: batchId,
+          transactionDate: row.date,
+          expenseAccountId: row.categoryId,
+          description: row.description,
+          amount: amount.toFixed(2), // Convert to string with 2 decimal places
+          supplierId: row.supplierId,
+          vatTransactionType: row.vatTransactionType,
+          vatRate: row.vatRate.toFixed(2), // Convert to string
+          vatAmount: vatAmount.toFixed(2), // Convert to string
+          netAmount: netAmount.toFixed(2), // Convert to string
+          bankAccountId: row.bankAccountId,
+          reference: `BULK_EXP_${Date.now()}`,
+          notes: row.notes || null,
+          status: 'validated'
+        };
+      });
+
+      try {
+        console.log('Sending bulk expense entries:', entries);
+        await apiRequest('/api/bulk-capture/expense/batch', 'POST', { entries });
+
+        queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/expense'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+
+        toast({
+          title: "Success",
+          description: `${validEntries.length} expense entries saved successfully!`,
+        });
+
+        // Reset rows
+        setBulkRows(prev => prev.map(row => ({
+          ...row,
+          date: '',
+          categoryId: null,
+          description: '',
+          amount: '',
+          supplierId: null,
+          notes: ''
+        })));
+      } catch (error: any) {
+        console.error('Bulk expense save error:', error);
+        toast({
+          title: "Error", 
+          description: error.message || "Failed to save bulk expenses",
+          variant: "destructive",
+        });
+      }
+    };
+
+    return (
+      <Card className="overflow-hidden shadow-xl border-0 bg-gradient-to-br from-white to-slate-50">
+        <CardHeader className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white border-b-4 border-blue-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-3 text-2xl font-bold">
+                <div className="p-2 bg-blue-500 rounded-lg">
+                  <Upload className="h-7 w-7 text-white" />
+                </div>
+                Bulk Expense Capture
+              </CardTitle>
+              <CardDescription className="text-slate-200 text-lg mt-2">
+                Professional bulk entry system with intelligent automation and VAT compliance
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-4">
+              <Badge className="bg-blue-500 text-white text-sm px-3 py-1 font-semibold">
+                {bulkRows.filter(row => row.amount && parseFloat(row.amount) > 0).length} active entries
+              </Badge>
+              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+                <Switch
+                  checked={smartFillEnabled}
+                  onCheckedChange={setSmartFillEnabled}
+                  className="data-[state=checked]:bg-blue-500"
+                />
+                <Label className="text-sm font-medium text-white">Smart Fill</Label>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {/* Sticky Expense Totals - Always Visible */}
+          <div className="sticky top-0 z-20 bg-gradient-to-r from-slate-100 to-slate-50 border-b-2 border-slate-200 shadow-lg backdrop-blur-sm">
+            {/* Real-time Totals Display */}
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="bg-white rounded-lg p-4 border border-slate-300 shadow-sm hover:shadow-md transition-shadow text-center">
+                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">Active Entries</div>
+                  <div className="text-2xl font-bold text-slate-800">{totals.entryCount}</div>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-green-300 shadow-sm hover:shadow-md transition-shadow text-center">
+                  <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Subtotal (excl VAT)</div>
+                  <div className="text-2xl font-bold text-green-600">R {totals.subtotal}</div>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-orange-300 shadow-sm hover:shadow-md transition-shadow text-center">
+                  <div className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-1">Total VAT</div>
+                  <div className="text-2xl font-bold text-orange-600">R {totals.totalVAT}</div>
+                </div>
+                <div className="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg p-4 shadow-lg hover:shadow-xl transition-shadow text-center">
+                  <div className="text-xs font-semibold text-red-100 uppercase tracking-wide mb-1">Grand Total</div>
+                  <div className="text-2xl font-bold">R {totals.grandTotal}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions Toolbar */}
+            <div className="px-4 pb-4">
+              <div className="flex items-center justify-between bg-white rounded-lg p-3 border border-slate-300 shadow-sm">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-slate-600" />
+                    <Label className="text-sm font-semibold text-slate-700">Date Range:</Label>
+                    <div className="relative">
+                      <ProfessionalDatePicker
+                        value={selectedDateRange.start}
+                        onChange={(value) => setSelectedDateRange(prev => ({ ...prev, start: value }))}
+                        placeholder="Start date..."
+                        size="sm"
+                        variant="elegant"
+                        className="w-40"
+                      />
+                    </div>
+                    <span className="text-slate-400 font-medium">to</span>
+                    <div className="relative">
+                      <ProfessionalDatePicker
+                        value={selectedDateRange.end}
+                        onChange={(value) => setSelectedDateRange(prev => ({ ...prev, end: value }))}
+                        placeholder="End date..."
+                        size="sm"
+                        variant="elegant"
+                        className="w-40"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={applyDateRange} className="ml-2">
+                      Apply to All
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" onClick={addMoreRows} className="border-slate-300 hover:bg-slate-50">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Rows
+                  </Button>
+                  <Button onClick={saveBulkExpenses} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-6 shadow-lg">
+                    <Upload className="h-5 w-5 mr-2" />
+                    Save All Expenses
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Professional Data Grid */}
+          <div className="overflow-x-auto bg-white">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gradient-to-r from-slate-800 to-slate-700 text-white">
+                  <th className="p-4 text-left text-sm font-bold border-r border-slate-600 w-56">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Date
+                    </div>
+                  </th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-slate-600 w-60">Expense Account</th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-slate-600 w-80">Description</th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-slate-600 w-40">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="h-4 w-4" />
+                      Amount (R)
+                    </div>
+                  </th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-slate-600 w-56">Supplier</th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-slate-600 w-48">VAT Treatment</th>
+                  <th className="p-4 text-left text-sm font-bold w-64">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Bank Account
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {bulkRows.map((row, index) => (
+                  <tr key={row.id} className={cn(
+                    "transition-all duration-200 hover:bg-blue-50/50",
+                    index % 2 === 0 ? "bg-white" : "bg-slate-50/30"
+                  )}>
+                    <td className="p-3 border-r border-slate-200">
+                      <ProfessionalDatePicker
+                        value={row.date}
+                        onChange={(value) => updateRow(index, 'date', value)}
+                        placeholder="Pick date"
+                        size="sm"
+                        variant="modern"
+                        className="w-full"
+                      />
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between text-sm border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200",
+                              !row.categoryId && "text-muted-foreground"
+                            )}
+                          >
+                            {row.categoryId
+                              ? expenseCategories.find((category) => category.id === row.categoryId)?.accountName
+                              : "Choose account..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search expense accounts..." />
+                            <CommandEmpty>No account found.</CommandEmpty>
+                            <CommandGroup className="max-h-64 overflow-auto">
+                              {expenseCategories.map((category) => (
+                                <CommandItem
+                                  key={category.id}
+                                  value={`${category.accountName} ${category.accountCode}`}
+                                  onSelect={() => {
+                                    updateRow(index, 'categoryId', category.id);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      row.categoryId === category.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{category.accountName}</span>
+                                    <span className="text-slate-500 text-xs">({category.accountCode})</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Input
+                        value={row.description}
+                        onChange={(e) => updateRow(index, 'description', e.target.value)}
+                        placeholder="Auto-generated or manual..."
+                        className={cn(
+                          "w-full text-sm border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200",
+                          smartFillEnabled && row.description.includes('expense') 
+                            ? 'bg-blue-50 border-blue-300 text-blue-800' 
+                            : ''
+                        )}
+                      />
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 text-sm">R</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={row.amount}
+                          onChange={(e) => updateRow(index, 'amount', e.target.value)}
+                          placeholder="0.00"
+                          className="w-full text-sm pl-8 border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-right"
+                        />
+                      </div>
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between text-sm border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200",
+                              !row.supplierId && "text-muted-foreground"
+                            )}
+                          >
+                            {row.supplierId
+                              ? suppliers.find((supplier) => supplier.id === row.supplierId)?.name
+                              : "Choose supplier..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[250px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search suppliers..." />
+                            <CommandEmpty>No supplier found.</CommandEmpty>
+                            <CommandGroup className="max-h-64 overflow-auto">
+                              {suppliers.map((supplier) => (
+                                <CommandItem
+                                  key={supplier.id}
+                                  value={supplier.name}
+                                  onSelect={() => {
+                                    updateRow(index, 'supplierId', supplier.id);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      row.supplierId === supplier.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {supplier.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Select value={row.vatTransactionType} onValueChange={(value) => updateRow(index, 'vatTransactionType', value)}>
+                        <SelectTrigger className="w-full text-sm border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="vat_inclusive">
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-600 font-medium">✓</span>
+                              VAT Inclusive
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="vat_exclusive">
+                            <div className="flex items-center gap-2">
+                              <span className="text-blue-600 font-medium">+</span>
+                              VAT Exclusive
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="zero_rated">
+                            <div className="flex items-center gap-2">
+                              <span className="text-orange-600 font-medium">0</span>
+                              Zero Rated
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="exempt">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-600 font-medium">×</span>
+                              Exempt
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="no_vat">
+                            <div className="flex items-center gap-2">
+                              <span className="text-red-600 font-medium">−</span>
+                              No VAT
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-3">
+                      <Select value={row.bankAccountId?.toString() || ""} onValueChange={(value) => updateRow(index, 'bankAccountId', parseInt(value))}>
+                        <SelectTrigger className="w-full text-sm border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                          <SelectValue placeholder="Choose bank account..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id.toString()}>
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4 text-slate-500" />
+                                <span className="font-medium">{account.accountName}</span>
+                                <span className="text-slate-500 text-xs">({account.accountCode})</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* General Notes Section */}
+          <div className="bg-slate-50 border-t border-slate-200 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertCircle className="h-5 w-5 text-slate-600 flex-shrink-0" />
+                <Label className="text-sm font-semibold text-slate-700 whitespace-nowrap">Batch Notes:</Label>
+              </div>
+              <div className="flex-1">
+                <Input
+                  value={expenseBatchNotes}
+                  onChange={(e) => setExpenseBatchNotes(e.target.value)}
+                  placeholder="Add general notes for this expense batch (optional)..."
+                  className="w-full text-sm border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Modern Bulk Income Capture Component
+  const BulkIncomeCapture = () => {
+    const [bulkIncomeRows, setBulkIncomeRows] = React.useState<BulkIncomeRow[]>([]);
+    const [selectedDateRange, setSelectedDateRange] = React.useState({ start: '', end: '' });
+    const [smartFillEnabled, setSmartFillEnabled] = React.useState(true);
+    const [batchNotes, setBatchNotes] = React.useState('');
+
+    React.useEffect(() => {
+      const initialRows: BulkIncomeRow[] = Array.from({ length: 10 }, (_, index) => ({
+        id: `income-row-${index}`,
+        date: '',
+        incomeAccount: '',
+        description: '',
+        amount: '',
+        clientId: null,
+        vatTransactionType: 'vat_inclusive',
+        vatRate: 15,
+        bankAccountId: null,
+        bankAccountOpen: false,
+        notes: ''
+      }));
+      setBulkIncomeRows(initialRows);
+    }, []);
+
+    const addMoreIncomeRows = () => {
+      const newRows: BulkIncomeRow[] = Array.from({ length: 5 }, (_, index) => ({
+        id: `income-row-${bulkIncomeRows.length + index}`,
+        date: '',
+        incomeAccount: '',
+        description: '',
+        amount: '',
+        clientId: null,
+        vatTransactionType: 'vat_inclusive',
+        vatRate: 15,
+        bankAccountId: null,
+        bankAccountOpen: false,
+        notes: ''
+      }));
+      setBulkIncomeRows([...bulkIncomeRows, ...newRows]);
+    };
+
+    const updateIncomeRow = (index: number, field: keyof BulkIncomeRow, value: any) => {
+      const updatedRows = [...bulkIncomeRows];
+      updatedRows[index] = { ...updatedRows[index], [field]: value };
+
+      if (smartFillEnabled && field === 'incomeAccount' && value) {
+        const account = incomeAccounts.find(acc => acc.accountCode === value || acc.id?.toString() === value);
+        if (account && !updatedRows[index].description) {
+          updatedRows[index].description = `${account.accountName} revenue`;
+        }
+      }
+
+      setBulkIncomeRows(updatedRows);
+    };
+
+    // Check if there are valid entries
+    const hasValidEntries = bulkIncomeRows.some(row => 
+      row.description.trim() && 
+      row.amount && 
+      parseFloat(row.amount) > 0 &&
+      row.incomeAccount &&
+      row.bankAccountId
+    );
+
+    // Save income entries directly to database
+    const saveIncomeEntries = async () => {
+      setIsSaving(true);
+
+      try {
+        const validRows = bulkIncomeRows.filter(row => 
+          row.description.trim() && 
+          row.amount && 
+          parseFloat(row.amount) > 0 &&
+          row.incomeAccount &&
+          row.bankAccountId
+        );
+
+        if (validRows.length === 0) {
+          toast({
+            title: "Validation Error",
+            description: "Please complete at least one income entry with all required fields",
+            variant: "destructive",
+          });
+          setIsSaving(false);
+          return;
+        }
+
+        // Save each income entry to database
+        await Promise.all(
+          validRows.map(async (row) => {
+            const amount = parseFloat(row.amount);
+            let vatAmount = 0;
+            let netAmount = amount;
+            let totalAmount = amount;
+
+            // Calculate VAT based on transaction type
+            if (row.vatTransactionType === 'zero_rated' || 
+                row.vatTransactionType === 'no_vat' || 
+                row.vatTransactionType === 'exempt') {
+              vatAmount = 0;
+              netAmount = amount;
+              totalAmount = amount;
+            } else if (row.vatTransactionType === 'vat_inclusive') {
+              vatAmount = (amount * row.vatRate) / (100 + row.vatRate);
+              netAmount = amount - vatAmount;
+              totalAmount = amount;
+            } else if (row.vatTransactionType === 'vat_exclusive') {
+              vatAmount = (amount * row.vatRate) / 100;
+              netAmount = amount;
+              totalAmount = amount + vatAmount;
+            }
+
+            return apiRequest("/api/incomes", "POST", {
+              incomeDate: row.date,
+              incomeAccount: row.incomeAccount,
+              description: row.description,
+              amount: netAmount,
+              vatAmount: vatAmount,
+              totalAmount: totalAmount,
+              clientId: row.clientId,
+              vatRate: row.vatTransactionType === 'zero_rated' || 
+                       row.vatTransactionType === 'no_vat' || 
+                       row.vatTransactionType === 'exempt' ? 0 : row.vatRate,
+              vatInclusive: row.vatTransactionType === 'vat_inclusive',
+              bankAccountId: row.bankAccountId,
+              notes: row.notes || batchNotes
+            });
+          })
+        );
+
+        queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
+        toast({ 
+          title: "Success", 
+          description: `${validRows.length} income entries saved successfully!` 
+        });
+
+        // Reset rows after successful save
+        setBulkIncomeRows(prev => prev.map(row => ({
+          ...row,
+          date: '',
+          incomeAccount: '',
+          description: '',
+          amount: '',
+          clientId: null,
+          notes: ''
+        })));
+
+      } catch (error) {
+        toast({ 
+          title: "Error", 
+          description: "Failed to save income entries", 
+          variant: "destructive" 
+        });
+      }
+
+      setIsSaving(false);
+    };
+
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+                Bulk Income Capture
+              </CardTitle>
+              <CardDescription className="text-base">
+                Professional bulk income entry for revenue transactions and client billing
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-green-100 text-green-700">
+                {bulkIncomeRows.filter(row => row.amount && parseFloat(row.amount) > 0).length} entries
+              </Badge>
+              <Switch
+                checked={smartFillEnabled}
+                onCheckedChange={setSmartFillEnabled}
+                className="data-[state=checked]:bg-green-600"
+              />
+              <Label className="text-sm font-medium">Smart Fill</Label>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {/* Income Totals Summary - Sticky Floating */}
+          <div className="sticky top-0 z-20 bg-gradient-to-r from-green-50 to-emerald-50 p-4 border-b shadow-lg backdrop-blur-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-600 font-medium">Total Income</p>
+                    <p className="text-2xl font-bold text-green-800">
+                      R {bulkIncomeRows.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-green-500" />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">VAT Amount</p>
+                    <p className="text-2xl font-bold text-blue-800">
+                      R {bulkIncomeRows.reduce((sum, row) => {
+                        const amount = parseFloat(row.amount) || 0;
+                        return sum + calculateVATAmount(amount, row.vatRate, row.vatTransactionType);
+                      }, 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <Calculator className="h-8 w-8 text-blue-500" />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600 font-medium">Net Income</p>
+                    <p className="text-2xl font-bold text-slate-800">
+                      R {bulkIncomeRows.reduce((sum, row) => {
+                        const amount = parseFloat(row.amount) || 0;
+                        return sum + calculateNetAmount(amount, row.vatRate, row.vatTransactionType);
+                      }, 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <Banknote className="h-8 w-8 text-slate-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* VAT Breakdown - Collapsible for mobile */}
+            <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <PieChart className="h-4 w-4" />
+                VAT Breakdown
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                <div className="text-center">
+                  <div className="text-blue-600 font-semibold">VAT Inclusive</div>
+                  <div className="text-slate-600">
+                    R {bulkIncomeRows.filter(row => row.vatTransactionType === 'vat_inclusive')
+                      .reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0)
+                      .toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-green-600 font-semibold">VAT Exclusive</div>
+                  <div className="text-slate-600">
+                    R {bulkIncomeRows.filter(row => row.vatTransactionType === 'vat_exclusive')
+                      .reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0)
+                      .toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-yellow-600 font-semibold">Zero Rated</div>
+                  <div className="text-slate-600">
+                    R {bulkIncomeRows.filter(row => row.vatTransactionType === 'zero_rated')
+                      .reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0)
+                      .toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-orange-600 font-semibold">Exempt</div>
+                  <div className="text-slate-600">
+                    R {bulkIncomeRows.filter(row => row.vatTransactionType === 'exempt')
+                      .reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0)
+                      .toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-red-600 font-semibold">No VAT</div>
+                  <div className="text-slate-600">
+                    R {bulkIncomeRows.filter(row => row.vatTransactionType === 'no_vat')
+                      .reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0)
+                      .toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions Toolbar */}
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 border-b p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium text-green-800">Quick Date:</Label>
+                <ProfessionalDatePicker
+                  value={new Date().toISOString().split('T')[0]}
+                  placeholder="Select date..."
+                  size="sm"
+                  variant="elegant"
+                  className="w-40"
+                />
+                <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-100">
+                  Apply to All
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={addMoreIncomeRows}
+                className="border-green-300 text-green-700 hover:bg-green-100"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add 5 Rows
+              </Button>
+              <Button 
+                onClick={saveIncomeEntries}
+                disabled={isSaving || !hasValidEntries}
+                className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save All Income
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Enhanced Professional Data Grid */}
+          <div className="overflow-x-auto bg-white">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gradient-to-r from-green-800 to-green-700 text-white">
+                  <th className="p-4 text-left text-sm font-bold border-r border-green-600 w-56">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Date
+                    </div>
+                  </th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-green-600 w-60">Income Account</th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-green-600 w-80">Description</th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-green-600 w-40">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="h-4 w-4" />
+                      Amount (R)
+                    </div>
+                  </th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-green-600 w-48">Client</th>
+                  <th className="p-4 text-left text-sm font-bold border-r border-green-600 w-56">VAT Treatment</th>
+                  <th className="p-4 text-left text-sm font-bold w-64">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Bank Account
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {bulkIncomeRows.map((row, index) => (
+                  <tr key={row.id} className={cn(
+                    "transition-all duration-200 hover:bg-green-50/50",
+                    index % 2 === 0 ? "bg-white" : "bg-slate-50/30"
+                  )}>
+                    <td className="p-3 border-r border-slate-200">
+                      <ProfessionalDatePicker
+                        value={row.date}
+                        onChange={(value) => updateIncomeRow(index, 'date', value)}
+                        placeholder="Pick date"
+                        size="sm"
+                        variant="modern"
+                        className="w-full"
+                      />
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Select value={row.incomeAccount} onValueChange={(value) => updateIncomeRow(index, 'incomeAccount', value)}>
+                        <SelectTrigger className="w-full text-sm border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-200">
+                          <SelectValue placeholder="Choose income account..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {incomeAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id?.toString() || account.accountCode}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{account.accountName}</span>
+                                <span className="text-slate-500 text-xs">({account.accountCode})</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Input
+                        value={row.description}
+                        onChange={(e) => updateIncomeRow(index, 'description', e.target.value)}
+                        placeholder="Revenue description..."
+                        className={cn(
+                          "w-full text-sm border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-200",
+                          smartFillEnabled && row.description.includes('revenue') ? 'bg-green-50 border-green-300' : ''
+                        )}
+                      />
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 text-sm">R</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.amount}
+                          onChange={(e) => updateIncomeRow(index, 'amount', e.target.value)}
+                          placeholder="0.00"
+                          className="w-full text-sm pl-8 border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+                        />
+                      </div>
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Select value={row.clientId?.toString() || ""} onValueChange={(value) => updateIncomeRow(index, 'clientId', parseInt(value))}>
+                        <SelectTrigger className="w-full text-sm border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-200">
+                          <SelectValue placeholder="Choose client..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id.toString()}>
+                              <span className="font-medium">{client.name}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-3 border-r border-slate-200">
+                      <Select value={row.vatTransactionType} onValueChange={(value) => updateIncomeRow(index, 'vatTransactionType', value)}>
+                        <SelectTrigger className="w-full text-sm border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="vat_inclusive">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              VAT Inclusive (15%)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="vat_exclusive">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              VAT Exclusive (15%)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="zero_rated">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                              Zero Rated (0%)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="exempt">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              Exempt (0%)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="no_vat">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                              No VAT (0%)
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-3">
+                      <Select value={row.bankAccountId?.toString() || ""} onValueChange={(value) => updateIncomeRow(index, 'bankAccountId', parseInt(value))}>
+                        <SelectTrigger className="w-full text-sm border-slate-300 focus:border-green-500 focus:ring-2 focus:ring-green-200">
+                          <SelectValue placeholder="Choose bank account..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id.toString()}>
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4 text-slate-500" />
+                                <span className="font-medium">{account.accountName}</span>
+                                <span className="text-slate-500 text-xs">({account.accountCode})</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* General Notes Section */}
+          <div className="border-t bg-gradient-to-r from-green-50 to-emerald-50 p-4">
+            <Label className="text-sm font-medium text-green-800 mb-2 block">General Batch Notes (applies to all entries)</Label>
+            <Textarea
+              value={batchNotes}
+              onChange={(e) => setBatchNotes(e.target.value)}
+              placeholder="Enter general notes for this income batch..."
+              className="w-full resize-none border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-200"
+              rows={2}
+            />
+          </div>
+
+
+
+
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="w-full p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Bulk Capture Testing</h1>
+          <p className="text-muted-foreground">Advanced bulk expense and income capture system for accountants</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setLocation('/transactions')}
+            variant="outline"
+            className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            View Transactions
+          </Button>
+          <Button 
+            onClick={() => setLocation('/chart-of-accounts')}
+            variant="outline"
+            className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Chart of Accounts
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-gradient-to-r from-slate-100 via-white to-slate-100 border-2 border-slate-200 rounded-2xl shadow-lg">
+          <TabsTrigger 
+            value="bank-import" 
+            className="relative flex items-center gap-3 px-6 py-4 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/30 hover:bg-blue-50 hover:text-blue-700"
+          >
+            <Upload className="h-5 w-5" />
+            <div className="text-left">
+              <div className="font-bold">Bank Import</div>
+              <div className="text-xs opacity-75">Upload statements</div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="bulk-expenses" 
+            className="relative flex items-center gap-3 px-6 py-4 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-red-500/30 hover:bg-red-50 hover:text-red-700"
+          >
+            <TrendingUp className="h-5 w-5" />
+            <div className="text-left">
+              <div className="font-bold">Bulk Expenses</div>
+              <div className="text-xs opacity-75">Manual entry</div>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="bulk-income" 
+            className="relative flex items-center gap-3 px-6 py-4 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-green-700 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-green-500/30 hover:bg-green-50 hover:text-green-700"
+          >
+            <Banknote className="h-5 w-5" />
+            <div className="text-left">
+              <div className="font-bold">Bulk Income</div>
+              <div className="text-xs opacity-75">Revenue entry</div>
+            </div>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="bank-import" className="space-y-6">
+          <BankStatementUpload />
+        </TabsContent>
+
+        <TabsContent value="bulk-expenses" className="space-y-6">
+          <BulkExpenseCapture />
+        </TabsContent>
+
+        <TabsContent value="bulk-income" className="space-y-6">
+          <BulkIncomeCapture />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

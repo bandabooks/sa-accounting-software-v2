@@ -467,59 +467,41 @@ const EnhancedBulkCapture = () => {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className={`flex items-center justify-between p-6 rounded-lg ${
-        activeTab === 'income' 
-          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' 
-          : 'bg-gradient-to-r from-red-50 to-rose-50 border border-red-200'
-      }`}>
-        <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            activeTab === 'income'
-              ? 'bg-gradient-to-br from-green-100 to-emerald-100'
-              : 'bg-gradient-to-br from-red-100 to-rose-100'
-          }`}>
-            {activeTab === 'income' ? (
-              <TrendingUp className="w-5 h-5 text-green-600" />
-            ) : (
-              <TrendingDown className="w-5 h-5 text-red-600" />
-            )}
+      <div className="bg-slate-800 text-white p-6 rounded-lg border border-slate-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+              {activeTab === 'income' ? (
+                <TrendingUp className="w-5 h-5 text-white" />
+              ) : (
+                <TrendingDown className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                {activeTab === 'income' ? 'Bulk Income Capture' : 'Bulk Expense Capture'}
+              </h1>
+              <p className="text-slate-300">
+                {activeTab === 'income' 
+                  ? 'Professional bulk income entry for revenue transactions and client billing'
+                  : 'Professional bulk entry system with intelligent automation and VAT compliance'
+                }
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className={`text-2xl font-bold ${
-              activeTab === 'income' ? 'text-green-900' : 'text-red-900'
-            }`}>
-              {activeTab === 'income' ? 'Bulk Income Capture' : 'Bulk Expense Capture'}
-            </h1>
-            <p className={`${
-              activeTab === 'income' ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {activeTab === 'income' 
-                ? 'Professional bulk income entry for revenue transactions and client billing'
-                : 'Professional bulk entry system with intelligent automation and VAT compliance'
-              }
-            </p>
+          <div className="flex items-center space-x-3">
+            <Badge variant="outline" className="px-3 py-1 border-blue-400 text-blue-300 bg-blue-600/20">
+              {activeTab === 'income' ? incomeCalculations.activeEntries : expenseCalculations.activeEntries} active entries
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-slate-700 hover:bg-slate-600 text-white border-slate-600"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Smart Fill
+            </Button>
           </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <Badge variant="outline" className={`px-3 py-1 ${
-            activeTab === 'income'
-              ? 'border-green-300 text-green-700 bg-green-100'
-              : 'border-red-300 text-red-700 bg-red-100'
-          }`}>
-            {activeTab === 'income' ? incomeCalculations.activeEntries : expenseCalculations.activeEntries} entries
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            className={`${
-              activeTab === 'income'
-                ? 'bg-green-100 hover:bg-green-200 text-green-700 border-green-300'
-                : 'bg-red-100 hover:bg-red-200 text-red-700 border-red-300'
-            }`}
-          >
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Smart Fill
-          </Button>
         </div>
       </div>
 
@@ -661,7 +643,7 @@ const EnhancedBulkCapture = () => {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-green-700">
+                  <thead className="bg-slate-800">
                     <tr>
                       <th className="text-left p-3 text-sm font-medium text-white">
                         <Calendar className="w-4 h-4 inline mr-2" />
