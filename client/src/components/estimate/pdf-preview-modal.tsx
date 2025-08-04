@@ -43,6 +43,12 @@ export default function PDFPreviewModal({
   const generatePreview = async () => {
     setIsGenerating(true);
     try {
+      // Clean up previous URL
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl("");
+      }
+
       // Transform estimate data to match the PDF generator interface
       const transformedEstimate: EstimateWithCustomer = {
         id: estimate.id,
@@ -72,10 +78,23 @@ export default function PDFPreviewModal({
         })) || []
       };
 
+      console.log("Generating PDF with data:", transformedEstimate);
       const pdf = await generateEstimatePDF(transformedEstimate);
-      const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
+      
+      if (pdf) {
+        const blob = pdf.output('blob');
+        console.log("PDF blob created:", blob.size, "bytes");
+        
+        if (blob && blob.size > 0) {
+          const url = URL.createObjectURL(blob);
+          console.log("Blob URL created:", url);
+          setPdfUrl(url);
+        } else {
+          throw new Error("PDF blob is empty or invalid");
+        }
+      } else {
+        throw new Error("PDF generation returned null");
+      }
     } catch (error) {
       console.error("Error generating PDF preview:", error);
       toast({
@@ -83,6 +102,7 @@ export default function PDFPreviewModal({
         description: "Failed to generate PDF preview. Please try again.",
         variant: "destructive",
       });
+      setPdfUrl(""); // Ensure URL is cleared on error
     } finally {
       setIsGenerating(false);
     }
@@ -174,10 +194,22 @@ export default function PDFPreviewModal({
               src={pdfUrl}
               className="flex-1 w-full border rounded-lg"
               title="Estimate PDF Preview"
+              sandbox="allow-same-origin allow-scripts allow-downloads"
+              onLoad={() => console.log("PDF iframe loaded successfully")}
+              onError={(e) => console.error("PDF iframe error:", e)}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <p className="text-gray-600 dark:text-gray-400">Failed to load PDF preview</p>
+              <div className="text-center">
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Failed to load PDF preview</p>
+                <Button 
+                  variant="outline" 
+                  onClick={generatePreview}
+                  className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                >
+                  Try Again
+                </Button>
+              </div>
             </div>
           )}
         </div>
