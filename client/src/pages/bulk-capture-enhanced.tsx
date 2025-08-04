@@ -467,16 +467,32 @@ const EnhancedBulkCapture = () => {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className={`flex items-center justify-between p-6 rounded-lg ${
+        activeTab === 'income' 
+          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' 
+          : 'bg-gradient-to-r from-red-50 to-rose-50 border border-red-200'
+      }`}>
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-50 rounded-lg flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-green-600" />
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            activeTab === 'income'
+              ? 'bg-gradient-to-br from-green-100 to-emerald-100'
+              : 'bg-gradient-to-br from-red-100 to-rose-100'
+          }`}>
+            {activeTab === 'income' ? (
+              <TrendingUp className="w-5 h-5 text-green-600" />
+            ) : (
+              <TrendingDown className="w-5 h-5 text-red-600" />
+            )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className={`text-2xl font-bold ${
+              activeTab === 'income' ? 'text-green-900' : 'text-red-900'
+            }`}>
               {activeTab === 'income' ? 'Bulk Income Capture' : 'Bulk Expense Capture'}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className={`${
+              activeTab === 'income' ? 'text-green-600' : 'text-red-600'
+            }`}>
               {activeTab === 'income' 
                 ? 'Professional bulk income entry for revenue transactions and client billing'
                 : 'Professional bulk entry system with intelligent automation and VAT compliance'
@@ -485,13 +501,21 @@ const EnhancedBulkCapture = () => {
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <Badge variant="outline" className="px-3 py-1">
+          <Badge variant="outline" className={`px-3 py-1 ${
+            activeTab === 'income'
+              ? 'border-green-300 text-green-700 bg-green-100'
+              : 'border-red-300 text-red-700 bg-red-100'
+          }`}>
             {activeTab === 'income' ? incomeCalculations.activeEntries : expenseCalculations.activeEntries} entries
           </Badge>
           <Button
             variant="outline"
             size="sm"
-            className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+            className={`${
+              activeTab === 'income'
+                ? 'bg-green-100 hover:bg-green-200 text-green-700 border-green-300'
+                : 'bg-red-100 hover:bg-red-200 text-red-700 border-red-300'
+            }`}
           >
             <CheckCircle className="w-4 h-4 mr-2" />
             Smart Fill
@@ -501,12 +525,18 @@ const EnhancedBulkCapture = () => {
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense')}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="income" className="flex items-center space-x-2">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+          <TabsTrigger 
+            value="income" 
+            className="flex items-center space-x-2 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+          >
             <TrendingUp className="w-4 h-4" />
             <span>Income Capture</span>
           </TabsTrigger>
-          <TabsTrigger value="expense" className="flex items-center space-x-2">
+          <TabsTrigger 
+            value="expense" 
+            className="flex items-center space-x-2 data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+          >
             <TrendingDown className="w-4 h-4" />
             <span>Expense Capture</span>
           </TabsTrigger>
@@ -821,7 +851,7 @@ const EnhancedBulkCapture = () => {
                 Add Rows
               </Button>
               <Button 
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-red-600 hover:bg-red-700"
                 onClick={() => saveExpensesMutation.mutate()}
                 disabled={saveExpensesMutation.isPending}
               >
