@@ -1960,9 +1960,13 @@ export class DatabaseStorage implements IStorage {
       };
 
       allEstimates.forEach(estimate => {
-        const status = estimate.status || 'draft'; // Default to draft if no status
-        if (status in stats) {
+        const status = estimate?.status || 'draft'; // Default to draft if no status
+        // Ensure status is a valid key
+        if (status && typeof status === 'string' && status in stats) {
           (stats as any)[status]++;
+        } else {
+          // If invalid status, count as draft
+          stats.draft++;
         }
       });
 

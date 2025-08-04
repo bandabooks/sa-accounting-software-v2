@@ -36,12 +36,12 @@ export default function Estimates() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { data: estimates, isLoading } = useQuery({
+  const { data: estimates = [], isLoading } = useQuery({
     queryKey: ["/api/estimates"],
     queryFn: estimatesApi.getAll
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats = { total: 0, conversionRate: 0, accepted: 0, wonValue: 0 } } = useQuery({
     queryKey: ["/api/estimates/stats"],
     queryFn: () => apiRequest("/api/estimates/stats", "GET")
   });
@@ -94,8 +94,8 @@ export default function Estimates() {
   });
 
   const filteredEstimates = estimates?.filter(estimate => {
-    const matchesSearch = estimate.estimateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      estimate.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = estimate.estimateNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      estimate.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || estimate.status === statusFilter;
     return matchesSearch && matchesStatus;
   }) || [];
