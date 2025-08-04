@@ -26,6 +26,7 @@ import GeneralReports from "@/pages/general-reports";
 import Expenses from "@/pages/expenses";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
+import PurchaseOrderCreate from "@/pages/purchase-order-create";
 import Products from "@/pages/products";
 import ProductCreate from "@/pages/product-create";
 import ProductEdit from "@/pages/product-edit";
@@ -160,6 +161,7 @@ const PERMISSIONS = {
   EXPENSES_CREATE: 'expenses:create',
   SUPPLIERS_VIEW: 'suppliers:view',
   PURCHASE_ORDERS_VIEW: 'purchase_orders:view',
+  PURCHASE_ORDERS_CREATE: 'purchase_orders:create',
   PRODUCTS_VIEW: 'products:view',
   PRODUCTS_CREATE: 'products:create',
   SETTINGS_VIEW: 'settings:view',
@@ -317,6 +319,11 @@ function AuthenticatedApp() {
         <Route path="/suppliers">
           <ProtectedRoute permission={PERMISSIONS.SUPPLIERS_VIEW}>
             <Suppliers />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/purchase-orders/create">
+          <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_CREATE}>
+            <PurchaseOrderCreate />
           </ProtectedRoute>
         </Route>
         <Route path="/purchase-orders">

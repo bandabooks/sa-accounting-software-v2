@@ -15,39 +15,53 @@ import {
   Plus,
   Trash2,
   FileText,
-  User,
+  Building,
   Calendar,
   Tag,
   AlertCircle,
   Info
 } from "lucide-react";
-import { customersApi } from "@/lib/api";
-import { formatCurrency, generateInvoiceNumber } from "@/lib/utils-invoice";
+import { formatCurrency } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
 import { useGlobalNotification } from "@/contexts/NotificationContext";
-import { CustomerSelect } from "@/components/CustomerSelect";
-import { ProductServiceSelect } from "@/components/ProductServiceSelect";
 import { VATTypeSelect } from "@/components/ui/vat-type-select";
 import { VATConditionalWrapper, VATFieldWrapper } from "@/components/vat/VATConditionalWrapper";
 import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
-import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
 import { useVATStatus } from "@/hooks/useVATStatus";
 import { apiRequest } from "@/lib/queryClient";
-import type { Customer, Product } from "@shared/schema";
 
-// Sales Order Item Interface
-interface SalesOrderItem {
-  productId?: number;
+// Purchase Order Item Interface
+interface PurchaseOrderItem {
   description: string;
   quantity: string;
   unitPrice: string;
   vatRate: string;
   vatInclusive: boolean;
   vatAmount: string;
-  vatTypeId: number;
+  vatTypeId: string; // Change to string to match VATTypeSelect interface
+  expenseCategory: string | null;
 }
 
-export default function SalesOrderCreate() {
+interface Supplier {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+const expenseCategories = [
+  { value: 'office_supplies', label: 'Office Supplies' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'inventory', label: 'Inventory' },
+  { value: 'services', label: 'Services' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'travel', label: 'Travel' },
+  { value: 'utilities', label: 'Utilities' },
+  { value: 'other', label: 'Other' }
+];
+
+export default function PurchaseOrderCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { showSuccess } = useGlobalNotification();
@@ -57,32 +71,36 @@ export default function SalesOrderCreate() {
   const { shouldShowVATFields } = useVATStatus();
 
   const [formData, setFormData] = useState({
-    customerId: "",
+    supplierId: "",
     orderDate: new Date().toISOString().split('T')[0],
-    expectedDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    deliveryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days from now
     status: "draft",
     notes: "",
     globalVatType: "1", // Default to Standard Rate (15%)
-    vatCalculationMethod: "inclusive" as "inclusive" | "exclusive"
+    vatCalculationMethod: "exclusive" as "inclusive" | "exclusive" // Purchase orders usually exclusive
   });
 
-  const [items, setItems] = useState<SalesOrderItem[]>([
+  const [items, setItems] = useState<PurchaseOrderItem[]>([
     {
-      productId: undefined,
       description: "",
       quantity: "1",
       unitPrice: "0.00",
       vatRate: "15.00",
-      vatInclusive: true,
+      vatInclusive: false, // Purchase orders usually exclusive
       vatAmount: "0.00",
-      vatTypeId: 1 // Default to Standard Rate (15%)
+      vatTypeId: "1", // Default to Standard Rate (15%)
+      expenseCategory: null
     }
   ]);
 
-  // Load Customers
-  const { data: customers = [] } = useQuery({
-    queryKey: ["/api/customers"],
-    queryFn: customersApi.getAll
+  // Load Suppliers
+  const { data: suppliers = [] } = useQuery<Supplier[]>({
+    queryKey: ["/api/suppliers"],
+    queryFn: async () => {
+      const response = await fetch('/api/suppliers');
+      if (!response.ok) throw new Error('Failed to fetch suppliers');
+      return response.json();
+    },
   });
 
   // Fetch VAT types from database for dynamic calculation
@@ -95,14 +113,14 @@ export default function SalesOrderCreate() {
   const vatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
 
   // Dynamic VAT calculation using database VAT types
-  const calculateItemVAT = (item: SalesOrderItem) => {
+  const calculateItemVAT = (item: PurchaseOrderItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
     if (item.vatTypeId && shouldShowVATFields && vatTypes.length > 0) {
       // Find VAT type from database
-      const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
+      const vatType = vatTypes.find((type: any) => type.id === parseInt(item.vatTypeId));
       
       if (vatType) {
         const vatRate = parseFloat(vatType.rate);
@@ -137,24 +155,24 @@ export default function SalesOrderCreate() {
       lineAmount * vatRate;
   };
 
-  const createSalesOrder = useMutation({
+  const createPurchaseOrder = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('/api/sales-orders', 'POST', data);
+      const response = await apiRequest('/api/purchase-orders', 'POST', data);
       return response;
     },
-    onSuccess: (salesOrder) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sales-orders"] });
+    onSuccess: (purchaseOrder: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       showSuccess(
-        "Sales Order Created Successfully",
-        `Sales Order ${salesOrder.orderNumber} has been created and is ready for review.`
+        "Purchase Order Created Successfully",
+        `Purchase Order ${purchaseOrder.orderNumber || 'PO-' + Date.now()} has been created and is ready for review.`
       );
-      setLocation(`/sales-orders/${salesOrder.id}`);
+      setLocation(`/purchase-orders`);
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create sales order. Please try again.",
+        description: "Failed to create purchase order. Please try again.",
         variant: "destructive",
       });
     }
@@ -162,14 +180,14 @@ export default function SalesOrderCreate() {
 
   const addItem = () => {
     setItems([...items, { 
-      productId: undefined, 
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
       vatRate: "15.00",
-      vatInclusive: true, 
+      vatInclusive: false, 
       vatAmount: "0.00",
-      vatTypeId: 1 // Default to Standard Rate (15%)
+      vatTypeId: "1", // Default to Standard Rate (15%)
+      expenseCategory: null
     }]);
   };
 
@@ -179,7 +197,7 @@ export default function SalesOrderCreate() {
     }
   };
 
-  const updateItem = (index: number, field: keyof SalesOrderItem, value: string | number) => {
+  const updateItem = (index: number, field: keyof PurchaseOrderItem, value: string | number) => {
     const newItems = [...items];
     (newItems[index] as any)[field] = value;
     
@@ -188,24 +206,6 @@ export default function SalesOrderCreate() {
       const calculatedVAT = calculateItemVAT(newItems[index]);
       newItems[index].vatAmount = calculatedVAT.toFixed(2);
     }
-    
-    setItems(newItems);
-  };
-
-  const handleProductSelect = (index: number, product: Product) => {
-    const newItems = [...items];
-    newItems[index] = {
-      ...newItems[index],
-      productId: product.id,
-      description: product.description || product.name,
-      unitPrice: product.unitPrice,
-      vatRate: product.vatRate || "15",
-      vatTypeId: product.vatRate === "0" ? 2 : 1 // Smart VAT type detection (2=zero_rated, 1=standard)
-    };
-    
-    // Auto-calculate VAT amount for the updated item
-    const calculatedVAT = calculateItemVAT(newItems[index]);
-    newItems[index].vatAmount = calculatedVAT.toFixed(2);
     
     setItems(newItems);
   };
@@ -227,10 +227,10 @@ export default function SalesOrderCreate() {
     e.preventDefault();
 
     // Validation
-    if (!formData.customerId) {
+    if (!formData.supplierId) {
       toast({
         title: "Validation Error",
-        description: "Please select a customer.",
+        description: "Please select a supplier.",
         variant: "destructive",
       });
       return;
@@ -245,10 +245,10 @@ export default function SalesOrderCreate() {
       return;
     }
 
-    const salesOrderData = {
-      customerId: parseInt(formData.customerId),
+    const purchaseOrderData = {
+      supplierId: parseInt(formData.supplierId),
       orderDate: formData.orderDate,
-      expectedDate: formData.expectedDate,
+      deliveryDate: formData.deliveryDate,
       status: formData.status,
       notes: formData.notes,
       subtotal: subtotal.toFixed(2),
@@ -263,11 +263,12 @@ export default function SalesOrderCreate() {
         vatRate: parseFloat(item.vatRate) || 0,
         vatAmount: parseFloat(item.vatAmount) || 0,
         vatInclusive: item.vatInclusive,
-        vatTypeId: item.vatTypeId
+        vatTypeId: parseInt(item.vatTypeId),
+        expenseCategory: item.expenseCategory
       }))
     };
 
-    createSalesOrder.mutate(salesOrderData);
+    createPurchaseOrder.mutate(purchaseOrderData);
   };
 
   return (
@@ -278,18 +279,18 @@ export default function SalesOrderCreate() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => setLocation("/sales-orders")}
+            onClick={() => setLocation("/purchase-orders")}
             className="text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Sales Orders
+            Back to Purchase Orders
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Sales Order</h1>
-            <p className="text-gray-600">Create a new sales order for your customer</p>
+            <h1 className="text-2xl font-bold text-gray-900">Create Purchase Order</h1>
+            <p className="text-gray-600">Create a new purchase order from your supplier</p>
           </div>
         </div>
-        <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+        <Badge variant="secondary" className="bg-orange-50 text-orange-700">
           <ShoppingCart className="h-3 w-3 mr-1" />
           Draft
         </Badge>
@@ -299,29 +300,37 @@ export default function SalesOrderCreate() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Customer Information */}
+            {/* Supplier Information */}
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg">
-                  <User className="h-5 w-5 mr-2 text-blue-600" />
-                  Customer Information
+                  <Building className="h-5 w-5 mr-2 text-orange-600" />
+                  Supplier Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Customer</label>
-                    <CustomerSelect
-                      value={formData.customerId}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
-                      placeholder="Select customer..."
-                    />
+                    <label className="text-sm font-medium text-gray-700">Supplier</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      value={formData.supplierId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, supplierId: e.target.value }))}
+                      required
+                    >
+                      <option value="">Select supplier...</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id.toString()}>
+                          {supplier.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Status</label>
                     <select 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                       value={formData.status}
                       onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
                     >
@@ -349,8 +358,8 @@ export default function SalesOrderCreate() {
                     <label className="text-sm font-medium text-gray-700">Expected Delivery Date</label>
                     <Input
                       type="date"
-                      value={formData.expectedDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, expectedDate: e.target.value }))}
+                      value={formData.deliveryDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
                       className="w-full"
                     />
                   </div>
@@ -358,23 +367,23 @@ export default function SalesOrderCreate() {
               </CardContent>
             </Card>
 
-            {/* Sales Order Items */}
+            {/* Purchase Order Items */}
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center text-lg">
-                      <Calculator className="h-5 w-5 mr-2 text-green-600" />
-                      Sales Order Items
+                      <Calculator className="h-5 w-5 mr-2 text-orange-600" />
+                      Purchase Order Items
                     </CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">Add products and services to this sales order</p>
+                    <p className="text-sm text-gray-600 mt-1">Add items to this purchase order</p>
                   </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={addItem}
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200"
+                    className="flex items-center gap-2 bg-gradient-to-r from-orange-50 to-red-50 hover:from-orange-100 hover:to-red-100 border-orange-200"
                   >
                     <Plus className="h-4 w-4" />
                     Add Item
@@ -383,7 +392,7 @@ export default function SalesOrderCreate() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {items.map((item, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-4 bg-gradient-to-r from-gray-50 to-blue-50">
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-4 bg-gradient-to-r from-gray-50 to-orange-50">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-gray-900">Item {index + 1}</h4>
                       {items.length > 1 && (
@@ -400,19 +409,6 @@ export default function SalesOrderCreate() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Product Selection */}
-                      <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Product/Service</label>
-                        <ProductServiceSelect
-                          value={item.productId}
-                          onValueChange={(productId) => {
-                            updateItem(index, 'productId', productId);
-                          }}
-                          onProductSelect={(product: Product) => handleProductSelect(index, product)}
-                          placeholder="Select or create product/service..."
-                        />
-                      </div>
-                      
                       {/* Description */}
                       <div className="md:col-span-2 space-y-2">
                         <label className="text-sm font-medium text-gray-700">Description</label>
@@ -422,6 +418,23 @@ export default function SalesOrderCreate() {
                           onChange={(e) => updateItem(index, 'description', e.target.value)}
                           className="w-full"
                         />
+                      </div>
+
+                      {/* Expense Category */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Expense Category</label>
+                        <select 
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          value={item.expenseCategory || ""}
+                          onChange={(e) => updateItem(index, 'expenseCategory', e.target.value)}
+                        >
+                          <option value="">Select category...</option>
+                          {expenseCategories.map((category) => (
+                            <option key={category.value} value={category.value}>
+                              {category.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Quantity */}
@@ -473,10 +486,10 @@ export default function SalesOrderCreate() {
                       </VATFieldWrapper>
 
                       {/* Line Total Display */}
-                      <div className="md:col-span-2 mt-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+                      <div className="md:col-span-2 mt-3 p-3 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg">
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium text-gray-700">Line Total:</span>
-                          <span className="text-lg font-semibold text-green-700">
+                          <span className="text-lg font-semibold text-orange-700">
                             {formatCurrency(
                               (
                                 parseFloat(item.quantity || "0") * 
@@ -506,10 +519,10 @@ export default function SalesOrderCreate() {
                 <VATConditionalWrapper>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Sales Order VAT Treatment</label>
+                      <label className="text-sm font-medium text-gray-700">Purchase Order VAT Treatment</label>
                       <VATTypeSelect
-                        value={parseInt(formData.globalVatType)}
-                        onValueChange={(vatTypeId) => setFormData(prev => ({ ...prev, globalVatType: vatTypeId.toString() }))}
+                        value={formData.globalVatType}
+                        onValueChange={(vatTypeId) => setFormData(prev => ({ ...prev, globalVatType: vatTypeId }))}
                         placeholder="Select VAT treatment..."
                       />
                     </div>
@@ -517,12 +530,12 @@ export default function SalesOrderCreate() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">VAT Calculation Method</label>
                       <select 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                         value={formData.vatCalculationMethod}
                         onChange={(e) => setFormData(prev => ({ ...prev, vatCalculationMethod: e.target.value as "inclusive" | "exclusive" }))}
                       >
-                        <option value="inclusive">VAT Inclusive</option>
                         <option value="exclusive">VAT Exclusive</option>
+                        <option value="inclusive">VAT Inclusive</option>
                       </select>
                     </div>
                   </div>
@@ -532,7 +545,7 @@ export default function SalesOrderCreate() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Notes</label>
                   <Textarea
-                    placeholder="Additional notes for this sales order..."
+                    placeholder="Additional notes for this purchase order..."
                     rows={3}
                     value={formData.notes}
                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
@@ -547,8 +560,8 @@ export default function SalesOrderCreate() {
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg">
-                  <Calculator className="h-5 w-5 mr-2 text-green-600" />
-                  Sales Order Summary
+                  <Calculator className="h-5 w-5 mr-2 text-orange-600" />
+                  Purchase Order Summary
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -569,24 +582,26 @@ export default function SalesOrderCreate() {
                   
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total:</span>
-                    <span className="text-green-600">{formatCurrency(total.toFixed(2))}</span>
+                    <span className="text-orange-600">{formatCurrency(total.toFixed(2))}</span>
                   </div>
                 </div>
 
                 {/* VAT Breakdown */}
                 <VATFieldWrapper>
-                  <VATSummary lineItems={items} vatTypes={vatTypes} />
+                  <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+                    VAT amounts calculated automatically based on selected VAT types
+                  </div>
                 </VATFieldWrapper>
 
                 {/* Action Buttons */}
                 <div className="mt-6 space-y-3">
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
-                    disabled={createSalesOrder.isPending}
+                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-md"
+                    disabled={createPurchaseOrder.isPending}
                   >
                     <FileText className="h-4 w-4 mr-2" />
-                    {createSalesOrder.isPending ? "Creating..." : "Create Sales Order"}
+                    {createPurchaseOrder.isPending ? "Creating..." : "Create Purchase Order"}
                   </Button>
                   
                   <div className="text-center">
