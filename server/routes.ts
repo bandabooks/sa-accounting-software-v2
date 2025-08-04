@@ -1499,21 +1499,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send estimate email
-  app.post("/api/estimates/:id/send", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/estimates/:id/send-email", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const companyId = req.user.companyId;
+      const { to, subject, message } = req.body;
+      
       const estimate = await storage.getEstimate(id);
       
       if (!estimate || estimate.companyId !== companyId) {
         return res.status(404).json({ message: "Estimate not found" });
       }
 
+      // Import email service
+      const { EmailService } = await import("./services/emailService");
+      const emailService = new EmailService();
+
+      // Send email with estimate details
+      await emailService.sendEmail({
+        to,
+        subject,
+        bodyText: message,
+        bodyHtml: `<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          ${message.replace(/\n/g, '<br>')}
+          <br><br>
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">
+            <h3>Estimate Details</h3>
+            <p><strong>Estimate Number:</strong> ${estimate.estimateNumber}</p>
+            <p><strong>Issue Date:</strong> ${estimate.issueDate}</p>
+            <p><strong>Total Amount:</strong> ${estimate.total}</p>
+            <p><strong>Valid Until:</strong> ${estimate.expiryDate}</p>
+          </div>
+        </div>`
+      });
+
       // Update estimate status to 'sent'
       await storage.updateEstimateStatus(id, 'sent');
-      
-      // In production, send actual email here
-      console.log("Estimate email sent simulation:", { estimateId: id });
       
       res.json({ message: "Estimate sent successfully", estimate: { ...estimate, status: 'sent' } });
     } catch (error) {
@@ -1568,7 +1589,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the duplicate estimate with items
       const newEstimate = await storage.createEstimate(duplicateData, originalEstimate.items || []);
       
-      res.status(201).json(newEstimate);
+      res.status(201).json({ 
+        success: true, 
+        id: newEstimate.id, 
+        estimateNumber: newEstimate.estimateNumber,
+        ...newEstimate 
+      });
     } catch (error) {
       console.error("Error duplicating estimate:", error);
       res.status(500).json({ message: "Failed to duplicate estimate" });

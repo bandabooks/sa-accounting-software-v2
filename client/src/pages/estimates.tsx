@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   Plus, Eye, FileText, Send, Check, X, Clock, AlertCircle, 
   BarChart3, TrendingUp, Target, Award, Calendar, Filter,
@@ -31,12 +31,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { estimatesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { MiniDashboard } from "@/components/MiniDashboard";
 import { DashboardCard } from "@/components/DashboardCard";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { generateEstimatePDF } from "@/components/estimate/pdf-generator";
 
 interface EstimateTemplate {
   id: string;
@@ -53,8 +64,121 @@ export default function Estimates() {
   const [viewMode, setViewMode] = useState<"pipeline" | "table">("pipeline");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [estimateToDelete, setEstimateToDelete] = useState<any>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailData, setEmailData] = useState({ to: "", subject: "", message: "" });
+  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Handler functions for dropdown actions
+  const handleDownloadPDF = async (estimate: any) => {
+    try {
+      const pdf = await generateEstimatePDF(estimate);
+      pdf.save(`estimate-${estimate.estimateNumber}.pdf`);
+      toast({
+        title: "PDF Downloaded",
+        description: "Your estimate PDF has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicate = async (estimate: any) => {
+    try {
+      const response = await apiRequest(`/api/estimates/${estimate.id}/duplicate`, {
+        method: "POST",
+      });
+      
+      if (response.success) {
+        queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+        toast({
+          title: "Estimate Duplicated",
+          description: `New estimate ${response.estimateNumber} created successfully.`,
+        });
+        setLocation(`/estimate-create?edit=${response.id}`);
+      }
+    } catch (error) {
+      console.error("Error duplicating estimate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to duplicate estimate. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendToCustomer = (estimate: any) => {
+    setSelectedEstimate(estimate);
+    setEmailData({
+      to: estimate.customer?.email || "",
+      subject: `Estimate ${estimate.estimateNumber} from Think Mybiz Accounting`,
+      message: `Dear ${estimate.customer?.name || "Valued Customer"},\n\nPlease find attached your estimate #${estimate.estimateNumber} dated ${formatDate(estimate.issueDate)}.\n\nThis estimate is valid until ${formatDate(estimate.expiryDate)}.\n\nIf you have any questions, please don't hesitate to contact us.\n\nKind regards,\nThink Mybiz Accounting`
+    });
+    setEmailDialogOpen(true);
+  };
+
+  const handleDeleteEstimate = (estimate: any) => {
+    setEstimateToDelete(estimate);
+    setDeleteDialogOpen(true);
+  };
+
+  // Email sending mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: async (emailPayload: any) => {
+      return await apiRequest(`/api/estimates/${selectedEstimate.id}/send-email`, {
+        method: "POST",
+        body: JSON.stringify(emailPayload),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      toast({
+        title: "Email Sent",
+        description: "Estimate has been sent to the customer successfully.",
+      });
+      setEmailDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to send email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/estimates/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      toast({
+        title: "Estimate Deleted",
+        description: "The estimate has been deleted successfully.",
+      });
+      setDeleteDialogOpen(false);
+      setEstimateToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete estimate. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
   
   const { data: estimates = [], isLoading } = useQuery({
     queryKey: ["/api/estimates"],
@@ -409,22 +533,20 @@ export default function Estimates() {
                                         Edit Estimate
                                       </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                      <Link to={`/estimates/${estimate.id}/duplicate`} className="flex items-center">
-                                        <Copy className="h-4 w-4 mr-2" />
-                                        Duplicate
-                                      </Link>
+                                    <DropdownMenuItem onClick={() => handleDuplicate(estimate)}>
+                                      <Copy className="h-4 w-4 mr-2" />
+                                      Duplicate
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleDownloadPDF(estimate)}>
                                       <Download className="h-4 w-4 mr-2" />
                                       Download PDF
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleSendToCustomer(estimate)}>
                                       <Send className="h-4 w-4 mr-2" />
                                       Send to Customer
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-red-600">
+                                    <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteEstimate(estimate)}>
                                       <Trash2 className="h-4 w-4 mr-2" />
                                       Delete Estimate
                                     </DropdownMenuItem>
@@ -617,6 +739,89 @@ export default function Estimates() {
           </Card>
         </div>
       </div>
+
+      {/* Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Send Estimate to Customer</DialogTitle>
+            <DialogDescription>
+              Send the estimate to your customer via email.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="email-to" className="text-right">
+                To
+              </label>
+              <Input
+                id="email-to"
+                value={emailData.to}
+                onChange={(e) => setEmailData({ ...emailData, to: e.target.value })}
+                className="col-span-3"
+                placeholder="customer@example.com"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="email-subject" className="text-right">
+                Subject
+              </label>
+              <Input
+                id="email-subject"
+                value={emailData.subject}
+                onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="email-message" className="text-right">
+                Message
+              </label>
+              <Textarea
+                id="email-message"
+                value={emailData.message}
+                onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
+                className="col-span-3"
+                rows={5}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => sendEmailMutation.mutate(emailData)}
+              disabled={sendEmailMutation.isPending || !emailData.to}
+            >
+              {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the estimate
+              "{estimateToDelete?.estimateNumber}" and remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => estimateToDelete && deleteMutation.mutate(estimateToDelete.id)}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Estimate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
