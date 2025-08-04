@@ -627,10 +627,36 @@ export default function InvoiceCreate() {
                       />
                     </div>
 
-                    {/* Amount Column - Calculated with VAT applied */}
+                    {/* Amount Column - Calculated with VAT applied based on global method */}
                     <div className="col-span-1">
                       <div className="text-right font-medium text-gray-900 dark:text-white px-2 py-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
-                        R{(parseFloat(item.quantity || "0") * parseFloat(item.unitPrice || "0")).toFixed(2)}
+                        R{(() => {
+                          const quantity = parseFloat(item.quantity || "0");
+                          const unitPrice = parseFloat(item.unitPrice || "0");
+                          const lineAmount = quantity * unitPrice;
+                          
+                          // Get VAT rate from VAT type ID
+                          const vatRate = item.vatTypeId === 1 ? 15 :  // STD_EX - VAT Exclusive (15%)
+                                         item.vatTypeId === 2 ? 15 :   // STD - VAT Inclusive (15%) 
+                                         item.vatTypeId === 3 ? 0 :    // ZER - Zero Rated (0%)
+                                         item.vatTypeId === 4 ? 0 :    // EXE - Exempt (0%)
+                                         0;                            // OUT - No VAT (0%)
+                          
+                          // CRITICAL: For zero-rated items, always show the line amount as-is
+                          if (vatRate === 0) {
+                            return lineAmount.toFixed(2);
+                          }
+                          
+                          // For standard VAT items, respect the global VAT calculation method
+                          if (formData.vatCalculationMethod === 'inclusive') {
+                            // VAT Inclusive: Amount displayed remains the same (VAT is already included)
+                            return lineAmount.toFixed(2);
+                          } else {
+                            // VAT Exclusive: Amount displayed should include VAT for display
+                            const vatAmount = lineAmount * (vatRate / 100);
+                            return (lineAmount + vatAmount).toFixed(2);
+                          }
+                        })()}
                       </div>
                     </div>
 
