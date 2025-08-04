@@ -1176,14 +1176,14 @@ export class DatabaseStorage implements IStorage {
       sequence = await this.createDefaultSequence(companyId, documentType, defaultPrefix);
     }
 
-    // Generate document number using current number
-    const documentNumber = `${sequence.prefix}${sequence.currentNumber.toString().padStart(4, '0')}`;
+    // Generate document number using next number
+    const documentNumber = `${sequence.prefix}${sequence.nextNumber.toString().padStart(4, '0')}`;
     
-    // Increment the current number for next use
+    // Increment the next number for next use
     await db
       .update(numberSequences)
       .set({ 
-        currentNumber: sequence.currentNumber + 1,
+        nextNumber: sequence.nextNumber + 1,
         updatedAt: new Date() 
       })
       .where(eq(numberSequences.id, sequence.id));

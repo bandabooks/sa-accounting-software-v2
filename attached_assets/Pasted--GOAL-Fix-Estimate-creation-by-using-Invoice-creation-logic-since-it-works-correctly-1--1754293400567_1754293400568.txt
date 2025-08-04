@@ -1,0 +1,64 @@
+// ✅ GOAL: Fix Estimate creation by using Invoice creation logic (since it works correctly)
+
+// 1. Copy the entire request structure, data validation, tax logic, and journal entry flow from invoice creation
+// 2. Replace only the model/entity from "Invoice" to "Estimate"
+// 3. Ensure that any required fields are not null (e.g., estimateNumber, customerId, lineItems, total)
+// 4. Match the VAT calculation flow from invoice
+// 5. If invoiceNumber is auto-generated, do the same for estimateNumber
+
+// 🔧 In estimate controller:
+const createEstimate = async (req, res) => {
+  try {
+    const {
+      customerId,
+      issueDate,
+      expiryDate,
+      items,
+      notes,
+      subtotal,
+      vatAmount,
+      total,
+      vatMethod,
+    } = req.body.estimate;
+
+    // ✅ Validate required fields
+    if (!customerId || !items || items.length === 0 || !issueDate || !total) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // ✅ Use invoice number logic to auto-generate estimateNumber
+    const estimateNumber = await generateEstimateNumber(); // copy logic from generateInvoiceNumber()
+
+    // ✅ Use same tax calculation and item mapping from invoices
+    const estimateItems = items.map(item => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      vatRate: item.vatRate,
+      total: item.total,
+    }));
+
+    const newEstimate = await prisma.estimate.create({
+      data: {
+        estimateNumber,
+        customer: { connect: { id: customerId } },
+        issueDate: new Date(issueDate),
+        expiryDate: new Date(expiryDate),
+        status: "draft",
+        subtotal,
+        vatAmount,
+        total,
+        vatMethod,
+        notes,
+        items: {
+          create: estimateItems,
+        },
+      },
+    });
+
+    return res.status(201).json(newEstimate);
+  } catch (error) {
+    console.error("❌ Estimate creation failed:", error);
+    return res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
