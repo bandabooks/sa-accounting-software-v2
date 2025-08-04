@@ -261,8 +261,29 @@ export default function EstimateCreate() {
 
       updateEstimate.mutate({ id: parseInt(editId), data: estimateData, items: validItems });
     } else {
-      // Create new estimate
-      createEstimate.mutate({ ...formData, items: validItems });
+      // Create new estimate - format data to match server schema
+      const estimateData: InsertEstimate = {
+        customerId: formData.customerId!,
+        issueDate: formData.issueDate,
+        expiryDate: formData.expiryDate,
+        status: formData.status,
+        subtotal: formData.subtotal,
+        vatAmount: formData.vatAmount,
+        total: formData.total,
+        notes: formData.notes,
+        terms: formData.terms
+      };
+
+      // Format items to include required 'total' field
+      const formattedItems = validItems.map(item => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        vatRate: item.vatRate,
+        total: (parseFloat(item.quantity) * parseFloat(item.unitPrice)).toFixed(2)
+      }));
+
+      createEstimate.mutate({ estimate: estimateData, items: formattedItems });
     }
   };
 
