@@ -203,13 +203,12 @@ export default function InvoiceCreate() {
     const lineAmount = quantity * unitPrice;
     
     if (item.vatTypeId && shouldShowVATFields) {
-      // Map VAT type ID to get the VAT rate and type
+      // Map VAT type ID to match bulk capture exactly
       const vatTypeMapping = {
-        1: { rate: 15, type: 'standard', name: 'STD_EX - VAT Exclusive' },
-        2: { rate: 15, type: 'standard', name: 'STD - VAT Inclusive' },
-        3: { rate: 0, type: 'zero_rated', name: 'ZER - Zero Rated' },
-        4: { rate: 0, type: 'exempt', name: 'EXE - Exempt' },
-        5: { rate: 0, type: 'no_vat', name: 'OUT - No VAT' }
+        1: { rate: 15, type: 'standard', name: 'STD - Standard Rate' },
+        2: { rate: 0, type: 'zero_rated', name: 'ZER - Zero Rated' },
+        3: { rate: 0, type: 'exempt', name: 'EXE - Exempt' },
+        4: { rate: 0, type: 'no_vat', name: 'OUT - Out of Scope' }
       };
       
       const vatConfig = vatTypeMapping[item.vatTypeId as keyof typeof vatTypeMapping];
@@ -276,7 +275,7 @@ export default function InvoiceCreate() {
       description: product.description || product.name,
       unitPrice: product.unitPrice,
       vatRate: product.vatRate || "15",
-      vatTypeId: product.vatRate === "0" ? 3 : 2 // Smart VAT type detection (3=zero_rated, 2=vat_inclusive)
+      vatTypeId: product.vatRate === "0" ? 2 : 1 // Smart VAT type detection (2=zero_rated, 1=standard)
     };
     
     // Calculate VAT amount for the updated item
