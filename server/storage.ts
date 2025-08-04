@@ -1713,34 +1713,32 @@ export class DatabaseStorage implements IStorage {
   // Estimates
   async getAllEstimates(companyId?: number): Promise<EstimateWithCustomer[]> {
     try {
-      let query = db.select({
-        id: estimates.id,
-        companyId: estimates.companyId,
-        customerId: estimates.customerId,
-        estimateNumber: estimates.estimateNumber,
-        issueDate: estimates.issueDate,
-        expiryDate: estimates.expiryDate,
-        status: estimates.status,
-        subtotal: estimates.subtotal,
-        vatAmount: estimates.vatAmount,
-        total: estimates.total,
-        notes: estimates.notes,
-        createdAt: estimates.createdAt,
-        updatedAt: estimates.updatedAt,
-        customerName: customers.name,
-        customerEmail: customers.email,
-        customerPhone: customers.phone,
-        customerVatNumber: customers.vatNumber
-      })
-      .from(estimates)
-      .leftJoin(customers, eq(estimates.customerId, customers.id));
-
-      // Apply company filtering if provided
+      // Simple approach - get estimates first, then customers separately
+      let estimatesQuery = db.select().from(estimates);
+      
       if (companyId) {
-        query = query.where(eq(estimates.companyId, companyId));
+        estimatesQuery = estimatesQuery.where(eq(estimates.companyId, companyId));
       }
-
-      const result = await query.orderBy(desc(estimates.createdAt));
+      
+      const allEstimates = await estimatesQuery.orderBy(desc(estimates.createdAt));
+      
+      // Get all customers for these estimates
+      const customerIds = [...new Set(allEstimates.map(e => e.customerId))];
+      const allCustomers = customerIds.length > 0 
+        ? await db.select().from(customers).where(inArray(customers.id, customerIds))
+        : [];
+      
+      // Combine estimates with customer data
+      const result = allEstimates.map(estimate => {
+        const customer = allCustomers.find(c => c.id === estimate.customerId);
+        return {
+          ...estimate,
+          customerName: customer?.name || 'Unknown Customer',
+          customerEmail: customer?.email || '',
+          customerPhone: customer?.phone || '',
+          customerVatNumber: customer?.vatNumber || ''
+        };
+      });
       
       console.log(`Retrieved ${result.length} estimates for company ${companyId || 'all'}`);
       return result as EstimateWithCustomer[];
