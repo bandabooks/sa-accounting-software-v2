@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice"
 import { SuccessModal } from "@/components/ui/success-modal";
 import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function EstimateDetail() {
   const params = useParams();
@@ -18,30 +19,14 @@ export default function EstimateDetail() {
   
   const estimateId = parseInt(params.id || "0");
 
-  const { data: estimate, isLoading } = useQuery({
+  const { data: estimate, isLoading } = useQuery<any>({
     queryKey: ["/api/estimates", estimateId],
-    queryFn: async () => {
-      const response = await fetch(`/api/estimates/${estimateId}`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      if (!response.ok) throw new Error("Failed to fetch estimate");
-      return response.json();
-    },
     enabled: estimateId > 0
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const response = await fetch(`/api/estimates/${estimateId}/status`, {
-        method: "PUT",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) throw new Error("Failed to update status");
+      const response = await apiRequest(`/api/estimates/${estimateId}/status`, "PUT", { status });
       return response.json();
     },
     onSuccess: () => {
@@ -64,12 +49,7 @@ export default function EstimateDetail() {
 
   const convertToInvoiceMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/estimates/${estimateId}/convert-to-invoice`, {
-        method: "POST",
-        credentials: 'include',
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) throw new Error("Failed to convert to invoice");
+      const response = await apiRequest(`/api/estimates/${estimateId}/convert-to-invoice`, "POST");
       return response.json();
     },
     onSuccess: (invoice) => {

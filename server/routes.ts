@@ -1498,6 +1498,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send estimate email
+  app.post("/api/estimates/:id/send", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
+      const estimate = await storage.getEstimate(id);
+      
+      if (!estimate || estimate.companyId !== companyId) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+
+      // Update estimate status to 'sent'
+      await storage.updateEstimateStatus(id, 'sent');
+      
+      // In production, send actual email here
+      console.log("Estimate email sent simulation:", { estimateId: id });
+      
+      res.json({ message: "Estimate sent successfully", estimate: { ...estimate, status: 'sent' } });
+    } catch (error) {
+      console.error("Error sending estimate:", error);
+      res.status(500).json({ message: "Failed to send estimate" });
+    }
+  });
+
+  // Generate estimate PDF
+  app.get("/api/estimates/:id/pdf", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
+      const estimate = await storage.getEstimate(id);
+      
+      if (!estimate || estimate.companyId !== companyId) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      
+      // In production, generate actual PDF here
+      res.json({ message: "PDF generation not implemented yet", downloadUrl: `/api/estimates/${id}/download` });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  // Duplicate estimate
+  app.post("/api/estimates/:id/duplicate", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
+      const originalEstimate = await storage.getEstimate(id);
+      
+      if (!originalEstimate || originalEstimate.companyId !== companyId) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+
+      // Generate new estimate number
+      const newEstimateNumber = await storage.getNextDocumentNumber(companyId, 'estimate');
+      
+      // Create duplicate estimate data
+      const duplicateData = {
+        ...originalEstimate,
+        id: undefined, // Remove id to create new record
+        estimateNumber: newEstimateNumber,
+        issueDate: new Date().toISOString().split('T')[0],
+        status: 'draft',
+        createdAt: undefined,
+        updatedAt: undefined
+      };
+
+      // Create the duplicate estimate with items
+      const newEstimate = await storage.createEstimate(duplicateData, originalEstimate.items || []);
+      
+      res.status(201).json(newEstimate);
+    } catch (error) {
+      console.error("Error duplicating estimate:", error);
+      res.status(500).json({ message: "Failed to duplicate estimate" });
+    }
+  });
+
+  // Delete estimate
+  app.delete("/api/estimates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
+      const estimate = await storage.getEstimate(id);
+      
+      if (!estimate || estimate.companyId !== companyId) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+
+      const success = await storage.deleteEstimate(id);
+      if (!success) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      
+      res.json({ message: "Estimate deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete estimate" });
+    }
+  });
+
   // Dashboard Stats Routes for List Pages
   app.get("/api/customers/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
