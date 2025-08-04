@@ -1399,6 +1399,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update estimate
+  app.put("/api/estimates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
+      const validatedData = createEstimateSchema.parse(req.body);
+      
+      // Check if estimate exists and belongs to company
+      const existingEstimate = await storage.getEstimate(id);
+      if (!existingEstimate || existingEstimate.companyId !== companyId) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+
+      // Update estimate data
+      const estimateData = {
+        ...validatedData.estimate,
+        companyId,
+        id // Keep existing ID
+      };
+      
+      console.log('Updating estimate with data:', JSON.stringify(estimateData, null, 2));
+      console.log('Updating estimate with items:', JSON.stringify(validatedData.items, null, 2));
+      
+      // Update the estimate
+      const updatedEstimate = await storage.updateEstimate(id, estimateData);
+      
+      if (!updatedEstimate) {
+        return res.status(404).json({ message: "Failed to update estimate" });
+      }
+      
+      // Get the full estimate with items to return
+      const fullEstimate = await storage.getEstimate(id);
+      
+      console.log('Estimate updated successfully:', id);
+      res.json(fullEstimate || updatedEstimate);
+    } catch (error) {
+      console.error("Estimate update error:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Internal server error:", error.message);
+      res.status(500).json({ message: "Failed to update estimate", error: error.message });
+    }
+  });
+
   app.post("/api/estimates/:id/convert-to-invoice", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);

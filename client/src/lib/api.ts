@@ -77,6 +77,9 @@ export const estimatesApi = {
   create: (data: any): Promise<EstimateWithItems> => 
     apiRequest("/api/estimates", "POST", data).then(res => res.json()),
   
+  update: (id: number, data: any): Promise<EstimateWithItems> => 
+    apiRequest(`/api/estimates/${id}`, "PUT", data).then(res => res.json()),
+  
   convertToInvoice: (id: number): Promise<InvoiceWithItems> => 
     apiRequest(`/api/estimates/${id}/convert-to-invoice`, "POST").then(res => res.json()),
 };

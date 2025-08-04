@@ -250,7 +250,17 @@ function AuthenticatedApp() {
             <Estimates />
           </ProtectedRoute>
         </Route>
+        <Route path="/estimates/create">
+          <ProtectedRoute permission={PERMISSIONS.ESTIMATES_CREATE}>
+            <EstimateCreate />
+          </ProtectedRoute>
+        </Route>
         <Route path="/estimates/new">
+          <ProtectedRoute permission={PERMISSIONS.ESTIMATES_CREATE}>
+            <EstimateCreate />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/estimates/edit/:id">
           <ProtectedRoute permission={PERMISSIONS.ESTIMATES_CREATE}>
             <EstimateCreate />
           </ProtectedRoute>

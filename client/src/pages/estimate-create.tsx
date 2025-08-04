@@ -47,16 +47,16 @@ interface EstimateItem {
 
 export default function EstimateCreate() {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute("/estimates/create");
+  const [matchCreate] = useRoute("/estimates/create");
+  const [matchEdit, paramsEdit] = useRoute("/estimates/edit/:id");
   const { toast } = useToast();
   const { showSuccess } = useGlobalNotification();
   const queryClient = useQueryClient();
   const { shouldShowVATFields } = useVATStatus();
   
-  // Get edit parameter from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const editId = urlParams.get('edit');
-  const isEditing = Boolean(editId);
+  // Determine if editing based on route
+  const editId = paramsEdit?.id || new URLSearchParams(window.location.search).get('edit');
+  const isEditing = Boolean(editId && (matchEdit || editId));
 
   const [formData, setFormData] = useState({
     customerId: 0,
@@ -117,9 +117,54 @@ export default function EstimateCreate() {
     enabled: !!activeCompany?.id,
     retry: false,
   });
+
+  // Fetch estimate data when editing
+  const { data: existingEstimate, isLoading: estimateLoading } = useQuery({
+    queryKey: ["/api/estimates", editId],
+    queryFn: () => editId ? apiRequest(`/api/estimates/${editId}`, "GET").then(res => res.json()) : null,
+    enabled: !!editId,
+    retry: false,
+  });
   
   // Ensure we have array of VAT types
   const vatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isEditing && existingEstimate) {
+      console.log('Loading existing estimate data:', existingEstimate);
+      
+      // Populate form data
+      setFormData({
+        customerId: existingEstimate.customerId || 0,
+        issueDate: new Date(existingEstimate.issueDate),
+        expiryDate: new Date(existingEstimate.expiryDate),
+        status: existingEstimate.status || "draft",
+        subtotal: existingEstimate.subtotal || "0.00",
+        vatAmount: existingEstimate.vatAmount || "0.00",
+        total: existingEstimate.total || "0.00",
+        notes: existingEstimate.notes || "",
+        terms: existingEstimate.terms || "",
+        globalVatType: "1", // Set to standard rate
+        vatCalculationMethod: vatSettings?.defaultVatCalculationMethod || "inclusive"
+      });
+
+      // Populate items
+      if (existingEstimate.items && existingEstimate.items.length > 0) {
+        const formattedItems = existingEstimate.items.map((item: any) => ({
+          productId: item.productId || undefined,
+          description: item.description || "",
+          quantity: item.quantity || "1",
+          unitPrice: item.unitPrice || "0.00",
+          vatRate: item.vatRate || "15.00",
+          vatInclusive: item.vatInclusive || true,
+          vatAmount: item.vatAmount || "0.00",
+          vatTypeId: item.vatTypeId || 1
+        }));
+        setItems(formattedItems);
+      }
+    }
+  }, [isEditing, existingEstimate, vatSettings]);
 
   // Dynamic VAT calculation using database VAT types (same as invoice)
   const calculateItemVAT = (item: EstimateItem) => {
@@ -352,9 +397,13 @@ export default function EstimateCreate() {
         estimate: estimateData, 
         items: formattedItems 
       };
-      console.log('Estimate Creation Payload:', JSON.stringify(payload, null, 2));
+      console.log(isEditing ? 'Estimate Update Payload:' : 'Estimate Creation Payload:', JSON.stringify(payload, null, 2));
 
-      createEstimate.mutate(payload);
+      if (isEditing && editId) {
+        updateEstimate.mutate({ id: parseInt(editId), data: payload.estimate, items: payload.items });
+      } else {
+        createEstimate.mutate(payload);
+      }
     }
   };
 
@@ -383,18 +432,20 @@ export default function EstimateCreate() {
 
   const updateEstimate = useMutation({
     mutationFn: async ({ id, data, items }: { id: number; data: any; items: any[] }) => {
-      const response = await apiRequest(`/api/estimates/${id}`, 'PUT', { ...data, items });
+      const response = await apiRequest(`/api/estimates/${id}`, 'PUT', { estimate: data, items });
       return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates", editId] });
       showSuccess(
         "Estimate Updated Successfully!",
         "Your estimate has been updated and saved."
       );
       setLocation("/estimates");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Update error:', error);
       toast({
         title: "Error", 
         description: "Failed to update estimate. Please try again.",
@@ -442,7 +493,7 @@ export default function EstimateCreate() {
           </div>
           <div className="flex items-center space-x-3">
             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-              EST-{String((estimates?.length || 0) + 1).padStart(4, '0')}
+              {isEditing && existingEstimate ? existingEstimate.estimateNumber : `EST-${String((estimates?.length || 0) + 1).padStart(4, '0')}`}
             </Badge>
           </div>
         </div>

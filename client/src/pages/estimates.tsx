@@ -528,7 +528,7 @@ export default function Estimates() {
                                       </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
-                                      <Link to={`/estimate-create?edit=${estimate.id}`} className="flex items-center">
+                                      <Link to={`/estimates/edit/${estimate.id}`} className="flex items-center">
                                         <Pencil className="h-4 w-4 mr-2" />
                                         Edit Estimate
                                       </Link>
