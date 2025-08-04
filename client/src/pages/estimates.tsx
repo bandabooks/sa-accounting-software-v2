@@ -5,7 +5,8 @@ import {
   Plus, Eye, FileText, Send, Check, X, Clock, AlertCircle, 
   BarChart3, TrendingUp, Target, Award, Calendar, Filter,
   Search, Download, MoreHorizontal, Edit, Star, Users,
-  DollarSign, Percent, ArrowRight, ChevronRight, Zap
+  DollarSign, Percent, ArrowRight, ChevronRight, Zap,
+  Pencil, Copy, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { estimatesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { MiniDashboard } from "@/components/MiniDashboard";
@@ -370,9 +378,46 @@ export default function Estimates() {
                                 <span className="font-semibold text-gray-800 text-sm">
                                   {estimate.estimateNumber}
                                 </span>
-                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                                  <MoreHorizontal className="h-3 w-3" />
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                      <MoreHorizontal className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/estimates/${estimate.id}`} className="flex items-center">
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        View Details
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/estimate-create?edit=${estimate.id}`} className="flex items-center">
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        Edit Estimate
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/estimates/${estimate.id}/duplicate`} className="flex items-center">
+                                        <Copy className="h-4 w-4 mr-2" />
+                                        Duplicate
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Download PDF
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Send className="h-4 w-4 mr-2" />
+                                      Send to Customer
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-red-600">
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete Estimate
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                               
                               <div>
