@@ -328,16 +328,21 @@ export default function EstimateCreate() {
         notes: sanitizedFormData.notes
       };
 
-      // Format items with enhanced VAT calculations using global VAT types
+      // Format items with enhanced VAT calculations using global VAT types - EXACT INVOICE LOGIC
       const formattedItems = validItems.map((item, index) => {
         const vatCalc = vatCalculations[index];
         const vatType = vatTypes.find(vt => vt.id === item.vatTypeId);
         
         return {
+          companyId: activeCompany?.id || 2, // Match invoice format
+          productId: item.productId || null,
           description: item.description,
           quantity: isNaN(parseFloat(item.quantity)) ? '1.00' : parseFloat(item.quantity).toFixed(2),
           unitPrice: isNaN(parseFloat(item.unitPrice)) ? '0.00' : parseFloat(item.unitPrice).toFixed(2),
           vatRate: vatType ? parseFloat(vatType.rate).toFixed(2) : '0.00',
+          vatAmount: isNaN(vatCalc.itemVat) ? '0.00' : vatCalc.itemVat.toFixed(2),
+          vatInclusive: item.vatInclusive || false,
+          vatTypeId: item.vatTypeId || 1,
           total: isNaN(vatCalc.itemGross) ? '0.00' : vatCalc.itemGross.toFixed(2)
         };
       });

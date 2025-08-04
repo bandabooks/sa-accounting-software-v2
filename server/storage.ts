@@ -1754,6 +1754,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEstimate(insertEstimate: InsertEstimate, items: Omit<InsertEstimateItem, 'estimateId'>[]): Promise<EstimateWithItems> {
+    // Generate estimate number if not provided
+    if (!insertEstimate.estimateNumber) {
+      insertEstimate.estimateNumber = await this.getNextDocumentNumber(insertEstimate.companyId, 'estimate', 'EST-');
+    }
+
     const [estimate] = await db
       .insert(estimates)
       .values(insertEstimate)
@@ -1763,7 +1768,11 @@ export class DatabaseStorage implements IStorage {
     for (const item of items) {
       const [estimateItem] = await db
         .insert(estimateItems)
-        .values({ ...item, estimateId: estimate.id })
+        .values({ 
+          ...item, 
+          estimateId: estimate.id,
+          companyId: insertEstimate.companyId 
+        })
         .returning();
       createdItems.push(estimateItem);
     }
