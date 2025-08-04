@@ -82,15 +82,24 @@ export default function PDFPreviewModal({
       const pdf = await generateEstimatePDF(transformedEstimate);
       
       if (pdf) {
-        const blob = pdf.output('blob');
-        console.log("PDF blob created:", blob.size, "bytes");
+        // Try data URL approach which is more compatible with browsers
+        const pdfDataUri = pdf.output('datauristring');
+        console.log("PDF data URI created, length:", pdfDataUri.length);
         
-        if (blob && blob.size > 0) {
-          const url = URL.createObjectURL(blob);
-          console.log("Blob URL created:", url);
-          setPdfUrl(url);
+        if (pdfDataUri && pdfDataUri.length > 100) { // Ensure it's a valid PDF
+          setPdfUrl(pdfDataUri);
         } else {
-          throw new Error("PDF blob is empty or invalid");
+          // Fallback to blob URL
+          const blob = pdf.output('blob');
+          console.log("PDF blob created:", blob.size, "bytes");
+          
+          if (blob && blob.size > 0) {
+            const url = URL.createObjectURL(blob);
+            console.log("Blob URL created:", url);
+            setPdfUrl(url);
+          } else {
+            throw new Error("PDF generation failed - no valid output");
+          }
         }
       } else {
         throw new Error("PDF generation returned null");
@@ -190,14 +199,34 @@ export default function PDFPreviewModal({
               </div>
             </div>
           ) : pdfUrl ? (
-            <iframe
-              src={pdfUrl}
-              className="flex-1 w-full border rounded-lg"
-              title="Estimate PDF Preview"
-              sandbox="allow-same-origin allow-scripts allow-downloads"
-              onLoad={() => console.log("PDF iframe loaded successfully")}
-              onError={(e) => console.error("PDF iframe error:", e)}
-            />
+            <div className="flex-1 relative">
+              <object
+                data={pdfUrl}
+                type="application/pdf"
+                className="w-full h-full border rounded-lg"
+                onLoad={() => console.log("PDF object loaded successfully")}
+              >
+                <embed
+                  src={pdfUrl}
+                  type="application/pdf"
+                  className="w-full h-full border rounded-lg"
+                />
+                <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      PDF preview not available in this browser
+                    </p>
+                    <Button 
+                      onClick={handleDownload}
+                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download to View
+                    </Button>
+                  </div>
+                </div>
+              </object>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-lg">
               <div className="text-center">

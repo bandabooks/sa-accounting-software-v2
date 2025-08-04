@@ -36,10 +36,27 @@ export default function PDFPreviewModal({
   const generatePreview = async () => {
     setIsGenerating(true);
     try {
+      // Clean up previous URL
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl("");
+      }
+
       const pdf = await generateInvoicePDF(invoice);
-      const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
+      
+      // Try data URL approach which is more compatible with browsers
+      const pdfDataUri = pdf.output('datauristring');
+      console.log("Invoice PDF data URI created, length:", pdfDataUri.length);
+      
+      if (pdfDataUri && pdfDataUri.length > 100) { // Ensure it's a valid PDF
+        setPdfUrl(pdfDataUri);
+      } else {
+        // Fallback to blob URL
+        const blob = pdf.output('blob');
+        console.log("Invoice PDF blob created:", blob.size, "bytes");
+        const url = URL.createObjectURL(blob);
+        setPdfUrl(url);
+      }
     } catch (error) {
       console.error("Error generating PDF preview:", error);
       toast({
@@ -47,6 +64,7 @@ export default function PDFPreviewModal({
         description: "Failed to generate PDF preview. Please try again.",
         variant: "destructive",
       });
+      setPdfUrl(""); // Ensure URL is cleared on error
     } finally {
       setIsGenerating(false);
     }
@@ -146,11 +164,34 @@ export default function PDFPreviewModal({
               </div>
             </div>
           ) : pdfUrl ? (
-            <iframe
-              src={pdfUrl}
-              className="w-full h-full border-0"
-              title="Invoice PDF Preview"
-            />
+            <div className="w-full h-full relative">
+              <object
+                data={pdfUrl}
+                type="application/pdf"
+                className="w-full h-full border-0"
+                onLoad={() => console.log("Invoice PDF object loaded successfully")}
+              >
+                <embed
+                  src={pdfUrl}
+                  type="application/pdf"
+                  className="w-full h-full border-0"
+                />
+                <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      PDF preview not available in this browser
+                    </p>
+                    <Button 
+                      onClick={handleDownload}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download to View
+                    </Button>
+                  </div>
+                </div>
+              </object>
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-gray-500">
