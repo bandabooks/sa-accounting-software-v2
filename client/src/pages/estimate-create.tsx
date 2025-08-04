@@ -1,105 +1,277 @@
-import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
-import { insertEstimateSchema, insertEstimateItemSchema } from "@shared/schema";
-import { z } from "zod";
+import { 
+  Plus, 
+  Trash2, 
+  ArrowLeft, 
+  Calculator, 
+  FileText, 
+  User, 
+  Calendar, 
+  DollarSign, 
+  Tag,
+  AlertCircle,
+  Info
+} from "lucide-react";
+import { calculateInvoiceTotal, formatCurrency, generateInvoiceNumber } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
 import { useGlobalNotification } from "@/contexts/NotificationContext";
-import { formatCurrency } from "@/lib/utils-invoice";
-import { VATCalculator, VATSummary } from "@/components/vat/VATCalculator";
-import { calculateLineItemVAT, calculateVATTotals } from "@shared/vat-utils";
+import { CustomerSelect } from "@/components/CustomerSelect";
 import { ProductServiceSelect } from "@/components/ProductServiceSelect";
-import type { Product } from "@shared/schema";
+import { VATTypeSelect } from "@/components/ui/vat-type-select";
+import { VATConditionalWrapper, VATFieldWrapper } from "@/components/vat/VATConditionalWrapper";
+import { useVATStatus } from "@/hooks/useVATStatus";
+import type { InsertEstimate, InsertEstimateItem, Customer, Product } from "@shared/schema";
 
-// Create form schema combining estimate and items
-const estimateFormSchema = insertEstimateSchema.extend({
-  items: z.array(insertEstimateItemSchema.omit({ estimateId: true })).min(1, "At least one item is required"),
-});
-
-type EstimateFormData = z.infer<typeof estimateFormSchema>;
+interface EstimateItem {
+  productId?: number;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  vatRate: string;
+  vatInclusive: boolean;
+  vatAmount: string;
+  vatTypeId: number; // Match invoice format
+}
 
 export default function EstimateCreate() {
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/estimates/create");
   const { toast } = useToast();
   const { showSuccess } = useGlobalNotification();
   const queryClient = useQueryClient();
+  const { shouldShowVATFields } = useVATStatus();
+  
+  // Get edit parameter from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const editId = urlParams.get('edit');
+  const isEditing = Boolean(editId);
 
-  const form = useForm<EstimateFormData>({
-    resolver: zodResolver(estimateFormSchema),
-    defaultValues: {
-      customerId: undefined,
-      estimateNumber: "",
-      issueDate: new Date(),
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      status: "draft",
-      subtotal: "0.00",
+  const [formData, setFormData] = useState({
+    customerId: 0,
+    issueDate: new Date(),
+    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    status: "draft" as "draft" | "sent" | "accepted" | "declined" | "expired",
+    subtotal: "0.00",
+    vatAmount: "0.00", 
+    total: "0.00",
+    notes: "",
+    terms: "",
+    globalVatType: "1", // Default to Standard Rate (15%) - Same as invoice
+    vatCalculationMethod: "inclusive" as "inclusive" | "exclusive" // VAT calculation method
+  });
+
+  const [items, setItems] = useState<EstimateItem[]>([
+    {
+      description: "",
+      quantity: "1",
+      unitPrice: "0.00",
+      vatRate: "15.00",
+      vatInclusive: true,
       vatAmount: "0.00",
-      total: "0.00",
-      notes: "",
-      items: [
-        {
-          description: "",
-          quantity: "1",
-          unitPrice: "0.00",
-          vatRate: "15",
-          vatInclusive: false,
-          vatAmount: "0.00",
-          total: "0.00",
-        },
-      ],
-    },
-  });
+      vatTypeId: 1 // Default to Standard Rate - Same as invoice
+    }
+  ]);
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-
+  // Fetch data same as invoice
   const { data: customers = [] } = useQuery({
     queryKey: ["/api/customers"],
+    retry: false,
+  });
+
+  const { data: estimates = [] } = useQuery({
+    queryKey: ["/api/estimates"],
+    retry: false,
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["/api/products"],
+    retry: false,
   });
 
-  const createEstimateMutation = useMutation({
-    mutationFn: async (data: EstimateFormData) => {
-      const { items, ...estimate } = data;
+  // Fetch VAT types from database for dynamic calculation (same as invoice)
+  const { data: vatTypesData = [] } = useQuery({
+    queryKey: ["/api/companies", 2, "vat-types"],
+    retry: false,
+  });
+  
+  // Ensure we have array of VAT types
+  const vatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
+
+  // Dynamic VAT calculation using database VAT types (same as invoice)
+  const calculateItemVAT = (item: EstimateItem) => {
+    const quantity = parseFloat(item.quantity || "0");
+    const unitPrice = parseFloat(item.unitPrice || "0");
+    const lineAmount = quantity * unitPrice;
+    
+    if (item.vatTypeId && shouldShowVATFields && vatTypes.length > 0) {
+      // Find VAT type from database
+      const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
+      
+      if (vatType) {
+        const vatRate = parseFloat(vatType.rate);
+        
+        // CRITICAL: If line item is Zero-Rated, Exempt, or No VAT, return 0 regardless of global method
+        if (vatRate === 0) {
+          console.log(`VAT Calculation: lineAmount=R${lineAmount}, vatTypeId=${item.vatTypeId}, ${vatType.code} - ${vatType.name}, VAT=R0.00 (${vatType.code.toLowerCase()})`);
+          return 0;
+        }
+        
+        // For Standard rate items, ALWAYS respect the global VAT calculation method
+        let calculatedVAT = 0;
+        if (formData.vatCalculationMethod === 'inclusive') {
+          // For inclusive method: VAT = lineAmount * (rate / (100 + rate))
+          calculatedVAT = lineAmount * (vatRate / (100 + vatRate));
+        } else {
+          // For exclusive method: VAT = lineAmount * (rate / 100)
+          calculatedVAT = lineAmount * (vatRate / 100);
+        }
+        
+        console.log(`VAT Calculation: lineAmount=R${lineAmount}, ${vatType.code} - ${vatType.name}, global_method=${formData.vatCalculationMethod}, VAT=R${calculatedVAT.toFixed(2)}`);
+        return calculatedVAT;
+      }
+    }
+    
+    // Fallback to traditional calculation if no VAT type ID or VAT types not loaded
+    const vatRate = parseFloat(item.vatRate || "0") / 100;
+    if (vatRate === 0) return 0; // Zero rate items always have zero VAT
+    
+    return formData.vatCalculationMethod === 'inclusive' ? 
+      lineAmount * (vatRate / (1 + vatRate)) : 
+      lineAmount * vatRate;
+  };
+
+  const addItem = () => {
+    setItems([...items, {
+      description: "",
+      quantity: "1",
+      unitPrice: "0.00",
+      vatRate: "15.00",
+      vatInclusive: true,
+      vatAmount: "0.00",
+      vatTypeId: parseInt(formData.globalVatType) // Use global VAT type as default
+    }]);
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length > 1) {
+      setItems(items.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateItem = (index: number, field: keyof EstimateItem, value: string | number) => {
+    const newItems = [...items];
+    (newItems[index] as any)[field] = value;
+    
+    // Auto-calculate VAT amount when relevant fields change
+    if (field === 'quantity' || field === 'unitPrice' || field === 'vatTypeId' || field === 'vatRate') {
+      const calculatedVAT = calculateItemVAT(newItems[index]);
+      newItems[index].vatAmount = calculatedVAT.toFixed(2);
+    }
+    
+    setItems(newItems);
+    
+    // Recalculate totals using the global VAT calculation method with database VAT types
+    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod, vatTypes);
+    setFormData(prev => ({
+      ...prev,
+      subtotal: totals.subtotal.toFixed(2),
+      vatAmount: totals.vatAmount.toFixed(2),
+      total: totals.total.toFixed(2)
+    }));
+  };
+
+  const handleProductSelect = (index: number, product: Product) => {
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      productId: product.id,
+      description: product.description || product.name,
+      unitPrice: product.unitPrice,
+      vatRate: product.vatRate || "15",
+      vatTypeId: product.vatRate === "0" ? 2 : 1 // Smart VAT type detection (2=zero_rated, 1=standard)
+    };
+    
+    // Calculate VAT amount for the updated item
+    const calculatedVAT = calculateItemVAT(newItems[index]);
+    newItems[index].vatAmount = calculatedVAT.toFixed(2);
+    
+    setItems(newItems);
+    
+    // Recalculate totals using the global VAT calculation method with database VAT types
+    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod, vatTypes);
+    setFormData(prev => ({
+      ...prev,
+      subtotal: totals.subtotal.toFixed(2),
+      vatAmount: totals.vatAmount.toFixed(2),
+      total: totals.total.toFixed(2)
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.customerId) {
+      toast({
+        title: "Error",
+        description: "Please select a customer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const validItems = items.filter(item => 
+      item.description.trim() && 
+      parseFloat(item.quantity) > 0 && 
+      parseFloat(item.unitPrice) >= 0
+    );
+
+    if (validItems.length === 0) {
+      toast({
+        title: "Error", 
+        description: "Please add at least one valid item.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isEditing && editId) {
+      // Update existing estimate
+      const estimateData: Partial<InsertEstimate> = {
+        customerId: formData.customerId,
+        issueDate: formData.issueDate,
+        expiryDate: formData.expiryDate,
+        status: formData.status,
+        subtotal: formData.subtotal,
+        vatAmount: formData.vatAmount,
+        total: formData.total,
+        notes: formData.notes,
+        terms: formData.terms
+      };
+
+      updateEstimate.mutate({ id: parseInt(editId), data: estimateData, items: validItems });
+    } else {
+      // Create new estimate
+      createEstimate.mutate({ ...formData, items: validItems });
+    }
+  };
+
+  // Mutations for create and update
+  const createEstimate = useMutation({
+    mutationFn: async (data: any) => {
       const response = await fetch("/api/estimates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          estimate,
-          items: items.map(item => ({
-            ...item,
-            quantity: item.quantity.toString(),
-            vatRate: item.vatRate?.toString() || "15"
-          }))
-        }),
+        body: JSON.stringify(data),
       });
       if (!response.ok) throw new Error("Failed to create estimate");
       return response.json();
@@ -108,378 +280,534 @@ export default function EstimateCreate() {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       showSuccess(
         "Estimate Created Successfully!",
-        `Estimate ${estimate.estimateNumber} has been created and saved.`
+        `Estimate EST-${String((estimates?.length || 0) + 1).padStart(4, '0')} has been created.`
       );
-      setLocation(`/estimates/${estimate.id}`);
+      setLocation("/estimates");
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create estimate",
+        description: "Failed to create estimate. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const watchedItems = form.watch("items");
+  const updateEstimate = useMutation({
+    mutationFn: async ({ id, data, items }: { id: number; data: any; items: any[] }) => {
+      const response = await fetch(`/api/estimates/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, items }),
+      });
+      if (!response.ok) throw new Error("Failed to update estimate");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      showSuccess(
+        "Estimate Updated Successfully!",
+        "Your estimate has been updated and saved."
+      );
+      setLocation("/estimates");
+    },
+    onError: () => {
+      toast({
+        title: "Error", 
+        description: "Failed to update estimate. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
-  // Calculate totals
-  const subtotal = watchedItems.reduce((sum, item) => {
-    const quantity = parseFloat(item.quantity?.toString() || "0");
-    const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
-    return sum + (quantity * unitPrice);
-  }, 0);
-
-  const vatAmount = watchedItems.reduce((sum, item) => {
-    const quantity = parseFloat(item.quantity?.toString() || "0");
-    const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
-    const vatRate = parseFloat(item.vatRate?.toString() || "0");
-    const itemTotal = quantity * unitPrice;
-    return sum + (itemTotal * vatRate / 100);
-  }, 0);
-
-  const total = subtotal + vatAmount;
-
-  // Update form totals
-  form.setValue("subtotal", subtotal.toFixed(2));
-  form.setValue("vatAmount", vatAmount.toFixed(2));
-  form.setValue("total", total.toFixed(2));
-
-  const onSubmit = (data: EstimateFormData) => {
-    // Update item totals
-    data.items.forEach((item, index) => {
-      const quantity = parseFloat(item.quantity?.toString() || "0");
-      const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
-      const vatRate = parseFloat(item.vatRate?.toString() || "0");
-      const itemSubtotal = quantity * unitPrice;
-      const itemVat = itemSubtotal * vatRate / 100;
-      const itemTotal = itemSubtotal + itemVat;
-      
-      form.setValue(`items.${index}.total`, itemTotal.toFixed(2));
-      data.items[index].total = itemTotal.toFixed(2);
-    });
-
-    createEstimateMutation.mutate(data);
-  };
-
-  const addItem = () => {
-    append({
-      companyId: 0, // Will be set by server
-      description: "",
-      quantity: "1",
-      unitPrice: "0.00",
-      vatRate: "15",
-      vatInclusive: false,
-      vatAmount: "0.00",
-      total: "0.00",
-    });
-  };
+  // Calculate VAT breakdown by type
+  const vatBreakdown = items.reduce((acc, item) => {
+    const vatAmount = parseFloat(item.vatAmount || "0");
+    if (item.vatTypeId === 1) {
+      acc.standard += vatAmount;
+    } else {
+      acc.zeroExempt += vatAmount;
+    }
+    return acc;
+  }, { standard: 0, zeroExempt: 0 });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setLocation("/estimates")}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Estimates
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Estimate</h1>
-          <p className="text-gray-600">Create a new estimate for your customer</p>
+    <div className="container mx-auto px-4 py-6 max-w-6xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/estimates")}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Estimates
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {isEditing ? "Edit Estimate" : "Create New Estimate"}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {isEditing ? "Update estimate details and line items" : "Create a new estimate for your customer"}
+            </p>
+          </div>
         </div>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Form */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Customer & Estimate Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Estimate Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="customerId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Customer</FormLabel>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content - Estimate Details and Items */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Client Information */}
+            <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b">
+                <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                  <User className="h-5 w-5 mr-2 text-blue-600" />
+                  Client Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                        <User className="h-4 w-4 mr-2" />
+                        Select Client *
+                      </Label>
+                      <CustomerSelect
+                        value={formData.customerId || undefined}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
+                        placeholder="Choose a client..."
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Issue Date *
+                      </Label>
+                      <Input
+                        type="date"
+                        value={formData.issueDate.toISOString().split('T')[0]}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          issueDate: new Date(e.target.value)
+                        }))}
+                        className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Expiry Date *
+                      </Label>
+                      <Input
+                        type="date"
+                        value={formData.expiryDate.toISOString().split('T')[0]}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          expiryDate: new Date(e.target.value)
+                        }))}
+                        className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                        <Tag className="h-4 w-4 mr-2" />
+                        Status
+                      </Label>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}
+                      >
+                        <SelectTrigger className="border-gray-300 focus:ring-2 focus:ring-blue-500">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="sent">Sent</SelectItem>
+                          <SelectItem value="accepted">Accepted</SelectItem>
+                          <SelectItem value="declined">Declined</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* VAT Treatment Section */}
+                <VATConditionalWrapper>
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <VATFieldWrapper>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Estimate VAT Treatment
+                          </Label>
                           <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
-                            value={field.value?.toString()}
+                            value={formData.vatCalculationMethod}
+                            onValueChange={(value: "inclusive" | "exclusive") =>
+                              setFormData(prev => ({ ...prev, vatCalculationMethod: value }))
+                            }
                           >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select customer" />
-                              </SelectTrigger>
-                            </FormControl>
+                            <SelectTrigger className="border-gray-300 focus:ring-2 focus:ring-blue-500">
+                              <SelectValue />
+                            </SelectTrigger>
                             <SelectContent>
-                              {(customers as any[]).map((customer: any) => (
-                                <SelectItem key={customer.id} value={customer.id.toString()}>
-                                  {customer.name}
-                                </SelectItem>
-                              ))}
+                              <SelectItem value="inclusive">VAT Inclusive</SelectItem>
+                              <SelectItem value="exclusive">VAT Exclusive</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="estimateNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estimate Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="EST-2025-001" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="issueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Issue Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="expiryDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Expiry Date</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notes</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Additional notes for this estimate..."
-                            rows={3}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Items */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Items</CardTitle>
-                    <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Item
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {fields.map((field, index) => (
-                      <div key={field.id} className="p-4 border rounded-lg space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">Item {index + 1}</h4>
-                          {fields.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => remove(index)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div className="md:col-span-2 lg:col-span-2">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Product/Service</label>
-                              <ProductServiceSelect
-                                value={watchedItems[index]?.productId}
-                                onValueChange={(productId) => {
-                                  form.setValue(`items.${index}.productId`, productId);
-                                }}
-                                onProductSelect={(product: Product) => {
-                                  form.setValue(`items.${index}.description`, product.description || product.name);
-                                  form.setValue(`items.${index}.unitPrice`, product.unitPrice || "0.00");
-                                  form.setValue(`items.${index}.vatRate`, product.vatRate || "15");
-                                }}
-                                placeholder="Select or create product/service..."
-                              />
-                            </div>
-                            
-                            <FormField
-                              control={form.control}
-                              name={`items.${index}.description`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Description (Optional Override)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="Custom description" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.quantity`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Quantity</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.unitPrice`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Unit Price</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="0.00"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`items.${index}.vatRate`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>VAT %</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="md:col-span-2 lg:col-span-4">
-                            <div className="text-sm text-gray-600">
-                              Item Total: {formatCurrency(
-                                (
-                                  (parseFloat(watchedItems[index]?.quantity?.toString() || "0")) *
-                                  (parseFloat(watchedItems[index]?.unitPrice?.toString() || "0")) *
-                                  (1 + (parseFloat(watchedItems[index]?.vatRate?.toString() || "0")) / 100)
-                                ).toFixed(2)
-                              )}
-                            </div>
-                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            This setting applies to all line items by default
+                          </p>
                         </div>
                       </div>
-                    ))}
+                    </VATFieldWrapper>
+                  </div>
+                </VATConditionalWrapper>
+              </CardContent>
+            </Card>
+
+            {/* Estimate Items */}
+            <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                    <Calculator className="h-5 w-5 mr-2 text-green-600" />
+                    Estimate Items
+                  </CardTitle>
+                  <Button
+                    type="button"
+                    onClick={addItem}
+                    variant="outline"
+                    size="sm"
+                    className="text-green-600 border-green-300 hover:bg-green-50"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {/* Items Header */}
+                <div className="grid grid-cols-12 gap-2 p-4 bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 border-b">
+                  <div className="col-span-2">Product/Service</div>
+                  <div className="col-span-3">Description</div>
+                  <div className="col-span-1">Qty</div>
+                  <div className="col-span-2">Unit Price</div>
+                  <div className="col-span-2">VAT Type</div>
+                  <div className="col-span-1">Amount</div>
+                  <div className="col-span-1 text-center">Action</div>
+                </div>
+
+                {/* Items List */}
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {items.map((item, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      
+                      {/* Product/Service Column */}
+                      <div className="col-span-2">
+                        <ProductServiceSelect
+                          value={item.productId}
+                          onValueChange={(productId) => updateItem(index, 'productId', productId)}
+                          onProductSelect={(product) => handleProductSelect(index, product)}
+                          placeholder="Select..."
+                        />
+                      </div>
+
+                      {/* Description Column */}
+                      <div className="col-span-3">
+                        <Input
+                          placeholder="Enter item description..."
+                          value={item.description}
+                          onChange={(e) => updateItem(index, 'description', e.target.value)}
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {/* Quantity Column */}
+                      <div className="col-span-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                          className="text-center border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {/* Unit Price Column */}
+                      <div className="col-span-2">
+                        <div className="flex items-center">
+                          <span className="text-gray-500 mr-1">R</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unitPrice}
+                            onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
+                            className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* VAT Type Column */}
+                      <div className="col-span-2">
+                        <VATTypeSelect
+                          value={item.vatTypeId?.toString()}
+                          onValueChange={(value) => updateItem(index, 'vatTypeId', parseInt(value))}
+                          placeholder="VAT Type"
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Amount Column */}
+                      <div className="col-span-1">
+                        <div className="text-right font-medium text-gray-900 dark:text-white px-2 py-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
+                          R{(() => {
+                            const quantity = parseFloat(item.quantity || "0");
+                            const unitPrice = parseFloat(item.unitPrice || "0");
+                            const lineAmount = quantity * unitPrice;
+                            
+                            // Get VAT rate from database VAT types
+                            const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
+                            const vatRate = vatType ? parseFloat(vatType.rate) : 0;
+                            
+                            // CRITICAL: For zero-rated items, always show the line amount as-is
+                            if (vatRate === 0) {
+                              return lineAmount.toFixed(2);
+                            }
+                            
+                            // For standard VAT items, respect the global VAT calculation method
+                            if (formData.vatCalculationMethod === 'inclusive') {
+                              // VAT Inclusive: Amount displayed remains the same (VAT is already included)
+                              return lineAmount.toFixed(2);
+                            } else {
+                              // VAT Exclusive: Amount displayed should include VAT for display
+                              const vatAmount = lineAmount * (vatRate / 100);
+                              return (lineAmount + vatAmount).toFixed(2);
+                            }
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Remove Column */}
+                      <div className="col-span-1 text-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(index)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
+                          disabled={items.length <= 1}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Empty State */}
+                {items.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    <Calculator className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-lg font-medium">No items added yet</p>
+                    <p className="text-sm">Click "Add Item" to get started</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Professional Estimate Summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left side - Additional Information */}
+              <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+                <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-b">
+                  <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                    <Info className="h-5 w-5 mr-2 text-orange-600" />
+                    Additional Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Estimate Number
+                      </span>
+                      <Badge variant="outline" className="bg-white text-blue-700 border-blue-200 font-mono">
+                        EST-{String((estimates?.length || 0) + 1).padStart(4, '0')}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Status
+                      </span>
+                      <Badge className={`${
+                        formData.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                        formData.status === 'sent' ? 'bg-blue-100 text-blue-800' :
+                        formData.status === 'declined' ? 'bg-red-100 text-red-800' :
+                        formData.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
+                      </Badge>
+                    </div>
+
+                    {shouldShowVATFields && (
+                      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-2 flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          VAT Information
+                        </h4>
+                        <div className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
+                          <p>VAT calculations are applied automatically based on your selected VAT types. Ensure your VAT registration status is correctly configured in settings.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Notes
+                        </Label>
+                        <Textarea
+                          placeholder="Additional notes for this estimate..."
+                          value={formData.notes}
+                          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Terms & Conditions
+                        </Label>
+                        <Textarea
+                          placeholder="Terms and conditions for this estimate..."
+                          value={formData.terms}
+                          onChange={(e) => setFormData(prev => ({ ...prev, terms: e.target.value }))}
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Summary */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span>{formatCurrency(subtotal.toFixed(2))}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">VAT:</span>
-                      <span>{formatCurrency(vatAmount.toFixed(2))}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-semibold text-lg">
-                      <span>Total:</span>
-                      <span>{formatCurrency(total.toFixed(2))}</span>
+            {/* Right side - Estimate Summary */}
+            <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-b">
+                <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                  <FileText className="h-5 w-5 mr-2 text-emerald-600" />
+                  Estimate Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                
+                {/* Line-Level VAT Control Info */}
+                <VATConditionalWrapper>
+                  <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2 flex items-center">
+                      <Info className="h-4 w-4 mr-2" />
+                      Line-Level VAT Control
+                    </h4>
+                    <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                      <p>✓ VAT is now controlled per line item for granular control</p>
+                      <p>✓ Each item can have different VAT types (Standard, Zero-rated, Exempt)</p>
+                      <p>✓ Global totals are calculated from individual line VAT amounts</p>
                     </div>
                   </div>
-                  <div className="mt-6 space-y-2">
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={createEstimateMutation.isPending}
-                    >
-                      {createEstimateMutation.isPending ? "Creating..." : "Create Estimate"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setLocation("/estimates")}
-                    >
-                      Cancel
-                    </Button>
+                </VATConditionalWrapper>
+
+                {/* VAT Breakdown by Type */}
+                <VATConditionalWrapper>
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      VAT Breakdown by Type:
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">
+                        <span className="text-gray-600 dark:text-gray-400">Standard (15%)</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          R {vatBreakdown.standard.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded">
+                        <span className="text-gray-600 dark:text-gray-400">Zero/Exempt:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          R {vatBreakdown.zeroExempt.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </VATConditionalWrapper>
+
+                {/* Estimate Totals */}
+                <div className="space-y-3 text-lg">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                    <span className="text-gray-600 dark:text-gray-400">Subtotal (excl. VAT):</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      R {formData.subtotal}
+                    </span>
+                  </div>
+                  
+                  <VATConditionalWrapper>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                      <span className="text-gray-600 dark:text-gray-400">Total VAT (from line items):</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        R {formData.vatAmount}
+                      </span>
+                    </div>
+                  </VATConditionalWrapper>
+                  
+                  <div className="flex justify-between items-center py-3 bg-green-50 dark:bg-green-900/20 rounded-lg px-4 border border-green-200 dark:border-green-800">
+                    <span className="text-lg font-semibold text-green-900 dark:text-green-100">
+                      Total (incl. VAT):
+                    </span>
+                    <span className="text-xl font-bold text-green-900 dark:text-green-100">
+                      R {formData.total}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="mt-6 space-y-3">
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
+                    disabled={createEstimate.isPending || updateEstimate.isPending}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    {isEditing ? 
+                      (updateEstimate.isPending ? "Updating..." : "Update Estimate") :
+                      (createEstimate.isPending ? "Creating..." : "Create Estimate")
+                    }
+                  </Button>
+                  
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                      Journal entry will be automatically created
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </form>
-      </Form>
+        </div>
+      </form>
     </div>
   );
 }
