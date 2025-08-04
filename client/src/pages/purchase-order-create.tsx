@@ -32,14 +32,14 @@ import { apiRequest } from "@/lib/queryClient";
 
 // Purchase Order Item Interface
 interface PurchaseOrderItem {
+  productId?: number;
   description: string;
   quantity: string;
   unitPrice: string;
   vatRate: string;
   vatInclusive: boolean;
   vatAmount: string;
-  vatTypeId: string; // Change to string to match VATTypeSelect interface
-  expenseCategory: string | null;
+  vatTypeId: number; // Match invoice format exactly
 }
 
 interface Supplier {
@@ -82,14 +82,14 @@ export default function PurchaseOrderCreate() {
 
   const [items, setItems] = useState<PurchaseOrderItem[]>([
     {
+      productId: undefined,
       description: "",
       quantity: "1",
       unitPrice: "0.00",
       vatRate: "15.00",
       vatInclusive: false, // Purchase orders usually exclusive
       vatAmount: "0.00",
-      vatTypeId: "1", // Default to Standard Rate (15%)
-      expenseCategory: null
+      vatTypeId: 1 // Default to Standard Rate (15%) - Match invoice format exactly
     }
   ]);
 
@@ -120,7 +120,7 @@ export default function PurchaseOrderCreate() {
     
     if (item.vatTypeId && shouldShowVATFields && vatTypes.length > 0) {
       // Find VAT type from database
-      const vatType = vatTypes.find((type: any) => type.id === parseInt(item.vatTypeId));
+      const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
       
       if (vatType) {
         const vatRate = parseFloat(vatType.rate);
@@ -180,14 +180,14 @@ export default function PurchaseOrderCreate() {
 
   const addItem = () => {
     setItems([...items, { 
+      productId: undefined,
       description: "", 
       quantity: "1", 
       unitPrice: "0.00", 
       vatRate: "15.00",
       vatInclusive: false, 
       vatAmount: "0.00",
-      vatTypeId: "1", // Default to Standard Rate (15%)
-      expenseCategory: null
+      vatTypeId: 1 // Default to Standard Rate (15%) - Match invoice format exactly
     }]);
   };
 
@@ -468,8 +468,8 @@ export default function PurchaseOrderCreate() {
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-700">VAT Type</label>
                           <VATTypeSelect
-                            value={item.vatTypeId}
-                            onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', vatTypeId)}
+                            value={item.vatTypeId.toString()}
+                            onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', parseInt(vatTypeId))}
                             placeholder="Select VAT type..."
                           />
                         </div>

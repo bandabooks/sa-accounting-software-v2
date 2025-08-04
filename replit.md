@@ -17,7 +17,7 @@ Preferred communication style: Simple, everyday language.
 - **UI Components**: Shadcn/UI built on Radix UI
 - **Styling**: Tailwind CSS with custom CSS variables, professional UI with dynamic gradients and split-screen layouts.
 - **Build Tool**: Vite for fast development and optimized builds.
-- **Design Principles**: Professional, modern SaaS aesthetics with dynamic gradients, clear call-to-actions, and mobile-optimized responsive design, emphasizing industry-standard layouts and workflows. Transaction forms (Invoice, Estimate, Sales Order, Purchase Order) use a standardized, enhanced structure with dedicated creation pages and consistent VAT integration.
+- **Design Principles**: Professional, modern SaaS aesthetics with dynamic gradients, clear call-to-actions, and mobile-optimized responsive design, emphasizing industry-standard layouts and workflows. All major transaction forms (Invoice, Estimate, Sales Order, Purchase Order, Credit Note) use a completely standardized, enhanced structure with dedicated creation pages, consistent VAT integration, and uniform data type handling for world-class user experience.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js server
@@ -32,7 +32,7 @@ Preferred communication style: Simple, everyday language.
     - **Reporting**: Comprehensive IFRS-compliant financial reports (Balance Sheet, P&L, Cash Flow, Trial Balance, Aged Reports, General Ledger) with PDF and CSV export capabilities. Reports are displayed inline within the same page using a compact card design.
     - **VAT Management**: South African VAT system (Standard, Zero-rated, Exempt), VAT201 returns, intelligent VAT compliance guidance, and support for company-level VAT registration and inclusive/exclusive pricing. All VAT calculations are database-driven via a centralized VAT service.
     - **SARS API Integration**: Complete SARS API integration module with secure credential management, multi-service support (VAT201, EMP501/502, ITR12/14), automated submissions, and connection testing.
-    - **Business Operations**: Invoice, Estimate, Purchase Order, and Customer management with CRUD operations and professional auto-numbering. Suppliers page features a card grid layout with performance scorecards and advanced filtering.
+    - **Business Operations**: Complete transaction management including Invoice, Estimate, Sales Order, Purchase Order, and Credit Note creation with CRUD operations, professional auto-numbering, and fully standardized forms ensuring uniform logic and UX across all transaction types. Suppliers page features a card grid layout with performance scorecards and advanced filtering.
     - **Inventory Management**: Stock tracking, lot/batch management, serial number tracking, warranty management, and multi-warehouse support.
     - **System Management**: Enterprise settings, multi-currency support, automated email reminders, and a comprehensive audit trail.
     - **Point of Sale (POS)**: Designed with FrontAccounting methodology, featuring keyboard shortcuts, barcode scanning, suspend/resume sales, multi-payment methods, real-time stock integration, and cash handling.

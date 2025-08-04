@@ -41,7 +41,7 @@ interface CreditNoteItem {
   vatRate: string;
   vatInclusive: boolean;
   vatAmount: string;
-  vatTypeId: string;
+  vatTypeId: number; // Match invoice format exactly
 }
 
 const creditNoteReasons = [
@@ -85,7 +85,7 @@ export default function CreditNoteCreate() {
       vatRate: "15.00",
       vatInclusive: true,
       vatAmount: "0.00",
-      vatTypeId: "1" // Default to Standard Rate (15%)
+      vatTypeId: 1 // Default to Standard Rate (15%) - Match invoice format exactly
     }
   ]);
 
@@ -117,7 +117,7 @@ export default function CreditNoteCreate() {
     
     if (item.vatTypeId && shouldShowVATFields && vatTypes.length > 0) {
       // Find VAT type from database
-      const vatType = vatTypes.find((type: any) => type.id === parseInt(item.vatTypeId));
+      const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
       
       if (vatType) {
         const vatRate = parseFloat(vatType.rate);
@@ -184,7 +184,7 @@ export default function CreditNoteCreate() {
       vatRate: "15.00",
       vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: "1" // Default to Standard Rate (15%)
+      vatTypeId: 1 // Default to Standard Rate (15%) - Match invoice format exactly
     }]);
   };
 
@@ -215,7 +215,7 @@ export default function CreditNoteCreate() {
       description: product.description || product.name,
       unitPrice: product.unitPrice,
       vatRate: product.vatRate || "15",
-      vatTypeId: product.vatRate === "0" ? "2" : "1" // Smart VAT type detection (2=zero_rated, 1=standard)
+      vatTypeId: product.vatRate === "0" ? 2 : 1 // Smart VAT type detection (2=zero_rated, 1=standard)
     };
     
     // Auto-calculate VAT amount for the updated item
@@ -519,8 +519,8 @@ export default function CreditNoteCreate() {
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-700">VAT Type</label>
                           <VATTypeSelect
-                            value={item.vatTypeId}
-                            onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', vatTypeId)}
+                            value={item.vatTypeId.toString()}
+                            onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', parseInt(vatTypeId))}
                             placeholder="Select VAT type..."
                           />
                         </div>

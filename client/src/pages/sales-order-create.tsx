@@ -455,8 +455,8 @@ export default function SalesOrderCreate() {
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-700">VAT Type</label>
                           <VATTypeSelect
-                            value={item.vatTypeId}
-                            onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', vatTypeId)}
+                            value={item.vatTypeId.toString()}
+                            onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', parseInt(vatTypeId))}
                             placeholder="Select VAT type..."
                           />
                         </div>
@@ -508,8 +508,8 @@ export default function SalesOrderCreate() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Sales Order VAT Treatment</label>
                       <VATTypeSelect
-                        value={parseInt(formData.globalVatType)}
-                        onValueChange={(vatTypeId) => setFormData(prev => ({ ...prev, globalVatType: vatTypeId.toString() }))}
+                        value={formData.globalVatType}
+                        onValueChange={(vatTypeId) => setFormData(prev => ({ ...prev, globalVatType: vatTypeId }))}
                         placeholder="Select VAT treatment..."
                       />
                     </div>
