@@ -1,0 +1,37 @@
+// Prompt: Fix Estimate PDF Preview & Email using working Invoice logic
+
+// Issue: The estimate preview modal (EST-0004) shows a broken PDF icon and does not render the actual estimate document. The "Download" and "Send Email" buttons also fail silently. Invoice logic works perfectly and should be used here.
+
+// ✅ Solution: Clone and apply the exact same logic used in invoice PDF generation and preview for the estimates module.
+
+// 📁 Files to copy logic from:
+// - client/src/pages/invoice-detail.tsx (or invoice-preview.tsx)
+// - server/controllers/invoiceController.js (PDF generation + email template logic)
+// - components/PDF/invoice-pdf.tsx
+
+// 📁 Files to apply this to:
+// - client/src/pages/estimate-detail.tsx (or estimate-preview.tsx)
+// - server/controllers/estimateController.js
+// - components/PDF/estimate-pdf.tsx (create this if missing)
+
+// ✅ Specific tasks:
+// 1. Use the same invoice PDF rendering method (e.g. react-pdf, PDFKit stream, or blob) to generate the estimate PDF
+// 2. Ensure the estimate PDF route on the backend returns a valid PDF stream:
+//    GET /estimates/:id/pdf → should mirror /invoices/:id/pdf
+// 3. Replace the broken iframe preview or blob logic with the working one from invoice preview
+// 4. Implement or copy the email-sending logic used in invoices for "Send Email" button on estimates
+//    - Ensure email template is created
+//    - Attach PDF correctly
+//    - Include subject and message body that mirrors invoice email structure
+// 5. Validate the following all work on estimates like they do for invoices:
+//    - PDF preview loads correctly
+//    - Download works
+//    - Email sends with attachment
+//    - Estimate number appears in header (EST-0004, etc.)
+
+// 🛠 Optional but helpful:
+// - Add error fallback message in the modal if PDF fails to load (e.g. "Could not load estimate preview.")
+// - Ensure the file names follow consistent format: `estimate-0004.pdf`
+
+// Expected result: The estimate module behaves exactly like the invoice module in terms of PDF preview, download, and email sending.
+
