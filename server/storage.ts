@@ -1176,49 +1176,18 @@ export class DatabaseStorage implements IStorage {
       sequence = await this.createDefaultSequence(companyId, documentType, defaultPrefix);
     }
 
-    // Generate the document number
-    const currentYear = new Date().getFullYear();
-    const formatParts = sequence.format.split('-');
-    let documentNumber = '';
-
-    // Reset numbering if it's a new year and yearReset is true
-    if (sequence.yearReset) {
-      const sequenceYear = sequence.updatedAt ? sequence.updatedAt.getFullYear() : currentYear;
-      if (sequenceYear < currentYear) {
-        await db
-          .update(numberSequences)
-          .set({ nextNumber: 1, updatedAt: new Date() })
-          .where(eq(numberSequences.id, sequence.id));
-        sequence.nextNumber = 1;
-      }
-    }
-
-    // Build document number according to format
-    for (const part of formatParts) {
-      switch (part) {
-        case 'prefix':
-          documentNumber += sequence.prefix;
-          break;
-        case 'year':
-          documentNumber += currentYear.toString() + '-';
-          break;
-        case 'number':
-          documentNumber += sequence.nextNumber.toString().padStart(3, '0');
-          break;
-        default:
-          documentNumber += part;
-      }
-    }
-
-    // Update the next number
+    // Generate document number using current number
+    const documentNumber = `${sequence.prefix}${sequence.currentNumber.toString().padStart(4, '0')}`;
+    
+    // Increment the current number for next use
     await db
       .update(numberSequences)
       .set({ 
-        nextNumber: sequence.nextNumber + 1,
-        updatedAt: new Date()
+        currentNumber: sequence.currentNumber + 1,
+        updatedAt: new Date() 
       })
       .where(eq(numberSequences.id, sequence.id));
-
+    
     return documentNumber;
   }
 

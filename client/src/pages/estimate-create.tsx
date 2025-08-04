@@ -245,6 +245,48 @@ export default function EstimateCreate() {
       return;
     }
 
+    // Calculate totals using global VAT types and settings
+    const vatCalculations = validItems.map(item => {
+      const vatType = vatTypes.find(vt => vt.id === item.vatTypeId);
+      const method = vatSettings?.defaultVatMethod || 'inclusive';
+      
+      if (!vatType) {
+        console.warn(`VAT Type not found for ID: ${item.vatTypeId}, using zero VAT`);
+        return {
+          itemVat: 0,
+          itemNet: parseFloat(item.unitPrice) * parseFloat(item.quantity),
+          itemGross: parseFloat(item.unitPrice) * parseFloat(item.quantity)
+        };
+      }
+      
+      const lineAmount = parseFloat(item.unitPrice) * parseFloat(item.quantity);
+      const calculation = calculateVATFromType(lineAmount, vatType, method === 'inclusive');
+      
+      console.log(`VAT Calculation: lineAmount=R${lineAmount.toFixed(2)}, ${vatType.code} - ${vatType.name}, global_method=${method}, VAT=R${calculation.vatAmount.toFixed(2)}`);
+      
+      return {
+        itemVat: calculation.vatAmount,
+        itemNet: calculation.netAmount,
+        itemGross: calculation.grossAmount
+      };
+    });
+
+    const totalVat = vatCalculations.reduce((sum, calc) => sum + calc.itemVat, 0);
+    const totalNet = vatCalculations.reduce((sum, calc) => sum + calc.itemNet, 0);
+    const totalGross = vatCalculations.reduce((sum, calc) => sum + calc.itemGross, 0);
+
+    // Sanitize and validate payload data
+    const sanitizedFormData = {
+      customerId: formData.customerId,
+      issueDate: formData.issueDate,
+      expiryDate: formData.expiryDate,
+      status: formData.status || 'draft',
+      subtotal: isNaN(totalNet) ? '0.00' : totalNet.toFixed(2),
+      vatAmount: isNaN(totalVat) ? '0.00' : totalVat.toFixed(2),
+      total: isNaN(totalGross) ? '0.00' : totalGross.toFixed(2),
+      notes: formData.notes || ''
+    };
+
     if (isEditing && editId) {
       // Update existing estimate
       const estimateData: Partial<InsertEstimate> = {

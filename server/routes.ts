@@ -1362,6 +1362,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/estimates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log('Received estimate creation request:', JSON.stringify(req.body, null, 2));
+      
       const validatedData = createEstimateSchema.parse(req.body);
       
       // Auto-generate estimate number if not provided
@@ -1369,6 +1371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let estimateNumber = validatedData.estimate.estimateNumber;
       if (!estimateNumber || estimateNumber.trim() === '') {
         estimateNumber = await storage.getNextDocumentNumber(companyId, 'estimate');
+        console.log('Generated estimate number:', estimateNumber);
       }
       
       // Use user's active company ID
@@ -1377,14 +1380,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estimateNumber,
         companyId
       };
+      
+      console.log('Creating estimate with data:', JSON.stringify(estimateData, null, 2));
+      console.log('Creating estimate with items:', JSON.stringify(validatedData.items, null, 2));
+      
       const estimate = await storage.createEstimate(estimateData, validatedData.items);
+      
+      console.log('Estimate created successfully:', estimate.id);
       res.status(201).json(estimate);
     } catch (error) {
       console.error("Estimate creation error:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create estimate" });
+      console.error("Internal server error:", error.message);
+      res.status(500).json({ message: "Failed to create estimate", error: error.message });
     }
   });
 
