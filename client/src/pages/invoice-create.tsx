@@ -69,7 +69,7 @@ export default function InvoiceCreate() {
     vatAmount: "0.00", 
     total: "0.00",
     notes: "",
-    globalVatType: "2", // Default to Standard Rate (15%)
+    globalVatType: "1", // Default to Standard Rate (15%) - Same as bulk capture
     vatCalculationMethod: "inclusive" as "inclusive" | "exclusive" // New VAT calculation method
   });
 
@@ -82,7 +82,7 @@ export default function InvoiceCreate() {
       vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
       vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: 2 // Default to Standard Rate (15%) - VAT Inclusive
+      vatTypeId: 1 // Default to Standard Rate (15%) - Same as bulk capture
     }
   ]);
 
@@ -115,7 +115,7 @@ export default function InvoiceCreate() {
         vatAmount: existingInvoice.vatAmount,
         total: existingInvoice.total,
         notes: existingInvoice.notes || "",
-        globalVatType: "2", // Default to Standard Rate (15%) for existing invoices
+        globalVatType: "1", // Default to Standard Rate (15%) - Same as bulk capture for existing invoices
         vatCalculationMethod: (existingInvoice as any).vatCalculationMethod || "inclusive"
       });
 
@@ -186,7 +186,7 @@ export default function InvoiceCreate() {
       vatRate: "15.00", // Initialize with 15%, will be calculated from VAT type
       vatInclusive: true, 
       vatAmount: "0.00",
-      vatTypeId: 2 // Default to Standard Rate (15%) - VAT Inclusive
+      vatTypeId: 1 // Default to Standard Rate (15%) - Same as bulk capture
     }]);
   };
 
