@@ -661,18 +661,18 @@ const EnhancedBulkCapture = () => {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
+                  <thead className="bg-green-700">
                     <tr>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="text-left p-3 text-sm font-medium text-white">
                         <Calendar className="w-4 h-4 inline mr-2" />
                         Date
                       </th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Income Account</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Amount (R)</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">VAT Treatment</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Bank Account</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Income Account</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Amount (R)</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Client</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">VAT Treatment</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Bank Account</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -866,18 +866,18 @@ const EnhancedBulkCapture = () => {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
+                  <thead className="bg-red-700">
                     <tr>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <th className="text-left p-3 text-sm font-medium text-white">
                         <Calendar className="w-4 h-4 inline mr-2" />
                         Date
                       </th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Expense Account</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Amount (R)</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Supplier/Vendor</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">VAT Treatment</th>
-                      <th className="text-left p-3 text-sm font-medium text-gray-700 dark:text-gray-300">Bank Account</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Expense Account</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Amount (R)</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Supplier/Vendor</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">VAT Treatment</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Bank Account</th>
                     </tr>
                   </thead>
                   <tbody>
