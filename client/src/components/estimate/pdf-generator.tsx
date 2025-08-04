@@ -1,24 +1,21 @@
-import jsPDF from "jspdf";
+import jsPDF from 'jspdf';
 
-const formatDate = (dateStr: string | Date) => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric'
+// Helper functions for formatting
+function formatCurrency(amount: number): string {
+  return `R ${amount.toFixed(2)}`;
+}
+
+function formatDate(date: string | Date): string {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: '2-digit',  
+    day: '2-digit'
   });
-};
+}
 
-const formatCurrency = (amount: string | number): string => {
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    minimumFractionDigits: 2,
-  }).format(isNaN(numAmount) ? 0 : numAmount);
-};
-
-interface EstimateWithCustomer {
+export interface EstimateWithCustomer {
   id: number;
   estimateNumber: string;
   issueDate: string;
@@ -28,22 +25,21 @@ interface EstimateWithCustomer {
   vatAmount: number;
   total: number;
   notes?: string;
+  terms?: string;
   customer: {
+    id: number;
     name: string;
     email?: string;
     phone?: string;
     address?: string;
-    city?: string;
-    postalCode?: string;
-    vatNumber?: string;
   };
   items: Array<{
     id: number;
     description: string;
     quantity: number;
     unitPrice: number;
-    vatRate: number;
-    total: number;
+    vatType: string;
+    lineTotal: number;
   }>;
 }
 
@@ -53,8 +49,9 @@ export function generateEstimatePDF(estimate: EstimateWithCustomer): Promise<jsP
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // Header Section
-    pdf.setFillColor(59, 130, 246); // Blue-600
+    // HEADER SECTION - Company branding with emerald theme
+    // Company logo area with emerald gradient background
+    pdf.setFillColor(16, 185, 129); // Emerald-500 to match emerald theme
     pdf.rect(20, 20, 10, 10, 'F');
     
     // White building icon representation
@@ -62,14 +59,14 @@ export function generateEstimatePDF(estimate: EstimateWithCustomer): Promise<jsP
     pdf.setFontSize(8);
     pdf.text("⬛", 22, 27);
     
-    // Company name
+    // Company name with emerald-700 color for estimates
     pdf.setFontSize(16);
-    pdf.setTextColor(29, 78, 216); // Blue-700
+    pdf.setTextColor(4, 120, 87); // Emerald-700 to match emerald theme
     pdf.text("Think Mybiz Accounting", 35, 25);
     
-    // Subtitle
+    // Subtitle for estimates
     pdf.setFontSize(8);
-    pdf.setTextColor(107, 114, 128); // Gray-500
+    pdf.setTextColor(107, 114, 128); // Gray-500 
     pdf.text("Professional Estimate Management", 35, 29);
     
     // Company contact details
@@ -79,177 +76,259 @@ export function generateEstimatePDF(estimate: EstimateWithCustomer): Promise<jsP
     pdf.text("PO Box 1234, Midrand, 1685", 20, 38);
     pdf.text("VAT #: 4455667788 | Reg: 2019/123456/07", 20, 41);
 
-    // Right side - "ESTIMATE" title
+    // Right side - "ESTIMATE" title (right-aligned)
     pdf.setFontSize(20);
     pdf.setTextColor(55, 65, 81); // Gray-700
     pdf.text("ESTIMATE", pageWidth - 20, 25, { align: 'right' });
     
-    // Estimate details
+    // Estimate details (right-aligned)
     pdf.setFontSize(8);
     pdf.setTextColor(0, 0, 0);
     pdf.text(`Estimate #: ${estimate.estimateNumber}`, pageWidth - 20, 32, { align: 'right' });
     pdf.text(`Date: ${formatDate(estimate.issueDate)}`, pageWidth - 20, 36, { align: 'right' });
     pdf.text(`Valid Until: ${formatDate(estimate.expiryDate)}`, pageWidth - 20, 40, { align: 'right' });
     
-    // Status with color
+    // Status with appropriate color matching
     let statusColor = [107, 114, 128]; // Default gray
     const status = estimate.status.toUpperCase();
     if (status === 'ACCEPTED') statusColor = [34, 197, 94]; // Green-500
-    else if (status === 'SENT') statusColor = [59, 130, 246]; // Blue-500  
-    else if (status === 'REJECTED') statusColor = [239, 68, 68]; // Red-500
+    else if (status === 'SENT') statusColor = [16, 185, 129]; // Emerald-500
     else if (status === 'EXPIRED') statusColor = [239, 68, 68]; // Red-500
     else if (status === 'DRAFT') statusColor = [107, 114, 128]; // Gray-500
     
     pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
     pdf.text(`Status: ${status}`, pageWidth - 20, 44, { align: 'right' });
 
-    // Addresses Section
+    // ADDRESSES SECTION
     const addressY = 55;
     
-    // "Bill To" - Customer address (left side)
+    // Estimate For section with underline
     pdf.setFontSize(9);
-    pdf.setTextColor(0, 0, 0);
+    pdf.setTextColor(55, 65, 81); // Gray-700 for headers
     pdf.text("Estimate For:", 20, addressY);
+    pdf.setDrawColor(229, 231, 235); // Gray-200
+    pdf.line(20, addressY + 1, 70, addressY + 1);
     
-    pdf.setFontSize(8);
-    pdf.setTextColor(75, 85, 99);
-    let customerY = addressY + 6;
+    // From section with underline
+    pdf.text("From:", pageWidth/2, addressY);
+    pdf.line(pageWidth/2, addressY + 1, pageWidth/2 + 40, addressY + 1);
     
-    // Customer name
+    // Customer details
+    pdf.setFontSize(10);
     pdf.setTextColor(0, 0, 0);
-    pdf.text(estimate.customer.name, 20, customerY);
-    customerY += 4;
+    let customerY = addressY + 8;
     
-    // Customer contact details
-    pdf.setTextColor(75, 85, 99);
+    pdf.setTextColor(17, 24, 39); // Gray-900 for customer name
+    pdf.text(estimate.customer.name, 20, customerY);
+    customerY += 5;
+    
     if (estimate.customer.email) {
+      pdf.setTextColor(75, 85, 99); // Gray-600 for details
       pdf.text(estimate.customer.email, 20, customerY);
       customerY += 4;
     }
+    
     if (estimate.customer.phone) {
       pdf.text(estimate.customer.phone, 20, customerY);
       customerY += 4;
     }
+    
     if (estimate.customer.address) {
-      pdf.text(estimate.customer.address, 20, customerY);
-      customerY += 4;
-      if (estimate.customer.city || estimate.customer.postalCode) {
-        const cityPostal = [estimate.customer.city, estimate.customer.postalCode].filter(Boolean).join(' ');
-        pdf.text(cityPostal, 20, customerY);
+      const addressLines = estimate.customer.address.split('\n');
+      addressLines.forEach(line => {
+        pdf.text(line, 20, customerY);
         customerY += 4;
-      }
+      });
     }
-    if (estimate.customer.vatNumber) {
-      pdf.text(`VAT: ${estimate.customer.vatNumber}`, 20, customerY);
-    }
+    
+    // Company details (From section)
+    let companyY = addressY + 8;
+    pdf.setTextColor(17, 24, 39); // Gray-900
+    pdf.text("Think Mybiz Accounting", pageWidth/2, companyY);
+    companyY += 5;
+    
+    pdf.setTextColor(75, 85, 99); // Gray-600
+    pdf.text("info@thinkmybiz.com", pageWidth/2, companyY);
+    companyY += 4;
+    pdf.text("+27 12 345 6789", pageWidth/2, companyY);
+    companyY += 4;
+    pdf.text("PO Box 1234, Midrand, 1685", pageWidth/2, companyY);
 
-    // Items Table
-    const tableY = Math.max(customerY + 15, 95);
+    // ITEMS TABLE
+    const tableStartY = Math.max(customerY, companyY) + 15;
     
-    // Table headers
+    // Table header with emerald theme
+    pdf.setFillColor(240, 253, 250); // Emerald-50 background
+    pdf.rect(20, tableStartY, pageWidth - 40, 12, 'F');
+    
     pdf.setFontSize(8);
+    pdf.setTextColor(4, 120, 87); // Emerald-700 for headers
+    
+    // Header text
+    pdf.text("#", 25, tableStartY + 8);
+    pdf.text("Description", 35, tableStartY + 8);
+    pdf.text("Qty", 110, tableStartY + 8);
+    pdf.text("Unit Price", 130, tableStartY + 8);
+    pdf.text("VAT Rate", 155, tableStartY + 8);
+    pdf.text("Amount", pageWidth - 25, tableStartY + 8, { align: 'right' });
+    
+    // Table border
+    pdf.setDrawColor(209, 213, 219); // Gray-300
+    pdf.setLineWidth(0.3);
+    pdf.rect(20, tableStartY, pageWidth - 40, 12);
+    
+    // Table content
+    let currentY = tableStartY + 12;
     pdf.setTextColor(0, 0, 0);
-    pdf.setFillColor(248, 250, 252); // Gray-50 background
-    pdf.rect(20, tableY, pageWidth - 40, 8, 'F');
     
-    pdf.text("Description", 22, tableY + 5);
-    pdf.text("Qty", pageWidth - 80, tableY + 5, { align: 'center' });
-    pdf.text("Unit Price", pageWidth - 60, tableY + 5, { align: 'center' });
-    pdf.text("VAT %", pageWidth - 40, tableY + 5, { align: 'center' });
-    pdf.text("Total", pageWidth - 22, tableY + 5, { align: 'right' });
-    
-    // Table items
-    let itemY = tableY + 12;
-    pdf.setTextColor(75, 85, 99);
-    
-    estimate.items.forEach((item) => {
-      if (itemY > pageHeight - 50) {
-        pdf.addPage();
-        itemY = 20;
+    estimate.items.forEach((item, index) => {
+      const rowHeight = 10;
+      
+      // Alternating row colors
+      if (index % 2 === 1) {
+        pdf.setFillColor(249, 250, 251); // Gray-50
+        pdf.rect(20, currentY, pageWidth - 40, rowHeight, 'F');
       }
       
-      // Description (with text wrapping for long descriptions)
+      pdf.setFontSize(7);
+      
+      // Item number
+      pdf.text((index + 1).toString(), 25, currentY + 6);
+      
+      // Description (wrap if too long)
+      const maxDescWidth = 70;
       const description = item.description;
-      if (description.length > 35) {
-        const lines = pdf.splitTextToSize(description, 80);
-        pdf.text(lines[0], 22, itemY);
-        if (lines.length > 1) {
-          pdf.setFontSize(7);
-          pdf.text(lines[1], 22, itemY + 3);
-          pdf.setFontSize(8);
+      if (pdf.getTextWidth(description) > maxDescWidth) {
+        const words = description.split(' ');
+        let line = '';
+        let lineY = currentY + 6;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          if (pdf.getTextWidth(testLine) > maxDescWidth && line !== '') {
+            pdf.text(line, 35, lineY);
+            line = words[i] + ' ';
+            lineY += 3;
+          } else {
+            line = testLine;
+          }
         }
+        pdf.text(line, 35, lineY);
       } else {
-        pdf.text(description, 22, itemY);
+        pdf.text(description, 35, currentY + 6);
       }
       
-      // Quantity (centered)
-      pdf.text(item.quantity.toString(), pageWidth - 80, itemY, { align: 'center' });
+      // Quantity
+      pdf.text(item.quantity.toString(), 115, currentY + 6, { align: 'right' });
       
-      // Unit Price (centered)
-      pdf.text(formatCurrency(item.unitPrice), pageWidth - 60, itemY, { align: 'center' });
+      // Unit Price
+      pdf.text(formatCurrency(item.unitPrice), 150, currentY + 6, { align: 'right' });
       
-      // VAT Rate (centered)
-      pdf.text(`${item.vatRate}%`, pageWidth - 40, itemY, { align: 'center' });
+      // VAT Rate
+      const vatRate = item.vatType === 'standard' ? '15%' : '0%';
+      pdf.text(vatRate, 170, currentY + 6, { align: 'right' });
       
-      // Total (right-aligned)
-      pdf.text(formatCurrency(item.total), pageWidth - 22, itemY, { align: 'right' });
+      // Line Total
+      pdf.text(formatCurrency(item.lineTotal), pageWidth - 25, currentY + 6, { align: 'right' });
       
-      itemY += 8;
+      // Row border
+      pdf.setDrawColor(229, 231, 235); // Gray-200
+      pdf.line(20, currentY + rowHeight, pageWidth - 20, currentY + rowHeight);
+      
+      currentY += rowHeight;
     });
 
-    // Summary Section
-    const summaryY = itemY + 10;
-    const summaryX = pageWidth - 80;
-    
-    // Summary background
-    pdf.setFillColor(248, 250, 252);
-    pdf.rect(summaryX - 5, summaryY - 5, 85, 25, 'F');
-    
-    pdf.setFontSize(8);
-    pdf.setTextColor(0, 0, 0);
+    // SUMMARY SECTION with emerald theme
+    const summaryY = currentY + 20;
+    const summaryX = pageWidth - 90;
+    const summaryWidth = 70;
     
     // Subtotal
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
     pdf.text("Subtotal:", summaryX, summaryY);
-    pdf.text(formatCurrency(estimate.subtotal), pageWidth - 22, summaryY, { align: 'right' });
+    const subtotalText = formatCurrency(estimate.subtotal || 0);
+    const subtotalWidth = pdf.getTextWidth(subtotalText);
+    pdf.text(subtotalText, summaryX + summaryWidth - subtotalWidth, summaryY);
     
     // VAT
-    pdf.text("VAT:", summaryX, summaryY + 5);
-    pdf.text(formatCurrency(estimate.vatAmount), pageWidth - 22, summaryY + 5, { align: 'right' });
+    pdf.text("VAT (15%):", summaryX, summaryY + 8);
+    const vatText = formatCurrency(estimate.vatAmount || 0);
+    const vatWidth = pdf.getTextWidth(vatText);
+    pdf.text(vatText, summaryX + summaryWidth - vatWidth, summaryY + 8);
     
-    // Line above total
+    // Border line
+    pdf.setDrawColor(209, 213, 219); // Gray-300
     pdf.setLineWidth(0.5);
-    pdf.line(summaryX, summaryY + 8, pageWidth - 22, summaryY + 8);
+    pdf.line(summaryX, summaryY + 12, summaryX + summaryWidth, summaryY + 12);
     
-    // Total (bold)
-    pdf.setFontSize(10);
-    pdf.text("Total:", summaryX, summaryY + 13);
-    pdf.text(formatCurrency(estimate.total), pageWidth - 22, summaryY + 13, { align: 'right' });
+    // TOTAL with emerald color theme
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("TOTAL:", summaryX, summaryY + 20);
+    
+    pdf.setFontSize(13);
+    pdf.setTextColor(4, 120, 87); // Emerald-700 for total amount
+    const totalText = formatCurrency(estimate.total || 0);
+    const totalWidth = pdf.getTextWidth(totalText);
+    pdf.text(totalText, summaryX + summaryWidth - totalWidth, summaryY + 20);
 
-    // Notes section
+    // NOTES AND TERMS SECTION
+    let footerY = summaryY + 40;
+    
     if (estimate.notes) {
-      const notesY = summaryY + 25;
-      pdf.setFontSize(9);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text("Notes:", 20, notesY);
-      
       pdf.setFontSize(8);
-      pdf.setTextColor(75, 85, 99);
-      const notesLines = pdf.splitTextToSize(estimate.notes, pageWidth - 40);
-      pdf.text(notesLines, 20, notesY + 5);
+      pdf.setTextColor(55, 65, 81); // Gray-700
+      pdf.text("Notes:", 20, footerY);
+      footerY += 5;
+      
+      pdf.setTextColor(75, 85, 99); // Gray-600
+      const noteLines = estimate.notes.split('\n');
+      noteLines.forEach(line => {
+        pdf.text(line, 20, footerY);
+        footerY += 4;
+      });
+      footerY += 5;
+    }
+    
+    if (estimate.terms) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(55, 65, 81); // Gray-700
+      pdf.text("Terms & Conditions:", 20, footerY);
+      footerY += 5;
+      
+      pdf.setTextColor(75, 85, 99); // Gray-600
+      const termLines = estimate.terms.split('\n');
+      termLines.forEach(line => {
+        pdf.text(line, 20, footerY);
+        footerY += 4;
+      });
     }
 
-    // Footer
-    const footerY = pageHeight - 25;
-    pdf.setLineWidth(0.5);
-    pdf.setDrawColor(229, 231, 235);
-    pdf.line(20, footerY, pageWidth - 20, footerY);
-    
+    // FOOTER
+    const footerText = "This estimate is valid for 30 days from the date of issue.";
     pdf.setFontSize(7);
-    pdf.setTextColor(107, 114, 128);
-    pdf.text("Thank you for your business!", 20, footerY + 5);
-    pdf.text(`Estimate ${estimate.estimateNumber} | Generated on ${formatDate(new Date())}`, pageWidth - 20, footerY + 5, { align: 'right' });
-    pdf.text("This is a computer-generated document. No signature required.", 20, footerY + 8);
-
+    pdf.setTextColor(107, 114, 128); // Gray-500
+    pdf.text(footerText, pageWidth / 2, pageHeight - 20, { align: 'center' });
+    
     resolve(pdf);
   });
+}
+
+interface PDFGeneratorProps {
+  estimate: EstimateWithCustomer;
+  onGenerate: (pdf: jsPDF) => void;
+}
+
+export default function PDFGenerator({ estimate, onGenerate }: PDFGeneratorProps) {
+  const handleGeneratePDF = async () => {
+    try {
+      const pdf = await generateEstimatePDF(estimate);
+      onGenerate(pdf);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
+  };
+
+  return { generatePDF: handleGeneratePDF };
 }

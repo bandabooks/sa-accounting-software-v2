@@ -1600,10 +1600,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Estimate not found" });
       }
       
-      // In production, generate actual PDF here
-      res.json({ message: "PDF generation not implemented yet", downloadUrl: `/api/estimates/${id}/download` });
+      // Return estimate data for client-side PDF generation
+      res.json({
+        success: true,
+        estimate: estimate,
+        message: "Estimate data ready for PDF generation"
+      });
     } catch (error) {
-      res.status(500).json({ message: "Failed to generate PDF" });
+      console.error("Error fetching estimate for PDF:", error);
+      res.status(500).json({ message: "Failed to fetch estimate data" });
     }
   });
 
