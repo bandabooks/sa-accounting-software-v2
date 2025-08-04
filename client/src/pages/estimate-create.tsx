@@ -410,31 +410,42 @@ export default function EstimateCreate() {
   }, { standard: 0, zeroExempt: 0 });
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/estimates")}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Estimates
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {isEditing ? "Edit Estimate" : "Create New Estimate"}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {isEditing ? "Update estimate details and line items" : "Create a new estimate for your customer"}
-            </p>
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Professional Header - Matching Invoice Style */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 shadow-sm mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setLocation('/estimates')}
+              className="hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Estimates
+            </Button>
+            <Separator orientation="vertical" className="h-6" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                <FileText className="h-6 w-6 mr-3 text-blue-600" />
+                {isEditing ? 'Edit Estimate' : 'Create New Estimate'}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Professional estimate with automatic accounting
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              EST-{String((estimates?.length || 0) + 1).padStart(4, '0')}
+            </Badge>
           </div>
         </div>
-      </div>
+      </header>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-6">
+        <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content - Estimate Details and Items */}
           <div className="lg:col-span-2 space-y-6">
@@ -885,7 +896,8 @@ export default function EstimateCreate() {
             </Card>
           </div>
         </div>
-      </form>
+        </form>
+      </main>
     </div>
   );
 }
