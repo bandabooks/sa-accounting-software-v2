@@ -196,47 +196,50 @@ export default function InvoiceCreate() {
     }
   };
 
-  // Fixed VAT calculation respecting global method and line item types
+  // Fetch VAT types from database for dynamic calculation
+  const { data: vatTypesData = [] } = useQuery({
+    queryKey: ["/api/companies", 2, "vat-types"],
+    retry: false,
+  });
+  
+  // Ensure we have array of VAT types
+  const vatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
+
+  // Dynamic VAT calculation using database VAT types
   const calculateItemVAT = (item: InvoiceItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
     
-    if (item.vatTypeId && shouldShowVATFields) {
-      // Map VAT type ID to match bulk capture exactly
-      const vatTypeMapping = {
-        1: { rate: 15, type: 'standard', name: 'STD - Standard Rate' },
-        2: { rate: 0, type: 'zero_rated', name: 'ZER - Zero Rated' },
-        3: { rate: 0, type: 'exempt', name: 'EXE - Exempt' },
-        4: { rate: 0, type: 'no_vat', name: 'OUT - Out of Scope' }
-      };
+    if (item.vatTypeId && shouldShowVATFields && vatTypes.length > 0) {
+      // Find VAT type from database
+      const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
       
-      const vatConfig = vatTypeMapping[item.vatTypeId as keyof typeof vatTypeMapping];
-      
-      // CRITICAL: If line item is Zero-Rated, Exempt, or No VAT, return 0 regardless of global method
-      if (!vatConfig || vatConfig.rate === 0) {
-        console.log(`VAT Calculation: lineAmount=R${lineAmount}, vatTypeId=${item.vatTypeId}, ${vatConfig?.name || 'Unknown'}, VAT=R0.00 (${vatConfig?.type || 'zero rate'})`);
-        return 0;
+      if (vatType) {
+        const vatRate = parseFloat(vatType.rate);
+        
+        // CRITICAL: If line item is Zero-Rated, Exempt, or No VAT, return 0 regardless of global method
+        if (vatRate === 0) {
+          console.log(`VAT Calculation: lineAmount=R${lineAmount}, vatTypeId=${item.vatTypeId}, ${vatType.code} - ${vatType.name}, VAT=R0.00 (${vatType.code.toLowerCase()})`);
+          return 0;
+        }
+        
+        // For Standard rate items, ALWAYS respect the global VAT calculation method
+        let calculatedVAT = 0;
+        if (formData.vatCalculationMethod === 'inclusive') {
+          // For inclusive method: VAT = lineAmount * (rate / (100 + rate))
+          calculatedVAT = lineAmount * (vatRate / (100 + vatRate));
+        } else {
+          // For exclusive method: VAT = lineAmount * (rate / 100)
+          calculatedVAT = lineAmount * (vatRate / 100);
+        }
+        
+        console.log(`VAT Calculation: lineAmount=R${lineAmount}, ${vatType.code} - ${vatType.name}, global_method=${formData.vatCalculationMethod}, VAT=R${calculatedVAT.toFixed(2)}`);
+        return calculatedVAT;
       }
-      
-      // For Standard rate items (15%), ALWAYS respect the global VAT calculation method
-      // This is the key fix: ignore individual VAT type (inclusive/exclusive) and use global setting
-      let calculatedVAT = 0;
-      if (formData.vatCalculationMethod === 'inclusive') {
-        // For inclusive method: VAT = lineAmount * (rate / (100 + rate))
-        // This extracts the VAT from an amount that already includes it
-        calculatedVAT = lineAmount * (vatConfig.rate / (100 + vatConfig.rate));
-      } else {
-        // For exclusive method: VAT = lineAmount * (rate / 100)
-        // This adds VAT to an amount that doesn't include it
-        calculatedVAT = lineAmount * (vatConfig.rate / 100);
-      }
-      
-      console.log(`VAT Calculation: lineAmount=R${lineAmount}, ${vatConfig.name}, global_method=${formData.vatCalculationMethod}, VAT=R${calculatedVAT.toFixed(2)}`);
-      return calculatedVAT;
     }
     
-    // Fallback to traditional calculation if no VAT type ID
+    // Fallback to traditional calculation if no VAT type ID or VAT types not loaded
     const vatRate = parseFloat(item.vatRate || "0") / 100;
     if (vatRate === 0) return 0; // Zero rate items always have zero VAT
     
@@ -257,8 +260,8 @@ export default function InvoiceCreate() {
     
     setItems(newItems);
     
-    // Recalculate totals using the global VAT calculation method
-    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod);
+    // Recalculate totals using the global VAT calculation method with database VAT types
+    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod, vatTypes);
     setFormData(prev => ({
       ...prev,
       subtotal: totals.subtotal.toFixed(2),
@@ -284,8 +287,8 @@ export default function InvoiceCreate() {
     
     setItems(newItems);
     
-    // Recalculate totals using the global VAT calculation method
-    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod);
+    // Recalculate totals using the global VAT calculation method with database VAT types
+    const totals = calculateInvoiceTotal(newItems, formData.vatCalculationMethod, vatTypes);
     setFormData(prev => ({
       ...prev,
       subtotal: totals.subtotal.toFixed(2),
@@ -634,12 +637,9 @@ export default function InvoiceCreate() {
                           const unitPrice = parseFloat(item.unitPrice || "0");
                           const lineAmount = quantity * unitPrice;
                           
-                          // Get VAT rate from VAT type ID - Updated to match bulk capture mapping
-                          const vatRate = item.vatTypeId === 1 ? 15 :  // STD - Standard Rate (15%)
-                                         item.vatTypeId === 2 ? 0 :    // ZER - Zero Rated (0%)
-                                         item.vatTypeId === 3 ? 0 :    // EXE - Exempt (0%)
-                                         item.vatTypeId === 4 ? 0 :    // OUT - Out of Scope (0%)
-                                         0;                            // Default to 0%
+                          // Get VAT rate from database VAT types
+                          const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
+                          const vatRate = vatType ? parseFloat(vatType.rate) : 0;
                           
                           // CRITICAL: For zero-rated items, always show the line amount as-is
                           if (vatRate === 0) {

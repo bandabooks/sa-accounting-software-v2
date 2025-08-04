@@ -22,7 +22,8 @@ export function calculateInvoiceTotal(
     vatTypeId?: number;
     vatAmount?: string | number;
   }>, 
-  vatCalculationMethod: 'inclusive' | 'exclusive' = 'inclusive'
+  vatCalculationMethod: 'inclusive' | 'exclusive' = 'inclusive',
+  vatTypes: Array<{id: number; rate: string}> = []
 ): {
   subtotal: number;
   vatAmount: number;
@@ -43,13 +44,10 @@ export function calculateInvoiceTotal(
 
     const lineAmount = qty * price;
 
-    if (item.vatTypeId) {
-      // Get VAT rate from VAT type ID - Updated to match bulk capture mapping
-      const vatRate = item.vatTypeId === 1 ? 15 :  // STD - Standard Rate (15%)
-                     item.vatTypeId === 2 ? 0 :    // ZER - Zero Rated (0%)
-                     item.vatTypeId === 3 ? 0 :    // EXE - Exempt (0%)
-                     item.vatTypeId === 4 ? 0 :    // OUT - Out of Scope (0%)
-                     0;                            // Default to 0%
+    if (item.vatTypeId && vatTypes.length > 0) {
+      // Get VAT rate from database VAT types
+      const vatType = vatTypes.find(type => type.id === item.vatTypeId);
+      const vatRate = vatType ? parseFloat(vatType.rate) : 0;
       
       // CRITICAL: For zero-rated items, always use 0 VAT regardless of calculation method
       if (vatRate === 0) {

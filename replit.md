@@ -6,6 +6,16 @@ Taxnify is a comprehensive business management platform designed for South Afric
 
 ## Recent Changes (August 2025)
 
+### VAT System Centralization and Cleanup Complete (August 2025)
+- **Centralized VAT Service Created** - Built `client/src/lib/vat-service.ts` to replace hardcoded VAT type mappings across system
+- **Database-Driven VAT Calculations** - All VAT calculations now use VAT types fetched dynamically from VAT module
+- **Consistent VAT Type Mapping Enforced** - Eliminated conflicting hardcoded mappings that caused Zero-Rated items to calculate incorrect VAT
+- **Total VAT Calculation Fixed** - Zero-Rated items now correctly contribute R0.00 to invoice totals and VAT breakdowns
+- **System-Wide Mapping Standardization** - All components now use consistent VAT type ID mapping from database
+- **Future-Proof Architecture** - VAT calculations automatically adapt when VAT types are modified in the VAT module
+- **Eliminated Legacy VAT Functions** - Removed old hardcoded VAT type mappings from invoice-create, utils-invoice, and bulk-capture pages
+- **Enhanced Error Prevention** - Centralized service prevents VAT calculation conflicts during development
+
 ### Production Readiness Testing & System Cleanup Complete (August 2025)
 - **Comprehensive Onboarding Validation** - Verified all required fields enforced, users cannot skip mandatory information
 - **Database Naming Standardization** - All VAT/tax fields now consistently use `vatAmount` across entire codebase
