@@ -466,24 +466,24 @@ export default function EstimateCreate() {
   }, { standard: 0, zeroExempt: 0 });
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Professional Header - Matching Invoice Style */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 shadow-sm mb-6">
+    <div className="flex flex-col h-full bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:to-gray-800">
+      {/* Professional Header - Emerald Theme */}
+      <header className="bg-white dark:bg-gray-800 border-b border-emerald-200 dark:border-gray-700 px-6 py-4 shadow-sm mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setLocation('/estimates')}
-              className="hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="hover:bg-emerald-100 dark:hover:bg-gray-700 text-emerald-700 dark:text-emerald-400"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Estimates
             </Button>
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-6 bg-emerald-200" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                <FileText className="h-6 w-6 mr-3 text-blue-600" />
+                <FileText className="h-6 w-6 mr-3 text-emerald-600" />
                 {isEditing ? 'Edit Estimate' : 'Create New Estimate'}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -492,7 +492,7 @@ export default function EstimateCreate() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
               {isEditing && existingEstimate ? existingEstimate.estimateNumber : `EST-${String((estimates?.length || 0) + 1).padStart(4, '0')}`}
             </Badge>
           </div>
@@ -508,9 +508,9 @@ export default function EstimateCreate() {
             
             {/* Client Information */}
             <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-b">
                 <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                  <User className="h-5 w-5 mr-2 text-blue-600" />
+                  <User className="h-5 w-5 mr-2 text-emerald-600" />
                   Client Information
                 </CardTitle>
               </CardHeader>
@@ -624,10 +624,10 @@ export default function EstimateCreate() {
 
             {/* Estimate Items */}
             <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                    <Calculator className="h-5 w-5 mr-2 text-green-600" />
+                    <Calculator className="h-5 w-5 mr-2 text-emerald-600" />
                     Estimate Items
                   </CardTitle>
                   <Button
@@ -635,7 +635,7 @@ export default function EstimateCreate() {
                     onClick={addItem}
                     variant="outline"
                     size="sm"
-                    className="text-green-600 border-green-300 hover:bg-green-50"
+                    className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Item
@@ -918,11 +918,11 @@ export default function EstimateCreate() {
                     </div>
                   </VATConditionalWrapper>
                   
-                  <div className="flex justify-between items-center py-3 bg-green-50 dark:bg-green-900/20 rounded-lg px-4 border border-green-200 dark:border-green-800">
-                    <span className="text-lg font-semibold text-green-900 dark:text-green-100">
+                  <div className="flex justify-between items-center py-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-4 border border-emerald-200 dark:border-emerald-800">
+                    <span className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
                       Total (incl. VAT):
                     </span>
-                    <span className="text-xl font-bold text-green-900 dark:text-green-100">
+                    <span className="text-xl font-bold text-emerald-900 dark:text-emerald-100">
                       R {formData.total}
                     </span>
                   </div>
