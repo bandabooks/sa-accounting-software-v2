@@ -505,7 +505,7 @@ const EnhancedBulkCapture = () => {
             <Badge variant="outline" className={`px-3 py-1 ${
               activeTab === 'income'
                 ? 'border-green-300 text-green-700 bg-green-100'
-                : 'border-blue-400 text-blue-300 bg-blue-600/20'
+                : 'border-blue-400 text-white bg-blue-600'
             }`}>
               {activeTab === 'income' ? incomeCalculations.activeEntries : expenseCalculations.activeEntries} active entries
             </Badge>
@@ -853,7 +853,7 @@ const EnhancedBulkCapture = () => {
                 Add Rows
               </Button>
               <Button 
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-blue-600 hover:bg-blue-700"
                 onClick={() => saveExpensesMutation.mutate()}
                 disabled={saveExpensesMutation.isPending}
               >
