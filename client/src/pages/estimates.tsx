@@ -386,19 +386,19 @@ export default function Estimates() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="w-48">
                                     <DropdownMenuItem asChild>
-                                      <Link href={`/estimates/${estimate.id}`} className="flex items-center">
+                                      <Link to={`/estimates/${estimate.id}`} className="flex items-center">
                                         <Eye className="h-4 w-4 mr-2" />
                                         View Details
                                       </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
-                                      <Link href={`/estimate-create?edit=${estimate.id}`} className="flex items-center">
+                                      <Link to={`/estimate-create?edit=${estimate.id}`} className="flex items-center">
                                         <Pencil className="h-4 w-4 mr-2" />
                                         Edit Estimate
                                       </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
-                                      <Link href={`/estimates/${estimate.id}/duplicate`} className="flex items-center">
+                                      <Link to={`/estimates/${estimate.id}/duplicate`} className="flex items-center">
                                         <Copy className="h-4 w-4 mr-2" />
                                         Duplicate
                                       </Link>
@@ -500,8 +500,13 @@ export default function Estimates() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex gap-2 justify-end">
                             <Button asChild size="sm" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0">
-                              <Link href={`/estimates/${estimate.id}`}>
+                              <Link to={`/estimates/${estimate.id}`}>
                                 <Eye className="h-3 w-3" />
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm" className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0">
+                              <Link to={`/estimate-create?edit=${estimate.id}`}>
+                                <Pencil className="h-3 w-3" />
                               </Link>
                             </Button>
                             {estimate.status === 'draft' && (

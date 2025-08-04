@@ -21,7 +21,12 @@ export default function EstimateDetail() {
   const { data: estimate, isLoading } = useQuery({
     queryKey: ["/api/estimates", estimateId],
     queryFn: async () => {
-      const response = await fetch(`/api/estimates/${estimateId}`);
+      const response = await fetch(`/api/estimates/${estimateId}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       if (!response.ok) throw new Error("Failed to fetch estimate");
       return response.json();
     },
@@ -32,6 +37,7 @@ export default function EstimateDetail() {
     mutationFn: async (status: string) => {
       const response = await fetch(`/api/estimates/${estimateId}/status`, {
         method: "PUT",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
@@ -60,6 +66,8 @@ export default function EstimateDetail() {
     mutationFn: async () => {
       const response = await fetch(`/api/estimates/${estimateId}/convert-to-invoice`, {
         method: "POST",
+        credentials: 'include',
+        headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) throw new Error("Failed to convert to invoice");
       return response.json();
