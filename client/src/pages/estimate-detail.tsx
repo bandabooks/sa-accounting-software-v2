@@ -75,10 +75,10 @@ export default function EstimateDetail() {
     mutationFn: async () => {
       return apiRequest(`/api/estimates/${id}/convert-to-invoice`, "POST");
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       successModal.showSuccess(
         "Converted to Invoice Successfully!",
-        `Estimate ${estimate?.estimateNumber} has been converted to Invoice ${data.invoiceNumber}.`,
+        `Estimate ${(estimate as any)?.estimateNumber} has been converted to Invoice ${data.invoiceNumber}.`,
         "View Invoice",
         () => setLocation(`/invoices/${data.id}`)
       );
@@ -108,7 +108,7 @@ export default function EstimateDetail() {
   const handleEmailSent = () => {
     successModal.showSuccess(
       "Estimate Sent Successfully!",
-      `Estimate ${estimate?.estimateNumber} has been sent via email.`
+      `Estimate ${(estimate as any)?.estimateNumber} has been sent via email.`
     );
   };
 
@@ -119,7 +119,7 @@ export default function EstimateDetail() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `estimate-${estimate?.estimateNumber}.pdf`;
+      a.download = `estimate-${(estimate as any)?.estimateNumber}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -135,10 +135,10 @@ export default function EstimateDetail() {
 
   const duplicateEstimate = async () => {
     try {
-      const response = await apiRequest(`/api/estimates/${id}/duplicate`, "POST");
+      const response = await apiRequest(`/api/estimates/${id}/duplicate`, "POST") as any;
       successModal.showSuccess(
         "Estimate Duplicated Successfully!",
-        `A copy of estimate ${estimate?.estimateNumber} has been created as ${response.estimateNumber}.`,
+        `A copy of estimate ${(estimate as any)?.estimateNumber} has been created as ${response.estimateNumber}.`,
         "View New Estimate",
         () => setLocation(`/estimates/${response.id}`)
       );
@@ -204,17 +204,17 @@ export default function EstimateDetail() {
                 <div>
                   <div className="flex items-center space-x-3">
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                      Estimate {estimate?.estimateNumber}
+                      Estimate {(estimate as any)?.estimateNumber}
                     </h1>
                     <Badge 
                       variant="outline" 
                       className="bg-emerald-50 text-emerald-700 border-emerald-200 font-medium px-3 py-1"
                     >
-                      {estimate?.status?.charAt(0).toUpperCase() + estimate?.status?.slice(1)}
+                      {(estimate as any)?.status?.charAt(0).toUpperCase() + (estimate as any)?.status?.slice(1)}
                     </Badge>
                   </div>
                   <p className="text-gray-600 dark:text-gray-400 mt-1 font-medium">
-                    Estimate for {estimate?.customer?.name} • {formatDate(estimate?.issueDate)}
+                    Estimate for {(estimate as any)?.customer?.name} • {formatDate((estimate as any)?.issueDate)}
                   </p>
                 </div>
               </div>
@@ -223,7 +223,7 @@ export default function EstimateDetail() {
             {/* Enhanced Action Buttons */}
             <div className="flex items-center space-x-3">
               <Select
-                value={estimate.status}
+                value={(estimate as any).status}
                 onValueChange={(value) => updateStatusMutation.mutate(value)}
               >
                 <SelectTrigger className="w-36 border-emerald-200 text-emerald-700">
@@ -311,15 +311,15 @@ export default function EstimateDetail() {
                 <p className="text-emerald-100">Professional Estimate Management</p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-medium">Estimate #: {estimate.estimateNumber}</p>
-                <p className="text-emerald-100">Date: {formatDate(estimate.issueDate)}</p>
-                <p className="text-emerald-100">Due: {formatDate(estimate.expiryDate)}</p>
+                <p className="text-lg font-medium">Estimate #: {(estimate as any)?.estimateNumber}</p>
+                <p className="text-emerald-100">Date: {formatDate((estimate as any)?.issueDate || (estimate as any)?.createdAt)}</p>
+                <p className="text-emerald-100">Due: {formatDate((estimate as any)?.expiryDate)}</p>
                 <div className="mt-2">
                   <Badge 
                     variant="outline" 
                     className="bg-white/20 text-white border-white/30 font-medium"
                   >
-                    Status: {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
+                    Status: {((estimate as any)?.status || 'draft').charAt(0).toUpperCase() + ((estimate as any)?.status || 'draft').slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -340,28 +340,28 @@ export default function EstimateDetail() {
                 <CardContent className="p-6">
                   <div className="space-y-2">
                     <div className="font-bold text-lg text-gray-900 dark:text-white">
-                      {estimate.customer.name}
+                      {(estimate as any)?.customer?.name}
                     </div>
-                    {estimate.customer.email && (
+                    {(estimate as any)?.customer?.email && (
                       <div className="text-gray-600 dark:text-gray-400">
-                        {estimate.customer.email}
+                        {(estimate as any)?.customer?.email}
                       </div>
                     )}
-                    {estimate.customer.phone && (
+                    {(estimate as any)?.customer?.phone && (
                       <div className="text-gray-600 dark:text-gray-400">
-                        {estimate.customer.phone}
+                        {(estimate as any)?.customer?.phone}
                       </div>
                     )}
-                    {estimate.customer.address && (
+                    {(estimate as any)?.customer?.address && (
                       <div className="text-gray-600 dark:text-gray-400">
-                        {estimate.customer.address}
-                        {estimate.customer.city && `, ${estimate.customer.city}`}
-                        {estimate.customer.postalCode && ` ${estimate.customer.postalCode}`}
+                        {(estimate as any)?.customer?.address}
+                        {(estimate as any)?.customer?.city && `, ${(estimate as any)?.customer?.city}`}
+                        {(estimate as any)?.customer?.postalCode && ` ${(estimate as any)?.customer?.postalCode}`}
                       </div>
                     )}
-                    {estimate.customer.vatNumber && (
+                    {(estimate as any)?.customer?.vatNumber && (
                       <div className="text-gray-600 dark:text-gray-400 font-medium">
-                        VAT: {estimate.customer.vatNumber}
+                        VAT: {(estimate as any)?.customer?.vatNumber}
                       </div>
                     )}
                   </div>
@@ -418,7 +418,7 @@ export default function EstimateDetail() {
                       </tr>
                     </thead>
                     <tbody>
-                      {estimate.items.map((item: any, index: number) => (
+                      {((estimate as any)?.items || []).map((item: any, index: number) => (
                         <tr key={item.id} className="border-b border-gray-200 hover:bg-emerald-50">
                           <td className="px-6 py-4 text-gray-600">{index + 1}</td>
                           <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
