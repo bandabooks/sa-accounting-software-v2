@@ -38,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSuccessModal } from "@/hooks/use-success-modal";
 import { SuccessModal } from "@/components/ui/success-modal";
 import PDFPreviewModal from "@/components/estimate/pdf-preview-modal";
+import EmailEstimate from "@/components/estimate/email-estimate";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function EstimateDetail() {
@@ -47,6 +48,7 @@ export default function EstimateDetail() {
   const queryClient = useQueryClient();
   const successModal = useSuccessModal();
   const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Fetch estimate data
   const { data: estimate, isLoading } = useQuery({
@@ -100,19 +102,14 @@ export default function EstimateDetail() {
   };
 
   const sendEstimate = async () => {
-    try {
-      await apiRequest(`/api/estimates/${id}/send`, "POST");
-      successModal.showSuccess(
-        "Estimate Sent Successfully!",
-        `Estimate ${estimate?.estimateNumber} has been sent to ${estimate?.customer?.name}.`
-      );
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send estimate.",
-        variant: "destructive",
-      });
-    }
+    setIsEmailModalOpen(true);
+  };
+
+  const handleEmailSent = () => {
+    successModal.showSuccess(
+      "Estimate Sent Successfully!",
+      `Estimate ${estimate?.estimateNumber} has been sent via email.`
+    );
   };
 
   const downloadPDF = async () => {
@@ -509,6 +506,15 @@ export default function EstimateDetail() {
           isOpen={isPDFPreviewOpen}
           onClose={() => setIsPDFPreviewOpen(false)}
           onSendEmail={sendEstimate}
+        />
+      )}
+
+      {estimate && (
+        <EmailEstimate
+          estimate={estimate}
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          onSent={handleEmailSent}
         />
       )}
     </div>

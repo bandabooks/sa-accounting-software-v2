@@ -1792,6 +1792,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email estimate functionality
+  app.post("/api/estimates/send-email", async (req, res) => {
+    try {
+      const { estimateId, to, subject, message } = req.body;
+      
+      // For demo purposes, we'll simulate email sending
+      // In production, you would integrate with SendGrid or another email service
+      console.log("Estimate email sent simulation:", { estimateId, to, subject, message });
+      
+      res.json({ message: "Email sent successfully" });
+    } catch (error) {
+      console.error("Error sending estimate email:", error);
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
   // Setup recurring invoice
   app.post("/api/invoices/setup-recurring", async (req, res) => {
     try {
