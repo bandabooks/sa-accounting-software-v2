@@ -360,7 +360,7 @@ export default function InvoiceCreate() {
     }
   };
 
-  const totals = calculateInvoiceTotal(items);
+  const totals = calculateInvoiceTotal(items, formData.vatCalculationMethod);
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -767,13 +767,18 @@ export default function InvoiceCreate() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div className="flex justify-between">
                           <span>Standard (15%):</span>
-                          <span className="font-mono">R {items.filter(item => item.vatTypeId === 1 || item.vatTypeId === 2)
-                            .reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
+                          <span className="font-mono">R {(() => {
+                            // Calculate VAT amount for Standard items using the global method
+                            const standardItems = items.filter(item => item.vatTypeId === 1 || item.vatTypeId === 2);
+                            return standardItems.reduce((sum, item) => {
+                              const calculatedVAT = calculateItemVAT(item);
+                              return sum + calculatedVAT;
+                            }, 0).toFixed(2);
+                          })()}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Zero/Exempt:</span>
-                          <span className="font-mono">R {items.filter(item => item.vatTypeId === 3 || item.vatTypeId === 4)
-                            .reduce((sum, item) => sum + parseFloat(item.vatAmount || "0"), 0).toFixed(2)}</span>
+                          <span className="font-mono">R 0.00</span>
                         </div>
                       </div>
                     </div>
