@@ -634,12 +634,12 @@ export default function InvoiceCreate() {
                           const unitPrice = parseFloat(item.unitPrice || "0");
                           const lineAmount = quantity * unitPrice;
                           
-                          // Get VAT rate from VAT type ID
-                          const vatRate = item.vatTypeId === 1 ? 15 :  // STD_EX - VAT Exclusive (15%)
-                                         item.vatTypeId === 2 ? 15 :   // STD - VAT Inclusive (15%) 
-                                         item.vatTypeId === 3 ? 0 :    // ZER - Zero Rated (0%)
-                                         item.vatTypeId === 4 ? 0 :    // EXE - Exempt (0%)
-                                         0;                            // OUT - No VAT (0%)
+                          // Get VAT rate from VAT type ID - Updated to match bulk capture mapping
+                          const vatRate = item.vatTypeId === 1 ? 15 :  // STD - Standard Rate (15%)
+                                         item.vatTypeId === 2 ? 0 :    // ZER - Zero Rated (0%)
+                                         item.vatTypeId === 3 ? 0 :    // EXE - Exempt (0%)
+                                         item.vatTypeId === 4 ? 0 :    // OUT - Out of Scope (0%)
+                                         0;                            // Default to 0%
                           
                           // CRITICAL: For zero-rated items, always show the line amount as-is
                           if (vatRate === 0) {

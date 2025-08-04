@@ -44,12 +44,12 @@ export function calculateInvoiceTotal(
     const lineAmount = qty * price;
 
     if (item.vatTypeId) {
-      // Get VAT rate from VAT type ID
-      const vatRate = item.vatTypeId === 1 ? 15 :  // STD_EX - VAT Exclusive (15%)
-                     item.vatTypeId === 2 ? 15 :   // STD - VAT Inclusive (15%) 
-                     item.vatTypeId === 3 ? 0 :    // ZER - Zero Rated (0%)
-                     item.vatTypeId === 4 ? 0 :    // EXE - Exempt (0%)
-                     0;                            // OUT - No VAT (0%)
+      // Get VAT rate from VAT type ID - Updated to match bulk capture mapping
+      const vatRate = item.vatTypeId === 1 ? 15 :  // STD - Standard Rate (15%)
+                     item.vatTypeId === 2 ? 0 :    // ZER - Zero Rated (0%)
+                     item.vatTypeId === 3 ? 0 :    // EXE - Exempt (0%)
+                     item.vatTypeId === 4 ? 0 :    // OUT - Out of Scope (0%)
+                     0;                            // Default to 0%
       
       // CRITICAL: For zero-rated items, always use 0 VAT regardless of calculation method
       if (vatRate === 0) {
