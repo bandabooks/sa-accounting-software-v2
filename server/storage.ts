@@ -12044,21 +12044,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async processBulkEntries(sessionId: number, companyId: number): Promise<{ success: boolean; processedCount: number; errors: any[] }> {
+    console.log(`Processing bulk entries for session ${sessionId}, company ${companyId}`);
     const session = await this.getBulkCaptureSession(sessionId, companyId);
     if (!session) {
       throw new Error('Session not found');
     }
 
+    console.log('Session found:', JSON.stringify(session, null, 2));
     let processedCount = 0;
     const errors: any[] = [];
 
     try {
       if (session.sessionType === 'expense') {
         const entries = await this.getBulkExpenseEntries(sessionId, companyId);
+        console.log(`Found ${entries.length} expense entries to process`);
         
         for (const entry of entries) {
           try {
             console.log('Processing expense entry:', JSON.stringify(entry, null, 2));
+
+            // Skip entries with zero amount
+            if (!entry.amount || parseFloat(entry.amount) === 0) {
+              console.log('Skipping entry with zero amount');
+              continue;
+            }
+
+            // Skip entries without required fields
+            if (!entry.categoryId || !entry.description) {
+              console.log('Skipping entry with missing required fields');
+              continue;
+            }
+
             // Create proper journal entry for expense following the same pattern as individual expenses
             const expenseAccount = await this.getChartOfAccount(entry.categoryId);
             const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
@@ -12126,15 +12142,30 @@ export class DatabaseStorage implements IStorage {
             processedCount++;
 
           } catch (error) {
+            console.error('Error processing expense entry:', error);
             errors.push({ entryId: entry.id, error: error.message });
           }
         }
       } else if (session.sessionType === 'income') {
         const entries = await this.getBulkIncomeEntries(sessionId, companyId);
+        console.log(`Found ${entries.length} income entries to process`);
         
         for (const entry of entries) {
           try {
             console.log('Processing income entry:', JSON.stringify(entry, null, 2));
+
+            // Skip entries with zero amount
+            if (!entry.amount || parseFloat(entry.amount) === 0) {
+              console.log('Skipping entry with zero amount');
+              continue;
+            }
+
+            // Skip entries without required fields
+            if (!entry.incomeAccountId || !entry.description) {
+              console.log('Skipping entry with missing required fields');
+              continue;
+            }
+
             // Create proper journal entry for income
             const incomeAccount = await this.getChartOfAccount(entry.incomeAccountId);
             const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
@@ -12202,6 +12233,7 @@ export class DatabaseStorage implements IStorage {
             processedCount++;
 
           } catch (error) {
+            console.error('Error processing income entry:', error);
             errors.push({ entryId: entry.id, error: error.message });
           }
         }
