@@ -73,6 +73,7 @@ const EnhancedBulkCapture = () => {
   const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedSession, setExpandedSession] = useState<number | null>(null);
+  const [processingSessions, setProcessingSessions] = useState<Set<number>>(new Set());
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -453,12 +454,11 @@ const EnhancedBulkCapture = () => {
     },
   });
 
-  // Process bulk session mutation
-  const processBulkSessionMutation = useMutation({
-    mutationFn: async (sessionId: number) => {
-      return await apiRequest(`/api/bulk-capture/sessions/${sessionId}/process`, 'POST', {});
-    },
-    onSuccess: (data: any) => {
+  // Process individual session
+  const processSession = async (sessionId: number) => {
+    setProcessingSessions(prev => new Set(prev).add(sessionId));
+    try {
+      const data = await apiRequest(`/api/bulk-capture/sessions/${sessionId}/process`, 'POST', {});
       toast({
         title: "Success",
         description: `Successfully processed ${data.processedCount} entries. ${data.errors?.length || 0} errors.`,
@@ -466,15 +466,30 @@ const EnhancedBulkCapture = () => {
       // Refetch sessions to update status
       queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to process bulk session",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setProcessingSessions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(sessionId);
+        return newSet;
+      });
+    }
+  };
+
+  // Process all sessions
+  const processAllSessions = async () => {
+    const unprocessedSessions = bulkSessions.filter((session: any) => 
+      session.status === 'processing' || session.status === 'draft'
+    );
+    for (const session of unprocessedSessions) {
+      await processSession(session.id);
+    }
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -1073,17 +1088,12 @@ const EnhancedBulkCapture = () => {
               </div>
               {bulkSessions.some((session: any) => session.status === 'processing' || session.status === 'draft') && (
                 <Button
-                  onClick={() => {
-                    // Process all unprocessed sessions
-                    bulkSessions
-                      .filter((session: any) => session.status === 'processing' || session.status === 'draft')
-                      .forEach((session: any) => processBulkSessionMutation.mutate(session.id));
-                  }}
-                  disabled={processBulkSessionMutation.isPending}
+                  onClick={processAllSessions}
+                  disabled={processingSessions.size > 0}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Process All Sessions
+                  {processingSessions.size > 0 ? 'Processing...' : 'Process All Sessions'}
                 </Button>
               )}
             </div>
@@ -1143,11 +1153,11 @@ const EnhancedBulkCapture = () => {
                       {(session.status === 'processing' || session.status === 'draft') && (
                         <Button
                           size="sm"
-                          onClick={() => processBulkSessionMutation.mutate(session.id)}
-                          disabled={processBulkSessionMutation.isPending}
+                          onClick={() => processSession(session.id)}
+                          disabled={processingSessions.has(session.id)}
                           className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                          {processBulkSessionMutation.isPending ? (
+                          {processingSessions.has(session.id) ? (
                             <>Processing...</>
                           ) : (
                             <>
