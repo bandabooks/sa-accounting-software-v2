@@ -3377,10 +3377,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const companyId = req.user!.companyId;
       
-      // Get real revenue data from invoices (using same logic as main dashboard)
+      // Get real sales data from invoices
       const invoices = await storage.getAllInvoices(companyId);
-      const totalRevenue = invoices
-        .filter(invoice => invoice.status === 'paid')
+      const totalSales = invoices
+        .filter(invoice => invoice.status === 'paid' || invoice.status === 'sent')
         .reduce((sum, invoice) => {
           const amount = parseFloat(invoice.total || invoice.totalAmount || '0');
           return sum + (isNaN(amount) ? 0 : amount);
@@ -3427,8 +3427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
         return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
       });
-      const currentMonthRevenue = currentMonthInvoices
-        .filter(invoice => invoice.status === 'paid')
+      const currentMonthSales = currentMonthInvoices
         .reduce((sum, invoice) => {
           const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
@@ -3440,20 +3439,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
         return invoiceDate.getMonth() === previousMonth && invoiceDate.getFullYear() === previousYear;
       });
-      const previousMonthRevenue = previousMonthInvoices
-        .filter(invoice => invoice.status === 'paid')
+      const previousMonthSales = previousMonthInvoices
         .reduce((sum, invoice) => {
           const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
-      const revenueGrowth = previousMonthRevenue > 0 
-        ? ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100
-        : currentMonthRevenue > 0 ? 100 : 0;
+      const salesGrowth = previousMonthSales > 0 
+        ? ((currentMonthSales - previousMonthSales) / previousMonthSales) * 100
+        : currentMonthSales > 0 ? 100 : 0;
 
       const stats = {
-        totalRevenue: Math.round(totalRevenue),
-        revenueGrowth: Math.round(revenueGrowth * 10) / 10,
+        totalSales: Math.round(totalSales),
+        salesGrowth: Math.round(salesGrowth * 10) / 10,
         totalOrders: invoices.length,
         pendingOrders: invoices.filter(invoice => invoice.status === 'draft').length,
         outstandingAmount: Math.round(outstandingAmount),
