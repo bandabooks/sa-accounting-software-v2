@@ -35,6 +35,7 @@ const journalLineSchema = z.object({
   debitAmount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Invalid debit amount"),
   creditAmount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Invalid credit amount"),
   reference: z.string().optional(),
+  entryDate: z.string().optional(), // Individual line-level date (ISO string)
 });
 
 const journalEntryWithLinesSchema = z.object({
@@ -151,8 +152,8 @@ export default function JournalEntries() {
         sourceId: null,
       },
       lines: [
-        { accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" },
-        { accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" },
+        { accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "", entryDate: format(new Date(), 'yyyy-MM-dd') },
+        { accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "", entryDate: format(new Date(), 'yyyy-MM-dd') },
       ],
     },
   });
@@ -193,7 +194,24 @@ export default function JournalEntries() {
   };
 
   const addLine = () => {
-    append({ accountId: "", description: "", debitAmount: "0.00", creditAmount: "0.00", reference: "" });
+    append({ 
+      accountId: "", 
+      description: "", 
+      debitAmount: "0.00", 
+      creditAmount: "0.00", 
+      reference: "",
+      entryDate: format(new Date(), 'yyyy-MM-dd')
+    });
+  };
+
+  // Apply posting date to all lines
+  const applyPostingDateToAll = () => {
+    const postingDate = form.getValues('entry.transactionDate');
+    const dateString = postingDate instanceof Date ? format(postingDate, 'yyyy-MM-dd') : postingDate;
+    
+    fields.forEach((_, index) => {
+      form.setValue(`lines.${index}.entryDate`, dateString);
+    });
   };
 
   const removeLine = (index: number) => {
@@ -320,25 +338,32 @@ export default function JournalEntries() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium">Journal Lines</h3>
-                    <Button type="button" variant="outline" onClick={addLine}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Line
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={applyPostingDateToAll}>
+                        <FileCheck className="h-4 w-4 mr-2" />
+                        Apply Posting Date to All
+                      </Button>
+                      <Button type="button" variant="outline" onClick={addLine}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Line
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Simplified Table Layout */}
                   <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-sm font-medium text-gray-700">
-                      <div className="col-span-4">Account</div>
+                    <div className="bg-gray-50 px-4 py-2 grid grid-cols-13 gap-2 text-sm font-medium text-gray-700">
+                      <div className="col-span-3">Account</div>
                       <div className="col-span-2">Description</div>
+                      <div className="col-span-2">Entry Date</div>
                       <div className="col-span-2">Reference</div>
                       <div className="col-span-2">Debit</div>
                       <div className="col-span-2">Credit</div>
                     </div>
                     
                     {fields.map((field, index) => (
-                      <div key={field.id} className="border-t px-4 py-3 grid grid-cols-12 gap-2 items-center hover:bg-gray-50">
-                        <div className="col-span-4">
+                      <div key={field.id} className="border-t px-4 py-3 grid grid-cols-13 gap-2 items-center hover:bg-gray-50">
+                        <div className="col-span-3">
                           <FormField
                             control={form.control}
                             name={`lines.${index}.accountId`}
@@ -368,6 +393,21 @@ export default function JournalEntries() {
                             name={`lines.${index}.description`}
                             render={({ field }) => (
                               <Input placeholder="Description" {...field} className="h-9" />
+                            )}
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`lines.${index}.entryDate`}
+                            render={({ field }) => (
+                              <Input
+                                type="date"
+                                {...field}
+                                className="h-9"
+                                title="Individual transaction date (different from posting date)"
+                              />
                             )}
                           />
                         </div>

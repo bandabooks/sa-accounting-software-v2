@@ -8,6 +8,10 @@ Taxnify is a comprehensive business management platform for South African compan
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Technical Discussions
+
+- **Journal Entries with Multiple Dates**: User inquired about implementing journal entries with different dates per line item. This is technically feasible by adding `entryDate` field to individual journal entry lines while maintaining the main posting date. Implementation would require database schema updates, UI enhancements for line-level date pickers, and business logic updates for accounting period validation.
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -33,6 +37,7 @@ Preferred communication style: Simple, everyday language.
     - **VAT Management**: South African VAT system (Standard, Zero-rated, Exempt), VAT201 returns, intelligent VAT compliance guidance, and support for company-level VAT registration and inclusive/exclusive pricing. All VAT calculations are database-driven via a centralized VAT service.
     - **SARS API Integration**: Complete SARS API integration module with secure credential management, multi-service support (VAT201, EMP501/502, ITR12/14), automated submissions, and connection testing.
     - **Business Operations**: Complete transaction management including Invoice, Estimate, Sales Order, Purchase Order, and Credit Note creation with CRUD operations, professional auto-numbering, and fully standardized forms ensuring uniform logic and UX across all transaction types. All major transaction forms (Invoice, Estimate, Sales Order, Purchase Order, Credit Note) now use completely standardized, enhanced structure with dedicated creation pages, consistent VAT integration, uniform data type handling, and professional auto-generated document numbering for world-class user experience. Professional PDF preview and email functionality implemented with data URI approach for reliable cross-browser compatibility. Suppliers page features a card grid layout with performance scorecards and advanced filtering.
+    - **Bulk Capture System**: Enhanced bulk expense/income capture with professional styling (green for income, charcoal with blue accents for expenses), independent session processing states, comprehensive VAT integration, and proper chart of accounts validation. Each bulk session has individual processing controls with no global button interference.
     - **Inventory Management**: Stock tracking, lot/batch management, serial number tracking, warranty management, and multi-warehouse support.
     - **System Management**: Enterprise settings, multi-currency support, automated email reminders, and a comprehensive audit trail.
     - **Point of Sale (POS)**: Designed with FrontAccounting methodology, featuring keyboard shortcuts, barcode scanning, suspend/resume sales, multi-payment methods, real-time stock integration, and cash handling.
