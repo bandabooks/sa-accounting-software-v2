@@ -2593,9 +2593,59 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Update invoice status and amount based on payments
-    await this.updateInvoicePaymentStatus(insertPayment.invoiceId);
+    if (insertPayment.invoiceId) {
+      await this.updateInvoicePaymentStatus(insertPayment.invoiceId);
+    }
+    
+    // Create journal entry for payment
+    await this.createPaymentJournalEntry(payment);
     
     return payment;
+  }
+
+  private async createPaymentJournalEntry(payment: Payment): Promise<void> {
+    try {
+      const invoice = payment.invoiceId ? await this.getInvoice(payment.invoiceId) : null;
+      const bankAccount = payment.bankAccountId ? await this.getBankAccount(payment.bankAccountId) : null;
+      
+      // Create journal entry for payment
+      const journalEntry = await this.createJournalEntry({
+        companyId: payment.companyId,
+        reference: `PAY-${payment.id}`,
+        description: `Payment received ${invoice ? `for invoice ${invoice.invoiceNumber}` : ''}`,
+        entryDate: new Date(),
+        totalAmount: parseFloat(payment.amount),
+        createdBy: 1 // TODO: Get from authenticated user
+      });
+
+      // Debit: Bank Account (Asset increases)
+      if (bankAccount) {
+        await this.createJournalEntryLine({
+          journalEntryId: journalEntry.id,
+          accountId: bankAccount.chartOfAccountsId || 1, // Bank account from COA
+          description: `Payment received - ${bankAccount.accountName}`,
+          debitAmount: parseFloat(payment.amount),
+          creditAmount: 0
+        });
+      }
+
+      // Credit: Accounts Receivable (Asset decreases) 
+      if (invoice) {
+        const receivablesAccount = await this.getAccountByCode(payment.companyId, '1200'); // Accounts Receivable
+        if (receivablesAccount) {
+          await this.createJournalEntryLine({
+            journalEntryId: journalEntry.id,
+            accountId: receivablesAccount.id,
+            description: `Payment for ${invoice.invoiceNumber}`,
+            debitAmount: 0,
+            creditAmount: parseFloat(payment.amount)
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error creating payment journal entry:', error);
+      // Don't throw error - payment should still be created even if journal entry fails
+    }
   }
 
   async updatePayment(id: number, updateData: Partial<InsertPayment>): Promise<Payment | undefined> {

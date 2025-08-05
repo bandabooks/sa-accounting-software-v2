@@ -138,6 +138,7 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
             <div 
               key={index} 
               onClick={stat.onClick}
+              data-stat-card={stat.title.toLowerCase().replace(/\s+/g, '-')}
               className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10"
             >
               <div className="flex items-center justify-between">

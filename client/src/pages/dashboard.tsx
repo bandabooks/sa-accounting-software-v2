@@ -24,6 +24,7 @@ import { dashboardApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { TooltipWizard } from "@/components/onboarding/TooltipWizard";
 import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
+import { PaymentFormModal } from "@/components/payments/PaymentFormModal";
 
 interface DashboardWidget {
   id: string;
@@ -36,6 +37,7 @@ interface DashboardWidget {
 export default function Dashboard() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, title: "New invoice payment received", type: "success", time: "2 min ago", priority: "high" },
     { id: 2, title: "Monthly VAT return due in 3 days", type: "warning", time: "1 hour ago", priority: "medium" },
@@ -169,7 +171,10 @@ export default function Dashboard() {
 
               {/* Compact Revenue Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:min-w-[300px]">
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                <div 
+                  data-stat-card="total-revenue"
+                  className="text-center p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 transition-all duration-200"
+                >
                   <div className="text-xl font-bold text-white mb-1">
                     {formatCurrency(dashboardStats.totalRevenue)}
                   </div>
@@ -222,7 +227,16 @@ export default function Dashboard() {
                 </Link>
               </Button>
               
-              {/* Tertiary Action - Add Customer (Purple) */}
+              {/* Tertiary Action - Record Payment (Orange) */}
+              <Button 
+                onClick={() => setIsPaymentModalOpen(true)}
+                className="bg-gradient-to-r from-orange-500/30 to-amber-600/30 hover:from-orange-500/40 hover:to-amber-600/40 backdrop-blur-sm text-white border border-orange-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Record Payment
+              </Button>
+              
+              {/* Quaternary Action - Add Customer (Purple) */}
               <Button asChild className="bg-gradient-to-r from-purple-500/30 to-violet-600/30 hover:from-purple-500/40 hover:to-violet-600/40 backdrop-blur-sm text-white border border-purple-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                 <Link href="/customers/new">
                   <UserPlus className="h-4 w-4 mr-2" />
@@ -513,11 +527,12 @@ export default function Dashboard() {
                             <span className="text-xs font-medium">Add Customer</span>
                           </Link>
                         </Button>
-                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                          <Link href="/payments/new">
-                            <DollarSign className="h-4 w-4" />
-                            <span className="text-xs font-medium">Record Payment</span>
-                          </Link>
+                        <Button 
+                          onClick={() => setIsPaymentModalOpen(true)}
+                          className="h-16 flex-col gap-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300"
+                        >
+                          <DollarSign className="h-4 w-4" />
+                          <span className="text-xs font-medium">Record Payment</span>
                         </Button>
                         <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
                           <Link href="/estimates/new">
@@ -831,6 +846,12 @@ export default function Dashboard() {
           isVisible={isWizardVisible}
           onComplete={completeOnboarding}
           onSkip={skipOnboarding}
+        />
+
+        {/* Payment Form Modal */}
+        <PaymentFormModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
         />
       </div>
     </div>

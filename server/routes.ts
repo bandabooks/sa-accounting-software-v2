@@ -1725,18 +1725,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payments", async (req, res) => {
+  app.post("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       console.log("Payment request body:", req.body);
-      // Add default companyId if not provided
+      const companyId = req.user.companyId;
+      
+      // Add companyId from authenticated user
       const paymentData = {
         ...req.body,
-        companyId: req.body.companyId || 2 // Default company ID
+        companyId
       };
       const validatedData = insertPaymentSchema.parse(paymentData);
       console.log("Validated payment data:", validatedData);
+      
+      // Create the payment
       const payment = await storage.createPayment(validatedData);
-      res.status(201).json(payment);
+      
+      // Get real-time updates for frontend
+      const [bankAccounts, dashboardStats, invoiceUpdate] = await Promise.all([
+        storage.getBankAccounts(companyId),
+        storage.getDashboardStats(companyId),
+        validatedData.invoiceId ? storage.getInvoice(validatedData.invoiceId) : null
+      ]);
+      
+      // Calculate total bank balance
+      const totalBankBalance = bankAccounts.reduce((sum, account) => 
+        sum + parseFloat(account.currentBalance || '0'), 0
+      );
+      
+      // Extract revenue from dashboard stats
+      const totalRevenue = parseFloat(dashboardStats.totalRevenue || '0');
+      
+      // Return comprehensive response for real-time UI updates
+      res.status(201).json({
+        payment,
+        realTimeUpdates: {
+          totalBankBalance: totalBankBalance.toFixed(2),
+          totalRevenue: totalRevenue.toFixed(2),
+          bankAccounts: bankAccounts.map(account => ({
+            id: account.id,
+            accountName: account.accountName,
+            currentBalance: account.currentBalance
+          })),
+          invoice: invoiceUpdate ? {
+            id: invoiceUpdate.id,
+            status: invoiceUpdate.status,
+            paidAmount: invoiceUpdate.paidAmount,
+            totalAmount: invoiceUpdate.totalAmount
+          } : null,
+          dashboardStats
+        }
+      });
     } catch (error) {
       console.error("Payment creation error:", error);
       if (error instanceof z.ZodError) {
