@@ -132,6 +132,15 @@ export default function SalesOrderCreate() {
     queryKey: ["/api/products"],
   });
 
+  // Fetch VAT types from database for dynamic calculation
+  const { data: vatTypesData = [] } = useQuery({
+    queryKey: ["/api/companies", 2, "vat-types"],
+    retry: false,
+  });
+  
+  // Ensure we have array of VAT types
+  const vatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
+
   // Generate sales order number on component mount
   useEffect(() => {
     const generateOrderNumber = () => {
@@ -143,30 +152,93 @@ export default function SalesOrderCreate() {
     setSalesOrderNumber(generateOrderNumber());
   }, []);
 
+  // Dynamic VAT calculation using database VAT types with NaN protection
+  const calculateItemVAT = useCallback((item: SalesOrderItem) => {
+    const quantity = parseFloat(item.quantity || "0");
+    const unitPrice = parseFloat(item.unitPrice || "0");
+    const lineAmount = quantity * unitPrice;
+    
+    // Check for NaN values early
+    if (isNaN(quantity) || isNaN(unitPrice) || isNaN(lineAmount)) {
+      return 0;
+    }
+    
+    if (item.vatTypeId && shouldShowVATFields && vatTypes.length > 0) {
+      // Find VAT type from database
+      const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
+      
+      if (vatType) {
+        const vatRate = parseFloat(vatType.rate);
+        
+        // Check for NaN VAT rate
+        if (isNaN(vatRate)) {
+          return 0;
+        }
+        
+        // CRITICAL: If line item is Zero-Rated, Exempt, or No VAT, return 0 regardless of global method
+        if (vatRate === 0) {
+          console.log(`VAT Calculation: lineAmount=R${lineAmount}, vatTypeId=${item.vatTypeId}, ${vatType.code} - ${vatType.name}, VAT=R0.00 (${vatType.code.toLowerCase()})`);
+          return 0;
+        }
+        
+        // For Standard rate items, ALWAYS respect the global VAT calculation method
+        let calculatedVAT = 0;
+        if (formData.vatCalculationMethod === 'inclusive') {
+          // For inclusive method: VAT = lineAmount * (rate / (100 + rate))
+          calculatedVAT = lineAmount * (vatRate / (100 + vatRate));
+        } else {
+          // For exclusive method: VAT = lineAmount * (rate / 100)
+          calculatedVAT = lineAmount * (vatRate / 100);
+        }
+        
+        // Protect against NaN results
+        if (isNaN(calculatedVAT)) {
+          return 0;
+        }
+        
+        console.log(`VAT Calculation: lineAmount=R${lineAmount}, ${vatType.code} - ${vatType.name}, global_method=${formData.vatCalculationMethod}, VAT=R${calculatedVAT.toFixed(2)}`);
+        return calculatedVAT;
+      }
+    }
+    
+    // Fallback to traditional calculation if no VAT type ID or VAT types not loaded
+    const vatRate = parseFloat(item.vatRate || "0") / 100;
+    if (isNaN(vatRate) || vatRate === 0) return 0; // Zero rate items or NaN always have zero VAT
+    
+    const result = formData.vatCalculationMethod === 'inclusive' ? 
+      lineAmount * (vatRate / (1 + vatRate)) : 
+      lineAmount * vatRate;
+      
+    return isNaN(result) ? 0 : result;
+  }, [vatTypes, shouldShowVATFields, formData.vatCalculationMethod]);
+
   // Enhanced VAT calculations with real-time updates
   const calculateItemTotal = useCallback((item: SalesOrderItem) => {
     const quantity = parseFloat(item.quantity) || 0;
     const unitPrice = parseFloat(item.unitPrice) || 0;
-    const vatRate = parseFloat(item.vatRate) || 0;
     
     const lineTotal = quantity * unitPrice;
-    const vatAmount = (lineTotal * vatRate) / 100;
+    const vatAmount = calculateItemVAT(item);
     
     return {
       lineTotal: lineTotal.toFixed(2),
       vatAmount: vatAmount.toFixed(2),
       totalWithVat: (lineTotal + vatAmount).toFixed(2)
     };
-  }, []);
+  }, [calculateItemVAT]);
 
   const calculateOrderTotals = useCallback(() => {
     let subtotal = 0;
     let totalVat = 0;
     
     items.forEach(item => {
-      const { lineTotal, vatAmount } = calculateItemTotal(item);
-      subtotal += parseFloat(lineTotal);
-      totalVat += parseFloat(vatAmount);
+      const quantity = parseFloat(item.quantity || "0");
+      const unitPrice = parseFloat(item.unitPrice || "0");
+      const lineAmount = quantity * unitPrice;
+      const vatAmount = calculateItemVAT(item);
+      
+      subtotal += lineAmount;
+      totalVat += vatAmount;
     });
     
     return {
@@ -174,7 +246,7 @@ export default function SalesOrderCreate() {
       vatAmount: totalVat.toFixed(2),
       total: (subtotal + totalVat).toFixed(2)
     };
-  }, [items, calculateItemTotal]);
+  }, [items, calculateItemVAT]);
 
   // Real-time calculation update
   useEffect(() => {
@@ -212,10 +284,10 @@ export default function SalesOrderCreate() {
       if (i === index) {
         const updatedItem = { ...item, [field]: value };
         
-        // Auto-calculate VAT when unit price or quantity changes
-        if (field === 'unitPrice' || field === 'quantity' || field === 'vatRate') {
-          const { vatAmount } = calculateItemTotal(updatedItem);
-          updatedItem.vatAmount = vatAmount;
+        // Auto-calculate VAT when unit price, quantity, or VAT type changes
+        if (field === 'unitPrice' || field === 'quantity' || field === 'vatRate' || field === 'vatTypeId') {
+          const vatAmount = calculateItemVAT(updatedItem);
+          updatedItem.vatAmount = vatAmount.toFixed(2);
         }
         
         return updatedItem;
@@ -465,122 +537,135 @@ export default function SalesOrderCreate() {
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center text-lg">
-                        <Tag className="h-5 w-5 mr-2 text-green-600" />
+                        <ShoppingCart className="h-5 w-5 mr-2 text-orange-600" />
                         Sales Order Items
                       </CardTitle>
                       <Button
                         type="button"
                         onClick={addItem}
-                        variant="outline"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                         size="sm"
-                        className="hover:bg-green-50 hover:border-green-300"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Item
                       </Button>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">Add products and services to this sales order</p>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    {items.map((item, index) => (
-                      <div key={index} className="relative">
-                        {items.length > 1 && (
-                          <Button
-                            type="button"
-                            onClick={() => removeItem(index)}
-                            variant="outline"
-                            size="sm"
-                            className="absolute -top-2 -right-2 z-10 h-8 w-8 p-0 bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-300"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        )}
-                        <div className="p-4 border border-gray-200 rounded-lg bg-gray-50/50 space-y-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Badge variant="outline" className="bg-white">
-                              Item {index + 1}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Product/Service Selection */}
-                            <div className="md:col-span-2 lg:col-span-3 space-y-2">
-                              <Label className="text-sm font-medium text-gray-700">Product/Service</Label>
-                              <ProductServiceSelect
-                                value={item.productId}
-                                onValueChange={(product) => handleProductSelect(index, product)}
-                                placeholder="Select product or service..."
-                              />
-                            </div>
-
-                            {/* Description */}
-                            <div className="md:col-span-2 lg:col-span-3 space-y-2">
-                              <Label className="text-sm font-medium text-gray-700">Description</Label>
-                              <Textarea
-                                placeholder="Enter item description..."
-                                rows={2}
-                                value={item.description}
-                                onChange={(e) => updateItem(index, 'description', e.target.value)}
-                              />
-                            </div>
-
-                            {/* Quantity */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium text-gray-700">Quantity</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="1"
-                                placeholder="1"
-                                value={item.quantity}
-                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                              />
-                            </div>
-
-                            {/* Unit Price */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium text-gray-700">Unit Price</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={item.unitPrice}
-                                onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
-                              />
-                            </div>
-
-                            {/* VAT Type Selection */}
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="text-left p-4 font-medium text-gray-700 w-48">Product/Service</th>
+                            <th className="text-left p-4 font-medium text-gray-700 flex-1">Description</th>
+                            <th className="text-center p-4 font-medium text-gray-700 w-20">Qty</th>
+                            <th className="text-center p-4 font-medium text-gray-700 w-32">Unit Price</th>
                             <VATFieldWrapper>
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium text-gray-700">VAT Type</Label>
-                                <VATTypeSelect
-                                  value={item.vatTypeId.toString()}
-                                  onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', parseInt(vatTypeId))}
-                                  placeholder="Select VAT type..."
-                                />
-                              </div>
+                              <th className="text-center p-4 font-medium text-gray-700 w-32">VAT Type</th>
                             </VATFieldWrapper>
+                            <th className="text-right p-4 font-medium text-gray-700 w-32">Amount</th>
+                            <th className="text-center p-4 font-medium text-gray-700 w-20">Remove</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((item, index) => {
+                            const lineTotal = parseFloat(item.quantity || "0") * parseFloat(item.unitPrice || "0");
+                            const totalWithVat = lineTotal + parseFloat(item.vatAmount || "0");
+                            
+                            return (
+                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50/50">
+                                {/* Product/Service Selection */}
+                                <td className="p-4">
+                                  <ProductServiceSelect
+                                    value={item.productId}
+                                    onValueChange={(product) => handleProductSelect(index, product)}
+                                    placeholder="Select..."
+                                  />
+                                </td>
 
-                            {/* Line Total Display */}
-                            <div className="md:col-span-2 lg:col-span-3 mt-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-700">Line Total:</span>
-                                <span className="text-lg font-semibold text-green-700">
-                                  {formatCurrency(
-                                    (
-                                      parseFloat(item.quantity || "0") * 
-                                      parseFloat(item.unitPrice || "0") + 
-                                      parseFloat(item.vatAmount || "0")
-                                    ).toFixed(2)
+                                {/* Description */}
+                                <td className="p-4">
+                                  <Input
+                                    placeholder="Enter item description..."
+                                    value={item.description}
+                                    onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                    className="border-0 bg-transparent focus:bg-white focus:border-gray-300"
+                                  />
+                                </td>
+
+                                {/* Quantity */}
+                                <td className="p-4">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={item.quantity}
+                                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                    className="w-16 text-center border-0 bg-transparent focus:bg-white focus:border-gray-300"
+                                  />
+                                </td>
+
+                                {/* Unit Price */}
+                                <td className="p-4">
+                                  <div className="flex items-center">
+                                    <span className="text-gray-500 mr-1">R</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={item.unitPrice}
+                                      onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
+                                      className="w-24 border-0 bg-transparent focus:bg-white focus:border-gray-300 text-right"
+                                    />
+                                  </div>
+                                </td>
+
+                                {/* VAT Type */}
+                                <VATFieldWrapper>
+                                  <td className="p-4">
+                                    <VATTypeSelect
+                                      value={item.vatTypeId.toString()}
+                                      onValueChange={(vatTypeId) => updateItem(index, 'vatTypeId', parseInt(vatTypeId))}
+                                      placeholder="STD"
+                                    />
+                                  </td>
+                                </VATFieldWrapper>
+
+                                {/* Amount */}
+                                <td className="p-4 text-right">
+                                  <div className="font-medium text-gray-900">
+                                    {formatCurrency(totalWithVat.toFixed(2))}
+                                  </div>
+                                  <VATFieldWrapper>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {(() => {
+                                        const vatType = vatTypes.find((type: any) => type.id === item.vatTypeId);
+                                        return vatType ? `${vatType.name}` : 'Standard Rate';
+                                      })()}
+                                    </div>
+                                  </VATFieldWrapper>
+                                </td>
+
+                                {/* Remove Button */}
+                                <td className="p-4 text-center">
+                                  {items.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      onClick={() => removeItem(index)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
                                   )}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </CardContent>
                 </Card>
 
