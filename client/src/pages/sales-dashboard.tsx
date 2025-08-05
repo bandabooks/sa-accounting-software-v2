@@ -15,12 +15,12 @@ import { Progress } from "@/components/ui/progress";
 export default function SalesDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch sales statistics with proper authentication
+  // Fetch sales statistics
   const { data: salesStats = {}, isLoading: statsLoading } = useQuery<any>({
     queryKey: ["/api/sales/stats"],
   });
 
-  // Fetch recent sales activities with proper authentication
+  // Fetch recent sales activities
   const { data: recentSalesOrders = [], isLoading: ordersLoading } = useQuery<any[]>({
     queryKey: ["/api/sales-orders"],
   });
