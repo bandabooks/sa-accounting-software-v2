@@ -3452,8 +3452,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : currentMonthRevenue > 0 ? 100 : 0;
 
       const stats = {
-        totalRevenue: Math.round(totalRevenue),
-        revenueGrowth: Math.round(revenueGrowth * 10) / 10,
+        totalSales: Math.round(totalRevenue), // Changed from totalRevenue to totalSales for frontend compatibility
+        totalRevenue: Math.round(totalRevenue), // Keep both for compatibility
+        salesGrowth: Math.round(revenueGrowth * 10) / 10, // Changed from revenueGrowth to salesGrowth
+        revenueGrowth: Math.round(revenueGrowth * 10) / 10, // Keep both for compatibility
         totalOrders: invoices.length,
         pendingOrders: invoices.filter(invoice => invoice.status === 'draft').length,
         outstandingAmount: Math.round(outstandingAmount),
