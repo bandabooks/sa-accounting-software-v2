@@ -11977,41 +11977,47 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
-  async createBulkExpenseEntries(entries: any[]): Promise<any[]> {
+  async createBulkExpenseEntries(entries: any[], userId?: number): Promise<any[]> {
     const insertedEntries = await db
       .insert(bulkExpenseEntries)
       .values(entries)
       .returning();
 
-    for (const entry of insertedEntries) {
-      await this.createAuditLog({
-        userId: 0,
-        companyId: entry.companyId,
-        action: "create",
-        resource: "bulk_expense_entry",
-        resourceId: entry.id.toString(),
-        details: { batchId: entry.batchId, amount: entry.amount },
-      });
+    // Only create audit logs if userId is provided and valid
+    if (userId && userId > 0) {
+      for (const entry of insertedEntries) {
+        await this.createAuditLog({
+          userId,
+          companyId: entry.companyId,
+          action: "create",
+          resource: "bulk_expense_entry",
+          resourceId: entry.id.toString(),
+          details: { batchId: entry.batchId, amount: entry.amount },
+        });
+      }
     }
 
     return insertedEntries;
   }
 
-  async createBulkIncomeEntries(entries: any[]): Promise<any[]> {
+  async createBulkIncomeEntries(entries: any[], userId?: number): Promise<any[]> {
     const insertedEntries = await db
       .insert(bulkIncomeEntries)
       .values(entries)
       .returning();
 
-    for (const entry of insertedEntries) {
-      await this.createAuditLog({
-        userId: 0,
-        companyId: entry.companyId,
-        action: "create",
-        resource: "bulk_income_entry",
-        resourceId: entry.id.toString(),
-        details: { batchId: entry.batchId, amount: entry.amount },
-      });
+    // Only create audit logs if userId is provided and valid
+    if (userId && userId > 0) {
+      for (const entry of insertedEntries) {
+        await this.createAuditLog({
+          userId,
+          companyId: entry.companyId,
+          action: "create",
+          resource: "bulk_income_entry",
+          resourceId: entry.id.toString(),
+          details: { batchId: entry.batchId, amount: entry.amount },
+        });
+      }
     }
 
     return insertedEntries;

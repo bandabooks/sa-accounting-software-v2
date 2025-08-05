@@ -9872,7 +9872,7 @@ Format your response as a JSON array of tip objects with "title", "description",
           sessionId: session.id,
           batchId: session.batchId,
         }));
-        await storage.createBulkExpenseEntries(expenseEntries);
+        await storage.createBulkExpenseEntries(expenseEntries, userId);
       } else if (sessionType === 'income' && entries && entries.length > 0) {
         const incomeEntries = entries.map((entry: any) => ({
           ...entry,
@@ -9880,7 +9880,7 @@ Format your response as a JSON array of tip objects with "title", "description",
           sessionId: session.id,
           batchId: session.batchId,
         }));
-        await storage.createBulkIncomeEntries(incomeEntries);
+        await storage.createBulkIncomeEntries(incomeEntries, userId);
       }
 
       // Update session to processing status
