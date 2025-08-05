@@ -12058,13 +12058,19 @@ export class DatabaseStorage implements IStorage {
         
         for (const entry of entries) {
           try {
+            console.log('Processing expense entry:', JSON.stringify(entry, null, 2));
             // Create proper journal entry for expense following the same pattern as individual expenses
             const expenseAccount = await this.getChartOfAccount(entry.categoryId);
             const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
             const vatInputAccount = await this.getChartOfAccountByCode(companyId, "1400"); // VAT Input Tax
 
             if (!expenseAccount || !bankAccount || !vatInputAccount) {
-              throw new Error("Required accounts not found for expense journal entry");
+              throw new Error(`Required accounts not found for expense journal entry: expense=${!!expenseAccount}, bank=${!!bankAccount}, vat=${!!vatInputAccount}`);
+            }
+
+            // Validate that the expense account belongs to the company
+            if (expenseAccount.companyId !== companyId) {
+              throw new Error(`Expense account does not belong to company`);
             }
 
             const entryNumber = await this.generateEntryNumber(companyId, 'BULK-EXP');
@@ -12128,13 +12134,19 @@ export class DatabaseStorage implements IStorage {
         
         for (const entry of entries) {
           try {
+            console.log('Processing income entry:', JSON.stringify(entry, null, 2));
             // Create proper journal entry for income
             const incomeAccount = await this.getChartOfAccount(entry.incomeAccountId);
             const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
             const vatOutputAccount = await this.getChartOfAccountByCode(companyId, "2200"); // VAT Output Tax
 
             if (!incomeAccount || !bankAccount || !vatOutputAccount) {
-              throw new Error("Required accounts not found for income journal entry");
+              throw new Error(`Required accounts not found for income journal entry: income=${!!incomeAccount}, bank=${!!bankAccount}, vat=${!!vatOutputAccount}`);
+            }
+
+            // Validate that the income account belongs to the company
+            if (incomeAccount.companyId !== companyId) {
+              throw new Error(`Income account does not belong to company`);
             }
 
             const entryNumber = await this.generateEntryNumber(companyId, 'BULK-INC');
