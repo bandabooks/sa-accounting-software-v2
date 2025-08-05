@@ -2075,6 +2075,9 @@ export class DatabaseStorage implements IStorage {
     revenueByMonth: { month: string; revenue: number }[];
     outstandingInvoiceCount: number;
     paidInvoiceCount: number;
+    revenueGrowth: number;
+    newCustomers: number;
+    overdueInvoices: number;
   }> {
     // If no companyId provided, return zero stats for safety
     if (!companyId) {
@@ -2086,40 +2089,121 @@ export class DatabaseStorage implements IStorage {
         recentInvoices: [],
         revenueByMonth: [],
         outstandingInvoiceCount: 0,
-        paidInvoiceCount: 0
+        paidInvoiceCount: 0,
+        revenueGrowth: 0,
+        newCustomers: 0,
+        overdueInvoices: 0
       };
     }
 
-    // Get only invoices for this company
-    const allInvoices = await db.select().from(invoices).where(eq(invoices.companyId, companyId));
+    // Get consolidated sales stats using the same logic as sales dashboard
+    return await this.getConsolidatedSalesStats(companyId);
+  }
+
+  // Unified sales statistics method used by both main dashboard and sales dashboard
+  async getConsolidatedSalesStats(companyId: number): Promise<{
+    totalRevenue: string;
+    outstandingInvoices: string;
+    totalCustomers: number;
+    vatDue: string;
+    recentInvoices: InvoiceWithCustomer[];
+    revenueByMonth: { month: string; revenue: number }[];
+    outstandingInvoiceCount: number;
+    paidInvoiceCount: number;
+    revenueGrowth: number;
+    newCustomers: number;
+    overdueInvoices: number;
+  }> {
+    // Get all invoices for this company
+    const allInvoices = await this.getAllInvoices(companyId);
     
-    // Calculate totals
-    const paidInvoices = allInvoices.filter(inv => inv.status === "paid");
-    const outstandingInvoiceList = allInvoices.filter(inv => inv.status === "sent" || inv.status === "draft");
+    // Calculate total revenue from paid invoices using enhanced logic
+    const paidInvoices = allInvoices.filter(invoice => invoice.status === 'paid');
+    const totalRevenue = paidInvoices.reduce((sum, invoice) => {
+      const amount = parseFloat(invoice.total || invoice.totalAmount || '0');
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
     
-    const totalRevenue = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
-    const outstandingInvoices = outstandingInvoiceList.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
-    const vatDue = paidInvoices.reduce((sum, inv) => sum + parseFloat(inv.vatAmount), 0);
+    // Get outstanding invoices (sent or overdue)
+    const outstandingInvoiceList = allInvoices.filter(invoice => 
+      invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'draft'
+    );
+    const outstandingAmount = outstandingInvoiceList.reduce((sum, invoice) => {
+      const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+    
+    // Calculate VAT due from paid invoices
+    const vatDue = paidInvoices.reduce((sum, invoice) => {
+      const amount = parseFloat(invoice.vatAmount || '0');
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
 
-    // Get customer count for this company only
-    const customerCount = await db.select({ count: count() }).from(customers).where(eq(customers.companyId, companyId));
-    const totalCustomers = customerCount[0]?.count || 0;
+    // Get overdue invoices
+    const overdueInvoices = allInvoices.filter(invoice => {
+      if (invoice.status !== 'overdue') return false;
+      const dueDate = new Date(invoice.dueDate);
+      return dueDate < new Date();
+    }).length;
 
-    // Get recent invoices with customer info for this company only
-    const recentInvoices = await this.getAllInvoices(companyId);
+    // Get customers data
+    const customers = await this.getAllCustomers(companyId);
+    const totalCustomers = customers.filter(customer => customer.isActive !== false).length;
+    
+    // Calculate new customers (added in last month)
+    const newCustomers = customers.filter(customer => {
+      const createdDate = new Date(customer.createdAt || customer.createdDate || '');
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      return createdDate > oneMonthAgo;
+    }).length;
 
-    // Calculate real revenue by month from actual invoices
+    // Calculate revenue growth (compare with previous month)
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const currentMonthInvoices = allInvoices.filter(invoice => {
+      const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
+      return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
+    });
+    const currentMonthRevenue = currentMonthInvoices
+      .filter(invoice => invoice.status === 'paid')
+      .reduce((sum, invoice) => {
+        const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
+    
+    const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    const previousMonthInvoices = allInvoices.filter(invoice => {
+      const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
+      return invoiceDate.getMonth() === previousMonth && invoiceDate.getFullYear() === previousYear;
+    });
+    const previousMonthRevenue = previousMonthInvoices
+      .filter(invoice => invoice.status === 'paid')
+      .reduce((sum, invoice) => {
+        const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
+    
+    const revenueGrowth = previousMonthRevenue > 0 
+      ? ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100
+      : currentMonthRevenue > 0 ? 100 : 0;
+
+    // Calculate revenue by month from actual invoices
     const revenueByMonth = this.calculateRevenueByMonth(paidInvoices);
 
     return {
       totalRevenue: totalRevenue.toFixed(2),
-      outstandingInvoices: outstandingInvoices.toFixed(2),
-      totalCustomers: Number(totalCustomers),
+      outstandingInvoices: outstandingAmount.toFixed(2),
+      totalCustomers,
       vatDue: vatDue.toFixed(2),
-      recentInvoices: recentInvoices.slice(0, 5),
+      recentInvoices: allInvoices.slice(0, 5),
       revenueByMonth,
       outstandingInvoiceCount: outstandingInvoiceList.length,
-      paidInvoiceCount: paidInvoices.length
+      paidInvoiceCount: paidInvoices.length,
+      revenueGrowth: Math.round(revenueGrowth * 10) / 10,
+      newCustomers,
+      overdueInvoices
     };
   }
 
