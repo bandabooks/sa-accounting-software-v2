@@ -57,7 +57,7 @@ export default function SalesOrderCreate() {
   const { shouldShowVATFields } = useVATStatus();
 
   const [formData, setFormData] = useState({
-    customerId: "",
+    customerId: 0,
     orderDate: new Date().toISOString().split('T')[0],
     expectedDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: "draft",
@@ -94,11 +94,16 @@ export default function SalesOrderCreate() {
   // Ensure we have array of VAT types
   const vatTypes = Array.isArray(vatTypesData) ? vatTypesData : [];
 
-  // Dynamic VAT calculation using database VAT types
+  // Dynamic VAT calculation using database VAT types with NaN protection
   const calculateItemVAT = (item: SalesOrderItem) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const lineAmount = quantity * unitPrice;
+    
+    // Check for NaN values early
+    if (isNaN(quantity) || isNaN(unitPrice) || isNaN(lineAmount)) {
+      return 0;
+    }
     
     if (item.vatTypeId && shouldShowVATFields && vatTypes.length > 0) {
       // Find VAT type from database
@@ -106,6 +111,11 @@ export default function SalesOrderCreate() {
       
       if (vatType) {
         const vatRate = parseFloat(vatType.rate);
+        
+        // Check for NaN VAT rate
+        if (isNaN(vatRate)) {
+          return 0;
+        }
         
         // CRITICAL: If line item is Zero-Rated, Exempt, or No VAT, return 0 regardless of global method
         if (vatRate === 0) {
@@ -123,6 +133,11 @@ export default function SalesOrderCreate() {
           calculatedVAT = lineAmount * (vatRate / 100);
         }
         
+        // Protect against NaN results
+        if (isNaN(calculatedVAT)) {
+          return 0;
+        }
+        
         console.log(`VAT Calculation: lineAmount=R${lineAmount}, ${vatType.code} - ${vatType.name}, global_method=${formData.vatCalculationMethod}, VAT=R${calculatedVAT.toFixed(2)}`);
         return calculatedVAT;
       }
@@ -130,11 +145,13 @@ export default function SalesOrderCreate() {
     
     // Fallback to traditional calculation if no VAT type ID or VAT types not loaded
     const vatRate = parseFloat(item.vatRate || "0") / 100;
-    if (vatRate === 0) return 0; // Zero rate items always have zero VAT
+    if (isNaN(vatRate) || vatRate === 0) return 0; // Zero rate items or NaN always have zero VAT
     
-    return formData.vatCalculationMethod === 'inclusive' ? 
+    const result = formData.vatCalculationMethod === 'inclusive' ? 
       lineAmount * (vatRate / (1 + vatRate)) : 
       lineAmount * vatRate;
+      
+    return isNaN(result) ? 0 : result;
   };
 
   const createSalesOrder = useMutation({
@@ -142,14 +159,14 @@ export default function SalesOrderCreate() {
       const response = await apiRequest('/api/sales-orders', 'POST', data);
       return response;
     },
-    onSuccess: (salesOrder) => {
+    onSuccess: (salesOrder: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
       showSuccess(
         "Sales Order Created Successfully",
-        `Sales Order ${salesOrder.orderNumber} has been created and is ready for review.`
+        `Sales Order ${salesOrder?.orderNumber || 'SO-001'} has been created and is ready for review.`
       );
-      setLocation(`/sales-orders/${salesOrder.id}`);
+      setLocation(`/sales-orders/${salesOrder?.id || 'new'}`);
     },
     onError: () => {
       toast({
@@ -210,15 +227,17 @@ export default function SalesOrderCreate() {
     setItems(newItems);
   };
 
-  // Calculate totals using centralized VAT service
+  // Calculate totals using centralized VAT service with NaN protection
   const subtotal = items.reduce((sum, item) => {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
-    return sum + (quantity * unitPrice);
+    const lineTotal = quantity * unitPrice;
+    return sum + (isNaN(lineTotal) ? 0 : lineTotal);
   }, 0);
 
   const vatAmount = items.reduce((sum, item) => {
-    return sum + parseFloat(item.vatAmount || "0");
+    const vat = parseFloat(item.vatAmount || "0");
+    return sum + (isNaN(vat) ? 0 : vat);
   }, 0);
 
   const total = subtotal + vatAmount;
@@ -227,7 +246,7 @@ export default function SalesOrderCreate() {
     e.preventDefault();
 
     // Validation
-    if (!formData.customerId) {
+    if (!formData.customerId || formData.customerId === 0) {
       toast({
         title: "Validation Error",
         description: "Please select a customer.",
@@ -246,14 +265,14 @@ export default function SalesOrderCreate() {
     }
 
     const salesOrderData = {
-      customerId: parseInt(formData.customerId),
+      customerId: formData.customerId,
       orderDate: formData.orderDate,
       expectedDate: formData.expectedDate,
       status: formData.status,
       notes: formData.notes,
-      subtotal: subtotal.toFixed(2),
-      vatAmount: vatAmount.toFixed(2),
-      total: total.toFixed(2),
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      vatAmount: parseFloat(vatAmount.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
       vatCalculationMethod: formData.vatCalculationMethod,
       globalVatType: formData.globalVatType,
       items: items.map(item => ({
@@ -262,6 +281,7 @@ export default function SalesOrderCreate() {
         unitPrice: parseFloat(item.unitPrice) || 0,
         vatRate: parseFloat(item.vatRate) || 0,
         vatAmount: parseFloat(item.vatAmount) || 0,
+        total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0),
         vatInclusive: item.vatInclusive,
         vatTypeId: item.vatTypeId
       }))
@@ -312,7 +332,7 @@ export default function SalesOrderCreate() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Customer</label>
                     <CustomerSelect
-                      value={formData.customerId}
+                      value={formData.customerId || undefined}
                       onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
                       placeholder="Select customer..."
                     />
@@ -575,7 +595,27 @@ export default function SalesOrderCreate() {
 
                 {/* VAT Breakdown */}
                 <VATFieldWrapper>
-                  <VATSummary lineItems={items} vatTypes={vatTypes} />
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">VAT Breakdown</h4>
+                    {vatTypes.map((vatType: any) => {
+                      const vatTotal = items.reduce((sum, item) => {
+                        if (item.vatTypeId === vatType.id) {
+                          const vat = parseFloat(item.vatAmount || "0");
+                          return sum + (isNaN(vat) ? 0 : vat);
+                        }
+                        return sum;
+                      }, 0);
+                      
+                      if (vatTotal === 0) return null;
+                      
+                      return (
+                        <div key={vatType.id} className="flex justify-between text-xs">
+                          <span className="text-gray-500">{vatType.name} ({vatType.rate}%):</span>
+                          <span>{formatCurrency(vatTotal.toFixed(2))}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </VATFieldWrapper>
 
                 {/* Action Buttons */}
