@@ -2188,12 +2188,10 @@ export const journalEntryLines = pgTable("journal_entry_lines", {
   vatInclusive: boolean("vat_inclusive").default(false),
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).default("0.00"),
   reference: varchar("reference", { length: 100 }),
-  entryDate: timestamp("entry_date"), // Individual line-level transaction date (different from posting date)
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   entryIdx: index("journal_lines_entry_idx").on(table.journalEntryId),
   accountIdx: index("journal_lines_account_idx").on(table.accountId),
-  entryDateIdx: index("journal_lines_entry_date_idx").on(table.entryDate),
 }));
 
 // Account Balances (for performance - calculated periodically)

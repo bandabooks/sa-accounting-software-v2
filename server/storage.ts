@@ -4936,12 +4936,7 @@ export class DatabaseStorage implements IStorage {
     const entryLines = await Promise.all(
       lines.map(line => 
         db.insert(journalEntryLines)
-          .values({ 
-            ...line, 
-            journalEntryId: newEntry.id,
-            // If no entryDate provided, use the main journal entry date
-            entryDate: line.entryDate || entry.transactionDate
-          })
+          .values({ ...line, journalEntryId: newEntry.id })
           .returning()
           .then(([insertedLine]) => insertedLine)
       )
