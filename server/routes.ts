@@ -9872,7 +9872,7 @@ Format your response as a JSON array of tip objects with "title", "description",
           sessionId: session.id,
           batchId: session.batchId,
         }));
-        await storage.createBulkExpenseEntries(expenseEntries, userId);
+        await storage.createBulkExpenseEntries(expenseEntries);
       } else if (sessionType === 'income' && entries && entries.length > 0) {
         const incomeEntries = entries.map((entry: any) => ({
           ...entry,
@@ -9880,7 +9880,7 @@ Format your response as a JSON array of tip objects with "title", "description",
           sessionId: session.id,
           batchId: session.batchId,
         }));
-        await storage.createBulkIncomeEntries(incomeEntries, userId);
+        await storage.createBulkIncomeEntries(incomeEntries);
       }
 
       // Update session to processing status
@@ -9924,30 +9924,6 @@ Format your response as a JSON array of tip objects with "title", "description",
     } catch (error) {
       console.error("Error fetching bulk capture session:", error);
       res.status(500).json({ message: "Failed to fetch session" });
-    }
-  });
-
-  app.get("/api/bulk-capture/sessions/:id/entries", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const companyId = req.user.companyId;
-      const sessionId = parseInt(req.params.id);
-      
-      const session = await storage.getBulkCaptureSession(sessionId, companyId);
-      if (!session) {
-        return res.status(404).json({ message: "Session not found" });
-      }
-
-      let entries = [];
-      if (session.sessionType === 'expense') {
-        entries = await storage.getBulkExpenseEntries(sessionId, companyId);
-      } else if (session.sessionType === 'income') {
-        entries = await storage.getBulkIncomeEntries(sessionId, companyId);
-      }
-
-      res.json(entries);
-    } catch (error) {
-      console.error("Error fetching session entries:", error);
-      res.status(500).json({ message: "Failed to fetch entries" });
     }
   });
 

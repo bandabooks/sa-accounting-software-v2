@@ -19,12 +19,7 @@ import {
   Clock,
   Calculator,
   CreditCard,
-  Calendar,
-  Eye,
-  Edit,
-  ChevronDown,
-  ChevronUp,
-  DollarSign
+  Calendar
 } from "lucide-react";
 import { format } from "date-fns";
 import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "@shared/vat-constants";
@@ -72,8 +67,6 @@ const EnhancedBulkCapture = () => {
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
   const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isProcessing, setIsProcessing] = useState(false);
-  const [expandedSession, setExpandedSession] = useState<number | null>(null);
-  const [processingSessions, setProcessingSessions] = useState<Set<number>>(new Set());
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -91,12 +84,6 @@ const EnhancedBulkCapture = () => {
   // Fetch bulk capture sessions
   const { data: bulkSessions = [], refetch: refetchSessions } = useQuery<any[]>({
     queryKey: ['/api/bulk-capture/sessions'],
-  });
-
-  // Fetch session entries for expanded session
-  const { data: sessionEntries = [] } = useQuery<any[]>({
-    queryKey: ['/api/bulk-capture/sessions', expandedSession, 'entries'],
-    enabled: !!expandedSession,
   });
 
   const { data: bankAccounts = [] } = useQuery<any[]>({
@@ -454,11 +441,12 @@ const EnhancedBulkCapture = () => {
     },
   });
 
-  // Process individual session
-  const processSession = async (sessionId: number) => {
-    setProcessingSessions(prev => new Set(prev).add(sessionId));
-    try {
-      const data = await apiRequest(`/api/bulk-capture/sessions/${sessionId}/process`, 'POST', {});
+  // Process bulk session mutation
+  const processBulkSessionMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      return await apiRequest(`/api/bulk-capture/sessions/${sessionId}/process`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
       toast({
         title: "Success",
         description: `Successfully processed ${data.processedCount} entries. ${data.errors?.length || 0} errors.`,
@@ -466,30 +454,15 @@ const EnhancedBulkCapture = () => {
       // Refetch sessions to update status
       queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to process bulk session",
         variant: "destructive",
       });
-    } finally {
-      setProcessingSessions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(sessionId);
-        return newSet;
-      });
-    }
-  };
-
-  // Process all sessions
-  const processAllSessions = async () => {
-    const unprocessedSessions = bulkSessions.filter((session: any) => 
-      session.status === 'processing' || session.status === 'draft'
-    );
-    for (const session of unprocessedSessions) {
-      await processSession(session.id);
-    }
-  };
+    },
+  });
 
   return (
     <div className="space-y-6 p-6">
@@ -1020,7 +993,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-blue-600 font-medium">VAT Inclusive</div>
                   <div className="text-lg font-bold text-blue-900">
                     R {expenseEntries
-                      .filter(e => e.vatTypeId === 1 && parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTransactionType === 'vat_inclusive' && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1030,7 +1003,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-green-600 font-medium">VAT Exclusive</div>
                   <div className="text-lg font-bold text-green-900">
                     R {expenseEntries
-                      .filter(e => e.vatTypeId === 2 && parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTransactionType === 'vat_exclusive' && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1040,7 +1013,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-yellow-600 font-medium">Zero Rated</div>
                   <div className="text-lg font-bold text-yellow-900">
                     R {expenseEntries
-                      .filter(e => e.vatTypeId === 3 && parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTransactionType === 'zero_rated' && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1050,7 +1023,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-purple-600 font-medium">Exempt</div>
                   <div className="text-lg font-bold text-purple-900">
                     R {expenseEntries
-                      .filter(e => e.vatTypeId === 4 && parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTransactionType === 'exempt' && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1060,7 +1033,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-gray-600 font-medium">No VAT</div>
                   <div className="text-lg font-bold text-gray-900">
                     R {expenseEntries
-                      .filter(e => e.vatTypeId === 5 && parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTransactionType === 'no_vat' && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1076,199 +1049,72 @@ const EnhancedBulkCapture = () => {
       {bulkSessions.length > 0 && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Bulk Capture Sessions
-                </CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Process saved bulk entries into journal entries for general ledger integration
-                </p>
-              </div>
-              {bulkSessions.some((session: any) => session.status === 'processing' || session.status === 'draft') && (
-                <Button
-                  onClick={processAllSessions}
-                  disabled={processingSessions.size > 0}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {processingSessions.size > 0 ? 'Processing...' : 'Process All Sessions'}
-                </Button>
-              )}
-            </div>
+            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <Clock className="w-5 h-5 mr-2" />
+              Bulk Capture Sessions
+            </CardTitle>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Process saved bulk entries into journal entries for general ledger integration
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {bulkSessions.map((session: any) => (
                 <div 
                   key={session.id} 
-                  className="border rounded-lg bg-gray-50 dark:bg-gray-800"
+                  className="flex items-center justify-between p-4 border rounded-lg bg-gray-50 dark:bg-gray-800"
                 >
-                  {/* Session Header */}
-                  <div className="flex items-center justify-between p-4">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <Badge 
-                          variant={session.status === 'completed' ? 'default' : 
-                                  session.status === 'error' ? 'destructive' : 'secondary'}
-                          className={session.sessionType === 'expense' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'}
-                        >
-                          {session.status}
-                        </Badge>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {session.sessionType === 'expense' ? 'Expenses' : 'Income'}
-                        </span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {session.batchId}
-                        </span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {session.totalEntries} entries
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-semibold text-green-600">
-                            R {(session.totalAmount || 0).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Created: {format(new Date(session.createdAt), 'MMM dd, yyyy HH:mm')}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
-                        className="text-gray-600 hover:text-gray-900"
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <Badge 
+                        variant={session.status === 'completed' ? 'default' : 
+                                session.status === 'error' ? 'destructive' : 'secondary'}
                       >
-                        <Eye className="w-4 h-4 mr-1" />
-                        {expandedSession === session.id ? 'Hide' : 'View'}
-                        {expandedSession === session.id ? 
-                          <ChevronUp className="w-4 h-4 ml-1" /> : 
-                          <ChevronDown className="w-4 h-4 ml-1" />
-                        }
-                      </Button>
-                      {(session.status === 'processing' || session.status === 'draft') && (
-                        <Button
-                          size="sm"
-                          onClick={() => processSession(session.id)}
-                          disabled={processingSessions.has(session.id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          {processingSessions.has(session.id) ? (
-                            <>Processing...</>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Process to Journal
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      {session.status === 'completed' && (
-                        <Badge variant="default" className="bg-green-100 text-green-800">
-                          ✓ Processed ({session.processedEntries} entries)
-                        </Badge>
-                      )}
-                      {session.status === 'error' && (
-                        <Badge variant="destructive">
-                          ✗ Error
-                        </Badge>
-                      )}
+                        {session.status}
+                      </Badge>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {session.sessionType === 'expense' ? 'Expenses' : 'Income'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {session.batchId}
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {session.totalEntries} entries
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Created: {format(new Date(session.createdAt), 'MMM dd, yyyy HH:mm')}
                     </div>
                   </div>
-
-                  {/* Expanded Session Details */}
-                  {expandedSession === session.id && (
-                    <div className="border-t bg-white dark:bg-gray-900 p-4">
-                      <div className="mb-4">
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                          Session Summary
-                        </h4>
-                        <div className="grid grid-cols-4 gap-4 mb-4">
-                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total Entries</div>
-                            <div className="text-lg font-bold text-gray-900 dark:text-white">
-                              {session.totalEntries}
-                            </div>
-                          </div>
-                          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                            <div className="text-xs text-green-600 dark:text-green-400 font-medium">Gross Amount</div>
-                            <div className="text-lg font-bold text-green-700 dark:text-green-300">
-                              R {(session.totalAmount || 0).toFixed(2)}
-                            </div>
-                          </div>
-                          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                            <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">Net Amount</div>
-                            <div className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                              R {(session.netAmount || 0).toFixed(2)}
-                            </div>
-                          </div>
-                          <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg">
-                            <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">VAT Amount</div>
-                            <div className="text-lg font-bold text-orange-700 dark:text-orange-300">
-                              R {(session.vatAmount || 0).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Session Entries Table */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className={`${session.sessionType === 'expense' ? 'bg-slate-800' : 'bg-green-700'}`}>
-                            <tr>
-                              <th className="text-left p-3 text-white font-medium">Date</th>
-                              <th className="text-left p-3 text-white font-medium">Description</th>
-                              <th className="text-left p-3 text-white font-medium">Account</th>
-                              <th className="text-left p-3 text-white font-medium">Amount</th>
-                              <th className="text-left p-3 text-white font-medium">VAT</th>
-                              <th className="text-left p-3 text-white font-medium">Net</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white dark:bg-gray-900">
-                            {sessionEntries.length > 0 ? (
-                              sessionEntries.map((entry: any, index: number) => (
-                                <tr key={index} className="border-b border-gray-200 dark:border-gray-700">
-                                  <td className="p-3 text-gray-900 dark:text-white">
-                                    {format(new Date(entry.transactionDate), 'MMM dd, yyyy')}
-                                  </td>
-                                  <td className="p-3 text-gray-900 dark:text-white">
-                                    {entry.description}
-                                  </td>
-                                  <td className="p-3 text-gray-600 dark:text-gray-300">
-                                    {entry.categoryId ? 
-                                      chartOfAccounts.find(acc => acc.id === entry.categoryId)?.accountName || 'Unknown Account' :
-                                      entry.incomeAccountId ? 
-                                      chartOfAccounts.find(acc => acc.id === entry.incomeAccountId)?.accountName || 'Unknown Account' :
-                                      'No Account'
-                                    }
-                                  </td>
-                                  <td className="p-3 font-semibold text-gray-900 dark:text-white">
-                                    R {parseFloat(entry.amount || 0).toFixed(2)}
-                                  </td>
-                                  <td className="p-3 text-orange-600 dark:text-orange-400">
-                                    R {parseFloat(entry.vatAmount || 0).toFixed(2)}
-                                  </td>
-                                  <td className="p-3 text-blue-600 dark:text-blue-400">
-                                    R {parseFloat(entry.netAmount || 0).toFixed(2)}
-                                  </td>
-                                </tr>
-                              ))
-                            ) : (
-                              <tr>
-                                <td colSpan={6} className="p-4 text-center text-gray-500">
-                                  Loading session entries...
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {session.status === 'processing' && (
+                      <Button
+                        size="sm"
+                        onClick={() => processBulkSessionMutation.mutate(session.id)}
+                        disabled={processBulkSessionMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {processBulkSessionMutation.isPending ? (
+                          <>Processing...</>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Process to Journal
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {session.status === 'completed' && (
+                      <Badge variant="default" className="bg-green-100 text-green-800">
+                        ✓ Processed ({session.processedEntries} entries)
+                      </Badge>
+                    )}
+                    {session.status === 'error' && (
+                      <Badge variant="destructive">
+                        ✗ Error
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -11977,47 +11977,41 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
-  async createBulkExpenseEntries(entries: any[], userId?: number): Promise<any[]> {
+  async createBulkExpenseEntries(entries: any[]): Promise<any[]> {
     const insertedEntries = await db
       .insert(bulkExpenseEntries)
       .values(entries)
       .returning();
 
-    // Only create audit logs if userId is provided and valid
-    if (userId && userId > 0) {
-      for (const entry of insertedEntries) {
-        await this.createAuditLog({
-          userId,
-          companyId: entry.companyId,
-          action: "create",
-          resource: "bulk_expense_entry",
-          resourceId: entry.id.toString(),
-          details: { batchId: entry.batchId, amount: entry.amount },
-        });
-      }
+    for (const entry of insertedEntries) {
+      await this.createAuditLog({
+        userId: 0,
+        companyId: entry.companyId,
+        action: "create",
+        resource: "bulk_expense_entry",
+        resourceId: entry.id.toString(),
+        details: { batchId: entry.batchId, amount: entry.amount },
+      });
     }
 
     return insertedEntries;
   }
 
-  async createBulkIncomeEntries(entries: any[], userId?: number): Promise<any[]> {
+  async createBulkIncomeEntries(entries: any[]): Promise<any[]> {
     const insertedEntries = await db
       .insert(bulkIncomeEntries)
       .values(entries)
       .returning();
 
-    // Only create audit logs if userId is provided and valid
-    if (userId && userId > 0) {
-      for (const entry of insertedEntries) {
-        await this.createAuditLog({
-          userId,
-          companyId: entry.companyId,
-          action: "create",
-          resource: "bulk_income_entry",
-          resourceId: entry.id.toString(),
-          details: { batchId: entry.batchId, amount: entry.amount },
-        });
-      }
+    for (const entry of insertedEntries) {
+      await this.createAuditLog({
+        userId: 0,
+        companyId: entry.companyId,
+        action: "create",
+        resource: "bulk_income_entry",
+        resourceId: entry.id.toString(),
+        details: { batchId: entry.batchId, amount: entry.amount },
+      });
     }
 
     return insertedEntries;
@@ -12050,49 +12044,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async processBulkEntries(sessionId: number, companyId: number): Promise<{ success: boolean; processedCount: number; errors: any[] }> {
-    console.log(`Processing bulk entries for session ${sessionId}, company ${companyId}`);
     const session = await this.getBulkCaptureSession(sessionId, companyId);
     if (!session) {
       throw new Error('Session not found');
     }
 
-    console.log('Session found:', JSON.stringify(session, null, 2));
     let processedCount = 0;
     const errors: any[] = [];
 
     try {
       if (session.sessionType === 'expense') {
         const entries = await this.getBulkExpenseEntries(sessionId, companyId);
-        console.log(`Found ${entries.length} expense entries to process`);
         
         for (const entry of entries) {
           try {
-            console.log('Processing expense entry:', JSON.stringify(entry, null, 2));
-
-            // Skip entries with zero amount
-            if (!entry.amount || parseFloat(entry.amount) === 0) {
-              console.log('Skipping entry with zero amount');
-              continue;
-            }
-
-            // Skip entries without required fields
-            if (!entry.categoryId || !entry.description) {
-              console.log('Skipping entry with missing required fields');
-              continue;
-            }
-
             // Create proper journal entry for expense following the same pattern as individual expenses
             const expenseAccount = await this.getChartOfAccount(entry.categoryId);
             const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
             const vatInputAccount = await this.getChartOfAccountByCode(companyId, "1400"); // VAT Input Tax
 
             if (!expenseAccount || !bankAccount || !vatInputAccount) {
-              throw new Error(`Required accounts not found for expense journal entry: expense=${!!expenseAccount}, bank=${!!bankAccount}, vat=${!!vatInputAccount}`);
-            }
-
-            // Validate that the expense account belongs to the company
-            if (expenseAccount.companyId !== companyId) {
-              throw new Error(`Expense account does not belong to company`);
+              throw new Error("Required accounts not found for expense journal entry");
             }
 
             const entryNumber = await this.generateEntryNumber(companyId, 'BULK-EXP');
@@ -12148,42 +12120,21 @@ export class DatabaseStorage implements IStorage {
             processedCount++;
 
           } catch (error) {
-            console.error('Error processing expense entry:', error);
             errors.push({ entryId: entry.id, error: error.message });
           }
         }
       } else if (session.sessionType === 'income') {
         const entries = await this.getBulkIncomeEntries(sessionId, companyId);
-        console.log(`Found ${entries.length} income entries to process`);
         
         for (const entry of entries) {
           try {
-            console.log('Processing income entry:', JSON.stringify(entry, null, 2));
-
-            // Skip entries with zero amount
-            if (!entry.amount || parseFloat(entry.amount) === 0) {
-              console.log('Skipping entry with zero amount');
-              continue;
-            }
-
-            // Skip entries without required fields
-            if (!entry.incomeAccountId || !entry.description) {
-              console.log('Skipping entry with missing required fields');
-              continue;
-            }
-
             // Create proper journal entry for income
             const incomeAccount = await this.getChartOfAccount(entry.incomeAccountId);
             const bankAccount = await this.getChartOfAccountByCode(companyId, "1010"); // Bank Account
             const vatOutputAccount = await this.getChartOfAccountByCode(companyId, "2200"); // VAT Output Tax
 
             if (!incomeAccount || !bankAccount || !vatOutputAccount) {
-              throw new Error(`Required accounts not found for income journal entry: income=${!!incomeAccount}, bank=${!!bankAccount}, vat=${!!vatOutputAccount}`);
-            }
-
-            // Validate that the income account belongs to the company
-            if (incomeAccount.companyId !== companyId) {
-              throw new Error(`Income account does not belong to company`);
+              throw new Error("Required accounts not found for income journal entry");
             }
 
             const entryNumber = await this.generateEntryNumber(companyId, 'BULK-INC');
@@ -12239,7 +12190,6 @@ export class DatabaseStorage implements IStorage {
             processedCount++;
 
           } catch (error) {
-            console.error('Error processing income entry:', error);
             errors.push({ entryId: entry.id, error: error.message });
           }
         }
