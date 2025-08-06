@@ -19,6 +19,7 @@ interface ExpenseFormData {
   bankAccountId?: number;
   description: string;
   categoryId?: number;
+  category: string;
   amount: string;
   vatType: "Inclusive" | "Exclusive" | "No VAT";
   vatRate: string;
@@ -50,6 +51,8 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
     expenseDate: new Date().toISOString().split('T')[0],
     paidStatus: "Unpaid",
     supplierInvoiceNumber: "",
+    categoryId: undefined,
+    category: "",
     createdBy: user?.id || 0,
   });
 
@@ -137,6 +140,8 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
       expenseDate: new Date().toISOString().split('T')[0],
       paidStatus: "Unpaid",
       supplierInvoiceNumber: "",
+      categoryId: undefined,
+      category: "",
       createdBy: user?.id || 0,
     });
     setNetAmount("0.00");
@@ -146,10 +151,10 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.description || !formData.amount) {
+    if (!formData.description || !formData.amount || !formData.category) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields including category",
         variant: "destructive",
       });
       return;
@@ -253,13 +258,17 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
 
               {/* Expense Category */}
               <div className="space-y-2">
-                <Label htmlFor="category">Expense Category</Label>
+                <Label htmlFor="category">Expense Category *</Label>
                 <Select
                   value={formData.categoryId?.toString() || ""}
-                  onValueChange={(value) => setFormData(prev => ({ 
-                    ...prev, 
-                    categoryId: value ? parseInt(value) : undefined 
-                  }))}
+                  onValueChange={(value) => {
+                    const selectedAccount = expenseAccounts.find((account: any) => account.id.toString() === value);
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      categoryId: value ? parseInt(value) : undefined,
+                      category: selectedAccount ? selectedAccount.accountName : ""
+                    }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
