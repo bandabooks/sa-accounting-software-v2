@@ -25,7 +25,7 @@ interface ExpenseFormData {
   vatAmount: string;
   expenseDate: string;
   paidStatus: "Paid" | "Unpaid" | "Partially Paid";
-  taxDeductible: boolean;
+
   attachmentUrl?: string;
   createdBy: number;
 }
@@ -49,7 +49,6 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
     vatAmount: "0.00",
     expenseDate: new Date().toISOString().split('T')[0],
     paidStatus: "Unpaid",
-    taxDeductible: true,
     createdBy: user?.id || 0,
   });
 
@@ -141,7 +140,6 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
       vatAmount: "0.00",
       expenseDate: new Date().toISOString().split('T')[0],
       paidStatus: "Unpaid",
-      taxDeductible: true,
       createdBy: user?.id || 0,
     });
     setNetAmount("0.00");
@@ -185,7 +183,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
@@ -194,7 +192,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto px-1 space-y-4">
+            <div className="flex-1 overflow-y-auto px-1 space-y-3 pb-4">
               {/* Supplier Field with Quick Add */}
               <div className="space-y-2">
                 <Label htmlFor="supplier">Supplier</Label>
@@ -390,19 +388,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
                 </div>
               )}
 
-              {/* Tax Deductible */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="taxDeductible"
-                  checked={formData.taxDeductible}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({ ...prev, taxDeductible: !!checked }))
-                  }
-                />
-                <Label htmlFor="taxDeductible" className="text-sm">
-                  Tax Deductible
-                </Label>
-              </div>
+              {/* Tax Deductible removed - VAT logic and category determine deductibility */}
 
               {/* File Upload Placeholder */}
               <div className="space-y-2">
@@ -416,7 +402,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
             </div>
 
             {/* Fixed Bottom Actions - Mobile Friendly */}
-            <div className="flex-shrink-0 mt-6 pt-4 border-t bg-background">
+            <div className="flex-shrink-0 mt-4 pt-3 border-t bg-background/95 backdrop-blur-sm">
               <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
                 <Button
                   type="button"
