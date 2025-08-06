@@ -2845,7 +2845,9 @@ export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit(
   createdAt: true,
   updatedAt: true,
 }).extend({
-  transactionDate: z.string().transform((str) => new Date(str)),
+  transactionDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Invalid date format",
+  }).transform((str) => new Date(str)),
 });
 
 export const insertJournalEntryLineSchema = createInsertSchema(journalEntryLines).omit({

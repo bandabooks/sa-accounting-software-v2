@@ -180,8 +180,8 @@ export default function JournalEntries() {
       entry: {
         ...data.entry,
         transactionDate: data.entry.transactionDate instanceof Date 
-          ? data.entry.transactionDate.toISOString().split('T')[0] + 'T00:00:00.000Z'
-          : new Date(data.entry.transactionDate).toISOString(),
+          ? data.entry.transactionDate.toISOString().split('T')[0]
+          : new Date(data.entry.transactionDate).toISOString().split('T')[0],
         totalDebit: totalDebits.toFixed(2),
         totalCredit: totalCredits.toFixed(2),
       },
