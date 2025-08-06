@@ -1921,52 +1921,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Financial Reporting - Expenses
-  app.get("/api/expenses", async (req, res) => {
+  // Enhanced Expense Management Routes
+  app.get("/api/expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const expenses = await storage.getAllExpenses();
+      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      const expenses = await storage.getAllExpenses(companyId);
       res.json(expenses);
     } catch (error) {
+      console.error("Failed to fetch expenses:", error);
       res.status(500).json({ message: "Failed to fetch expenses" });
     }
   });
 
-  app.get("/api/expenses/:id", async (req, res) => {
+  app.get("/api/expenses/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      const dateFilter = req.query.dateFilter as string;
+      const metrics = await storage.getExpenseMetrics(companyId, dateFilter);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Failed to fetch expense metrics:", error);
+      res.status(500).json({ message: "Failed to fetch expense metrics" });
+    }
+  });
+
+  app.get("/api/expenses/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
       const expense = await storage.getExpense(id);
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
       }
+      
+      // Check company access for non-super admins
+      if (req.user.role !== 'super_admin' && expense.companyId !== req.user.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       res.json(expense);
     } catch (error) {
+      console.error("Failed to fetch expense:", error);
       res.status(500).json({ message: "Failed to fetch expense" });
     }
   });
 
-  app.post("/api/expenses", async (req, res) => {
+  app.post("/api/expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const validatedData = insertExpenseSchema.parse(req.body);
+      const validatedData = insertExpenseSchema.parse({
+        ...req.body,
+        companyId: req.user.companyId,
+        createdBy: req.user.id
+      });
+      
+      console.log("Creating expense with validated data:", validatedData);
+      
       const expense = await storage.createExpense(validatedData);
       res.status(201).json(expense);
     } catch (error) {
+      console.error("Failed to create expense:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create expense" });
+      res.status(500).json({ message: "Failed to create expense", error: error.message });
     }
   });
 
-  app.put("/api/expenses/:id", async (req, res) => {
+  app.put("/api/expenses/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Check if expense exists and user has access
+      const existingExpense = await storage.getExpense(id);
+      if (!existingExpense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      if (req.user.role !== 'super_admin' && existingExpense.companyId !== req.user.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       const validatedData = insertExpenseSchema.partial().parse(req.body);
       const expense = await storage.updateExpense(id, validatedData);
+      
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
       }
       res.json(expense);
     } catch (error) {
+      console.error("Failed to update expense:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
@@ -1974,15 +2017,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/expenses/:id", async (req, res) => {
+  app.delete("/api/expenses/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Check if expense exists and user has access
+      const existingExpense = await storage.getExpense(id);
+      if (!existingExpense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      if (req.user.role !== 'super_admin' && existingExpense.companyId !== req.user.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       const deleted = await storage.deleteExpense(id);
       if (!deleted) {
         return res.status(404).json({ message: "Expense not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error("Failed to delete expense:", error);
       res.status(500).json({ message: "Failed to delete expense" });
     }
   });

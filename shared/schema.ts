@@ -835,19 +835,26 @@ export const numberSequences = pgTable("number_sequences", {
 // Financial reporting tables
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
-  companyId: integer("company_id").notNull(),
+  companyId: integer("company_id").notNull(), // Client/Company reference
+  supplierId: integer("supplier_id"), // Reference to supplier
   description: text("description").notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  category: text("category").notNull(), // office_supplies, travel, utilities, etc.
+  categoryId: integer("category_id"), // Reference to Chart of Accounts
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Gross amount
+  vatType: text("vat_type").notNull().default("No VAT"), // 'Inclusive', 'Exclusive', 'No VAT'
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
-  vatInclusive: boolean("vat_inclusive").default(false), // Whether amount includes VAT
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
-  expenseDate: timestamp("expense_date").notNull(),
-  isDeductible: boolean("is_deductible").default(true),
-  receiptPath: text("receipt_path"), // Path to receipt image/PDF
+  expenseDate: date("expense_date").notNull(),
+  isPaid: boolean("is_paid").default(false), // Paid status
+  taxDeductible: boolean("tax_deductible").default(true), // Tax deductible checkbox
+  attachmentUrl: text("attachment_url"), // File upload URL
+  createdBy: integer("created_by").notNull(), // User who created the expense
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyIdx: index("expenses_company_idx").on(table.companyId),
+  supplierIdx: index("expenses_supplier_idx").on(table.supplierId),
+  categoryIdx: index("expenses_category_idx").on(table.categoryId),
+  dateIdx: index("expenses_date_idx").on(table.expenseDate),
 }));
 
 export const vatReturns = pgTable("vat_returns", {
@@ -1429,14 +1436,15 @@ export const insertPaymentSchema = z.object({
   status: z.enum(["pending", "completed", "failed"]).default("completed"),
 });
 
-export const insertExpenseSchema = z.object({
-  description: z.string(),
-  amount: z.string(),
-  category: z.string(),
-  vatAmount: z.string().default("0.00"),
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
   expenseDate: z.string().transform((str) => new Date(str)),
-  isDeductible: z.boolean().default(true),
-  receiptPath: z.string().optional(),
+  amount: z.string(),
+  vatAmount: z.string(),
+  vatRate: z.string(),
 });
 
 export const insertVatReturnSchema = z.object({

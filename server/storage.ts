@@ -2840,23 +2840,134 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bankAccounts.id, bankAccountId));
   }
 
-  // Expenses
-  async getAllExpenses(): Promise<Expense[]> {
-    return await db.select().from(expenses).orderBy(desc(expenses.expenseDate));
+  // Enhanced Expenses with Supplier and Category Relations
+  async getAllExpenses(companyId?: number): Promise<any[]> {
+    let query = db
+      .select({
+        expense: expenses,
+        supplier: suppliers,
+        category: chartOfAccounts
+      })
+      .from(expenses)
+      .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
+      .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id));
+
+    if (companyId) {
+      query = query.where(eq(expenses.companyId, companyId));
+    }
+
+    const result = await query.orderBy(desc(expenses.expenseDate));
+    
+    return result.map(row => ({
+      ...row.expense,
+      supplier: row.supplier,
+      category: row.category
+    }));
   }
 
-  async getExpense(id: number): Promise<Expense | undefined> {
-    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
-    return expense || undefined;
+  async getExpense(id: number): Promise<any | undefined> {
+    const result = await db
+      .select({
+        expense: expenses,
+        supplier: suppliers,
+        category: chartOfAccounts
+      })
+      .from(expenses)
+      .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
+      .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id))
+      .where(eq(expenses.id, id));
+
+    if (result.length === 0) return undefined;
+
+    const row = result[0];
+    return {
+      ...row.expense,
+      supplier: row.supplier,
+      category: row.category
+    };
   }
 
   async createExpense(expense: InsertExpense): Promise<Expense> {
-    const [newExpense] = await db.insert(expenses).values(expense).returning();
+    const [newExpense] = await db.insert(expenses).values({
+      ...expense,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    
+    // Create journal entry for expense
+    await this.createExpenseJournalEntry(newExpense);
+    
     return newExpense;
   }
 
+  private async createExpenseJournalEntry(expense: Expense): Promise<void> {
+    try {
+      // Create journal entry for expense
+      const journalEntry = await this.createJournalEntry({
+        companyId: expense.companyId,
+        reference: `EXP-${expense.id}`,
+        description: expense.description,
+        entryDate: new Date(expense.expenseDate),
+        totalAmount: parseFloat(expense.amount),
+        createdBy: expense.createdBy
+      });
+
+      // Get expense category account or default to general expenses
+      let expenseAccountId = expense.categoryId;
+      if (!expenseAccountId) {
+        const generalExpense = await this.getAccountByCode(expense.companyId, '5000');
+        expenseAccountId = generalExpense?.id || 1;
+      }
+
+      // Debit: Expense Account
+      await this.createJournalEntryLine({
+        journalEntryId: journalEntry.id,
+        accountId: expenseAccountId,
+        description: expense.description,
+        debitAmount: parseFloat(expense.amount),
+        creditAmount: 0
+      });
+
+      // Credit: Accounts Payable or Bank Account
+      if (!expense.isPaid) {
+        // Accounts Payable
+        const payableAccount = await this.getAccountByCode(expense.companyId, '2000');
+        if (payableAccount) {
+          await this.createJournalEntryLine({
+            journalEntryId: journalEntry.id,
+            accountId: payableAccount.id,
+            description: `Payable - ${expense.description}`,
+            debitAmount: 0,
+            creditAmount: parseFloat(expense.amount)
+          });
+        }
+      } else {
+        // Bank Account (assuming cash payment)
+        const bankAccount = await this.getAccountByCode(expense.companyId, '1100');
+        if (bankAccount) {
+          await this.createJournalEntryLine({
+            journalEntryId: journalEntry.id,
+            accountId: bankAccount.id,
+            description: `Cash payment - ${expense.description}`,
+            debitAmount: 0,
+            creditAmount: parseFloat(expense.amount)
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error creating expense journal entry:', error);
+    }
+  }
+
   async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
-    const [updatedExpense] = await db.update(expenses).set(expense).where(eq(expenses.id, id)).returning();
+    const [updatedExpense] = await db
+      .update(expenses)
+      .set({
+        ...expense,
+        updatedAt: new Date()
+      })
+      .where(eq(expenses.id, id))
+      .returning();
     return updatedExpense || undefined;
   }
 
@@ -2865,17 +2976,210 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async getExpensesByCategory(category: string): Promise<Expense[]> {
-    return await db.select().from(expenses).where(eq(expenses.category, category)).orderBy(desc(expenses.expenseDate));
+  async getExpensesByCategory(categoryId: number, companyId?: number): Promise<any[]> {
+    let query = db
+      .select({
+        expense: expenses,
+        supplier: suppliers,
+        category: chartOfAccounts
+      })
+      .from(expenses)
+      .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
+      .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id))
+      .where(eq(expenses.categoryId, categoryId));
+
+    if (companyId) {
+      query = query.where(and(
+        eq(expenses.categoryId, categoryId),
+        eq(expenses.companyId, companyId)
+      ));
+    }
+
+    const result = await query.orderBy(desc(expenses.expenseDate));
+    
+    return result.map(row => ({
+      ...row.expense,
+      supplier: row.supplier,
+      category: row.category
+    }));
   }
 
-  async getExpensesByDateRange(startDate: Date, endDate: Date): Promise<Expense[]> {
-    return await db.select().from(expenses)
+  async getExpensesByDateRange(startDate: Date, endDate: Date, companyId?: number): Promise<any[]> {
+    let query = db
+      .select({
+        expense: expenses,
+        supplier: suppliers,
+        category: chartOfAccounts
+      })
+      .from(expenses)
+      .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
+      .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id))
       .where(and(
         sql`${expenses.expenseDate} >= ${startDate}`,
         sql`${expenses.expenseDate} <= ${endDate}`
-      ))
-      .orderBy(desc(expenses.expenseDate));
+      ));
+
+    if (companyId) {
+      query = query.where(and(
+        sql`${expenses.expenseDate} >= ${startDate}`,
+        sql`${expenses.expenseDate} <= ${endDate}`,
+        eq(expenses.companyId, companyId)
+      ));
+    }
+
+    const result = await query.orderBy(desc(expenses.expenseDate));
+    
+    return result.map(row => ({
+      ...row.expense,
+      supplier: row.supplier,
+      category: row.category
+    }));
+  }
+
+  async getExpenseMetrics(companyId?: number, dateFilter?: string): Promise<{
+    totalExpenses: string;
+    totalVatClaimed: string;
+    taxDeductibleAmount: string;
+    nonDeductibleAmount: string;
+    paidExpenses: string;
+    unpaidExpenses: string;
+    categoryBreakdown: Array<{
+      category: string;
+      amount: string;
+      count: number;
+    }>;
+    supplierBreakdown: Array<{
+      supplier: string;
+      amount: string;
+      count: number;
+    }>;
+  }> {
+    try {
+      let whereClause = companyId ? eq(expenses.companyId, companyId) : undefined;
+      
+      // Add date filtering
+      if (dateFilter && dateFilter !== 'all_time') {
+        const now = new Date();
+        let startDate: Date;
+        
+        switch (dateFilter) {
+          case 'current_month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case 'last_month':
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            break;
+          case 'current_quarter':
+            const quarter = Math.floor(now.getMonth() / 3);
+            startDate = new Date(now.getFullYear(), quarter * 3, 1);
+            break;
+          case 'current_year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          default:
+            startDate = new Date(0);
+        }
+        
+        if (whereClause) {
+          whereClause = and(whereClause, sql`${expenses.expenseDate} >= ${startDate}`);
+        } else {
+          whereClause = sql`${expenses.expenseDate} >= ${startDate}`;
+        }
+      }
+
+      const allExpenses = await db
+        .select({
+          expense: expenses,
+          supplier: suppliers,
+          category: chartOfAccounts
+        })
+        .from(expenses)
+        .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
+        .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id))
+        .where(whereClause || undefined);
+
+      const totalExpenses = allExpenses.reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
+      const totalVatClaimed = allExpenses.reduce((sum, row) => sum + parseFloat(row.expense.vatAmount || '0'), 0);
+      const taxDeductibleAmount = allExpenses
+        .filter(row => row.expense.taxDeductible)
+        .reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
+      const nonDeductibleAmount = allExpenses
+        .filter(row => !row.expense.taxDeductible)
+        .reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
+      const paidExpenses = allExpenses
+        .filter(row => row.expense.isPaid)
+        .reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
+      const unpaidExpenses = allExpenses
+        .filter(row => !row.expense.isPaid)
+        .reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
+
+      // Category breakdown
+      const categoryMap = new Map();
+      allExpenses.forEach(row => {
+        const categoryName = row.category?.accountName || 'Uncategorized';
+        const amount = parseFloat(row.expense.amount);
+        
+        if (categoryMap.has(categoryName)) {
+          categoryMap.set(categoryName, {
+            amount: categoryMap.get(categoryName).amount + amount,
+            count: categoryMap.get(categoryName).count + 1
+          });
+        } else {
+          categoryMap.set(categoryName, { amount, count: 1 });
+        }
+      });
+
+      const categoryBreakdown = Array.from(categoryMap.entries()).map(([category, data]) => ({
+        category,
+        amount: data.amount.toFixed(2),
+        count: data.count
+      })).sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+
+      // Supplier breakdown
+      const supplierMap = new Map();
+      allExpenses.forEach(row => {
+        const supplierName = row.supplier?.name || 'Direct/Cash Purchase';
+        const amount = parseFloat(row.expense.amount);
+        
+        if (supplierMap.has(supplierName)) {
+          supplierMap.set(supplierName, {
+            amount: supplierMap.get(supplierName).amount + amount,
+            count: supplierMap.get(supplierName).count + 1
+          });
+        } else {
+          supplierMap.set(supplierName, { amount, count: 1 });
+        }
+      });
+
+      const supplierBreakdown = Array.from(supplierMap.entries()).map(([supplier, data]) => ({
+        supplier,
+        amount: data.amount.toFixed(2),
+        count: data.count
+      })).sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+
+      return {
+        totalExpenses: totalExpenses.toFixed(2),
+        totalVatClaimed: totalVatClaimed.toFixed(2),
+        taxDeductibleAmount: taxDeductibleAmount.toFixed(2),
+        nonDeductibleAmount: nonDeductibleAmount.toFixed(2),
+        paidExpenses: paidExpenses.toFixed(2),
+        unpaidExpenses: unpaidExpenses.toFixed(2),
+        categoryBreakdown,
+        supplierBreakdown
+      };
+    } catch (error) {
+      console.error('Error getting expense metrics:', error);
+      return {
+        totalExpenses: '0.00',
+        totalVatClaimed: '0.00',
+        taxDeductibleAmount: '0.00',
+        nonDeductibleAmount: '0.00',
+        paidExpenses: '0.00',
+        unpaidExpenses: '0.00',
+        categoryBreakdown: [],
+        supplierBreakdown: []
+      };
+    }
   }
 
   // VAT Returns
