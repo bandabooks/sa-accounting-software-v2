@@ -62,6 +62,7 @@ export default function JournalEntries() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntryWithLines | null>(null);
+  const [accountSearchTerm, setAccountSearchTerm] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     type: 'create' | 'post' | 'reverse';
@@ -85,6 +86,12 @@ export default function JournalEntries() {
   const { data: accounts = [] } = useQuery({
     queryKey: ["/api/chart-of-accounts"],
   });
+
+  // Filter accounts based on search term
+  const filteredAccounts = accounts.filter((account: any) =>
+    account.accountName.toLowerCase().includes(accountSearchTerm.toLowerCase()) ||
+    account.accountCode.toLowerCase().includes(accountSearchTerm.toLowerCase())
+  );
 
   const createMutation = useMutation({
     mutationFn: (data: JournalEntryFormData) => apiRequest("/api/journal-entries", "POST", data),
@@ -282,7 +289,12 @@ export default function JournalEntries() {
             Record and manage accounting transactions
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+          setIsCreateDialogOpen(open);
+          if (open) {
+            setAccountSearchTerm(""); // Clear search when dialog opens
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -392,12 +404,25 @@ export default function JournalEntries() {
                                 <SelectTrigger className="h-9">
                                   <SelectValue placeholder="Select account" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                  {accounts.map((account: any) => (
+                                <SelectContent className="max-h-[300px]">
+                                  <div className="sticky top-0 p-2 border-b bg-white dark:bg-gray-950">
+                                    <Input
+                                      placeholder="Search accounts..."
+                                      value={accountSearchTerm}
+                                      onChange={(e) => setAccountSearchTerm(e.target.value)}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  {filteredAccounts.map((account: any) => (
                                     <SelectItem key={account.id} value={account.id.toString()}>
                                       {account.accountCode} - {account.accountName}
                                     </SelectItem>
                                   ))}
+                                  {filteredAccounts.length === 0 && accountSearchTerm && (
+                                    <div className="p-2 text-sm text-gray-500 text-center">
+                                      No accounts found matching "{accountSearchTerm}"
+                                    </div>
+                                  )}
                                 </SelectContent>
                               </Select>
                             )}
@@ -770,7 +795,7 @@ export default function JournalEntries() {
                     </div>
                     <div className="flex justify-between">
                       <span className="font-medium">Transaction Date:</span>
-                      <span>{confirmDialog.data.entry.transactionDate}</span>
+                      <span>{format(new Date(confirmDialog.data.entry.transactionDate), 'dd/MM/yyyy')}</span>
                     </div>
                   </div>
                 </div>
