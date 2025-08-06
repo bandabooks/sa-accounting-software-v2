@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertJournalEntrySchema, type JournalEntryWithLines } from "@shared/schema";
-import { Plus, Search, Edit, FileCheck, RotateCcw, Trash2, BookOpen } from "lucide-react";
+import { Plus, Search, Edit, FileCheck, RotateCcw, Trash2, BookOpen, AlertTriangle, CheckCircle } from "lucide-react";
 import { SuccessModal } from "@/components/ui/success-modal";
 import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +62,18 @@ export default function JournalEntries() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntryWithLines | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: 'create' | 'post' | 'reverse';
+    entry?: JournalEntryWithLines;
+    data?: any;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'create',
+    onConfirm: () => {},
+  });
+  const [reverseDescription, setReverseDescription] = useState("");
   const { toast } = useToast();
   const successModal = useSuccessModal();
   const queryClient = useQueryClient();
@@ -175,29 +187,36 @@ export default function JournalEntries() {
   });
 
   const onSubmit = (data: JournalEntryFormData) => {
-    const confirmed = confirm(`Are you sure you want to create journal entry "${data.entry.entryNumber}" with total amount ${formatCurrency(totalDebits.toFixed(2))}?`);
-    if (confirmed) {
-      const entryData = {
-        entry: {
-          entryNumber: data.entry.entryNumber,
-          transactionDate: data.entry.transactionDate,
-          description: data.entry.description,
-          reference: data.entry.reference || "",
-          totalDebit: totalDebits.toFixed(2),
-          totalCredit: totalCredits.toFixed(2),
-          sourceModule: "manual",
-          sourceId: null,
-        },
-        lines: data.lines.map(line => ({
-          accountId: parseInt(line.accountId.toString()),
-          description: line.description || "",
-          debitAmount: parseFloat(line.debitAmount || "0").toFixed(2),
-          creditAmount: parseFloat(line.creditAmount || "0").toFixed(2),
-          reference: line.reference || "",
-        })),
-      };
-      createMutation.mutate(entryData);
-    }
+    const entryData = {
+      entry: {
+        entryNumber: data.entry.entryNumber,
+        transactionDate: data.entry.transactionDate,
+        description: data.entry.description,
+        reference: data.entry.reference || "",
+        totalDebit: totalDebits.toFixed(2),
+        totalCredit: totalCredits.toFixed(2),
+        sourceModule: "manual",
+        sourceId: null,
+      },
+      lines: data.lines.map(line => ({
+        accountId: parseInt(line.accountId.toString()),
+        description: line.description || "",
+        debitAmount: parseFloat(line.debitAmount || "0").toFixed(2),
+        creditAmount: parseFloat(line.creditAmount || "0").toFixed(2),
+        reference: line.reference || "",
+      })),
+    };
+
+    setConfirmDialog({
+      isOpen: true,
+      type: 'create',
+      data: entryData,
+      onConfirm: () => {
+        createMutation.mutate(entryData);
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        setIsCreateDialogOpen(false);
+      },
+    });
   };
 
   const addLine = () => {
@@ -211,19 +230,31 @@ export default function JournalEntries() {
   };
 
   const handlePost = (entry: JournalEntryWithLines) => {
-    if (confirm(`Are you sure you want to post journal entry "${entry.entryNumber}"? This action cannot be undone.`)) {
-      postMutation.mutate(entry.id);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      type: 'post',
+      entry,
+      onConfirm: () => {
+        postMutation.mutate(entry.id);
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+      },
+    });
   };
 
   const handleReverse = (entry: JournalEntryWithLines) => {
-    const confirmed = confirm(`Are you sure you want to reverse journal entry "${entry.entryNumber}"? This will create a new reversing entry.`);
-    if (confirmed) {
-      const description = prompt(`Enter a description for the reversal of journal entry "${entry.entryNumber}":`);
-      if (description && description.trim() !== "") {
-        reverseMutation.mutate({ id: entry.id, description: description.trim() });
-      }
-    }
+    setReverseDescription("");
+    setConfirmDialog({
+      isOpen: true,
+      type: 'reverse',
+      entry,
+      onConfirm: () => {
+        if (reverseDescription.trim()) {
+          reverseMutation.mutate({ id: entry.id, description: reverseDescription.trim() });
+          setConfirmDialog({ ...confirmDialog, isOpen: false });
+          setReverseDescription("");
+        }
+      },
+    });
   };
 
   if (entriesLoading) {
@@ -692,6 +723,125 @@ export default function JournalEntries() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Confirmation Dialog */}
+      <Dialog open={confirmDialog.isOpen} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, isOpen: open })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {confirmDialog.type === 'create' && (
+                <>
+                  <CheckCircle className="h-5 w-5 text-blue-600" />
+                  Confirm Journal Entry Creation
+                </>
+              )}
+              {confirmDialog.type === 'post' && (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  Confirm Post to Journal
+                </>
+              )}
+              {confirmDialog.type === 'reverse' && (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  Confirm Journal Entry Reversal
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {confirmDialog.type === 'create' && confirmDialog.data && (
+              <div className="space-y-3">
+                <p className="text-gray-700 dark:text-gray-300">
+                  Are you sure you want to create this journal entry?
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Entry Number:</span>
+                      <span>{confirmDialog.data.entry.entryNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Total Amount:</span>
+                      <span className="font-semibold text-blue-600">{formatCurrency(confirmDialog.data.entry.totalDebit)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Transaction Date:</span>
+                      <span>{confirmDialog.data.entry.transactionDate}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {confirmDialog.type === 'post' && confirmDialog.entry && (
+              <div className="space-y-3">
+                <p className="text-gray-700 dark:text-gray-300">
+                  Are you sure you want to post journal entry "{confirmDialog.entry.entryNumber}"?
+                </p>
+                <div className="bg-orange-50 dark:bg-orange-950 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">This action cannot be undone.</span>
+                  </div>
+                  <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
+                    Once posted, this journal entry will be final and affect your financial reports.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {confirmDialog.type === 'reverse' && confirmDialog.entry && (
+              <div className="space-y-3">
+                <p className="text-gray-700 dark:text-gray-300">
+                  Are you sure you want to reverse journal entry "{confirmDialog.entry.entryNumber}"?
+                </p>
+                <div className="bg-red-50 dark:bg-red-950 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    This will create a new reversing entry to cancel out the original transaction.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Reversal Description *
+                  </label>
+                  <Textarea
+                    value={reverseDescription}
+                    onChange={(e) => setReverseDescription(e.target.value)}
+                    placeholder="Enter reason for reversal..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDialog.onConfirm}
+              disabled={confirmDialog.type === 'reverse' && !reverseDescription.trim()}
+              className={
+                confirmDialog.type === 'post' 
+                  ? "bg-orange-600 hover:bg-orange-700" 
+                  : confirmDialog.type === 'reverse'
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }
+            >
+              {confirmDialog.type === 'create' && 'Create Entry'}
+              {confirmDialog.type === 'post' && 'Post to Journal'}
+              {confirmDialog.type === 'reverse' && 'Reverse Entry'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
