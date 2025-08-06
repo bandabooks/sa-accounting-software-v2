@@ -2820,6 +2820,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Goods Receipts Routes
+  app.get('/api/goods-receipts', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const receipts = await storage.getAllGoodsReceipts();
+      res.json(receipts);
+    } catch (error) {
+      console.error('Error fetching goods receipts:', error);
+      res.status(500).json({ error: 'Failed to fetch goods receipts' });
+    }
+  });
+
+  app.get('/api/goods-receipts/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const receipt = await storage.getGoodsReceipt(parseInt(req.params.id));
+      if (!receipt) {
+        return res.status(404).json({ error: 'Goods receipt not found' });
+      }
+      res.json(receipt);
+    } catch (error) {
+      console.error('Error fetching goods receipt:', error);
+      res.status(500).json({ error: 'Failed to fetch goods receipt' });
+    }
+  });
+
+  app.post('/api/goods-receipts', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { receipt, items } = req.body;
+      receipt.companyId = req.user!.companyId;
+      
+      // Auto-generate receipt number
+      if (!receipt.receiptNumber) {
+        const sequence = await storage.getNextSequence('GR', req.user!.companyId!);
+        receipt.receiptNumber = sequence;
+      }
+      
+      const newReceipt = await storage.createGoodsReceipt(receipt, items);
+      res.status(201).json(newReceipt);
+    } catch (error) {
+      console.error('Error creating goods receipt:', error);
+      res.status(500).json({ error: 'Failed to create goods receipt' });
+    }
+  });
+
+  app.put('/api/goods-receipts/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const updatedReceipt = await storage.updateGoodsReceipt(parseInt(req.params.id), req.body);
+      if (!updatedReceipt) {
+        return res.status(404).json({ error: 'Goods receipt not found' });
+      }
+      res.json(updatedReceipt);
+    } catch (error) {
+      console.error('Error updating goods receipt:', error);
+      res.status(500).json({ error: 'Failed to update goods receipt' });
+    }
+  });
+
+  app.delete('/api/goods-receipts/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const success = await storage.deleteGoodsReceipt(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ error: 'Goods receipt not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting goods receipt:', error);
+      res.status(500).json({ error: 'Failed to delete goods receipt' });
+    }
+  });
+
+  // Purchase Requisitions Routes
+  app.get('/api/purchase-requisitions', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const requisitions = await storage.getAllPurchaseRequisitions();
+      res.json(requisitions);
+    } catch (error) {
+      console.error('Error fetching purchase requisitions:', error);
+      res.status(500).json({ error: 'Failed to fetch purchase requisitions' });
+    }
+  });
+
+  app.get('/api/purchase-requisitions/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const requisition = await storage.getPurchaseRequisition(parseInt(req.params.id));
+      if (!requisition) {
+        return res.status(404).json({ error: 'Purchase requisition not found' });
+      }
+      res.json(requisition);
+    } catch (error) {
+      console.error('Error fetching purchase requisition:', error);
+      res.status(500).json({ error: 'Failed to fetch purchase requisition' });
+    }
+  });
+
+  app.post('/api/purchase-requisitions', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { requisition, items } = req.body;
+      requisition.companyId = req.user!.companyId;
+      requisition.requestedBy = req.user!.id;
+      
+      // Auto-generate requisition number
+      if (!requisition.requisitionNumber) {
+        const sequence = await storage.getNextSequence('PR', req.user!.companyId!);
+        requisition.requisitionNumber = sequence;
+      }
+      
+      const newRequisition = await storage.createPurchaseRequisition(requisition, items);
+      res.status(201).json(newRequisition);
+    } catch (error) {
+      console.error('Error creating purchase requisition:', error);
+      res.status(500).json({ error: 'Failed to create purchase requisition' });
+    }
+  });
+
+  app.put('/api/purchase-requisitions/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const updatedRequisition = await storage.updatePurchaseRequisition(parseInt(req.params.id), req.body);
+      if (!updatedRequisition) {
+        return res.status(404).json({ error: 'Purchase requisition not found' });
+      }
+      res.json(updatedRequisition);
+    } catch (error) {
+      console.error('Error updating purchase requisition:', error);
+      res.status(500).json({ error: 'Failed to update purchase requisition' });
+    }
+  });
+
+  app.post('/api/purchase-requisitions/:id/approve', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const approvedRequisition = await storage.approvePurchaseRequisition(parseInt(req.params.id), req.user!.id);
+      if (!approvedRequisition) {
+        return res.status(404).json({ error: 'Purchase requisition not found' });
+      }
+      res.json(approvedRequisition);
+    } catch (error) {
+      console.error('Error approving purchase requisition:', error);
+      res.status(500).json({ error: 'Failed to approve purchase requisition' });
+    }
+  });
+
+  app.post('/api/purchase-requisitions/:id/reject', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { rejectionReason } = req.body;
+      const rejectedRequisition = await storage.rejectPurchaseRequisition(
+        parseInt(req.params.id), 
+        req.user!.id, 
+        rejectionReason
+      );
+      if (!rejectedRequisition) {
+        return res.status(404).json({ error: 'Purchase requisition not found' });
+      }
+      res.json(rejectedRequisition);
+    } catch (error) {
+      console.error('Error rejecting purchase requisition:', error);
+      res.status(500).json({ error: 'Failed to reject purchase requisition' });
+    }
+  });
+
+  app.delete('/api/purchase-requisitions/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const success = await storage.deletePurchaseRequisition(parseInt(req.params.id));
+      if (!success) {
+        return res.status(404).json({ error: 'Purchase requisition not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting purchase requisition:', error);
+      res.status(500).json({ error: 'Failed to delete purchase requisition' });
+    }
+  });
+
   // Initialize PayFast service
   let payfastService: any = null;
   try {

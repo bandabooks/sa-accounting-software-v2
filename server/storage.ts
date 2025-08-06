@@ -176,6 +176,18 @@ import {
   type InsertPurchaseOrderItem,
   type SupplierPayment,
   type InsertSupplierPayment,
+  type GoodsReceipt,
+  type InsertGoodsReceipt,
+  type GoodsReceiptItem,
+  type InsertGoodsReceiptItem,
+  type GoodsReceiptWithSupplier,
+  type GoodsReceiptWithItems,
+  type PurchaseRequisition,
+  type InsertPurchaseRequisition,
+  type PurchaseRequisitionItem,
+  type InsertPurchaseRequisitionItem,
+  type PurchaseRequisitionWithUser,
+  type PurchaseRequisitionWithItems,
   type ProductCategory,
   type InsertProductCategory,
   type Product,
@@ -3227,6 +3239,255 @@ export class DatabaseStorage implements IStorage {
   async deletePurchaseOrderItem(id: number): Promise<boolean> {
     const result = await db.delete(purchaseOrderItems).where(eq(purchaseOrderItems.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // Goods Receipts Management
+  async getAllGoodsReceipts(): Promise<GoodsReceiptWithSupplier[]> {
+    const results = await db
+      .select()
+      .from(goodsReceipts)
+      .leftJoin(suppliers, eq(goodsReceipts.supplierId, suppliers.id))
+      .leftJoin(users, eq(goodsReceipts.receivedBy, users.id))
+      .orderBy(desc(goodsReceipts.createdAt));
+
+    return results.map((result) => ({
+      ...result.goods_receipts,
+      supplier: result.suppliers || {
+        id: 0,
+        name: 'Unknown Supplier',
+        email: null,
+        phone: null,
+        address: null,
+        city: null,
+        postalCode: null,
+        vatNumber: null,
+        paymentTerms: null,
+        category: null,
+        notes: null,
+        isActive: null,
+        createdAt: null,
+      },
+      receivedByUser: result.users ? {
+        id: result.users.id,
+        username: result.users.username,
+        name: result.users.name,
+        email: result.users.email,
+      } : null,
+    }));
+  }
+
+  async getGoodsReceipt(id: number): Promise<GoodsReceiptWithItems | undefined> {
+    const [result] = await db
+      .select()
+      .from(goodsReceipts)
+      .leftJoin(suppliers, eq(goodsReceipts.supplierId, suppliers.id))
+      .leftJoin(purchaseOrders, eq(goodsReceipts.purchaseOrderId, purchaseOrders.id))
+      .where(eq(goodsReceipts.id, id));
+
+    if (!result) return undefined;
+
+    const items = await db
+      .select()
+      .from(goodsReceiptItems)
+      .where(eq(goodsReceiptItems.goodsReceiptId, id));
+
+    return {
+      ...result.goods_receipts,
+      supplier: result.suppliers || {
+        id: 0,
+        name: 'Unknown Supplier',
+        email: null,
+        phone: null,
+        address: null,
+        city: null,
+        postalCode: null,
+        vatNumber: null,
+        paymentTerms: null,
+        category: null,
+        notes: null,
+        isActive: null,
+        createdAt: null,
+      },
+      purchaseOrder: result.purchase_orders || undefined,
+      items,
+    };
+  }
+
+  async createGoodsReceipt(receipt: InsertGoodsReceipt, items: Omit<InsertGoodsReceiptItem, 'goodsReceiptId'>[]): Promise<GoodsReceiptWithItems> {
+    const [newReceipt] = await db
+      .insert(goodsReceipts)
+      .values(receipt)
+      .returning();
+
+    const receiptItems = await db
+      .insert(goodsReceiptItems)
+      .values(items.map(item => ({ ...item, goodsReceiptId: newReceipt.id })))
+      .returning();
+
+    const supplier = await this.getSupplier(newReceipt.supplierId);
+    if (!supplier) {
+      throw new Error('Supplier not found');
+    }
+
+    return { ...newReceipt, items: receiptItems, supplier };
+  }
+
+  async updateGoodsReceipt(id: number, receipt: Partial<InsertGoodsReceipt>): Promise<GoodsReceipt | undefined> {
+    const [updated] = await db
+      .update(goodsReceipts)
+      .set(receipt)
+      .where(eq(goodsReceipts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteGoodsReceipt(id: number): Promise<boolean> {
+    // First delete all items
+    await db.delete(goodsReceiptItems).where(eq(goodsReceiptItems.goodsReceiptId, id));
+    
+    // Then delete the receipt
+    const result = await db.delete(goodsReceipts).where(eq(goodsReceipts.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Purchase Requisitions Management
+  async getAllPurchaseRequisitions(): Promise<PurchaseRequisitionWithUser[]> {
+    const results = await db
+      .select()
+      .from(purchaseRequisitions)
+      .leftJoin(users, eq(purchaseRequisitions.requestedBy, users.id))
+      .orderBy(desc(purchaseRequisitions.createdAt));
+
+    return results.map((result) => ({
+      ...result.purchase_requisitions,
+      requestedByUser: result.users || {
+        id: 0,
+        username: 'unknown',
+        name: 'Unknown User',
+        email: null,
+        role: 'user',
+        permissions: [],
+        companyId: null,
+        createdAt: null,
+        updatedAt: null,
+      },
+    }));
+  }
+
+  async getPurchaseRequisition(id: number): Promise<PurchaseRequisitionWithItems | undefined> {
+    const [result] = await db
+      .select()
+      .from(purchaseRequisitions)
+      .leftJoin(users, eq(purchaseRequisitions.requestedBy, users.id))
+      .where(eq(purchaseRequisitions.id, id));
+
+    if (!result) return undefined;
+
+    const items = await db
+      .select()
+      .from(purchaseRequisitionItems)
+      .leftJoin(suppliers, eq(purchaseRequisitionItems.suggestedSupplierId, suppliers.id))
+      .where(eq(purchaseRequisitionItems.requisitionId, id));
+
+    return {
+      ...result.purchase_requisitions,
+      requestedByUser: result.users || {
+        id: 0,
+        username: 'unknown',
+        name: 'Unknown User',
+        email: null,
+        role: 'user',
+        permissions: [],
+        companyId: null,
+        createdAt: null,
+        updatedAt: null,
+      },
+      items: items.map(item => ({
+        ...item.purchase_requisition_items,
+        suggestedSupplier: item.suppliers,
+      })),
+    };
+  }
+
+  async createPurchaseRequisition(requisition: InsertPurchaseRequisition, items: Omit<InsertPurchaseRequisitionItem, 'requisitionId'>[]): Promise<PurchaseRequisitionWithItems> {
+    const [newRequisition] = await db
+      .insert(purchaseRequisitions)
+      .values(requisition)
+      .returning();
+
+    const requisitionItems = await db
+      .insert(purchaseRequisitionItems)
+      .values(items.map(item => ({ ...item, requisitionId: newRequisition.id })))
+      .returning();
+
+    const user = await this.getUserById(newRequisition.requestedBy);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return { 
+      ...newRequisition, 
+      items: requisitionItems,
+      requestedByUser: user
+    };
+  }
+
+  async updatePurchaseRequisition(id: number, requisition: Partial<InsertPurchaseRequisition>): Promise<PurchaseRequisition | undefined> {
+    const [updated] = await db
+      .update(purchaseRequisitions)
+      .set(requisition)
+      .where(eq(purchaseRequisitions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePurchaseRequisition(id: number): Promise<boolean> {
+    // First delete all items
+    await db.delete(purchaseRequisitionItems).where(eq(purchaseRequisitionItems.requisitionId, id));
+    
+    // Then delete the requisition
+    const result = await db.delete(purchaseRequisitions).where(eq(purchaseRequisitions.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async approvePurchaseRequisition(id: number, approvedBy: number): Promise<PurchaseRequisition | undefined> {
+    const [updated] = await db
+      .update(purchaseRequisitions)
+      .set({
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+      })
+      .where(eq(purchaseRequisitions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async rejectPurchaseRequisition(id: number, rejectedBy: number, rejectionReason: string): Promise<PurchaseRequisition | undefined> {
+    const [updated] = await db
+      .update(purchaseRequisitions)
+      .set({
+        status: 'rejected',
+        rejectedBy,
+        rejectedAt: new Date(),
+        rejectionReason,
+      })
+      .where(eq(purchaseRequisitions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async convertRequisitionToPurchaseOrder(requisitionId: number, purchaseOrderId: number): Promise<PurchaseRequisition | undefined> {
+    const [updated] = await db
+      .update(purchaseRequisitions)
+      .set({
+        status: 'converted_to_po',
+        convertedToPurchaseOrderId: purchaseOrderId,
+        convertedAt: new Date(),
+      })
+      .where(eq(purchaseRequisitions.id, requisitionId))
+      .returning();
+    return updated || undefined;
   }
 
   // Supplier Payments

@@ -123,6 +123,8 @@ import Payments from "@/pages/payments";
 import SalesReports from "@/pages/sales-reports";
 import PurchaseDashboard from "@/pages/purchase-dashboard";
 import PurchaseReports from "@/pages/purchase-reports";
+import GoodsReceipts from "@/pages/goods-receipts";
+import PurchaseRequisitions from "@/pages/purchase-requisitions";
 
 import Warehouses from "@/pages/warehouses";
 import LotBatchTracking from "@/pages/lot-batch-tracking";
@@ -368,6 +370,16 @@ function AuthenticatedApp() {
         <Route path="/purchase-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <PurchaseReports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/goods-receipts">
+          <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
+            <GoodsReceipts />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/purchase-requisitions">
+          <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
+            <PurchaseRequisitions />
           </ProtectedRoute>
         </Route>
         <Route path="/products">

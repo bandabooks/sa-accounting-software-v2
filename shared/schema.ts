@@ -1069,6 +1069,95 @@ export const purchaseOrderItems = pgTable("purchase_order_items", {
   companyIdx: index("purchase_order_items_company_idx").on(table.companyId),
 }));
 
+// Goods Receipts (Purchase Receipts)
+export const goodsReceipts = pgTable("goods_receipts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  receiptNumber: text("receipt_number").notNull(),
+  purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id),
+  supplierId: integer("supplier_id").notNull().references(() => suppliers.id),
+  receivedDate: timestamp("received_date").notNull(),
+  receivedBy: integer("received_by").references(() => users.id).notNull(),
+  status: text("status").notNull().default("pending"), // pending, partial, completed, cancelled
+  notes: text("notes"),
+  qualityCheckPassed: boolean("quality_check_passed").default(true),
+  qualityCheckNotes: text("quality_check_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("goods_receipts_company_idx").on(table.companyId),
+  purchaseOrderIdx: index("goods_receipts_po_idx").on(table.purchaseOrderId),
+  supplierIdx: index("goods_receipts_supplier_idx").on(table.supplierId),
+}));
+
+export const goodsReceiptItems = pgTable("goods_receipt_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  goodsReceiptId: integer("goods_receipt_id").notNull().references(() => goodsReceipts.id),
+  purchaseOrderItemId: integer("purchase_order_item_id").references(() => purchaseOrderItems.id),
+  description: text("description").notNull(),
+  orderedQuantity: decimal("ordered_quantity", { precision: 10, scale: 2 }).notNull(),
+  receivedQuantity: decimal("received_quantity", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  qualityStatus: text("quality_status").default("accepted"), // accepted, rejected, on_hold
+  rejectionReason: text("rejection_reason"),
+  lotNumber: text("lot_number"),
+  batchNumber: text("batch_number"),
+  expiryDate: timestamp("expiry_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("goods_receipt_items_company_idx").on(table.companyId),
+  receiptIdx: index("goods_receipt_items_receipt_idx").on(table.goodsReceiptId),
+}));
+
+// Purchase Requisitions
+export const purchaseRequisitions = pgTable("purchase_requisitions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  requisitionNumber: text("requisition_number").notNull(),
+  requestedBy: integer("requested_by").references(() => users.id).notNull(),
+  department: text("department"),
+  requestDate: timestamp("request_date").notNull(),
+  requiredDate: timestamp("required_date"),
+  status: text("status").notNull().default("draft"), // draft, pending_approval, approved, rejected, converted_to_po, cancelled
+  priority: text("priority").default("normal"), // low, normal, high, urgent
+  justification: text("justification"),
+  totalEstimatedCost: decimal("total_estimated_cost", { precision: 10, scale: 2 }).default("0.00"),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  convertedToPurchaseOrderId: integer("converted_to_purchase_order_id").references(() => purchaseOrders.id),
+  convertedAt: timestamp("converted_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyRequisitionUnique: unique().on(table.companyId, table.requisitionNumber),
+  companyIdx: index("purchase_requisitions_company_idx").on(table.companyId),
+  requestedByIdx: index("purchase_requisitions_requested_by_idx").on(table.requestedBy),
+  statusIdx: index("purchase_requisitions_status_idx").on(table.status),
+}));
+
+export const purchaseRequisitionItems = pgTable("purchase_requisition_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  requisitionId: integer("requisition_id").notNull().references(() => purchaseRequisitions.id),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  estimatedUnitPrice: decimal("estimated_unit_price", { precision: 10, scale: 2 }),
+  estimatedTotal: decimal("estimated_total", { precision: 10, scale: 2 }),
+  suggestedSupplierId: integer("suggested_supplier_id").references(() => suppliers.id),
+  urgency: text("urgency").default("normal"), // low, normal, high
+  specifications: text("specifications"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("purchase_requisition_items_company_idx").on(table.companyId),
+  requisitionIdx: index("purchase_requisition_items_requisition_idx").on(table.requisitionId),
+}));
+
 export const supplierPayments = pgTable("supplier_payments", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
@@ -1881,6 +1970,39 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   payments: many(payments),
 }));
 
+// Insert schemas for new tables
+export const insertGoodsReceiptSchema = createInsertSchema(goodsReceipts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertGoodsReceiptItemSchema = createInsertSchema(goodsReceiptItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPurchaseRequisitionSchema = createInsertSchema(purchaseRequisitions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPurchaseRequisitionItemSchema = createInsertSchema(purchaseRequisitionItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports
+export type GoodsReceipt = typeof goodsReceipts.$inferSelect;
+export type InsertGoodsReceipt = z.infer<typeof insertGoodsReceiptSchema>;
+export type GoodsReceiptItem = typeof goodsReceiptItems.$inferSelect;
+export type InsertGoodsReceiptItem = z.infer<typeof insertGoodsReceiptItemSchema>;
+export type PurchaseRequisition = typeof purchaseRequisitions.$inferSelect;
+export type InsertPurchaseRequisition = z.infer<typeof insertPurchaseRequisitionSchema>;
+export type PurchaseRequisitionItem = typeof purchaseRequisitionItems.$inferSelect;
+export type InsertPurchaseRequisitionItem = z.infer<typeof insertPurchaseRequisitionItemSchema>;
+
 // Extended types for API responses
 export type InvoiceWithCustomer = Invoice & { customer: Customer };
 export type InvoiceWithItems = Invoice & { items: InvoiceItem[]; customer: Customer };
@@ -1888,6 +2010,10 @@ export type EstimateWithCustomer = Estimate & { customer: Customer };
 export type EstimateWithItems = Estimate & { items: EstimateItem[]; customer: Customer };
 export type PurchaseOrderWithSupplier = PurchaseOrder & { supplier: Supplier };
 export type PurchaseOrderWithItems = PurchaseOrder & { items: PurchaseOrderItem[]; supplier: Supplier };
+export type GoodsReceiptWithSupplier = GoodsReceipt & { supplier: Supplier };
+export type GoodsReceiptWithItems = GoodsReceipt & { items: GoodsReceiptItem[]; supplier: Supplier; purchaseOrder?: PurchaseOrder };
+export type PurchaseRequisitionWithUser = PurchaseRequisition & { requestedByUser: User };
+export type PurchaseRequisitionWithItems = PurchaseRequisition & { items: PurchaseRequisitionItem[]; requestedByUser: User };
 export type SupplierPaymentWithSupplier = SupplierPayment & { supplier: Supplier };
 export type SupplierPaymentWithPurchaseOrder = SupplierPayment & { purchaseOrder?: PurchaseOrder };
 
