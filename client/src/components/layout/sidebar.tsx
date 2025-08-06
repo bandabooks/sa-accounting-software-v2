@@ -169,7 +169,8 @@ const navigationGroups = [
     items: [
       { path: "/customer-lifecycle", label: "Customer Lifecycle", icon: TrendingUp, permission: "CUSTOMER_VIEW", module: "crm" },
       { path: "/communication-center", label: "Communication Center", icon: MessageCircle, permission: "CUSTOMER_VIEW", module: "crm" },
-      { path: "/customer-segments", label: "Customer Segments", icon: Users, permission: "CUSTOMER_VIEW", module: "crm" }
+      { path: "/customer-segments", label: "Customer Segments", icon: Users, permission: "CUSTOMER_VIEW", module: "crm" },
+      { path: "/customer-insights", label: "Customer Insights", icon: BarChart3, permission: "CUSTOMER_VIEW", module: "crm" }
     ]
   },
   {

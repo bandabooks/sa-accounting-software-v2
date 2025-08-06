@@ -237,11 +237,13 @@ export default function CommunicationCenter() {
                   <SelectValue placeholder="All Channels" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Channels</SelectItem>
+                  <SelectItem value="all">All Channels</SelectItem>
                   {COMMUNICATION_CHANNELS.map(channel => (
                     <SelectItem key={channel.value} value={channel.value}>
-                      <channel.icon className="w-4 h-4 mr-2 inline" />
-                      {channel.label}
+                      <div className="flex items-center">
+                        <channel.icon className="w-4 h-4 mr-2" />
+                        {channel.label}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -251,11 +253,13 @@ export default function CommunicationCenter() {
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   {COMMUNICATION_STATUS.map(status => (
                     <SelectItem key={status.value} value={status.value}>
-                      <status.icon className="w-4 h-4 mr-2 inline" />
-                      {status.label}
+                      <div className="flex items-center">
+                        <status.icon className="w-4 h-4 mr-2" />
+                        {status.label}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -452,8 +456,10 @@ export default function CommunicationCenter() {
                     <SelectContent>
                       {COMMUNICATION_CHANNELS.map(channel => (
                         <SelectItem key={channel.value} value={channel.value}>
-                          <channel.icon className="w-4 h-4 mr-2 inline" />
-                          {channel.label}
+                          <div className="flex items-center">
+                            <channel.icon className="w-4 h-4 mr-2" />
+                            {channel.label}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -96,6 +96,7 @@ import ComplianceClients from "@/pages/compliance-clients";
 import CustomerLifecycle from "@/pages/customer-lifecycle";
 import CommunicationCenter from "@/pages/communication-center";
 import CustomerSegments from "@/pages/customer-segments";
+import CustomerInsights from "@/pages/customer-insights";
 import SARSCompliance from "@/pages/sars-compliance";
 import SARSIntegration from "@/pages/sars-integration";
 import Integrations from "@/pages/integrations";
@@ -419,6 +420,11 @@ function AuthenticatedApp() {
         <Route path="/customer-segments">
           <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_VIEW}>
             <CustomerSegments />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customer-insights">
+          <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_VIEW}>
+            <CustomerInsights />
           </ProtectedRoute>
         </Route>
         <Route path="/expenses">

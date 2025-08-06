@@ -4801,8 +4801,8 @@ export class DatabaseStorage implements IStorage {
         email: customers.email,
         phone: customers.phone,
         category: customers.category,
-        lifecycle_stage: customers.lifecycleStage,
-        lead_source: customers.leadSource,
+        lifecycle_stage: sql<string>`COALESCE(${customers.lifecycleStage}, 'prospect')`,
+        lead_source: sql<string>`COALESCE(${customers.leadSource}, 'direct')`,
         assigned_to: customers.assignedTo,
         last_contact_date: customers.lastContactDate,
         next_follow_up_date: customers.nextFollowUpDate,
@@ -4822,21 +4822,21 @@ export class DatabaseStorage implements IStorage {
   async getCustomerLifecycleStats(companyId: number) {
     const stages = await db
       .select({
-        stage: customers.lifecycleStage,
+        stage: sql<string>`COALESCE(${customers.lifecycleStage}, 'prospect')`,
         count: sql<number>`count(*)`
       })
       .from(customers)
       .where(eq(customers.companyId, companyId))
-      .groupBy(customers.lifecycleStage);
+      .groupBy(sql`COALESCE(${customers.lifecycleStage}, 'prospect')`);
 
     const leadSources = await db
       .select({
-        source: customers.leadSource,
+        source: sql<string>`COALESCE(${customers.leadSource}, 'direct')`,
         count: sql<number>`count(*)`
       })
       .from(customers)
       .where(eq(customers.companyId, companyId))
-      .groupBy(customers.leadSource);
+      .groupBy(sql`COALESCE(${customers.leadSource}, 'direct')`);
 
     const totalCustomers = await db
       .select({ count: sql<number>`count(*)` })
