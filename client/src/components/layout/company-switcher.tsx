@@ -307,17 +307,25 @@ export default function CompanySwitcher() {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="outline" 
-          className="flex items-center space-x-3 bg-white hover:bg-gray-50 border-gray-200 shadow-sm h-12 px-4 min-w-[200px] justify-between"
+          className="flex items-center space-x-3 bg-white hover:bg-gray-50 border-gray-200 shadow-sm h-12 px-4 min-w-[240px] justify-between ring-1 ring-green-200"
         >
           <div className="flex items-center space-x-3">
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-white text-sm font-medium">
+              <AvatarFallback className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-medium">
                 {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
               </AvatarFallback>
             </Avatar>
             <div className="text-left">
-              <div className="text-sm font-medium text-gray-900 truncate max-w-[140px]">
-                {activeCompany.displayName || activeCompany.name}
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium text-gray-900 truncate max-w-[140px]">
+                  {activeCompany.displayName || activeCompany.name}
+                </div>
+                <Badge 
+                  variant="secondary" 
+                  className="bg-green-100 text-green-800 border-green-200 text-xs px-2 py-0.5 font-medium"
+                >
+                  Active
+                </Badge>
               </div>
               {activeCompany.industry && (
                 <div className="text-xs text-gray-500 truncate max-w-[140px]">
@@ -390,7 +398,15 @@ export default function CompanySwitcher() {
                         {company.displayName || company.name}
                       </span>
                       {isActive && (
-                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <div className="flex items-center gap-1">
+                          <Badge 
+                            variant="secondary" 
+                            className="bg-green-100 text-green-800 border-green-200 text-xs px-2 py-0.5 font-medium"
+                          >
+                            Active
+                          </Badge>
+                          <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        </div>
                       )}
                     </div>
                     

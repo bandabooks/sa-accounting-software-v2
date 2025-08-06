@@ -68,14 +68,14 @@ export default function Header() {
           )}
         </div>
         <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-          {/* Global Search - Hidden on very small screens */}
+          {/* Professional Company Switcher - Always visible */}
           <div className="hidden sm:block">
-            <GlobalSearch />
+            <CompanySwitcher />
           </div>
           
-          {/* Company Switcher - Hidden on very small screens */}
-          <div className="hidden xs:block">
-            <CompanySwitcher />
+          {/* Global Search */}
+          <div className="hidden md:block">
+            <GlobalSearch />
           </div>
           
           {/* Onboarding Help Button */}
