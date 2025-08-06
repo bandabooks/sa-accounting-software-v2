@@ -6,7 +6,7 @@ import {
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
-  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle
+  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -48,6 +48,8 @@ const navigationGroups = [
       { path: "/purchase-dashboard", label: "Purchase Dashboard", icon: BarChart3, permission: "DASHBOARD_VIEW", module: "purchases" },
       { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" },
       { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/goods-receipts", label: "Goods Receipts", icon: PackageCheck, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/purchase-requisitions", label: "Purchase Requisitions", icon: FileText, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
       { path: "/payment-flows", label: "Payment Flows", icon: CreditCard, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
       { path: "/three-way-matching", label: "3-Way Matching", icon: CheckCircle, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
       { path: "/exception-dashboard", label: "Exception Dashboard", icon: Shield, permission: "EXCEPTIONS_VIEW", module: "purchases" },
