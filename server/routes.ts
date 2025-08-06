@@ -5606,16 +5606,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req as AuthenticatedRequest).user?.id || 1;
       const { entry, lines } = req.body;
       
+      console.log("Journal entry request body:", req.body);
+      console.log("Entry data:", entry);
+      console.log("Lines data:", lines);
+      
       const validatedEntry = insertJournalEntrySchema.parse({ 
         ...entry, 
         companyId,
         createdBy: userId 
       });
       
+      console.log("Validated entry:", validatedEntry);
+      
       const journalEntry = await storage.createJournalEntry(validatedEntry, lines);
       res.status(201).json(journalEntry);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Journal entry validation errors:", error.errors);
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
       console.error("Error creating journal entry:", error);
