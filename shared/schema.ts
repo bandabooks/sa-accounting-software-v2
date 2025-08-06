@@ -837,6 +837,7 @@ export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(), // Client/Company reference
   supplierId: integer("supplier_id"), // Reference to supplier
+  bankAccountId: integer("bank_account_id").references(() => bankAccounts.id), // Reference to bank account used for payment
   description: text("description").notNull(),
   categoryId: integer("category_id"), // Reference to Chart of Accounts
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Gross amount
@@ -844,7 +845,7 @@ export const expenses = pgTable("expenses", {
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   expenseDate: date("expense_date").notNull(),
-  isPaid: boolean("is_paid").default(false), // Paid status
+  paidStatus: text("paid_status").notNull().default("Unpaid"), // 'Paid', 'Unpaid', 'Partially Paid'
   taxDeductible: boolean("tax_deductible").default(true), // Tax deductible checkbox
   attachmentUrl: text("attachment_url"), // File upload URL
   createdBy: integer("created_by").notNull(), // User who created the expense
@@ -854,6 +855,7 @@ export const expenses = pgTable("expenses", {
   companyIdx: index("expenses_company_idx").on(table.companyId),
   supplierIdx: index("expenses_supplier_idx").on(table.supplierId),
   categoryIdx: index("expenses_category_idx").on(table.categoryId),
+  bankAccountIdx: index("expenses_bank_account_idx").on(table.bankAccountId),
   dateIdx: index("expenses_date_idx").on(table.expenseDate),
 }));
 

@@ -297,21 +297,7 @@ export default function EnhancedExpensesPage() {
               </SelectContent>
             </Select>
 
-            {user?.role === 'super_admin' && (companies as any) && (
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Company" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all_companies">All Companies</SelectItem>
-                  {(companies as any)?.map((company: any) => (
-                    <SelectItem key={company.companyId} value={company.companyId.toString()}>
-                      {company.company?.name || company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {/* Company filter removed - company context established at login */}
           </div>
         </CardContent>
       </Card>
