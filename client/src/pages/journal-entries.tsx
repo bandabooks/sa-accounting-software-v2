@@ -179,6 +179,9 @@ export default function JournalEntries() {
       ...data,
       entry: {
         ...data.entry,
+        transactionDate: data.entry.transactionDate instanceof Date 
+          ? data.entry.transactionDate.toISOString() 
+          : data.entry.transactionDate,
         totalDebit: totalDebits.toFixed(2),
         totalCredit: totalCredits.toFixed(2),
       },
