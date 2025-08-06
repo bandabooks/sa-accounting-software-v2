@@ -1984,8 +1984,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate internal expense reference number
       const internalExpenseRef = await storage.generateExpenseReference(req.user.companyId);
       
+      // If categoryId is provided but category is not, fetch the category name
+      let categoryName = req.body.category;
+      if (req.body.categoryId && !categoryName) {
+        const account = await storage.getChartOfAccount(req.body.categoryId);
+        categoryName = account?.accountName || "General";
+      }
+      
       const validatedData = insertExpenseSchema.parse({
         ...req.body,
+        category: categoryName,
         companyId: req.user.companyId,
         createdBy: req.user.id,
         internalExpenseRef,
