@@ -141,8 +141,8 @@ export default function JournalEntries() {
     resolver: zodResolver(journalEntryWithLinesSchema),
     defaultValues: {
       entry: {
-        entryNumber: "",
-        transactionDate: new Date(),
+        entryNumber: `je${Date.now().toString().slice(-8)}`,
+        transactionDate: new Date().toISOString().split('T')[0],
         description: "",
         reference: "",
         totalDebit: "0.00",
@@ -176,20 +176,22 @@ export default function JournalEntries() {
 
   const onSubmit = (data: JournalEntryFormData) => {
     const entryData = {
-      ...data,
       entry: {
-        ...data.entry,
-        transactionDate: data.entry.transactionDate instanceof Date 
-          ? data.entry.transactionDate.toISOString().split('T')[0]
-          : new Date(data.entry.transactionDate).toISOString().split('T')[0],
+        entryNumber: data.entry.entryNumber,
+        transactionDate: data.entry.transactionDate,
+        description: data.entry.description,
+        reference: data.entry.reference || "",
         totalDebit: totalDebits.toFixed(2),
         totalCredit: totalCredits.toFixed(2),
+        sourceModule: "manual",
+        sourceId: null,
       },
       lines: data.lines.map(line => ({
-        ...line,
         accountId: parseInt(line.accountId.toString()),
+        description: line.description || "",
         debitAmount: parseFloat(line.debitAmount || "0").toFixed(2),
         creditAmount: parseFloat(line.creditAmount || "0").toFixed(2),
+        reference: line.reference || "",
       })),
     };
     createMutation.mutate(entryData);
