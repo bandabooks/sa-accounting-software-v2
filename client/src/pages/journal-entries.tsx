@@ -175,26 +175,29 @@ export default function JournalEntries() {
   });
 
   const onSubmit = (data: JournalEntryFormData) => {
-    const entryData = {
-      entry: {
-        entryNumber: data.entry.entryNumber,
-        transactionDate: data.entry.transactionDate,
-        description: data.entry.description,
-        reference: data.entry.reference || "",
-        totalDebit: totalDebits.toFixed(2),
-        totalCredit: totalCredits.toFixed(2),
-        sourceModule: "manual",
-        sourceId: null,
-      },
-      lines: data.lines.map(line => ({
-        accountId: parseInt(line.accountId.toString()),
-        description: line.description || "",
-        debitAmount: parseFloat(line.debitAmount || "0").toFixed(2),
-        creditAmount: parseFloat(line.creditAmount || "0").toFixed(2),
-        reference: line.reference || "",
-      })),
-    };
-    createMutation.mutate(entryData);
+    const confirmed = confirm(`Are you sure you want to create journal entry "${data.entry.entryNumber}" with total amount ${formatCurrency(totalDebits.toFixed(2))}?`);
+    if (confirmed) {
+      const entryData = {
+        entry: {
+          entryNumber: data.entry.entryNumber,
+          transactionDate: data.entry.transactionDate,
+          description: data.entry.description,
+          reference: data.entry.reference || "",
+          totalDebit: totalDebits.toFixed(2),
+          totalCredit: totalCredits.toFixed(2),
+          sourceModule: "manual",
+          sourceId: null,
+        },
+        lines: data.lines.map(line => ({
+          accountId: parseInt(line.accountId.toString()),
+          description: line.description || "",
+          debitAmount: parseFloat(line.debitAmount || "0").toFixed(2),
+          creditAmount: parseFloat(line.creditAmount || "0").toFixed(2),
+          reference: line.reference || "",
+        })),
+      };
+      createMutation.mutate(entryData);
+    }
   };
 
   const addLine = () => {
@@ -214,9 +217,12 @@ export default function JournalEntries() {
   };
 
   const handleReverse = (entry: JournalEntryWithLines) => {
-    const description = prompt(`Enter a description for the reversal of journal entry "${entry.entryNumber}":`);
-    if (description) {
-      reverseMutation.mutate({ id: entry.id, description });
+    const confirmed = confirm(`Are you sure you want to reverse journal entry "${entry.entryNumber}"? This will create a new reversing entry.`);
+    if (confirmed) {
+      const description = prompt(`Enter a description for the reversal of journal entry "${entry.entryNumber}":`);
+      if (description && description.trim() !== "") {
+        reverseMutation.mutate({ id: entry.id, description: description.trim() });
+      }
     }
   };
 
