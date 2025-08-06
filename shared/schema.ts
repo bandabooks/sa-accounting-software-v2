@@ -846,8 +846,10 @@ export const expenses = pgTable("expenses", {
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   expenseDate: date("expense_date").notNull(),
   paidStatus: text("paid_status").notNull().default("Unpaid"), // 'Paid', 'Unpaid', 'Partially Paid'
-  taxDeductible: boolean("tax_deductible").default(true), // Tax deductible checkbox
   attachmentUrl: text("attachment_url"), // File upload URL
+  // New fields for standalone expense module
+  supplierInvoiceNumber: text("supplier_invoice_number"), // Supplier's invoice/reference number with duplicate prevention
+  internalExpenseRef: text("internal_expense_ref").notNull(), // Auto-generated internal reference (EXP-2025-0001)
   createdBy: integer("created_by").notNull(), // User who created the expense
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -857,6 +859,9 @@ export const expenses = pgTable("expenses", {
   categoryIdx: index("expenses_category_idx").on(table.categoryId),
   bankAccountIdx: index("expenses_bank_account_idx").on(table.bankAccountId),
   dateIdx: index("expenses_date_idx").on(table.expenseDate),
+  // Unique constraint for supplier invoice number per company to prevent duplicates
+  companySupplierInvoiceUnique: unique().on(table.companyId, table.supplierInvoiceNumber),
+  internalRefIdx: index("expenses_internal_ref_idx").on(table.internalExpenseRef),
 }));
 
 export const vatReturns = pgTable("vat_returns", {

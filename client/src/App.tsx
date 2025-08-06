@@ -24,6 +24,7 @@ import FinancialReportsDetailed from "@/pages/financial-reports-detailed";
 import BusinessReports from "@/pages/business-reports";
 import GeneralReports from "@/pages/general-reports";
 import Expenses from "@/pages/expenses";
+import ExpensesStandalone from "@/pages/expenses-standalone";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
 import PurchaseOrderCreate from "@/pages/purchase-order-create";
@@ -215,6 +216,11 @@ function AuthenticatedApp() {
         <Route path="/dashboard">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <Dashboard />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/expenses">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <ExpensesStandalone />
           </ProtectedRoute>
         </Route>
         <Route path="/invoices">

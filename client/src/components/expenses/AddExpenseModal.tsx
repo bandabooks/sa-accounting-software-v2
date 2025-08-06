@@ -25,7 +25,7 @@ interface ExpenseFormData {
   vatAmount: string;
   expenseDate: string;
   paidStatus: "Paid" | "Unpaid" | "Partially Paid";
-
+  supplierInvoiceNumber?: string; // New field for supplier invoice number
   attachmentUrl?: string;
   createdBy: number;
 }
@@ -49,6 +49,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
     vatAmount: "0.00",
     expenseDate: new Date().toISOString().split('T')[0],
     paidStatus: "Unpaid",
+    supplierInvoiceNumber: "",
     createdBy: user?.id || 0,
   });
 
@@ -227,6 +228,20 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
                 </div>
               </div>
 
+              {/* Supplier Invoice Number Field */}
+              <div className="space-y-2">
+                <Label htmlFor="supplierInvoiceNumber">Supplier Invoice Number</Label>
+                <Input
+                  id="supplierInvoiceNumber"
+                  value={formData.supplierInvoiceNumber || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, supplierInvoiceNumber: e.target.value }))}
+                  placeholder="Enter supplier's invoice number (e.g., INV-12345)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This field helps prevent duplicate entries. Each supplier invoice number must be unique per company.
+                </p>
+              </div>
+
               {/* Description Field */}
               <div className="space-y-2">
                 <Label htmlFor="description">Description *</Label>
@@ -255,7 +270,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
                   <SelectContent>
                     {expenseAccounts.map((account: any) => (
                       <SelectItem key={account.id} value={account.id.toString()}>
-                        {account.accountName}
+                        {account.accountName} ({account.accountType})
                       </SelectItem>
                     ))}
                   </SelectContent>

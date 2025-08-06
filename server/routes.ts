@@ -1967,10 +1967,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      // Check for duplicate supplier invoice number if provided
+      if (req.body.supplierInvoiceNumber) {
+        const existingExpense = await storage.getExpenseBySupplierInvoiceNumber(
+          req.user.companyId, 
+          req.body.supplierInvoiceNumber
+        );
+        if (existingExpense) {
+          return res.status(400).json({ 
+            message: "Supplier invoice number already exists",
+            details: `Invoice number "${req.body.supplierInvoiceNumber}" is already used for this company.`
+          });
+        }
+      }
+
+      // Generate internal expense reference number
+      const internalExpenseRef = await storage.generateExpenseReference(req.user.companyId);
+      
       const validatedData = insertExpenseSchema.parse({
         ...req.body,
         companyId: req.user.companyId,
-        createdBy: req.user.id
+        createdBy: req.user.id,
+        internalExpenseRef,
       });
       
       console.log("Creating expense with validated data:", validatedData);

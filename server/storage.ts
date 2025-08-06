@@ -2900,6 +2900,61 @@ export class DatabaseStorage implements IStorage {
     return newExpense;
   }
 
+  // Check for duplicate supplier invoice number
+  async getExpenseBySupplierInvoiceNumber(companyId: number, supplierInvoiceNumber: string): Promise<Expense | undefined> {
+    const [expense] = await db
+      .select()
+      .from(expenses)
+      .where(and(
+        eq(expenses.companyId, companyId),
+        eq(expenses.supplierInvoiceNumber, supplierInvoiceNumber)
+      ));
+    return expense;
+  }
+
+  // Generate internal expense reference number
+  async generateExpenseReference(companyId: number): Promise<string> {
+    const currentYear = new Date().getFullYear();
+    
+    // Get or create number sequence for expenses
+    let sequence = await db
+      .select()
+      .from(numberSequences)
+      .where(and(
+        eq(numberSequences.companyId, companyId),
+        eq(numberSequences.documentType, 'expense')
+      ));
+
+    if (sequence.length === 0) {
+      // Create new sequence for expenses
+      await db.insert(numberSequences).values({
+        companyId,
+        documentType: 'expense',
+        prefix: 'EXP',
+        nextNumber: 1,
+        format: 'prefix-year-number',
+        yearReset: true
+      });
+      return `EXP-${currentYear}-0001`;
+    }
+
+    const seq = sequence[0];
+    const nextNumber = seq.nextNumber;
+    const paddedNumber = nextNumber.toString().padStart(4, '0');
+    const reference = `${seq.prefix}-${currentYear}-${paddedNumber}`;
+
+    // Update sequence
+    await db
+      .update(numberSequences)
+      .set({ 
+        nextNumber: nextNumber + 1,
+        updatedAt: new Date()
+      })
+      .where(eq(numberSequences.id, seq.id));
+
+    return reference;
+  }
+
   private async createExpenseJournalEntry(expense: Expense): Promise<void> {
     try {
       // Create journal entry for expense
