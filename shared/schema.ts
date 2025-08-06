@@ -2844,6 +2844,8 @@ export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit(
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  transactionDate: z.string().transform((str) => new Date(str)),
 });
 
 export const insertJournalEntryLineSchema = createInsertSchema(journalEntryLines).omit({
