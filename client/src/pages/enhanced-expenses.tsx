@@ -38,8 +38,8 @@ export default function EnhancedExpensesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("current_month");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [supplierFilter, setSupplierFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("all_suppliers");
+  const [categoryFilter, setCategoryFilter] = useState("all_categories");
 
   // Fetch expenses
   const { data: expenses = [], isLoading } = useQuery({
@@ -274,7 +274,7 @@ export default function EnhancedExpensesPage() {
                 <SelectValue placeholder="Supplier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Suppliers</SelectItem>
+                <SelectItem value="all_suppliers">All Suppliers</SelectItem>
                 {(suppliers as any)?.map((supplier: any) => (
                   <SelectItem key={supplier.id} value={supplier.id.toString()}>
                     {supplier.name}
@@ -288,7 +288,7 @@ export default function EnhancedExpensesPage() {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all_categories">All Categories</SelectItem>
                 {(categories as any)?.map((category: any) => (
                   <SelectItem key={category.id} value={category.id.toString()}>
                     {category.accountName}
@@ -303,7 +303,7 @@ export default function EnhancedExpensesPage() {
                   <SelectValue placeholder="Company" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Companies</SelectItem>
+                  <SelectItem value="all_companies">All Companies</SelectItem>
                   {(companies as any)?.map((company: any) => (
                     <SelectItem key={company.companyId} value={company.companyId.toString()}>
                       {company.company?.name || company.name}
