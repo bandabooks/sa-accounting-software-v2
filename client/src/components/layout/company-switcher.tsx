@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Building2, ChevronDown, Check, ArrowRight, Plus, Sparkles } from "lucide-react";
+import { Building2, ChevronDown, Check, ArrowRight, Plus, Sparkles, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { insertCompanySchema } from "@shared/schema";
@@ -42,6 +42,7 @@ interface UserCompany {
 export default function CompanySwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -90,6 +91,22 @@ export default function CompanySwitcher() {
   const { data: activeCompany, isLoading: activeCompanyLoading } = useQuery<Company>({
     queryKey: ["/api/companies/active"],
   });
+
+  // Filter companies based on search query
+  const filteredCompanies = useMemo(() => {
+    if (!searchQuery.trim()) return userCompanies;
+    
+    const query = searchQuery.toLowerCase();
+    return userCompanies.filter(userCompany => {
+      const company = userCompany.company;
+      return (
+        company.name.toLowerCase().includes(query) ||
+        (company.displayName && company.displayName.toLowerCase().includes(query)) ||
+        (company.industry && company.industry.toLowerCase().includes(query)) ||
+        userCompany.role.toLowerCase().includes(query)
+      );
+    });
+  }, [userCompanies, searchQuery]);
 
   // Switch company mutation
   const switchCompanyMutation = useMutation({
@@ -247,7 +264,15 @@ export default function CompanySwitcher() {
 
   const handleCreateCompanyClick = () => {
     setIsOpen(false); // Close the dropdown
+    setSearchQuery(""); // Clear search
     setIsCreateDialogOpen(true); // Open the create dialog
+  };
+
+  const handleDropdownOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setSearchQuery(""); // Clear search when closing
+    }
   };
 
   // Industry options
@@ -303,7 +328,7 @@ export default function CompanySwitcher() {
 
   return (
     <>
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleDropdownOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button 
           variant="outline" 
@@ -339,6 +364,20 @@ export default function CompanySwitcher() {
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="start" className="w-80 max-h-96 overflow-y-auto">
+        {/* Search Input */}
+        <div className="p-3 border-b border-gray-100">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search companies..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 bg-gray-50 border-gray-200 focus:bg-white"
+              autoFocus={false}
+            />
+          </div>
+        </div>
+
         {/* Create Company Option - Prominent at top */}
         <div className="p-1">
           <DropdownMenuItem
@@ -361,12 +400,24 @@ export default function CompanySwitcher() {
 
         <DropdownMenuSeparator className="my-2" />
         
-        <DropdownMenuLabel className="font-semibold text-gray-900">
-          Your Companies ({userCompanies.length})
+        <DropdownMenuLabel className="font-semibold text-gray-900 flex items-center justify-between">
+          <span>Your Companies ({filteredCompanies.length})</span>
+          {searchQuery && (
+            <span className="text-xs text-gray-500 font-normal">
+              {filteredCompanies.length} of {userCompanies.length} shown
+            </span>
+          )}
         </DropdownMenuLabel>
         
         <div className="space-y-1 p-1">
-          {userCompanies.map((userCompany) => {
+          {filteredCompanies.length === 0 && searchQuery ? (
+            <div className="p-3 text-center text-gray-500">
+              <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">No companies found for "{searchQuery}"</p>
+              <p className="text-xs text-gray-400 mt-1">Try a different search term</p>
+            </div>
+          ) : (
+            filteredCompanies.map((userCompany) => {
             const company = userCompany.company;
             const isActive = company.id === activeCompany.id;
             
@@ -431,7 +482,7 @@ export default function CompanySwitcher() {
                 )}
               </DropdownMenuItem>
             );
-          })}
+          }))}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
