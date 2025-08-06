@@ -100,7 +100,7 @@ function AccountSearchSelect({
         </div>
         <div className="max-h-60 overflow-y-auto">
           {filteredAccounts.map((account) => (
-            <SelectItem key={account.id} value={account.id.toString()}>
+            <SelectItem key={`account-${account.id}`} value={account.id.toString()}>
               <div className="flex flex-col">
                 <span className="font-medium">{account.accountCode} - {account.accountName}</span>
                 <span className="text-xs text-muted-foreground">{account.accountType}</span>
@@ -133,6 +133,53 @@ export default function JournalEntriesEnhanced() {
   const { data: nextNumberData } = useQuery({
     queryKey: ["/api/journal-entries/next-number"],
     enabled: isCreateDialogOpen,
+  });
+
+  // Post entry mutation
+  const postMutation = useMutation({
+    mutationFn: async (entryId: number) => {
+      return apiRequest(`/api/journal-entries/${entryId}/post`, {
+        method: 'PUT'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
+      toast({
+        title: "Posted Successfully",
+        description: "Journal entry posted to general ledger",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to post journal entry",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Reverse entry mutation  
+  const reverseMutation = useMutation({
+    mutationFn: async ({ id, description }: { id: number; description: string }) => {
+      return apiRequest(`/api/journal-entries/${id}/reverse`, {
+        method: 'POST',
+        body: JSON.stringify({ description })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
+      toast({
+        title: "Reversed Successfully", 
+        description: "Journal entry reversed with balancing entry created",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reverse journal entry",
+        variant: "destructive",
+      });
+    }
   });
 
   const createMutation = useMutation({
@@ -693,12 +740,36 @@ export default function JournalEntriesEnhanced() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" title="Edit Entry">
                       <Edit className="h-4 w-4" />
                     </Button>
                     {!entry.isPosted && (
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        title="Post to General Ledger"
+                        onClick={() => postMutation.mutate(entry.id)}
+                        disabled={postMutation.isPending}
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
                         <FileCheck className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {entry.isPosted && !entry.isReversed && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        title="Reverse Entry"
+                        onClick={() => {
+                          const description = prompt("Reason for reversal:");
+                          if (description) {
+                            reverseMutation.mutate({ id: entry.id, description });
+                          }
+                        }}
+                        disabled={reverseMutation.isPending}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <RotateCcw className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

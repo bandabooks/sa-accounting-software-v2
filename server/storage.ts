@@ -13970,6 +13970,39 @@ export class DatabaseStorage implements IStorage {
       .from(customerPriceLists)
       .where(and(eq(customerPriceLists.customerId, customerId), eq(customerPriceLists.isActive, true)));
   }
+  async getNextSequence(prefix: string, companyId: number): Promise<string> {
+    // Get current highest number for this prefix and company
+    const [sequence] = await db.select({
+      currentNumber: numberSequences.currentNumber
+    })
+    .from(numberSequences)
+    .where(and(
+      eq(numberSequences.prefix, prefix),
+      eq(numberSequences.companyId, companyId)
+    ));
+
+    let nextNumber = 1;
+    if (sequence) {
+      nextNumber = sequence.currentNumber + 1;
+      // Update the sequence
+      await db.update(numberSequences)
+        .set({ currentNumber: nextNumber })
+        .where(and(
+          eq(numberSequences.prefix, prefix),
+          eq(numberSequences.companyId, companyId)
+        ));
+    } else {
+      // Create new sequence
+      await db.insert(numberSequences).values({
+        companyId,
+        prefix,
+        currentNumber: nextNumber,
+        format: `${prefix}{number}`
+      });
+    }
+
+    return `${prefix.toLowerCase()}${nextNumber.toString().padStart(8, '0')}`;
+  }
 }
 
 export const storage = new DatabaseStorage();

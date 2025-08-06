@@ -5551,6 +5551,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Post journal entry to general ledger
+  app.put("/api/journal-entries/:id/post", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const postedEntry = await storage.postJournalEntry(id);
+      if (!postedEntry) {
+        return res.status(404).json({ error: "Journal entry not found" });
+      }
+      res.json(postedEntry);
+    } catch (error) {
+      console.error("Error posting journal entry:", error);
+      res.status(500).json({ error: "Failed to post journal entry" });
+    }
+  });
+
+  // Reverse journal entry
+  app.post("/api/journal-entries/:id/reverse", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { description } = req.body;
+      if (!description) {
+        return res.status(400).json({ error: "Reversal description is required" });
+      }
+      const reversedEntry = await storage.reverseJournalEntry(id, description, req.user!.id!);
+      res.json(reversedEntry);
+    } catch (error) {
+      console.error("Error reversing journal entry:", error);
+      res.status(500).json({ error: "Failed to reverse journal entry" });
+    }
+  });
+
   // Create retroactive journal entries for existing invoices
   app.post("/api/journal-entries/retroactive", authenticate, async (req, res) => {
     try {
