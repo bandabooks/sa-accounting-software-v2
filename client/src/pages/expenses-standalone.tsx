@@ -101,85 +101,118 @@ export default function ExpensesStandalone() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Expenses</h1>
-          <p className="text-muted-foreground">
-            Manage your business expenses and track spending
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900">
+      <div className="space-y-8 p-6">
+        {/* Enhanced Header */}
+        <div className="flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                <DollarSign className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                  Expenses
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 text-base">
+                  Manage your business expenses and track spending
+                </p>
+              </div>
+            </div>
+          </div>
+          <Button 
+            onClick={() => setIsAddModalOpen(true)} 
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
+          >
+            <Plus className="h-5 w-5" />
+            Add New Expense
+          </Button>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add New Expense
-        </Button>
-      </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+        {/* Enhanced Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Expenses</CardTitle>
+              <div className="p-2 bg-gradient-to-r from-red-500 to-pink-600 rounded-lg">
+                <TrendingDown className="h-4 w-4 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                {formatCurrency(metrics?.totalExpenses || "0")}
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                {metrics?.expenseCount || 0} expense entries
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">This Month</CardTitle>
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg">
+                <Calendar className="h-4 w-4 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                {formatCurrency(metrics?.currentMonthExpenses || "0")}
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                Current month expenses
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Unpaid Expenses</CardTitle>
+              <div className="p-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg">
+                <CreditCard className="h-4 w-4 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                {formatCurrency(metrics?.unpaidExpenses || "0")}
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                Outstanding payments
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Average Expense</CardTitle>
+              <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                <Receipt className="h-4 w-4 text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                {formatCurrency(metrics?.averageExpense || "0")}
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                Per expense entry
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Enhanced Filters and Search */}
+        <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-lg rounded-2xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
+                <Filter className="h-5 w-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                Filters & Search
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics?.totalExpenses || "0")}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics?.expenseCount || 0} expense entries
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics?.currentMonthExpenses || "0")}</div>
-            <p className="text-xs text-muted-foreground">
-              Current month expenses
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unpaid Expenses</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics?.unpaidExpenses || "0")}</div>
-            <p className="text-xs text-muted-foreground">
-              Outstanding payments
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Expense</CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics?.averageExpense || "0")}</div>
-            <p className="text-xs text-muted-foreground">
-              Per expense entry
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Search</label>
@@ -261,37 +294,48 @@ export default function ExpensesStandalone() {
         </CardContent>
       </Card>
 
-      {/* Expenses Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Expense Entries ({filteredExpenses.length})
-          </CardTitle>
-          <CardDescription>
-            Track and manage all your business expenses
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Enhanced Expenses Table */}
+        <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-lg rounded-2xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                Expense Entries ({filteredExpenses.length})
+              </span>
+            </CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              Track and manage all your business expenses
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : filteredExpenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-              <Receipt className="h-12 w-12 mb-4" />
-              <p>No expenses found</p>
-              <p className="text-sm">Create your first expense entry</p>
+            <div className="flex flex-col items-center justify-center h-48 text-gray-500 dark:text-gray-400">
+              <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-2xl mb-4">
+                <Receipt className="h-16 w-16" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No expenses found</h3>
+              <p className="text-sm text-center max-w-md">
+                Create your first expense entry to start tracking your business spending
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {filteredExpenses.map((expense) => (
-                <Card key={expense.id} className="p-4">
+                <Card key={expense.id} className="p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <h3 className="font-semibold">{expense.description}</h3>
-                        <Badge variant={getStatusBadgeVariant(expense.paidStatus)}>
+                        <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{expense.description}</h3>
+                        <Badge 
+                          variant={getStatusBadgeVariant(expense.paidStatus)}
+                          className="px-3 py-1 text-xs font-medium rounded-full"
+                        >
                           {expense.paidStatus}
                         </Badge>
                       </div>
@@ -318,11 +362,12 @@ export default function ExpensesStandalone() {
         </CardContent>
       </Card>
 
-      {/* Add Expense Modal */}
-      <AddExpenseModal
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-      />
+        {/* Add Expense Modal */}
+        <AddExpenseModal
+          open={isAddModalOpen}
+          onOpenChange={setIsAddModalOpen}
+        />
+      </div>
     </div>
   );
 }
