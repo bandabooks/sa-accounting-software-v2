@@ -93,6 +93,9 @@ import Onboarding from "@/pages/onboarding";
 import SpendingWizard from "@/pages/spending-wizard";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
 import ComplianceClients from "@/pages/compliance-clients";
+import CustomerLifecycle from "@/pages/customer-lifecycle";
+import CommunicationCenter from "@/pages/communication-center";
+import CustomerSegments from "@/pages/customer-segments";
 import SARSCompliance from "@/pages/sars-compliance";
 import SARSIntegration from "@/pages/sars-integration";
 import Integrations from "@/pages/integrations";
@@ -401,6 +404,21 @@ function AuthenticatedApp() {
         <Route path="/business-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <BusinessReports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customer-lifecycle">
+          <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_VIEW}>
+            <CustomerLifecycle />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/communication-center">
+          <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_VIEW}>
+            <CommunicationCenter />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/customer-segments">
+          <ProtectedRoute permission={PERMISSIONS.CUSTOMERS_VIEW}>
+            <CustomerSegments />
           </ProtectedRoute>
         </Route>
         <Route path="/expenses">

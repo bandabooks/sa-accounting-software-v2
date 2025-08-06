@@ -4792,6 +4792,223 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(productSerials.serialNumber);
   }
 
+  // Enhanced CRM Storage Methods
+  async getCustomersWithLifecycle(companyId: number) {
+    const result = await db
+      .select({
+        id: customers.id,
+        name: customers.name,
+        email: customers.email,
+        phone: customers.phone,
+        category: customers.category,
+        lifecycle_stage: customers.lifecycleStage,
+        lead_source: customers.leadSource,
+        assigned_to: customers.assignedTo,
+        last_contact_date: customers.lastContactDate,
+        next_follow_up_date: customers.nextFollowUpDate,
+        industry: customers.industry,
+        company_size: customers.companySize,
+        annual_revenue: customers.annualRevenue,
+        created_at: customers.createdAt,
+        updated_at: customers.updatedAt
+      })
+      .from(customers)
+      .where(eq(customers.companyId, companyId))
+      .orderBy(customers.updatedAt);
+    
+    return result;
+  }
+
+  async getCustomerLifecycleStats(companyId: number) {
+    const stages = await db
+      .select({
+        stage: customers.lifecycleStage,
+        count: sql<number>`count(*)`
+      })
+      .from(customers)
+      .where(eq(customers.companyId, companyId))
+      .groupBy(customers.lifecycleStage);
+
+    const leadSources = await db
+      .select({
+        source: customers.leadSource,
+        count: sql<number>`count(*)`
+      })
+      .from(customers)
+      .where(eq(customers.companyId, companyId))
+      .groupBy(customers.leadSource);
+
+    const totalCustomers = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(customers)
+      .where(eq(customers.companyId, companyId));
+
+    return {
+      stages: stages.map(s => ({
+        stage: s.stage || 'prospect',
+        count: s.count || 0
+      })),
+      leadSources: leadSources.map(s => ({
+        source: s.source || 'direct',
+        count: s.count || 0
+      })),
+      totalCustomers: totalCustomers[0]?.count || 0
+    };
+  }
+
+  async getCustomerLifecycleEvents(customerId: number, companyId: number) {
+    const events = await db
+      .select()
+      .from(sql`customer_lifecycle_events`)
+      .where(
+        sql`customer_id = ${customerId} AND company_id = ${companyId}`
+      )
+      .orderBy(sql`created_at DESC`);
+    
+    return events;
+  }
+
+  async updateCustomerLifecycleStage(customerId: number, stage: string, companyId: number, userId?: number) {
+    const [updated] = await db
+      .update(customers)
+      .set({ 
+        lifecycleStage: stage,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(customers.id, customerId),
+          eq(customers.companyId, companyId)
+        )
+      )
+      .returning();
+
+    // Log the lifecycle event
+    if (updated) {
+      await db
+        .insert(sql`customer_lifecycle_events`)
+        .values({
+          company_id: companyId,
+          customer_id: customerId,
+          event_type: 'stage_change',
+          to_stage: stage,
+          trigger: 'manual',
+          description: `Stage updated to ${stage}`,
+          performed_by: userId,
+          created_at: new Date()
+        });
+    }
+
+    return updated;
+  }
+
+  async getAllCommunications(companyId: number) {
+    const communications = await db
+      .select()
+      .from(sql`communication_history`)
+      .where(sql`company_id = ${companyId}`)
+      .orderBy(sql`created_at DESC`);
+    
+    return communications;
+  }
+
+  async getCommunicationStats(companyId: number) {
+    const totalSent = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(sql`communication_history`)
+      .where(sql`company_id = ${companyId} AND status = 'sent'`);
+
+    const totalDelivered = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(sql`communication_history`)
+      .where(sql`company_id = ${companyId} AND delivered_at IS NOT NULL`);
+
+    const totalOpened = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(sql`communication_history`)
+      .where(sql`company_id = ${companyId} AND opened_at IS NOT NULL`);
+
+    const channelStats = await db
+      .select({
+        channel: sql`channel`,
+        count: sql<number>`count(*)`
+      })
+      .from(sql`communication_history`)
+      .where(sql`company_id = ${companyId}`)
+      .groupBy(sql`channel`);
+
+    return {
+      totalSent: totalSent[0]?.count || 0,
+      totalDelivered: totalDelivered[0]?.count || 0,
+      totalOpened: totalOpened[0]?.count || 0,
+      deliveryRate: totalSent[0]?.count > 0 ? ((totalDelivered[0]?.count || 0) / totalSent[0].count * 100) : 0,
+      openRate: totalDelivered[0]?.count > 0 ? ((totalOpened[0]?.count || 0) / totalDelivered[0].count * 100) : 0,
+      channelBreakdown: channelStats.map(c => ({
+        channel: c.channel,
+        count: c.count || 0
+      }))
+    };
+  }
+
+  async createCommunication(data: any) {
+    const [communication] = await db
+      .insert(sql`communication_history`)
+      .values({
+        ...data,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+      .returning();
+    
+    return communication;
+  }
+
+  async getCommunicationTemplates(companyId: number) {
+    const templates = await db
+      .select()
+      .from(sql`communication_templates`)
+      .where(sql`company_id = ${companyId} AND is_active = true`)
+      .orderBy(sql`name`);
+    
+    return templates;
+  }
+
+  async createCommunicationTemplate(data: any) {
+    const [template] = await db
+      .insert(sql`communication_templates`)
+      .values({
+        ...data,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+      .returning();
+    
+    return template;
+  }
+
+  async getCustomerSegments(companyId: number) {
+    const segments = await db
+      .select()
+      .from(sql`customer_segments`)
+      .where(sql`company_id = ${companyId} AND is_active = true`)
+      .orderBy(sql`name`);
+    
+    return segments;
+  }
+
+  async createCustomerSegment(data: any) {
+    const [segment] = await db
+      .insert(sql`customer_segments`)
+      .values({
+        ...data,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+      .returning();
+    
+    return segment;
+  }
+
   // Chart of Accounts Implementation
   async getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
     const accounts = await db.select().from(chartOfAccounts)

@@ -2118,6 +2118,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ENHANCED CRM API ROUTES
+  
+  // Customer Lifecycle Management
+  app.get("/api/customers/lifecycle", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const customers = await storage.getCustomersWithLifecycle(companyId);
+      res.json(customers);
+    } catch (error) {
+      console.error("Error fetching customer lifecycle data:", error);
+      res.status(500).json({ error: "Failed to fetch customer lifecycle data" });
+    }
+  });
+
+  app.get("/api/customers/lifecycle/stats", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const stats = await storage.getCustomerLifecycleStats(companyId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching lifecycle stats:", error);
+      res.status(500).json({ error: "Failed to fetch lifecycle stats" });
+    }
+  });
+
+  app.get("/api/customers/:id/lifecycle-events", authenticate, async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      const companyId = req.user?.companyId || 2;
+      const events = await storage.getCustomerLifecycleEvents(customerId, companyId);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching customer lifecycle events:", error);
+      res.status(500).json({ error: "Failed to fetch lifecycle events" });
+    }
+  });
+
+  app.put("/api/customers/:id/lifecycle-stage", authenticate, async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      const companyId = req.user?.companyId || 2;
+      const { stage } = req.body;
+      
+      const updated = await storage.updateCustomerLifecycleStage(customerId, stage, companyId, req.user?.id);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating lifecycle stage:", error);
+      res.status(500).json({ error: "Failed to update lifecycle stage" });
+    }
+  });
+
+  // Communication Center
+  app.get("/api/communications", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const communications = await storage.getAllCommunications(companyId);
+      res.json(communications);
+    } catch (error) {
+      console.error("Error fetching communications:", error);
+      res.status(500).json({ error: "Failed to fetch communications" });
+    }
+  });
+
+  app.get("/api/communications/stats", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const stats = await storage.getCommunicationStats(companyId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching communication stats:", error);
+      res.status(500).json({ error: "Failed to fetch communication stats" });
+    }
+  });
+
+  app.post("/api/communications", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const communication = await storage.createCommunication({ ...req.body, companyId, sentBy: req.user?.id });
+      res.status(201).json(communication);
+    } catch (error) {
+      console.error("Error creating communication:", error);
+      res.status(500).json({ error: "Failed to create communication" });
+    }
+  });
+
+  // Communication Templates
+  app.get("/api/communication-templates", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const templates = await storage.getCommunicationTemplates(companyId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching communication templates:", error);
+      res.status(500).json({ error: "Failed to fetch communication templates" });
+    }
+  });
+
+  app.post("/api/communication-templates", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const template = await storage.createCommunicationTemplate({ ...req.body, companyId, createdBy: req.user?.id });
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating communication template:", error);
+      res.status(500).json({ error: "Failed to create communication template" });
+    }
+  });
+
+  // Customer Segments
+  app.get("/api/customer-segments", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const segments = await storage.getCustomerSegments(companyId);
+      res.json(segments);
+    } catch (error) {
+      console.error("Error fetching customer segments:", error);
+      res.status(500).json({ error: "Failed to fetch customer segments" });
+    }
+  });
+
+  app.post("/api/customer-segments", authenticate, async (req, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const segment = await storage.createCustomerSegment({ ...req.body, companyId, createdBy: req.user?.id });
+      res.status(201).json(segment);
+    } catch (error) {
+      console.error("Error creating customer segment:", error);
+      res.status(500).json({ error: "Failed to create customer segment" });
+    }
+  });
+
   // WORLD-CLASS FINANCIAL REPORTING SUITE
   
   // Balance Sheet Report

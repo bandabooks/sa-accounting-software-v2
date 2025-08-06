@@ -6,7 +6,7 @@ import {
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
-  Lock, ToggleLeft, Upload, Terminal, Zap
+  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -159,6 +159,17 @@ const navigationGroups = [
       { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reports" },
       { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reports" },
       { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "basic_reports" }
+    ]
+  },
+  {
+    id: "crm",
+    label: "CRM",
+    icon: UserCog,
+    module: "crm",
+    items: [
+      { path: "/customer-lifecycle", label: "Customer Lifecycle", icon: TrendingUp, permission: "CUSTOMER_VIEW", module: "crm" },
+      { path: "/communication-center", label: "Communication Center", icon: MessageCircle, permission: "CUSTOMER_VIEW", module: "crm" },
+      { path: "/customer-segments", label: "Customer Segments", icon: Users, permission: "CUSTOMER_VIEW", module: "crm" }
     ]
   },
   {

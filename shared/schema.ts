@@ -161,9 +161,35 @@ export const customers = pgTable("customers", {
   notes: text("notes"),
   portalAccess: boolean("portal_access").default(false),
   portalPassword: text("portal_password"), // For customer portal login
+  // Enhanced CRM fields
+  lifecycleStage: text("lifecycle_stage").notNull().default("prospect"), // prospect, lead, customer, advocate, champion, dormant
+  leadSource: text("lead_source").default("direct"), // website, referral, social_media, cold_call, advertisement, trade_show, partner, other
+  assignedTo: integer("assigned_to").references(() => users.id), // Sales rep or account manager
+  tags: text("tags").array().default([]), // Flexible tagging system
+  preferredContactMethod: text("preferred_contact_method").default("email"), // email, phone, sms, whatsapp
+  timezone: text("timezone").default("Africa/Johannesburg"),
+  language: text("language").default("en"),
+  industry: text("industry"), // Finance, retail, manufacturing, services, etc.
+  companySize: text("company_size"), // startup, small, medium, large, enterprise
+  annualRevenue: decimal("annual_revenue", { precision: 12, scale: 2 }),
+  website: text("website"),
+  socialMedia: json("social_media").$type<{
+    linkedin?: string;
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+  }>(),
+  customFields: json("custom_fields").$type<Record<string, any>>(),
+  isActive: boolean("is_active").default(true),
+  lastContactDate: timestamp("last_contact_date"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyIdx: index("customers_company_idx").on(table.companyId),
+  lifecycleIdx: index("customers_lifecycle_idx").on(table.lifecycleStage),
+  assignedIdx: index("customers_assigned_idx").on(table.assignedTo),
+  emailIdx: index("customers_email_idx").on(table.email),
 }));
 
 export const invoices = pgTable("invoices", {
@@ -427,6 +453,139 @@ export const customerInsights = pgTable("customer_insights", {
   customerIdx: unique("customer_insights_customer_unique").on(table.companyId, table.customerId),
   healthScoreIdx: index("customer_insights_health_score_idx").on(table.healthScore),
   riskLevelIdx: index("customer_insights_risk_level_idx").on(table.riskLevel),
+}));
+
+// Customer Lifecycle Events - Track customer journey progression
+export const customerLifecycleEvents = pgTable("customer_lifecycle_events", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  eventType: text("event_type").notNull(), // stage_change, interaction, milestone, churn_risk, win_back
+  fromStage: text("from_stage"), // Previous lifecycle stage
+  toStage: text("to_stage"), // New lifecycle stage
+  trigger: text("trigger").notNull(), // manual, automated, behavior, time_based
+  description: text("description"),
+  metadata: json("metadata").$type<Record<string, any>>(),
+  performedBy: integer("performed_by").references(() => users.id),
+  automationId: integer("automation_id"), // Reference to automation that triggered this
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("customer_lifecycle_events_company_idx").on(table.companyId),
+  customerIdx: index("customer_lifecycle_events_customer_idx").on(table.customerId),
+  typeIdx: index("customer_lifecycle_events_type_idx").on(table.eventType),
+  stageIdx: index("customer_lifecycle_events_stage_idx").on(table.toStage),
+}));
+
+// Customer Segments - Dynamic customer grouping
+export const customerSegments = pgTable("customer_segments", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  criteria: json("criteria").$type<{
+    rules: Array<{
+      field: string;
+      operator: string;
+      value: any;
+      logic?: 'AND' | 'OR';
+    }>;
+    conditions: 'all' | 'any';
+  }>().notNull(),
+  color: text("color").default("#3B82F6"),
+  isActive: boolean("is_active").default(true),
+  autoUpdate: boolean("auto_update").default(true), // Automatically update membership
+  memberCount: integer("member_count").default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("customer_segments_company_idx").on(table.companyId),
+  nameIdx: index("customer_segments_name_idx").on(table.name),
+}));
+
+// Customer Segment Membership - Many-to-many relationship
+export const customerSegmentMembership = pgTable("customer_segment_membership", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  segmentId: integer("segment_id").references(() => customerSegments.id).notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
+  addedBy: integer("added_by").references(() => users.id),
+  automaticallyAdded: boolean("automatically_added").default(false),
+}, (table) => ({
+  membershipUnique: unique("customer_segment_membership_unique").on(table.customerId, table.segmentId),
+  companyIdx: index("customer_segment_membership_company_idx").on(table.companyId),
+  customerIdx: index("customer_segment_membership_customer_idx").on(table.customerId),
+  segmentIdx: index("customer_segment_membership_segment_idx").on(table.segmentId),
+}));
+
+// Communication History - Multi-channel communication tracking
+export const communicationHistory = pgTable("communication_history", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").references(() => customers.id),
+  leadId: integer("lead_id").references(() => salesLeads.id),
+  channel: text("channel").notNull(), // email, sms, phone, whatsapp, meeting, letter, other
+  direction: text("direction").notNull(), // inbound, outbound
+  subject: text("subject"),
+  content: text("content"),
+  status: text("status").notNull().default("sent"), // sent, delivered, opened, clicked, replied, failed, bounced
+  providerId: text("provider_id"), // External provider reference (SendGrid ID, etc.)
+  metadata: json("metadata").$type<{
+    fromAddress?: string;
+    toAddress?: string;
+    ccAddresses?: string[];
+    bccAddresses?: string[];
+    attachments?: string[];
+    templateId?: string;
+    campaignId?: string;
+    automationId?: string;
+    phoneNumber?: string;
+    duration?: number; // For calls, in seconds
+    callDirection?: 'inbound' | 'outbound';
+    recordings?: string[];
+    openedAt?: string;
+    clickedAt?: string;
+    repliedAt?: string;
+  }>(),
+  sentBy: integer("sent_by").references(() => users.id),
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  openedAt: timestamp("opened_at"),
+  clickedAt: timestamp("clicked_at"),
+  repliedAt: timestamp("replied_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("communication_history_company_idx").on(table.companyId),
+  customerIdx: index("communication_history_customer_idx").on(table.customerId),
+  leadIdx: index("communication_history_lead_idx").on(table.leadId),
+  channelIdx: index("communication_history_channel_idx").on(table.channel),
+  statusIdx: index("communication_history_status_idx").on(table.status),
+  sentAtIdx: index("communication_history_sent_at_idx").on(table.sentAt),
+}));
+
+// Communication Templates - Reusable communication templates
+export const communicationTemplates = pgTable("communication_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("general"), // welcome, follow_up, proposal, reminder, thank_you, support, marketing
+  channel: text("channel").notNull(), // email, sms, whatsapp
+  subject: text("subject"),
+  content: text("content").notNull(),
+  variables: text("variables").array().default([]), // Available template variables
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("communication_templates_company_idx").on(table.companyId),
+  categoryIdx: index("communication_templates_category_idx").on(table.category),
+  channelIdx: index("communication_templates_channel_idx").on(table.channel),
 }));
 
 // Sales Leads - Lead management and qualification
