@@ -180,8 +180,8 @@ export default function JournalEntries() {
       entry: {
         ...data.entry,
         transactionDate: data.entry.transactionDate instanceof Date 
-          ? data.entry.transactionDate.toISOString() 
-          : data.entry.transactionDate,
+          ? data.entry.transactionDate.toISOString().split('T')[0] + 'T00:00:00.000Z'
+          : new Date(data.entry.transactionDate).toISOString(),
         totalDebit: totalDebits.toFixed(2),
         totalCredit: totalCredits.toFixed(2),
       },
@@ -282,7 +282,7 @@ export default function JournalEntries() {
                             type="date"
                             {...field}
                             value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
