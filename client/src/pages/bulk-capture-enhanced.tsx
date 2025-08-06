@@ -44,7 +44,7 @@ interface ExpenseEntry {
 interface IncomeEntry {
   id?: number;
   transactionDate: string;
-  incomeAccountId: number;
+  incomeAccountId: number | string;
   description: string;
   amount: string;
   clientId?: number;
@@ -108,9 +108,13 @@ const EnhancedBulkCapture = () => {
 
   // Initialize 10 default income entries
   const initializeIncomeEntries = useCallback(() => {
+    // Find the first revenue account as default, or leave as empty string if none
+    const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
+    const defaultIncomeAccountId = revenueAccounts.length > 0 ? revenueAccounts[0].id : '';
+    
     const defaultEntries: IncomeEntry[] = Array.from({ length: 10 }, () => ({
       transactionDate: quickDate,
-      incomeAccountId: 0,
+      incomeAccountId: defaultIncomeAccountId,
       description: '',
       amount: '',
       vatTypeId: 1, // Default to Standard Rate VAT type
@@ -120,7 +124,7 @@ const EnhancedBulkCapture = () => {
       status: 'draft',
     }));
     setIncomeEntries(defaultEntries);
-  }, [quickDate]);
+  }, [quickDate, chartOfAccounts]);
 
   // Initialize entries on mount and tab change
   useEffect(() => {
@@ -322,9 +326,13 @@ const EnhancedBulkCapture = () => {
       }));
       setExpenseEntries(prev => [...prev, ...newEntries]);
     } else {
+      // Find the first revenue account as default, or leave as empty string if none
+      const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
+      const defaultIncomeAccountId = revenueAccounts.length > 0 ? revenueAccounts[0].id : '';
+      
       const newEntries = Array.from({ length: count }, () => ({
         transactionDate: quickDate,
-        incomeAccountId: 0,
+        incomeAccountId: defaultIncomeAccountId,
         description: '',
         amount: '',
         vatTypeId: 1, // Default to Standard Rate
@@ -335,7 +343,7 @@ const EnhancedBulkCapture = () => {
       }));
       setIncomeEntries(prev => [...prev, ...newEntries]);
     }
-  }, [activeTab, quickDate]);
+  }, [activeTab, quickDate, chartOfAccounts]);
 
   // Save expense entries mutation
   const saveExpensesMutation = useMutation({
@@ -395,7 +403,8 @@ const EnhancedBulkCapture = () => {
       const validEntries = incomeEntries.filter(entry => 
         entry.description && 
         parseFloat(entry.amount) > 0 && 
-        entry.incomeAccountId > 0
+        entry.incomeAccountId && 
+        (typeof entry.incomeAccountId === 'number' ? entry.incomeAccountId > 0 : entry.incomeAccountId !== '')
       );
       
       if (validEntries.length === 0) {
@@ -408,7 +417,7 @@ const EnhancedBulkCapture = () => {
         batchNotes: `Bulk income capture - ${validEntries.length} entries`,
         entries: validEntries.map(entry => ({
           transactionDate: entry.transactionDate,
-          incomeAccountId: entry.incomeAccountId,
+          incomeAccountId: typeof entry.incomeAccountId === 'string' ? parseInt(entry.incomeAccountId) : entry.incomeAccountId,
           description: entry.description,
           amount: parseFloat(entry.amount),
           clientId: entry.clientId || null,
@@ -690,11 +699,11 @@ const EnhancedBulkCapture = () => {
                         </td>
                         <td className="p-3">
                           <Select
-                            value={entry.incomeAccountId.toString()}
-                            onValueChange={(value) => updateIncomeEntry(index, 'incomeAccountId', parseInt(value))}
+                            value={entry.incomeAccountId ? entry.incomeAccountId.toString() : ''}
+                            onValueChange={(value) => updateIncomeEntry(index, 'incomeAccountId', value ? parseInt(value) : '')}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Choose income..." />
+                              <SelectValue placeholder="Choose income account..." />
                             </SelectTrigger>
                             <SelectContent>
                               {chartOfAccounts
@@ -704,6 +713,11 @@ const EnhancedBulkCapture = () => {
                                     {account.accountCode} - {account.accountName}
                                   </SelectItem>
                                 ))}
+                              {chartOfAccounts.filter(account => account.accountType === 'Revenue').length === 0 && (
+                                <div className="p-2 text-sm text-red-500 text-center">
+                                  No Revenue accounts found. Please create Revenue accounts in Chart of Accounts.
+                                </div>
+                              )}
                             </SelectContent>
                           </Select>
                         </td>
