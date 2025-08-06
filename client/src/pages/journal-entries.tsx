@@ -562,21 +562,22 @@ export default function JournalEntries() {
                       </Button>
                       {!entry.isPosted && !entry.isReversed && (
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handlePost(entry)}
+                          className="text-green-600 border-green-200 hover:bg-green-50"
                         >
-                          <FileCheck className="h-4 w-4" />
+                          Post to Journal
                         </Button>
                       )}
                       {entry.isPosted && !entry.isReversed && (
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleReverse(entry)}
-                          className="text-orange-600 hover:text-orange-700"
+                          className="text-orange-600 border-orange-200 hover:bg-orange-50"
                         >
-                          <RotateCcw className="h-4 w-4" />
+                          Reverse Entry
                         </Button>
                       )}
                     </div>
