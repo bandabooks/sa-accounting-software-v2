@@ -1,19 +1,63 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { 
   Plus, Search, Filter, Eye, TrendingUp, Users, DollarSign, ShoppingCart,
   Receipt, FileText, Truck, CreditCard, BarChart3, ArrowUpRight, ArrowDownRight,
-  Calendar, Target, Package, Clock, AlertTriangle, UserPlus, CheckCircle, Star
+  Calendar, Target, Package, Clock, AlertTriangle, UserPlus, CheckCircle, Star,
+  GitBranch, Mail, Phone, MessageSquare, MoreHorizontal, Edit, Archive,
+  TrendingDown, Award, Activity, Zap, Settings, Sparkles, Palette, Layout
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+// Import the new world-class sales components
+import SalesPipelineManager from "@/components/sales/SalesPipelineManager";
+import LeadManagement from "@/components/sales/LeadManagement";
+import InteractiveQuoteSystem from "@/components/sales/InteractiveQuoteSystem";
+import SalesForecastingDashboard from "@/components/sales/SalesForecastingDashboard";
+import DynamicPricingRules from "@/components/sales/DynamicPricingRules";
+
+// Schema definitions for new features
+const leadFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  source: z.string().min(1, "Source is required"),
+  estimatedValue: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const opportunityFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  value: z.string().min(1, "Value is required"),
+  probability: z.number().min(0).max(100),
+  expectedCloseDate: z.string().min(1, "Expected close date is required"),
+  priority: z.string().min(1, "Priority is required"),
+  notes: z.string().optional(),
+});
 
 export default function SalesDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTab, setSelectedTab] = useState("overview");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch sales statistics
   const { data: salesStats = {}, isLoading: statsLoading } = useQuery<any>({
@@ -572,6 +616,168 @@ export default function SalesDashboard() {
             </Card>
           </div>
         </div>
+
+        {/* Enhanced Main Content Tabs with World-Class Features */}
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+          <div className="border-b bg-white rounded-lg p-1 shadow-sm">
+            <TabsList className="grid w-full grid-cols-12 h-12 text-xs">
+              <TabsTrigger value="overview" className="flex items-center gap-1">
+                <BarChart3 className="h-3 w-3" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="pipeline" className="flex items-center gap-1">
+                <GitBranch className="h-3 w-3" />
+                Pipeline
+              </TabsTrigger>
+              <TabsTrigger value="leads" className="flex items-center gap-1">
+                <UserPlus className="h-3 w-3" />
+                Leads
+              </TabsTrigger>
+              <TabsTrigger value="forecasting" className="flex items-center gap-1">
+                <Target className="h-3 w-3" />
+                Forecasting
+              </TabsTrigger>
+              <TabsTrigger value="quotes" className="flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                Quotes
+              </TabsTrigger>
+              <TabsTrigger value="pricing" className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3" />
+                Pricing
+              </TabsTrigger>
+              <TabsTrigger value="sales-orders" className="flex items-center gap-1">
+                <ShoppingCart className="h-3 w-3" />
+                Orders
+              </TabsTrigger>
+              <TabsTrigger value="invoices" className="flex items-center gap-1">
+                <Receipt className="h-3 w-3" />
+                Invoices
+              </TabsTrigger>
+              <TabsTrigger value="estimates" className="flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                Estimates
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                Customers
+              </TabsTrigger>
+              <TabsTrigger value="deliveries" className="flex items-center gap-1">
+                <Truck className="h-3 w-3" />
+                Deliveries
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" />
+                Analytics
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Overview Tab - Enhanced Sales Dashboard (current content) */}
+          <TabsContent value="overview">
+            {/* Current sales dashboard content remains here as default overview */}
+            <div className="text-center py-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Sales Overview</h2>
+              <p className="text-gray-600">Current sales dashboard overview content displayed above.</p>
+            </div>
+          </TabsContent>
+
+          {/* Pipeline Management Tab - World-class drag-and-drop pipeline */}
+          <TabsContent value="pipeline">
+            <SalesPipelineManager />
+          </TabsContent>
+
+          {/* Lead Management Tab - Advanced lead tracking and qualification */}
+          <TabsContent value="leads">
+            <LeadManagement />
+          </TabsContent>
+
+          {/* Sales Forecasting Tab - AI-powered forecasting and analytics */}
+          <TabsContent value="forecasting">
+            <SalesForecastingDashboard />
+          </TabsContent>
+
+          {/* Interactive Quote System Tab - Professional templates and analytics */}
+          <TabsContent value="quotes">
+            <InteractiveQuoteSystem />
+          </TabsContent>
+
+          {/* Dynamic Pricing Rules Tab - Automated pricing optimization */}
+          <TabsContent value="pricing">
+            <DynamicPricingRules />
+          </TabsContent>
+
+          {/* Sales Orders Tab */}
+          <TabsContent value="sales-orders">
+            <div className="text-center py-8">
+              <ShoppingCart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Sales Orders Management</h3>
+              <p className="text-gray-600 mb-4">Manage and track all sales orders</p>
+              <Link href="/sales-orders">
+                <Button>View All Sales Orders</Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          {/* Invoices Tab */}
+          <TabsContent value="invoices">
+            <div className="text-center py-8">
+              <Receipt className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Invoice Management</h3>
+              <p className="text-gray-600 mb-4">Create and manage customer invoices</p>
+              <Link href="/invoices">
+                <Button>View All Invoices</Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          {/* Estimates Tab */}
+          <TabsContent value="estimates">
+            <div className="text-center py-8">
+              <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Estimates & Quotes</h3>
+              <p className="text-gray-600 mb-4">Create and manage customer estimates</p>
+              <Link href="/estimates">
+                <Button>View All Estimates</Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          {/* Customers Tab */}
+          <TabsContent value="customers">
+            <div className="text-center py-8">
+              <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Customer Management</h3>
+              <p className="text-gray-600 mb-4">Manage customer relationships and data</p>
+              <Link href="/customers">
+                <Button>View All Customers</Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          {/* Deliveries Tab */}
+          <TabsContent value="deliveries">
+            <div className="text-center py-8">
+              <Truck className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Delivery Management</h3>
+              <p className="text-gray-600 mb-4">Track and manage product deliveries</p>
+              <Link href="/deliveries">
+                <Button>View All Deliveries</Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics">
+            <div className="text-center py-8">
+              <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Sales Analytics</h3>
+              <p className="text-gray-600 mb-4">Advanced sales reporting and analytics</p>
+              <Link href="/sales-reports">
+                <Button>View Sales Reports</Button>
+              </Link>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

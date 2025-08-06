@@ -321,6 +321,326 @@ export const deliveries = pgTable("deliveries", {
   statusIdx: index("deliveries_status_idx").on(table.status),
 }));
 
+
+
+// Quote Interactions - Track customer interactions with quotes
+export const quoteInteractions = pgTable("quote_interactions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  estimateId: integer("estimate_id").references(() => estimates.id),
+  sessionId: text("session_id"),
+  action: text("action").notNull(), // viewed, downloaded, emailed, accepted, rejected, expired
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  viewDuration: integer("view_duration"), // in seconds
+  sectionViewed: text("section_viewed"), // header, items, terms, etc.
+  deviceType: text("device_type"), // desktop, mobile, tablet
+  location: text("location"), // geo location if available
+  timestamp: timestamp("timestamp").defaultNow(),
+}, (table) => ({
+  companyIdx: index("quote_interactions_company_idx").on(table.companyId),
+  estimateIdx: index("quote_interactions_estimate_idx").on(table.estimateId),
+  actionIdx: index("quote_interactions_action_idx").on(table.action),
+  timestampIdx: index("quote_interactions_timestamp_idx").on(table.timestamp),
+}));
+
+
+
+// Sales Forecasting - Predictive sales analytics
+export const salesForecasts = pgTable("sales_forecasts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  forecastName: text("forecast_name").notNull(),
+  period: text("period").notNull(), // monthly, quarterly, yearly
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  targetRevenue: decimal("target_revenue", { precision: 12, scale: 2 }).notNull(),
+  forecastedRevenue: decimal("forecasted_revenue", { precision: 12, scale: 2 }).notNull(),
+  actualRevenue: decimal("actual_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  confidence: integer("confidence").notNull().default(75), // confidence percentage
+  methodology: text("methodology").notNull().default("pipeline"), // pipeline, historical, weighted
+  notes: text("notes"),
+  createdBy: integer("created_by").references(() => users.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sales_forecasts_company_idx").on(table.companyId),
+  periodIdx: index("sales_forecasts_period_idx").on(table.period),
+  dateRangeIdx: index("sales_forecasts_date_range_idx").on(table.startDate, table.endDate),
+}));
+
+// Sales Activities - Track all sales activities and interactions
+export const salesActivities = pgTable("sales_activities", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  type: text("type").notNull(), // call, email, meeting, presentation, demo, follow_up, note
+  subject: text("subject").notNull(),
+  description: text("description"),
+  customerId: integer("customer_id").references(() => customers.id),
+  leadId: integer("lead_id").references(() => salesLeads.id),
+  opportunityId: integer("opportunity_id").references(() => salesOpportunities.id),
+  estimateId: integer("estimate_id").references(() => estimates.id),
+  salesOrderId: integer("sales_order_id").references(() => salesOrders.id),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  scheduledAt: timestamp("scheduled_at"),
+  completedAt: timestamp("completed_at"),
+  duration: integer("duration"), // in minutes
+  outcome: text("outcome"), // successful, unsuccessful, reschedule, no_show
+  nextAction: text("next_action"),
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  status: text("status").notNull().default("scheduled"), // scheduled, completed, cancelled
+  attachments: text("attachments").array(), // file paths or URLs
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sales_activities_company_idx").on(table.companyId),
+  typeIdx: index("sales_activities_type_idx").on(table.type),
+  assignedIdx: index("sales_activities_assigned_idx").on(table.assignedTo),
+  scheduledIdx: index("sales_activities_scheduled_idx").on(table.scheduledAt),
+  statusIdx: index("sales_activities_status_idx").on(table.status),
+}));
+
+// Customer Insights - Advanced customer analytics and behavior
+export const customerInsights = pgTable("customer_insights", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  lifetimeValue: decimal("lifetime_value", { precision: 12, scale: 2 }).default("0.00"),
+  averageOrderValue: decimal("average_order_value", { precision: 10, scale: 2 }).default("0.00"),
+  totalOrders: integer("total_orders").default(0),
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0.00"),
+  firstPurchaseDate: timestamp("first_purchase_date"),
+  lastPurchaseDate: timestamp("last_purchase_date"),
+  averageDaysBetweenOrders: integer("average_days_between_orders"),
+  healthScore: integer("health_score").default(50), // 0-100 customer health score
+  riskLevel: text("risk_level").notNull().default("low"), // low, medium, high
+  preferredPaymentMethod: text("preferred_payment_method"),
+  preferredContactMethod: text("preferred_contact_method"),
+  seasonalTrends: json("seasonal_trends").$type<Record<string, any>>(),
+  purchasePatterns: json("purchase_patterns").$type<Record<string, any>>(),
+  lastCalculated: timestamp("last_calculated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("customer_insights_company_idx").on(table.companyId),
+  customerIdx: unique("customer_insights_customer_unique").on(table.companyId, table.customerId),
+  healthScoreIdx: index("customer_insights_health_score_idx").on(table.healthScore),
+  riskLevelIdx: index("customer_insights_risk_level_idx").on(table.riskLevel),
+}));
+
+// Sales Leads - Lead management and qualification
+export const salesLeads = pgTable("sales_leads", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  leadNumber: text("lead_number").notNull(),
+  title: text("title").notNull(),
+  contactName: text("contact_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  company: text("company"),
+  source: text("source").notNull().default("website"), // website, referral, cold_call, social_media, advertisement, trade_show, other
+  status: text("status").notNull().default("new"), // new, contacted, qualified, unqualified, opportunity, lost, converted
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  score: integer("score").default(0), // Lead score 0-100
+  estimatedValue: decimal("estimated_value", { precision: 10, scale: 2 }),
+  estimatedCloseDate: timestamp("estimated_close_date"),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  notes: text("notes"),
+  tags: text("tags").array(), // Array of tags for categorization
+  customFields: json("custom_fields").$type<Record<string, any>>(), // Flexible custom fields
+  lastContactDate: timestamp("last_contact_date"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
+  convertedToCustomerId: integer("converted_to_customer_id").references(() => customers.id),
+  convertedAt: timestamp("converted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyLeadUnique: unique().on(table.companyId, table.leadNumber),
+  companyIdx: index("sales_leads_company_idx").on(table.companyId),
+  statusIdx: index("sales_leads_status_idx").on(table.status),
+  assignedIdx: index("sales_leads_assigned_idx").on(table.assignedTo),
+  emailIdx: index("sales_leads_email_idx").on(table.email),
+}));
+
+// Sales Pipeline Stages - Customizable pipeline stages
+export const salesPipelineStages = pgTable("sales_pipeline_stages", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  order: integer("order").notNull().default(0),
+  probability: decimal("probability", { precision: 5, scale: 2 }).notNull().default("0.00"), // Win probability 0-100%
+  color: text("color").notNull().default("#3B82F6"), // Hex color for visual representation
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sales_pipeline_stages_company_idx").on(table.companyId),
+  orderIdx: index("sales_pipeline_stages_order_idx").on(table.order),
+}));
+
+// Sales Opportunities - Track deals through the pipeline
+export const salesOpportunities = pgTable("sales_opportunities", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  opportunityNumber: text("opportunity_number").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  leadId: integer("lead_id").references(() => salesLeads.id),
+  customerId: integer("customer_id").references(() => customers.id),
+  stageId: integer("stage_id").references(() => salesPipelineStages.id).notNull(),
+  value: decimal("value", { precision: 10, scale: 2 }).notNull(),
+  probability: decimal("probability", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  expectedCloseDate: timestamp("expected_close_date"),
+  actualCloseDate: timestamp("actual_close_date"),
+  assignedTo: integer("assigned_to").references(() => users.id).notNull(),
+  source: text("source"),
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  status: text("status").notNull().default("open"), // open, won, lost, on_hold
+  lostReason: text("lost_reason"), // If status is lost
+  tags: text("tags").array(),
+  customFields: json("custom_fields").$type<Record<string, any>>(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyOpportunityUnique: unique().on(table.companyId, table.opportunityNumber),
+  companyIdx: index("sales_opportunities_company_idx").on(table.companyId),
+  stageIdx: index("sales_opportunities_stage_idx").on(table.stageId),
+  assignedIdx: index("sales_opportunities_assigned_idx").on(table.assignedTo),
+  statusIdx: index("sales_opportunities_status_idx").on(table.status),
+}));
+
+// Quote Templates - Professional quote templates
+export const quoteTemplates = pgTable("quote_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull().default("general"), // general, service, product, project, maintenance
+  template: json("template").$type<{
+    headerText?: string;
+    footerText?: string;
+    terms?: string;
+    validityDays?: number;
+    styles?: Record<string, any>;
+    sections?: Array<{
+      title: string;
+      description: string;
+      items: Array<{
+        description: string;
+        quantity: number;
+        unitPrice: number;
+        vatRate: number;
+      }>;
+    }>;
+  }>(),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  usage_count: integer("usage_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("quote_templates_company_idx").on(table.companyId),
+  categoryIdx: index("quote_templates_category_idx").on(table.category),
+}));
+
+// Quote Analytics - Track quote interactions
+export const quoteAnalytics = pgTable("quote_analytics", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  estimateId: integer("estimate_id").references(() => estimates.id).notNull(),
+  eventType: text("event_type").notNull(), // viewed, downloaded, shared, accepted, rejected, expired
+  viewerEmail: text("viewer_email"),
+  viewerIp: text("viewer_ip"),
+  userAgent: text("user_agent"),
+  timeSpent: integer("time_spent"), // Time spent viewing in seconds
+  pageViews: integer("page_views").default(1),
+  deviceType: text("device_type"), // desktop, tablet, mobile
+  location: text("location"), // Geographic location if available
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("quote_analytics_company_idx").on(table.companyId),
+  estimateIdx: index("quote_analytics_estimate_idx").on(table.estimateId),
+  eventTypeIdx: index("quote_analytics_event_type_idx").on(table.eventType),
+}));
+
+// Digital Signatures for quotes and contracts
+export const digitalSignatures = pgTable("digital_signatures", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  documentType: text("document_type").notNull(), // estimate, contract, agreement, proposal
+  documentId: integer("document_id").notNull(), // ID of the related document
+  signerName: text("signer_name").notNull(),
+  signerEmail: text("signer_email").notNull(),
+  signerTitle: text("signer_title"),
+  signatureData: text("signature_data").notNull(), // Base64 encoded signature image
+  signatureIp: text("signature_ip"),
+  signatureDevice: text("signature_device"),
+  signedAt: timestamp("signed_at").defaultNow(),
+  isValid: boolean("is_valid").default(true),
+  verificationCode: text("verification_code"), // For signature verification
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("digital_signatures_company_idx").on(table.companyId),
+  documentIdx: index("digital_signatures_document_idx").on(table.documentType, table.documentId),
+  emailIdx: index("digital_signatures_email_idx").on(table.signerEmail),
+}));
+
+// Dynamic Pricing Rules
+export const pricingRules = pgTable("pricing_rules", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  ruleType: text("rule_type").notNull(), // volume_discount, customer_specific, product_bundle, seasonal, loyalty
+  conditions: json("conditions").$type<{
+    minimumQuantity?: number;
+    customerIds?: number[];
+    productIds?: number[];
+    dateRange?: { start: string; end: string };
+    orderValue?: { min?: number; max?: number };
+  }>(),
+  discount: json("discount").$type<{
+    type: 'percentage' | 'fixed' | 'tiered';
+    value: number;
+    tiers?: Array<{ min: number; max?: number; discount: number }>;
+  }>(),
+  priority: integer("priority").default(0), // Higher number = higher priority
+  isActive: boolean("is_active").default(true),
+  validFrom: timestamp("valid_from").defaultNow(),
+  validTo: timestamp("valid_to"),
+  usage_count: integer("usage_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("pricing_rules_company_idx").on(table.companyId),
+  typeIdx: index("pricing_rules_type_idx").on(table.ruleType),
+  activeIdx: index("pricing_rules_active_idx").on(table.isActive),
+}));
+
+// Customer Price Lists
+export const customerPriceLists = pgTable("customer_price_lists", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("ZAR"),
+  minimumQuantity: decimal("minimum_quantity", { precision: 10, scale: 2 }).default("1.00"),
+  validFrom: timestamp("valid_from").defaultNow(),
+  validTo: timestamp("valid_to"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("customer_price_lists_company_idx").on(table.companyId),
+  customerIdx: index("customer_price_lists_customer_idx").on(table.customerId),
+  productIdx: index("customer_price_lists_product_idx").on(table.productId),
+  customerProductUnique: unique().on(table.customerId, table.productId),
+}));
+
 export const deliveryItems = pgTable("delivery_items", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
@@ -3549,7 +3869,77 @@ export const insertBankIntegrationSchema = createInsertSchema(bankIntegrations).
   updatedAt: true,
 });
 
+// New World-Class Sales Feature Schemas
+export const insertSalesLeadSchema = createInsertSchema(salesLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
+export const insertSalesActivitySchema = createInsertSchema(salesActivities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSalesForecastSchema = createInsertSchema(salesForecasts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerInsightSchema = createInsertSchema(customerInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuoteInteractionSchema = createInsertSchema(quoteInteractions).omit({
+  id: true,
+});
+
+// Add the missing schema for digital signatures
+export const insertDigitalSignatureSchema = createInsertSchema(digitalSignatures).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Add the missing schema for pricing rules  
+export const insertPricingRuleSchema = createInsertSchema(pricingRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Add more missing schemas
+export const insertQuoteTemplateSchema = createInsertSchema(quoteTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertQuoteAnalyticsSchema = createInsertSchema(quoteAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSalesPipelineStageSchema = createInsertSchema(salesPipelineStages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSalesOpportunitySchema = createInsertSchema(salesOpportunities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerPriceListSchema = createInsertSchema(customerPriceLists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 // Smart Spending Wizard - AI-powered financial advice system
 export const spendingWizardProfiles = pgTable("spending_wizard_profiles", {
@@ -4508,6 +4898,46 @@ export type DeliveryWithCustomer = Delivery & { customer: Customer };
 export type DeliveryWithItems = Delivery & { items: DeliveryItem[]; customer: Customer };
 export type CreditNoteWithCustomer = CreditNote & { customer: Customer };
 export type CreditNoteWithItems = CreditNote & { items: CreditNoteItem[]; customer: Customer };
+
+// === NEW WORLD-CLASS SALES FEATURE TYPES ===
+
+// Sales Leads
+export type SalesLead = typeof salesLeads.$inferSelect;
+export type InsertSalesLead = z.infer<typeof insertSalesLeadSchema>;
+
+// Sales Pipeline Stages
+export type SalesPipelineStage = typeof salesPipelineStages.$inferSelect;
+export type InsertSalesPipelineStage = z.infer<typeof insertSalesPipelineStageSchema>;
+
+// Sales Opportunities
+export type SalesOpportunity = typeof salesOpportunities.$inferSelect;
+export type InsertSalesOpportunity = z.infer<typeof insertSalesOpportunitySchema>;
+
+// Quote Templates
+export type QuoteTemplate = typeof quoteTemplates.$inferSelect;
+export type InsertQuoteTemplate = z.infer<typeof insertQuoteTemplateSchema>;
+
+// Quote Analytics
+export type QuoteAnalytics = typeof quoteAnalytics.$inferSelect;
+export type InsertQuoteAnalytics = z.infer<typeof insertQuoteAnalyticsSchema>;
+
+// Digital Signatures
+export type DigitalSignature = typeof digitalSignatures.$inferSelect;
+export type InsertDigitalSignature = z.infer<typeof insertDigitalSignatureSchema>;
+
+// Pricing Rules
+export type PricingRule = typeof pricingRules.$inferSelect;
+export type InsertPricingRule = z.infer<typeof insertPricingRuleSchema>;
+
+// Customer Price Lists
+export type CustomerPriceList = typeof customerPriceLists.$inferSelect;
+export type InsertCustomerPriceList = z.infer<typeof insertCustomerPriceListSchema>;
+
+// Extended types for API responses with relationships
+export type SalesLeadWithAssignedUser = SalesLead & { assignedUser?: User; convertedCustomer?: Customer };
+export type SalesOpportunityWithStage = SalesOpportunity & { stage: SalesPipelineStage; assignedUser?: User; customer?: Customer; lead?: SalesLead };
+export type EstimateWithAnalytics = Estimate & { analytics: QuoteAnalytics[]; signatures: DigitalSignature[] };
+export type ProductWithPricing = Product & { customerPriceLists: CustomerPriceList[]; pricingRules: PricingRule[] };
 
 // Enhanced Inventory Management Types (removed duplicates - already defined above)
 

@@ -73,6 +73,15 @@ import {
   bankIntegrations,
   // Enhanced Inventory Module imports
   productLots,
+  // World-Class Sales Feature imports
+  salesLeads,
+  salesPipelineStages,
+  salesOpportunities,
+  quoteTemplates,
+  quoteAnalytics,
+  digitalSignatures,
+  pricingRules,
+  customerPriceLists,
   // Bulk Capture Module imports
   bulkCaptureSessions,
   bulkExpenseEntries,
@@ -354,6 +363,27 @@ import {
   type InsertWarehouseStock,
   type ProductWithVariants,
   type WarehouseWithStock,
+  // New World-Class Sales Feature Types
+  SalesLead,
+  InsertSalesLead,
+  SalesLeadWithAssignedUser,
+  SalesPipelineStage,
+  InsertSalesPipelineStage,
+  SalesOpportunity,
+  InsertSalesOpportunity,
+  SalesOpportunityWithStage,
+  QuoteTemplate,
+  InsertQuoteTemplate,
+  QuoteAnalytics,
+  InsertQuoteAnalytics,
+  DigitalSignature,
+  InsertDigitalSignature,
+  PricingRule,
+  InsertPricingRule,
+  CustomerPriceList,
+  InsertCustomerPriceList,
+  EstimateWithAnalytics,
+  ProductWithPricing
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
@@ -852,6 +882,76 @@ export interface IStorage {
   createDeliveryItem(item: InsertDeliveryItem): Promise<DeliveryItem>;
   updateDeliveryItem(id: number, item: Partial<InsertDeliveryItem>): Promise<DeliveryItem | undefined>;
   deleteDeliveryItem(id: number): Promise<boolean>;
+
+  // === NEW WORLD-CLASS SALES FEATURES ===
+
+  // Sales Leads Management
+  getSalesLeads(companyId: number): Promise<SalesLead[]>;
+  getSalesLead(id: number): Promise<SalesLeadWithAssignedUser | undefined>;
+  createSalesLead(lead: InsertSalesLead): Promise<SalesLead>;
+  updateSalesLead(id: number, lead: Partial<InsertSalesLead>): Promise<SalesLead | undefined>;
+  deleteSalesLead(id: number): Promise<boolean>;
+  getSalesLeadsByStatus(companyId: number, status: string): Promise<SalesLead[]>;
+  getSalesLeadsByAssignedUser(userId: number): Promise<SalesLead[]>;
+  convertLeadToCustomer(leadId: number, userId: number): Promise<Customer>;
+  updateLeadScore(leadId: number, score: number): Promise<SalesLead | undefined>;
+
+  // Sales Pipeline Stages Management
+  getSalesPipelineStages(companyId: number): Promise<SalesPipelineStage[]>;
+  getSalesPipelineStage(id: number): Promise<SalesPipelineStage | undefined>;
+  createSalesPipelineStage(stage: InsertSalesPipelineStage): Promise<SalesPipelineStage>;
+  updateSalesPipelineStage(id: number, stage: Partial<InsertSalesPipelineStage>): Promise<SalesPipelineStage | undefined>;
+  deleteSalesPipelineStage(id: number): Promise<boolean>;
+  reorderPipelineStages(companyId: number, stageOrders: { id: number; order: number }[]): Promise<boolean>;
+
+  // Sales Opportunities Management
+  getSalesOpportunities(companyId: number): Promise<SalesOpportunity[]>;
+  getSalesOpportunity(id: number): Promise<SalesOpportunityWithStage | undefined>;
+  createSalesOpportunity(opportunity: InsertSalesOpportunity): Promise<SalesOpportunity>;
+  updateSalesOpportunity(id: number, opportunity: Partial<InsertSalesOpportunity>): Promise<SalesOpportunity | undefined>;
+  deleteSalesOpportunity(id: number): Promise<boolean>;
+  moveSalesOpportunityToStage(opportunityId: number, stageId: number): Promise<SalesOpportunity | undefined>;
+  getSalesOpportunitiesByStage(companyId: number, stageId: number): Promise<SalesOpportunity[]>;
+  getSalesOpportunitiesByAssignedUser(userId: number): Promise<SalesOpportunity[]>;
+  closeSalesOpportunity(opportunityId: number, status: 'won' | 'lost', lostReason?: string): Promise<SalesOpportunity | undefined>;
+
+  // Quote Templates Management
+  getQuoteTemplates(companyId: number): Promise<QuoteTemplate[]>;
+  getQuoteTemplate(id: number): Promise<QuoteTemplate | undefined>;
+  createQuoteTemplate(template: InsertQuoteTemplate): Promise<QuoteTemplate>;
+  updateQuoteTemplate(id: number, template: Partial<InsertQuoteTemplate>): Promise<QuoteTemplate | undefined>;
+  deleteQuoteTemplate(id: number): Promise<boolean>;
+  getQuoteTemplatesByCategory(companyId: number, category: string): Promise<QuoteTemplate[]>;
+  incrementTemplateUsage(templateId: number): Promise<QuoteTemplate | undefined>;
+
+  // Quote Analytics Management
+  getQuoteAnalytics(estimateId: number): Promise<QuoteAnalytics[]>;
+  createQuoteAnalytics(analytics: InsertQuoteAnalytics): Promise<QuoteAnalytics>;
+  getQuoteAnalyticsByType(estimateId: number, eventType: string): Promise<QuoteAnalytics[]>;
+  getQuoteViewStats(estimateId: number): Promise<{totalViews: number; uniqueViewers: number; totalTimeSpent: number}>;
+
+  // Digital Signatures Management
+  getDigitalSignatures(documentType: string, documentId: number): Promise<DigitalSignature[]>;
+  createDigitalSignature(signature: InsertDigitalSignature): Promise<DigitalSignature>;
+  verifyDigitalSignature(id: number): Promise<DigitalSignature | undefined>;
+  invalidateDigitalSignature(id: number): Promise<boolean>;
+
+  // Pricing Rules Management
+  getPricingRules(companyId: number): Promise<PricingRule[]>;
+  getPricingRule(id: number): Promise<PricingRule | undefined>;
+  createPricingRule(rule: InsertPricingRule): Promise<PricingRule>;
+  updatePricingRule(id: number, rule: Partial<InsertPricingRule>): Promise<PricingRule | undefined>;
+  deletePricingRule(id: number): Promise<boolean>;
+  getActivePricingRules(companyId: number): Promise<PricingRule[]>;
+  calculateDynamicPrice(companyId: number, productId: number, customerId?: number, quantity?: number): Promise<{originalPrice: number; discountedPrice: number; appliedRules: PricingRule[]}>;
+
+  // Customer Price Lists Management
+  getCustomerPriceLists(companyId: number): Promise<CustomerPriceList[]>;
+  getCustomerPriceList(customerId: number, productId: number): Promise<CustomerPriceList | undefined>;
+  createCustomerPriceList(priceList: InsertCustomerPriceList): Promise<CustomerPriceList>;
+  updateCustomerPriceList(id: number, priceList: Partial<InsertCustomerPriceList>): Promise<CustomerPriceList | undefined>;
+  deleteCustomerPriceList(id: number): Promise<boolean>;
+  getCustomerPriceListsByCustomer(customerId: number): Promise<CustomerPriceList[]>;
 
   // Enhanced Inventory Management - Lot/Batch Tracking
   getProductLots(companyId: number, productId?: number): Promise<ProductLot[]>;
@@ -12416,6 +12516,618 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .limit(limit);
+  }
+
+  // ===================================================================
+  // WORLD-CLASS SALES FEATURES IMPLEMENTATION
+  // ===================================================================
+
+  // Sales Leads Management
+  async getSalesLeads(companyId: number): Promise<SalesLead[]> {
+    return await db
+      .select()
+      .from(salesLeads)
+      .where(eq(salesLeads.companyId, companyId))
+      .orderBy(desc(salesLeads.createdAt));
+  }
+
+  async getSalesLead(id: number): Promise<SalesLeadWithAssignedUser | undefined> {
+    const [lead] = await db
+      .select({
+        id: salesLeads.id,
+        companyId: salesLeads.companyId,
+        leadNumber: salesLeads.leadNumber,
+        name: salesLeads.name,
+        email: salesLeads.email,
+        phone: salesLeads.phone,
+        company: salesLeads.company,
+        source: salesLeads.source,
+        status: salesLeads.status,
+        score: salesLeads.score,
+        estimatedValue: salesLeads.estimatedValue,
+        estimatedCloseDate: salesLeads.estimatedCloseDate,
+        assignedTo: salesLeads.assignedTo,
+        notes: salesLeads.notes,
+        tags: salesLeads.tags,
+        customFields: salesLeads.customFields,
+        lastContactDate: salesLeads.lastContactDate,
+        nextFollowUpDate: salesLeads.nextFollowUpDate,
+        convertedToCustomerId: salesLeads.convertedToCustomerId,
+        convertedAt: salesLeads.convertedAt,
+        createdAt: salesLeads.createdAt,
+        updatedAt: salesLeads.updatedAt,
+        assignedUser: users ? {
+          id: users.id,
+          name: users.name,
+          email: users.email
+        } : null
+      })
+      .from(salesLeads)
+      .leftJoin(users, eq(salesLeads.assignedTo, users.id))
+      .where(eq(salesLeads.id, id));
+    
+    return lead || undefined;
+  }
+
+  async createSalesLead(lead: InsertSalesLead): Promise<SalesLead> {
+    // Generate lead number
+    const leadNumber = `LEAD-${Date.now()}`;
+    const [newLead] = await db
+      .insert(salesLeads)
+      .values({ ...lead, leadNumber })
+      .returning();
+    return newLead;
+  }
+
+  async updateSalesLead(id: number, lead: Partial<InsertSalesLead>): Promise<SalesLead | undefined> {
+    const [updatedLead] = await db
+      .update(salesLeads)
+      .set({ ...lead, updatedAt: new Date() })
+      .where(eq(salesLeads.id, id))
+      .returning();
+    return updatedLead || undefined;
+  }
+
+  async deleteSalesLead(id: number): Promise<boolean> {
+    const result = await db.delete(salesLeads).where(eq(salesLeads.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getSalesLeadsByStatus(companyId: number, status: string): Promise<SalesLead[]> {
+    return await db
+      .select()
+      .from(salesLeads)
+      .where(and(eq(salesLeads.companyId, companyId), eq(salesLeads.status, status)));
+  }
+
+  async getSalesLeadsByAssignedUser(userId: number): Promise<SalesLead[]> {
+    return await db
+      .select()
+      .from(salesLeads)
+      .where(eq(salesLeads.assignedTo, userId));
+  }
+
+  async convertLeadToCustomer(leadId: number, userId: number): Promise<Customer> {
+    const lead = await this.getSalesLead(leadId);
+    if (!lead) {
+      throw new Error('Lead not found');
+    }
+
+    // Create customer from lead
+    const customerData = {
+      companyId: lead.companyId,
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone || '',
+      contactName: lead.name,
+      isActive: true
+    };
+
+    const customer = await this.createCustomer(customerData);
+
+    // Update lead with conversion details
+    await this.updateSalesLead(leadId, {
+      status: 'converted',
+      convertedToCustomerId: customer.id,
+      convertedAt: new Date()
+    });
+
+    return customer;
+  }
+
+  async updateLeadScore(leadId: number, score: number): Promise<SalesLead | undefined> {
+    return await this.updateSalesLead(leadId, { score });
+  }
+
+  // Sales Pipeline Stages Management
+  async getSalesPipelineStages(companyId: number): Promise<SalesPipelineStage[]> {
+    return await db
+      .select()
+      .from(salesPipelineStages)
+      .where(and(eq(salesPipelineStages.companyId, companyId), eq(salesPipelineStages.isActive, true)))
+      .orderBy(salesPipelineStages.order);
+  }
+
+  async getSalesPipelineStage(id: number): Promise<SalesPipelineStage | undefined> {
+    const [stage] = await db
+      .select()
+      .from(salesPipelineStages)
+      .where(eq(salesPipelineStages.id, id));
+    return stage || undefined;
+  }
+
+  async createSalesPipelineStage(stage: InsertSalesPipelineStage): Promise<SalesPipelineStage> {
+    const [newStage] = await db
+      .insert(salesPipelineStages)
+      .values(stage)
+      .returning();
+    return newStage;
+  }
+
+  async updateSalesPipelineStage(id: number, stage: Partial<InsertSalesPipelineStage>): Promise<SalesPipelineStage | undefined> {
+    const [updatedStage] = await db
+      .update(salesPipelineStages)
+      .set({ ...stage, updatedAt: new Date() })
+      .where(eq(salesPipelineStages.id, id))
+      .returning();
+    return updatedStage || undefined;
+  }
+
+  async deleteSalesPipelineStage(id: number): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const [updatedStage] = await db
+      .update(salesPipelineStages)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(salesPipelineStages.id, id))
+      .returning();
+    return !!updatedStage;
+  }
+
+  async reorderPipelineStages(companyId: number, stageOrders: { id: number; order: number }[]): Promise<boolean> {
+    try {
+      for (const { id, order } of stageOrders) {
+        await db
+          .update(salesPipelineStages)
+          .set({ order, updatedAt: new Date() })
+          .where(and(eq(salesPipelineStages.id, id), eq(salesPipelineStages.companyId, companyId)));
+      }
+      return true;
+    } catch (error) {
+      console.error('Error reordering pipeline stages:', error);
+      return false;
+    }
+  }
+
+  // Sales Opportunities Management - Key implementation methods
+  async getSalesOpportunities(companyId: number): Promise<SalesOpportunity[]> {
+    return await db
+      .select()
+      .from(salesOpportunities)
+      .where(eq(salesOpportunities.companyId, companyId))
+      .orderBy(desc(salesOpportunities.createdAt));
+  }
+
+  async getSalesOpportunity(id: number): Promise<SalesOpportunityWithStage | undefined> {
+    const [opportunity] = await db
+      .select({
+        id: salesOpportunities.id,
+        companyId: salesOpportunities.companyId,
+        opportunityNumber: salesOpportunities.opportunityNumber,
+        title: salesOpportunities.title,
+        description: salesOpportunities.description,
+        leadId: salesOpportunities.leadId,
+        customerId: salesOpportunities.customerId,
+        stageId: salesOpportunities.stageId,
+        value: salesOpportunities.value,
+        probability: salesOpportunities.probability,
+        expectedCloseDate: salesOpportunities.expectedCloseDate,
+        actualCloseDate: salesOpportunities.actualCloseDate,
+        assignedTo: salesOpportunities.assignedTo,
+        source: salesOpportunities.source,
+        priority: salesOpportunities.priority,
+        status: salesOpportunities.status,
+        lostReason: salesOpportunities.lostReason,
+        tags: salesOpportunities.tags,
+        customFields: salesOpportunities.customFields,
+        notes: salesOpportunities.notes,
+        createdAt: salesOpportunities.createdAt,
+        updatedAt: salesOpportunities.updatedAt,
+        stage: salesPipelineStages ? {
+          id: salesPipelineStages.id,
+          name: salesPipelineStages.name,
+          probability: salesPipelineStages.probability,
+          order: salesPipelineStages.order,
+          color: salesPipelineStages.color
+        } : null,
+        assignedUser: users ? {
+          id: users.id,
+          name: users.name,
+          email: users.email
+        } : null
+      })
+      .from(salesOpportunities)
+      .leftJoin(salesPipelineStages, eq(salesOpportunities.stageId, salesPipelineStages.id))
+      .leftJoin(users, eq(salesOpportunities.assignedTo, users.id))
+      .where(eq(salesOpportunities.id, id));
+    
+    return opportunity || undefined;
+  }
+
+  async createSalesOpportunity(opportunity: InsertSalesOpportunity): Promise<SalesOpportunity> {
+    // Generate opportunity number
+    const opportunityNumber = `OPP-${Date.now()}`;
+    const [newOpportunity] = await db
+      .insert(salesOpportunities)
+      .values({ ...opportunity, opportunityNumber })
+      .returning();
+    return newOpportunity;
+  }
+
+  async updateSalesOpportunity(id: number, opportunity: Partial<InsertSalesOpportunity>): Promise<SalesOpportunity | undefined> {
+    const [updatedOpportunity] = await db
+      .update(salesOpportunities)
+      .set({ ...opportunity, updatedAt: new Date() })
+      .where(eq(salesOpportunities.id, id))
+      .returning();
+    return updatedOpportunity || undefined;
+  }
+
+  async deleteSalesOpportunity(id: number): Promise<boolean> {
+    const result = await db.delete(salesOpportunities).where(eq(salesOpportunities.id, id));
+    return result.rowCount > 0;
+  }
+
+  async moveSalesOpportunityToStage(opportunityId: number, stageId: number): Promise<SalesOpportunity | undefined> {
+    return await this.updateSalesOpportunity(opportunityId, { stageId });
+  }
+
+  async getSalesOpportunitiesByStage(companyId: number, stageId: number): Promise<SalesOpportunity[]> {
+    return await db
+      .select()
+      .from(salesOpportunities)
+      .where(and(eq(salesOpportunities.companyId, companyId), eq(salesOpportunities.stageId, stageId)));
+  }
+
+  async getSalesOpportunitiesByAssignedUser(userId: number): Promise<SalesOpportunity[]> {
+    return await db
+      .select()
+      .from(salesOpportunities)
+      .where(eq(salesOpportunities.assignedTo, userId));
+  }
+
+  async closeSalesOpportunity(opportunityId: number, status: 'won' | 'lost', lostReason?: string): Promise<SalesOpportunity | undefined> {
+    const updateData: Partial<InsertSalesOpportunity> = {
+      status,
+      actualCloseDate: new Date()
+    };
+
+    if (lostReason) {
+      updateData.lostReason = lostReason;
+    }
+
+    return await this.updateSalesOpportunity(opportunityId, updateData);
+  }
+
+  // Quote Templates Management
+  async getQuoteTemplates(companyId: number): Promise<QuoteTemplate[]> {
+    return await db
+      .select()
+      .from(quoteTemplates)
+      .where(and(eq(quoteTemplates.companyId, companyId), eq(quoteTemplates.isActive, true)))
+      .orderBy(desc(quoteTemplates.createdAt));
+  }
+
+  async getQuoteTemplate(id: number): Promise<QuoteTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(quoteTemplates)
+      .where(eq(quoteTemplates.id, id));
+    return template || undefined;
+  }
+
+  async createQuoteTemplate(template: InsertQuoteTemplate): Promise<QuoteTemplate> {
+    const [newTemplate] = await db
+      .insert(quoteTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
+  }
+
+  async updateQuoteTemplate(id: number, template: Partial<InsertQuoteTemplate>): Promise<QuoteTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(quoteTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(quoteTemplates.id, id))
+      .returning();
+    return updatedTemplate || undefined;
+  }
+
+  async deleteQuoteTemplate(id: number): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const [updatedTemplate] = await db
+      .update(quoteTemplates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(quoteTemplates.id, id))
+      .returning();
+    return !!updatedTemplate;
+  }
+
+  async getQuoteTemplatesByCategory(companyId: number, category: string): Promise<QuoteTemplate[]> {
+    return await db
+      .select()
+      .from(quoteTemplates)
+      .where(and(
+        eq(quoteTemplates.companyId, companyId),
+        eq(quoteTemplates.category, category),
+        eq(quoteTemplates.isActive, true)
+      ));
+  }
+
+  async incrementTemplateUsage(templateId: number): Promise<QuoteTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(quoteTemplates)
+      .set({ 
+        usageCount: sql`${quoteTemplates.usageCount} + 1`,
+        lastUsed: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(quoteTemplates.id, templateId))
+      .returning();
+    return updatedTemplate || undefined;
+  }
+
+  // Quote Analytics Management
+  async getQuoteAnalytics(estimateId: number): Promise<QuoteAnalytics[]> {
+    return await db
+      .select()
+      .from(quoteAnalytics)
+      .where(eq(quoteAnalytics.estimateId, estimateId))
+      .orderBy(desc(quoteAnalytics.createdAt));
+  }
+
+  async createQuoteAnalytics(analytics: InsertQuoteAnalytics): Promise<QuoteAnalytics> {
+    const [newAnalytics] = await db
+      .insert(quoteAnalytics)
+      .values(analytics)
+      .returning();
+    return newAnalytics;
+  }
+
+  async getQuoteAnalyticsByType(estimateId: number, eventType: string): Promise<QuoteAnalytics[]> {
+    return await db
+      .select()
+      .from(quoteAnalytics)
+      .where(and(eq(quoteAnalytics.estimateId, estimateId), eq(quoteAnalytics.eventType, eventType)));
+  }
+
+  async getQuoteViewStats(estimateId: number): Promise<{totalViews: number; uniqueViewers: number; totalTimeSpent: number}> {
+    const viewEvents = await db
+      .select()
+      .from(quoteAnalytics)
+      .where(and(eq(quoteAnalytics.estimateId, estimateId), eq(quoteAnalytics.eventType, 'view')));
+
+    const totalViews = viewEvents.length;
+    const uniqueViewers = new Set(viewEvents.map(e => e.ipAddress)).size;
+    const totalTimeSpent = viewEvents.reduce((sum, event) => 
+      sum + (event.timeSpent || 0), 0);
+
+    return { totalViews, uniqueViewers, totalTimeSpent };
+  }
+
+  // Digital Signatures Management
+  async getDigitalSignatures(documentType: string, documentId: number): Promise<DigitalSignature[]> {
+    return await db
+      .select()
+      .from(digitalSignatures)
+      .where(and(
+        eq(digitalSignatures.documentType, documentType),
+        eq(digitalSignatures.documentId, documentId)
+      ))
+      .orderBy(desc(digitalSignatures.createdAt));
+  }
+
+  async createDigitalSignature(signature: InsertDigitalSignature): Promise<DigitalSignature> {
+    const [newSignature] = await db
+      .insert(digitalSignatures)
+      .values(signature)
+      .returning();
+    return newSignature;
+  }
+
+  async verifyDigitalSignature(id: number): Promise<DigitalSignature | undefined> {
+    const [signature] = await db
+      .update(digitalSignatures)
+      .set({ verifiedAt: new Date() })
+      .where(eq(digitalSignatures.id, id))
+      .returning();
+    return signature || undefined;
+  }
+
+  async invalidateDigitalSignature(id: number): Promise<boolean> {
+    const [signature] = await db
+      .update(digitalSignatures)
+      .set({ invalidatedAt: new Date() })
+      .where(eq(digitalSignatures.id, id))
+      .returning();
+    return !!signature;
+  }
+
+  // Pricing Rules Management
+  async getPricingRules(companyId: number): Promise<PricingRule[]> {
+    return await db
+      .select()
+      .from(pricingRules)
+      .where(and(eq(pricingRules.companyId, companyId), eq(pricingRules.isActive, true)))
+      .orderBy(desc(pricingRules.priority));
+  }
+
+  async getPricingRule(id: number): Promise<PricingRule | undefined> {
+    const [rule] = await db
+      .select()
+      .from(pricingRules)
+      .where(eq(pricingRules.id, id));
+    return rule || undefined;
+  }
+
+  async createPricingRule(rule: InsertPricingRule): Promise<PricingRule> {
+    const [newRule] = await db
+      .insert(pricingRules)
+      .values(rule)
+      .returning();
+    return newRule;
+  }
+
+  async updatePricingRule(id: number, rule: Partial<InsertPricingRule>): Promise<PricingRule | undefined> {
+    const [updatedRule] = await db
+      .update(pricingRules)
+      .set({ ...rule, updatedAt: new Date() })
+      .where(eq(pricingRules.id, id))
+      .returning();
+    return updatedRule || undefined;
+  }
+
+  async deletePricingRule(id: number): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const [updatedRule] = await db
+      .update(pricingRules)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(pricingRules.id, id))
+      .returning();
+    return !!updatedRule;
+  }
+
+  async getActivePricingRules(companyId: number): Promise<PricingRule[]> {
+    return await db
+      .select()
+      .from(pricingRules)
+      .where(and(
+        eq(pricingRules.companyId, companyId),
+        eq(pricingRules.isActive, true),
+        or(
+          isNull(pricingRules.validFrom),
+          lte(pricingRules.validFrom, new Date())
+        ),
+        or(
+          isNull(pricingRules.validTo),
+          gte(pricingRules.validTo, new Date())
+        )
+      ))
+      .orderBy(desc(pricingRules.priority));
+  }
+
+  async calculateDynamicPrice(companyId: number, productId: number, customerId?: number, quantity?: number): Promise<{originalPrice: number; discountedPrice: number; appliedRules: PricingRule[]}> {
+    // Get product base price
+    const product = await this.getProduct(productId);
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    const originalPrice = parseFloat(product.price || '0');
+    let discountedPrice = originalPrice;
+    const appliedRules: PricingRule[] = [];
+
+    // Get active pricing rules
+    const rules = await this.getActivePricingRules(companyId);
+
+    // Apply rules in priority order
+    for (const rule of rules) {
+      // Check if rule applies to this product/customer/quantity
+      const ruleConditions = rule.conditions as any;
+      
+      let ruleApplies = true;
+      
+      // Check product condition
+      if (ruleConditions?.productIds && !ruleConditions.productIds.includes(productId)) {
+        ruleApplies = false;
+      }
+      
+      // Check customer condition
+      if (customerId && ruleConditions?.customerIds && !ruleConditions.customerIds.includes(customerId)) {
+        ruleApplies = false;
+      }
+      
+      // Check quantity condition
+      if (quantity && ruleConditions?.minQuantity && quantity < ruleConditions.minQuantity) {
+        ruleApplies = false;
+      }
+
+      if (ruleApplies) {
+        // Apply the discount
+        if (rule.discountType === 'percentage') {
+          discountedPrice = discountedPrice * (1 - rule.discountValue / 100);
+        } else {
+          discountedPrice = Math.max(0, discountedPrice - rule.discountValue);
+        }
+        
+        appliedRules.push(rule);
+
+        // If rule is exclusive, stop processing further rules
+        if (ruleConditions?.isExclusive) {
+          break;
+        }
+      }
+    }
+
+    return {
+      originalPrice,
+      discountedPrice: Math.round(discountedPrice * 100) / 100, // Round to 2 decimal places
+      appliedRules
+    };
+  }
+
+  // Customer Price Lists Management
+  async getCustomerPriceLists(companyId: number): Promise<CustomerPriceList[]> {
+    return await db
+      .select()
+      .from(customerPriceLists)
+      .where(and(eq(customerPriceLists.companyId, companyId), eq(customerPriceLists.isActive, true)))
+      .orderBy(desc(customerPriceLists.createdAt));
+  }
+
+  async getCustomerPriceList(customerId: number, productId: number): Promise<CustomerPriceList | undefined> {
+    const [priceList] = await db
+      .select()
+      .from(customerPriceLists)
+      .where(and(
+        eq(customerPriceLists.customerId, customerId),
+        eq(customerPriceLists.productId, productId),
+        eq(customerPriceLists.isActive, true)
+      ));
+    return priceList || undefined;
+  }
+
+  async createCustomerPriceList(priceList: InsertCustomerPriceList): Promise<CustomerPriceList> {
+    const [newPriceList] = await db
+      .insert(customerPriceLists)
+      .values(priceList)
+      .returning();
+    return newPriceList;
+  }
+
+  async updateCustomerPriceList(id: number, priceList: Partial<InsertCustomerPriceList>): Promise<CustomerPriceList | undefined> {
+    const [updatedPriceList] = await db
+      .update(customerPriceLists)
+      .set({ ...priceList, updatedAt: new Date() })
+      .where(eq(customerPriceLists.id, id))
+      .returning();
+    return updatedPriceList || undefined;
+  }
+
+  async deleteCustomerPriceList(id: number): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const [updatedPriceList] = await db
+      .update(customerPriceLists)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(customerPriceLists.id, id))
+      .returning();
+    return !!updatedPriceList;
+  }
+
+  async getCustomerPriceListsByCustomer(customerId: number): Promise<CustomerPriceList[]> {
+    return await db
+      .select()
+      .from(customerPriceLists)
+      .where(and(eq(customerPriceLists.customerId, customerId), eq(customerPriceLists.isActive, true)));
   }
 }
 
