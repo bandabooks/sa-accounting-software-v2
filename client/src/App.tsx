@@ -40,7 +40,7 @@ import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
 import TrialSignup from "@/pages/trial-signup";
 import ChartOfAccounts from "@/pages/chart-of-accounts";
-import JournalEntries from "@/pages/journal-entries";
+import JournalEntries from "@/pages/journal-entries-enhanced";
 import Banking from "@/pages/banking";
 import GeneralLedger from "@/pages/general-ledger";
 import FixedAssets from "@/pages/fixed-assets";

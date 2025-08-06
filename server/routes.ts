@@ -5540,6 +5540,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get next journal entry number
+  app.get("/api/journal-entries/next-number", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const nextNumber = await storage.getNextSequence('JE', req.user!.companyId!);
+      res.json({ entryNumber: nextNumber });
+    } catch (error) {
+      console.error('Error generating journal entry number:', error);
+      res.status(500).json({ error: 'Failed to generate journal entry number' });
+    }
+  });
+
   // Create retroactive journal entries for existing invoices
   app.post("/api/journal-entries/retroactive", authenticate, async (req, res) => {
     try {
