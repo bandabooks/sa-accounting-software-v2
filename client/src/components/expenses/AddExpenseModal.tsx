@@ -184,16 +184,16 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+        <DialogContent className="max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
               Add New Expense
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto px-1 space-y-3 pb-4">
+          <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+            <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 min-h-0">
               {/* Supplier Field with Quick Add */}
               <div className="space-y-2">
                 <Label htmlFor="supplier">Supplier</Label>
@@ -405,34 +405,45 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
 
               {/* Tax Deductible removed - VAT logic and category determine deductibility */}
 
-              {/* File Upload Placeholder */}
+              {/* File Upload Section */}
               <div className="space-y-2">
-                <Label>Upload Invoice (PDF, PNG, JPG)</Label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm text-gray-500 mb-1">Drag and drop your file here, or click to browse</p>
-                  <p className="text-xs text-gray-400">Supported formats: PDF, PNG, JPG (max 10MB)</p>
+                <Label>Upload Invoice/Receipt (PDF, PNG, JPG)</Label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                  <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Click to upload or drag and drop</p>
+                  <p className="text-xs text-gray-400">PDF, PNG, JPG up to 10MB</p>
                 </div>
               </div>
             </div>
 
-            {/* Fixed Bottom Actions - Mobile Friendly */}
-            <div className="flex-shrink-0 mt-4 pt-3 border-t bg-background/95 backdrop-blur-sm">
-              <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            {/* Fixed Bottom Actions */}
+            <div className="flex-shrink-0 mt-6 pt-4 border-t bg-background/95 backdrop-blur-sm sticky bottom-0">
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
-                  className="sm:w-auto"
+                  className="w-full sm:w-auto order-2 sm:order-1"
+                  disabled={createExpenseMutation.isPending}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createExpenseMutation.isPending}
-                  className="sm:w-auto"
+                  disabled={createExpenseMutation.isPending || !formData.description.trim()}
+                  className="w-full sm:w-auto order-1 sm:order-2 bg-primary hover:bg-primary/90"
                 >
-                  {createExpenseMutation.isPending ? "Creating..." : "Create Expense"}
+                  {createExpenseMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving Expense...
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Save Transaction
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
