@@ -56,6 +56,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
   const [netAmount, setNetAmount] = useState("0.00");
   const [grossAmount, setGrossAmount] = useState("0.00");
   const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Fetch suppliers
   const { data: suppliers } = useQuery({
@@ -105,13 +106,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
 
   const createExpenseMutation = useMutation({
     mutationFn: async (data: ExpenseFormData) => {
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create expense');
-      return response.json();
+      return await apiRequest('/api/expenses', 'POST', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
@@ -141,10 +136,12 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
       vatAmount: "0.00",
       expenseDate: new Date().toISOString().split('T')[0],
       paidStatus: "Unpaid",
+      supplierInvoiceNumber: "",
       createdBy: user?.id || 0,
     });
     setNetAmount("0.00");
     setGrossAmount("0.00");
+    setSelectedFile(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -408,10 +405,45 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
               {/* File Upload Section */}
               <div className="space-y-2">
                 <Label>Upload Invoice/Receipt (PDF, PNG, JPG)</Label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors">
-                  <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Click to upload or drag and drop</p>
-                  <p className="text-xs text-gray-400">PDF, PNG, JPG up to 10MB</p>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast({
+                            title: "File too large",
+                            description: "Please select a file smaller than 10MB",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setSelectedFile(file);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    id="file-upload"
+                  />
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                    <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                    {selectedFile ? (
+                      <div>
+                        <p className="text-sm text-green-600 dark:text-green-400 mb-1">
+                          ✓ {selectedFile.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Click to upload or drag and drop</p>
+                        <p className="text-xs text-gray-400">PDF, PNG, JPG up to 10MB</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
