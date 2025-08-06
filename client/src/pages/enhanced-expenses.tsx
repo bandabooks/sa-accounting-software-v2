@@ -33,7 +33,7 @@ interface ExpenseMetrics {
 }
 
 export default function EnhancedExpensesPage() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: any };
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("current_month");
@@ -44,7 +44,7 @@ export default function EnhancedExpensesPage() {
   // Fetch expenses
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ['/api/expenses', searchTerm, dateFilter, statusFilter, supplierFilter, categoryFilter],
-  });
+  }) as { data: any[], isLoading: boolean };
 
   // Fetch expense metrics
   const { data: metrics } = useQuery<ExpenseMetrics>({
@@ -54,15 +54,15 @@ export default function EnhancedExpensesPage() {
   // Fetch suppliers for filter
   const { data: suppliers } = useQuery({
     queryKey: ['/api/suppliers'],
-  });
+  }) as { data: any[] };
 
   // Fetch categories for filter
   const { data: categories } = useQuery({
     queryKey: ['/api/chart-of-accounts'],
-    select: (data) => data?.filter((account: any) => 
+    select: (data: any) => data?.filter((account: any) => 
       account.accountType === 'Expense' || account.accountType === 'Cost of Sales'
     ),
-  });
+  }) as { data: any[] };
 
   // Fetch companies for multi-company filter
   const { data: companies } = useQuery({
@@ -275,7 +275,7 @@ export default function EnhancedExpensesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All Suppliers</SelectItem>
-                {suppliers?.map((supplier: any) => (
+                {(suppliers as any)?.map((supplier: any) => (
                   <SelectItem key={supplier.id} value={supplier.id.toString()}>
                     {supplier.name}
                   </SelectItem>
@@ -289,7 +289,7 @@ export default function EnhancedExpensesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All Categories</SelectItem>
-                {categories?.map((category: any) => (
+                {(categories as any)?.map((category: any) => (
                   <SelectItem key={category.id} value={category.id.toString()}>
                     {category.accountName}
                   </SelectItem>
@@ -297,14 +297,14 @@ export default function EnhancedExpensesPage() {
               </SelectContent>
             </Select>
 
-            {user?.role === 'super_admin' && companies && (
+            {user?.role === 'super_admin' && (companies as any) && (
               <Select>
                 <SelectTrigger>
                   <SelectValue placeholder="Company" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All Companies</SelectItem>
-                  {companies.map((company: any) => (
+                  {(companies as any)?.map((company: any) => (
                     <SelectItem key={company.companyId} value={company.companyId.toString()}>
                       {company.company?.name || company.name}
                     </SelectItem>
@@ -342,7 +342,7 @@ export default function EnhancedExpensesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {expenses.map((expense: any) => (
+              {(expenses as any)?.map((expense: any) => (
                 <div key={expense.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex-1">

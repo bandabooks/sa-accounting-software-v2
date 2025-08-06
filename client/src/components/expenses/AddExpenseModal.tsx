@@ -39,7 +39,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState<ExpenseFormData>({
-    companyId: user?.companyId || 0,
+    companyId: (user as any)?.companyId || 0,
     description: "",
     amount: "",
     vatType: "No VAT",
@@ -130,7 +130,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
 
   const resetForm = () => {
     setFormData({
-      companyId: user?.companyId || 0,
+      companyId: (user as any)?.companyId || 0,
       description: "",
       amount: "",
       vatType: "No VAT",
@@ -156,7 +156,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
     createExpenseMutation.mutate(formData);
   };
 
-  const expenseAccounts = accounts?.filter((account: any) => 
+  const expenseAccounts = (accounts as any)?.filter((account: any) => 
     account.accountType === 'Expense' || account.accountType === 'Cost of Sales'
   ) || [];
 
@@ -173,7 +173,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Multi-company dropdown - only show for super_admin */}
-            {user?.role === 'super_admin' && companies && (
+            {(user as any)?.role === 'super_admin' && (companies as any) && (
               <div className="md:col-span-2">
                 <Label htmlFor="companyId">Client/Company *</Label>
                 <Select 
@@ -184,7 +184,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
                     <SelectValue placeholder="Select company" />
                   </SelectTrigger>
                   <SelectContent>
-                    {companies.map((company: any) => (
+                    {(companies as any)?.map((company: any) => (
                       <SelectItem key={company.companyId} value={company.companyId.toString()}>
                         {company.company?.name || company.name}
                       </SelectItem>
@@ -205,7 +205,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
                   <SelectValue placeholder="Select supplier (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {suppliers?.map((supplier: any) => (
+                  {(suppliers as any)?.map((supplier: any) => (
                     <SelectItem key={supplier.id} value={supplier.id.toString()}>
                       {supplier.name}
                     </SelectItem>
