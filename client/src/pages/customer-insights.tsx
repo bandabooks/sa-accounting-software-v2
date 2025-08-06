@@ -127,13 +127,13 @@ export default function CustomerInsights() {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesRisk = !riskFilter || (
+    const matchesRisk = !riskFilter || riskFilter === 'all' || (
       riskFilter === 'low' && customer.riskScore <= 30 ||
       riskFilter === 'medium' && customer.riskScore > 30 && customer.riskScore <= 70 ||
       riskFilter === 'high' && customer.riskScore > 70
     );
 
-    const matchesEngagement = !engagementFilter || (
+    const matchesEngagement = !engagementFilter || engagementFilter === 'all' || (
       engagementFilter === 'very_high' && customer.engagementScore > 80 ||
       engagementFilter === 'high' && customer.engagementScore > 60 && customer.engagementScore <= 80 ||
       engagementFilter === 'medium' && customer.engagementScore > 40 && customer.engagementScore <= 60 ||
@@ -283,7 +283,7 @@ export default function CustomerInsights() {
                   <SelectValue placeholder="Risk Level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Risk Levels</SelectItem>
+                  <SelectItem value="all">All Risk Levels</SelectItem>
                   {RISK_LEVELS.map(level => (
                     <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>
                   ))}
@@ -294,7 +294,7 @@ export default function CustomerInsights() {
                   <SelectValue placeholder="Engagement" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Engagement</SelectItem>
+                  <SelectItem value="all">All Engagement</SelectItem>
                   {ENGAGEMENT_LEVELS.map(level => (
                     <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>
                   ))}
