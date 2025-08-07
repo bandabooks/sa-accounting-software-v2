@@ -40,7 +40,8 @@ interface ExpenseEntry {
   bankAccountId?: number;
   reference?: string;
   notes?: string;
-  status: string;
+  status: 'draft' | 'finalized';
+  isLocked?: boolean;
 }
 
 interface IncomeEntry {
@@ -57,7 +58,16 @@ interface IncomeEntry {
   bankAccountId?: number;
   reference?: string;
   notes?: string;
-  status: string;
+  status: 'draft' | 'finalized';
+  isLocked?: boolean;
+}
+
+interface CaptureMetrics {
+  today: { finalized: number; draft: number; };
+  yesterday: { finalized: number; };
+  thisMonth: { total: number; finalized: number; };
+  totalValue: number;
+  percentFinalized: number;
 }
 
 const EnhancedBulkCapture = () => {
@@ -70,7 +80,9 @@ const EnhancedBulkCapture = () => {
   const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successDetails, setSuccessDetails] = useState<{count: number, type: string}>({count: 0, type: ''});
+  const [successDetails, setSuccessDetails] = useState<{count: number, type: string, status: 'draft' | 'finalized'}>({count: 0, type: '', status: 'finalized'});
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'finalized'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -105,7 +117,7 @@ const EnhancedBulkCapture = () => {
       vatRate: '15.00',
       vatAmount: '0.00',
       netAmount: '0.00',
-      status: 'finalized',
+      status: 'draft',
     }));
     setExpenseEntries(defaultEntries);
   }, [quickDate]);
@@ -317,7 +329,7 @@ const EnhancedBulkCapture = () => {
   // Add more rows
   const addMoreRows = useCallback((count: number = 5) => {
     if (activeTab === 'expense') {
-      const newEntries = Array.from({ length: count }, () => ({
+      const newEntries: ExpenseEntry[] = Array.from({ length: count }, () => ({
         transactionDate: quickDate,
         categoryId: 0,
         description: '',
@@ -326,7 +338,7 @@ const EnhancedBulkCapture = () => {
         vatRate: '15.00',
         vatAmount: '0.00',
         netAmount: '0.00',
-        status: 'draft',
+        status: 'draft' as 'draft',
       }));
       setExpenseEntries(prev => [...prev, ...newEntries]);
     } else {
@@ -334,7 +346,7 @@ const EnhancedBulkCapture = () => {
       const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
       const defaultIncomeAccountId = revenueAccounts.length > 0 ? revenueAccounts[0].id : '';
       
-      const newEntries = Array.from({ length: count }, () => ({
+      const newEntries: IncomeEntry[] = Array.from({ length: count }, () => ({
         transactionDate: quickDate,
         incomeAccountId: defaultIncomeAccountId,
         description: '',
@@ -343,7 +355,7 @@ const EnhancedBulkCapture = () => {
         vatRate: '15.00',
         vatAmount: '0.00',
         netAmount: '0.00',
-        status: 'draft',
+        status: 'draft' as 'draft',
       }));
       setIncomeEntries(prev => [...prev, ...newEntries]);
     }
@@ -423,7 +435,7 @@ const EnhancedBulkCapture = () => {
       return responses;
     },
     onSuccess: (responses: any[]) => {
-      setSuccessDetails({ count: responses.length, type: 'expense' });
+      setSuccessDetails({ count: responses.length, type: 'expense', status: 'finalized' });
       setShowSuccessModal(true);
       // Reset the form
       initializeExpenseEntries();
@@ -515,7 +527,7 @@ const EnhancedBulkCapture = () => {
       return responses;
     },
     onSuccess: (responses: any[]) => {
-      setSuccessDetails({ count: responses.length, type: 'income' });
+      setSuccessDetails({ count: responses.length, type: 'income', status: 'finalized' });
       setShowSuccessModal(true);
       // Reset the form
       initializeIncomeEntries();

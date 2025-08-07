@@ -1,0 +1,108 @@
+You are enhancing the Bulk Capture module of a professional Node.js-based accounting system (Taxnify) to ensure it supports **finalized financial data**, **clear draft distinction**, and **professional analytics**. This system is used by accountants and tax practitioners, and must uphold data integrity for audits and accurate reporting.
+
+---
+
+### 📌 MODULE: Bulk Capture (Income & Expense)
+Location: `/bulk-capture`
+
+---
+
+### ✅ OBJECTIVE:
+
+1. **Allow capturing of multiple income/expense entries**
+2. **Ensure distinction between "Draft" and "Finalized" entries**
+3. **Visibly confirm saved entries**
+4. **Display professional metrics for better review and audit**
+
+---
+
+### 📋 FEATURES TO IMPLEMENT:
+
+#### 1. 🚦**Draft vs Finalized Status**
+- On saving, users **must choose**:
+  - `Save as Draft` — Entry saved but **not posted** to general ledger
+  - `Finalize and Post` — Entry saved and **posted to general ledger**
+- Each row should display status icon: 📝 Draft or ✅ Finalized
+- Finalized entries are **locked** from editing unless reopened by admin
+
+---
+
+#### 2. ✅ **User Feedback and Confirmation**
+- When finalized: Show message like:
+  > ✅ **Success! 5 transactions were recorded and posted to the ledger.**
+- When saved as draft: Show:
+  > 💾 **Saved as Draft. Entries will not affect reports until finalized.**
+
+---
+
+#### 3. 📊 **Capture Metrics Summary Panel**
+- Add a right-side or top summary box with metrics:
+  - 📅 **Today**:  X finalized, Y draft
+  - 📆 **Yesterday**: X finalized
+  - 📈 **This Month**: Total X entries, Z finalized
+  - 🧾 Total recorded value: Rxx,xxx.00
+  - 📌 % Finalized: e.g., 87%
+
+**Use color codes**: Blue for drafts, Green for finalized, Red for errors
+
+---
+
+### 🔁 BULK ENTRY FLOW
+
+Each row captures:
+- Transaction Date (format: `YYYY-MM-DD`)
+- Description
+- Reference (optional)
+- Account (dropdown)
+- Debit / Credit
+- Upload File (optional receipt)
+- Status (dropdown or inferred from submission action)
+
+Each set is saved into:
+- `journal_entries` table with status
+- `journal_lines` table per line item
+- Attachments linked per entry (optional)
+
+---
+
+### 🛑 VALIDATIONS
+
+- All required fields must be completed before finalizing
+- Amounts must balance (debit = credit for each row)
+- Date must be string format (use format conversion from General Entry)
+- Prevent null values in accounts or categories
+
+---
+
+### ⚙️ SYSTEM INTEGRATION
+
+- Use **same logic** as working General Entry module for:
+  - Entry creation
+  - Ledger posting
+  - Date formatting
+- Do **not** post to ledger if status is “Draft”
+
+---
+
+### 🖥️ UI IMPROVEMENTS
+
+- Finalized entries should have lock icon and light green background
+- Drafts shown in amber/yellow background with edit option
+- Add filter toggle: [ All | Finalized | Draft ]
+- Add search by description or date
+
+---
+
+### 🧠 INTELLIGENT TOUCH
+
+- Auto-fill account based on description (e.g. if "POS Sale", use 4000 - Sales)
+- Pre-suggest categories from historical entries
+- When uploading PDF or JPG, auto-suggest account using filename
+
+---
+
+### 🧪 QA TESTING POINTS
+
+- Create 5 draft entries, confirm they do not affect reports
+- Finalize 3 entries, confirm posted to journal & reflected in metrics
+- Edit draft, finalize, and verify update in metrics
