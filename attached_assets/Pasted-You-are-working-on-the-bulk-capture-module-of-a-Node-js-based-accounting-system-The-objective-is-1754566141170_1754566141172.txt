@@ -1,0 +1,55 @@
+You are working on the `/bulk-capture` module of a Node.js-based accounting system. The objective is to provide a **real-time display unit or counter** that shows the **number of transactions captured (both Draft and Finalized)**, without needing to navigate to the General Entries module.
+
+---
+
+### 🎯 GOAL:
+- Add a **visible counter or display card** on the Bulk Capture screen.
+- Show the **number of transactions captured to date** within the current company context.
+- Clearly indicate:
+  - ✅ Number of Finalized Entries
+  - 📝 Number of Draft Entries
+  - 📊 Total Number of Entries Today
+
+---
+
+### 📋 REQUIREMENTS:
+
+#### 1. 🖼️ **Transaction Counter Display**
+- Add a summary display bar at the top or right-side panel of the `/bulk-capture` page.
+- Display:
+  - `Total Transactions Captured Today: X`
+  - `Finalized: Y`
+  - `Draft: Z`
+- Use styled badges, chips, or cards to display counts with the following colors:
+  - Green for Finalized
+  - Yellow for Draft
+  - Gray or Blue for Total
+
+#### 2. 🔁 **Live Mirror Without Page Refresh**
+- Counter should **update instantly** when a new transaction is saved or finalized.
+- Use WebSocket or local state + real-time update via React/JS.
+- No need to navigate to `/general-entries` to fetch counts.
+
+#### 3. 🧠 **Filters (Optional Enhancement)**
+- Add filter toggles: `Today`, `This Week`, `This Month` for better insight.
+- Clicking on the count opens a filtered view (optional).
+
+---
+
+### ⚙️ TECH INSTRUCTIONS:
+- Fetch records from the `journal_entries` or `bulk_entries` table filtered by:
+  - Logged-in company
+  - Current date (`created_at`)
+- Use count aggregation grouped by `status = 'finalized'` or `status = 'draft'`
+- Display counts in the UI using a card or badge component with animated count-up if possible
+
+---
+
+### ✅ UI Example (Suggested Layout)
+
+```jsx
+<Card title="Bulk Capture Summary">
+  <Badge color="gray">Total Today: 24</Badge>
+  <Badge color="green">Finalized: 18</Badge>
+  <Badge color="yellow">Draft: 6</Badge>
+</Card>
