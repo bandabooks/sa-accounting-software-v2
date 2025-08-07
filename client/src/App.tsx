@@ -110,7 +110,7 @@ import ProfessionalUserManagement from "@/pages/ProfessionalUserManagement";
 import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
-import BulkCapture from "@/pages/bulk-capture-new";
+import BulkCapture from "@/pages/bulk-capture-enhanced";
 import SalesDashboard from "@/pages/sales-dashboard";
 import SalesOrders from "@/pages/sales-orders";
 import SalesOrderCreate from "@/pages/sales-order-create";

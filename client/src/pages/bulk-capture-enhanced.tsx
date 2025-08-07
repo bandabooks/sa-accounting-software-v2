@@ -345,7 +345,7 @@ const EnhancedBulkCapture = () => {
     }
   }, [activeTab, quickDate, chartOfAccounts]);
 
-  // Save expense entries mutation
+  // Save expense entries mutation - using journal entry logic
   const saveExpensesMutation = useMutation({
     mutationFn: async () => {
       const validEntries = expenseEntries.filter(entry => 
@@ -358,34 +358,65 @@ const EnhancedBulkCapture = () => {
         throw new Error('No valid entries to save');
       }
 
-      return await apiRequest('/api/bulk-capture/sessions', 'POST', {
-        sessionType: 'expense',
-        totalEntries: validEntries.length,
-        batchNotes: `Bulk expense capture - ${validEntries.length} entries`,
-        entries: validEntries.map(entry => ({
-          transactionDate: entry.transactionDate,
-          categoryId: entry.categoryId,
-          description: entry.description,
-          amount: parseFloat(entry.amount),
-          supplierId: entry.supplierId || null,
-          bankAccountId: entry.bankAccountId || null,
-          vatTypeId: entry.vatTypeId,
-          vatRate: parseFloat(entry.vatRate),
-          vatAmount: parseFloat(entry.vatAmount),
-          netAmount: parseFloat(entry.netAmount) || (parseFloat(entry.amount) - parseFloat(entry.vatAmount)),
-          reference: entry.reference || null,
-          notes: entry.notes || null,
-        }))
-      });
+      const responses = [];
+      
+      for (const entry of validEntries) {
+        const amount = parseFloat(entry.amount);
+        const vatAmount = parseFloat(entry.vatAmount) || 0;
+        const netAmount = amount - vatAmount;
+        
+        const response = await apiRequest('/api/journal-entries', 'POST', {
+          entry: {
+            entryNumber: `bulk-exp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            transactionDate: entry.transactionDate,
+            description: entry.description,
+            reference: entry.reference || '',
+            totalDebit: amount.toFixed(2),
+            totalCredit: amount.toFixed(2),
+            sourceModule: 'bulk-expense',
+            sourceId: null
+          },
+          lines: [
+            // Debit expense category account
+            {
+              accountId: parseInt(entry.categoryId.toString()),
+              description: entry.description,
+              debitAmount: netAmount.toFixed(2),
+              creditAmount: '0.00',
+              reference: entry.reference || ''
+            },
+            // Debit VAT account if applicable
+            ...(vatAmount > 0 ? [{
+              accountId: parseInt(entry.vatTypeId?.toString() || '0'),
+              description: `VAT on ${entry.description}`,
+              debitAmount: vatAmount.toFixed(2),
+              creditAmount: '0.00',
+              reference: entry.reference || ''
+            }] : []),
+            // Credit bank account
+            {
+              accountId: parseInt(entry.bankAccountId?.toString() || '0'),
+              description: entry.description,
+              debitAmount: '0.00',
+              creditAmount: amount.toFixed(2),
+              reference: entry.reference || ''
+            }
+          ]
+        });
+        responses.push(response);
+      }
+      
+      return responses;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (responses: any[]) => {
       toast({
         title: "Success",
-        description: `Successfully saved ${expenseCalculations.activeEntries} expense entries to session ${data.session?.batchId}`,
+        description: `Successfully created ${responses.length} expense journal entries`,
       });
       // Reset the form
       initializeExpenseEntries();
-      // Refetch sessions to show the new one
+      // Refetch journal entries and sessions
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
       queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
     },
     onError: (error: any) => {
@@ -397,7 +428,7 @@ const EnhancedBulkCapture = () => {
     },
   });
 
-  // Save income entries mutation
+  // Save income entries mutation - using journal entry logic
   const saveIncomesMutation = useMutation({
     mutationFn: async () => {
       const validEntries = incomeEntries.filter(entry => 
@@ -411,34 +442,65 @@ const EnhancedBulkCapture = () => {
         throw new Error('No valid entries to save');
       }
 
-      return await apiRequest('/api/bulk-capture/sessions', 'POST', {
-        sessionType: 'income',
-        totalEntries: validEntries.length,
-        batchNotes: `Bulk income capture - ${validEntries.length} entries`,
-        entries: validEntries.map(entry => ({
-          transactionDate: entry.transactionDate,
-          incomeAccountId: typeof entry.incomeAccountId === 'string' ? parseInt(entry.incomeAccountId) : entry.incomeAccountId,
-          description: entry.description,
-          amount: parseFloat(entry.amount),
-          clientId: entry.clientId || null,
-          bankAccountId: entry.bankAccountId || null,
-          vatTypeId: entry.vatTypeId,
-          vatRate: parseFloat(entry.vatRate),
-          vatAmount: parseFloat(entry.vatAmount),
-          netAmount: parseFloat(entry.netAmount) || (parseFloat(entry.amount) - parseFloat(entry.vatAmount)),
-          reference: entry.reference || null,
-          notes: entry.notes || null,
-        }))
-      });
+      const responses = [];
+      
+      for (const entry of validEntries) {
+        const amount = parseFloat(entry.amount);
+        const vatAmount = parseFloat(entry.vatAmount) || 0;
+        const netAmount = amount - vatAmount;
+        
+        const response = await apiRequest('/api/journal-entries', 'POST', {
+          entry: {
+            entryNumber: `bulk-inc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            transactionDate: entry.transactionDate,
+            description: entry.description,
+            reference: entry.reference || '',
+            totalDebit: amount.toFixed(2),
+            totalCredit: amount.toFixed(2),
+            sourceModule: 'bulk-income',
+            sourceId: null
+          },
+          lines: [
+            // Debit bank account
+            {
+              accountId: parseInt(entry.bankAccountId?.toString() || '0'),
+              description: entry.description,
+              debitAmount: amount.toFixed(2),
+              creditAmount: '0.00',
+              reference: entry.reference || ''
+            },
+            // Credit income account
+            {
+              accountId: typeof entry.incomeAccountId === 'string' ? parseInt(entry.incomeAccountId) : entry.incomeAccountId,
+              description: entry.description,
+              debitAmount: '0.00',
+              creditAmount: netAmount.toFixed(2),
+              reference: entry.reference || ''
+            },
+            // Credit VAT account if applicable
+            ...(vatAmount > 0 ? [{
+              accountId: parseInt(entry.vatTypeId?.toString() || '0'),
+              description: `VAT on ${entry.description}`,
+              debitAmount: '0.00',
+              creditAmount: vatAmount.toFixed(2),
+              reference: entry.reference || ''
+            }] : [])
+          ]
+        });
+        responses.push(response);
+      }
+      
+      return responses;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (responses: any[]) => {
       toast({
         title: "Success",
-        description: `Successfully saved ${incomeCalculations.activeEntries} income entries to session ${data.session?.batchId}`,
+        description: `Successfully created ${responses.length} income journal entries`,
       });
       // Reset the form
       initializeIncomeEntries();
-      // Refetch sessions to show the new one
+      // Refetch journal entries and sessions
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
       queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
     },
     onError: (error: any) => {
@@ -1007,7 +1069,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-blue-600 font-medium">VAT Inclusive</div>
                   <div className="text-lg font-bold text-blue-900">
                     R {expenseEntries
-                      .filter(e => e.vatTransactionType === 'vat_inclusive' && parseFloat(e.amount) > 0)
+                      .filter(e => parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1017,7 +1079,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-green-600 font-medium">VAT Exclusive</div>
                   <div className="text-lg font-bold text-green-900">
                     R {expenseEntries
-                      .filter(e => e.vatTransactionType === 'vat_exclusive' && parseFloat(e.amount) > 0)
+                      .filter(e => parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1027,7 +1089,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-yellow-600 font-medium">Zero Rated</div>
                   <div className="text-lg font-bold text-yellow-900">
                     R {expenseEntries
-                      .filter(e => e.vatTransactionType === 'zero_rated' && parseFloat(e.amount) > 0)
+                      .filter(e => parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1037,7 +1099,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-purple-600 font-medium">Exempt</div>
                   <div className="text-lg font-bold text-purple-900">
                     R {expenseEntries
-                      .filter(e => e.vatTransactionType === 'exempt' && parseFloat(e.amount) > 0)
+                      .filter(e => parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -1047,7 +1109,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-gray-600 font-medium">No VAT</div>
                   <div className="text-lg font-bold text-gray-900">
                     R {expenseEntries
-                      .filter(e => e.vatTransactionType === 'no_vat' && parseFloat(e.amount) > 0)
+                      .filter(e => parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
