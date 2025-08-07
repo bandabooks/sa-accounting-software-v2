@@ -120,12 +120,29 @@ const EnhancedBulkCapture = () => {
   const { data: recentEntries = [] } = useQuery<any[]>({
     queryKey: ['/api/journal-entries', 'bulk-capture-today'],
     queryFn: async () => {
-      const entries = await apiRequest('/api/journal-entries');
+      const response = await fetch('/api/journal-entries', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch journal entries');
+      }
+      const entries = await response.json();
       const today = new Date();
       const todayString = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
       
       console.log('Filtering entries for today:', todayString);
-      console.log('Total entries fetched:', entries.length);
+      console.log('Total entries fetched:', entries?.length || 0);
+      console.log('Entries response type:', typeof entries);
+      console.log('Sample entry:', entries?.[0]);
+      
+      // Ensure entries is an array
+      if (!Array.isArray(entries)) {
+        console.log('Entries is not an array:', entries);
+        return [];
+      }
       
       // Filter only bulk capture entries from today
       const filteredEntries = entries.filter((entry: any) => {
