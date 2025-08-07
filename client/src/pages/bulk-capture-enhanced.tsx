@@ -387,15 +387,25 @@ const EnhancedBulkCapture = () => {
             },
             // Debit VAT account if applicable
             ...(vatAmount > 0 ? [{
-              accountId: parseInt(entry.vatTypeId?.toString() || '0'),
+              accountId: (() => {
+                // Find VAT Input account from chart of accounts
+                const vatAccount = chartOfAccounts.find(acc => 
+                  acc.accountName === 'VAT Input' &&
+                  acc.accountType === 'Asset'
+                );
+                return vatAccount ? vatAccount.id : 70; // Default to known VAT Input account
+              })(),
               description: `VAT on ${entry.description}`,
               debitAmount: vatAmount.toFixed(2),
               creditAmount: '0.00',
               reference: entry.reference || ''
             }] : []),
-            // Credit bank account
+            // Credit bank account (use chart_account_id from bank_accounts table)
             {
-              accountId: parseInt(entry.bankAccountId?.toString() || '0'),
+              accountId: (() => {
+                const bankAccount = bankAccounts.find(ba => ba.id === parseInt(entry.bankAccountId?.toString() || '0'));
+                return bankAccount ? bankAccount.chartAccountId : 0;
+              })(),
               description: entry.description,
               debitAmount: '0.00',
               creditAmount: amount.toFixed(2),
@@ -461,9 +471,12 @@ const EnhancedBulkCapture = () => {
             sourceId: null
           },
           lines: [
-            // Debit bank account
+            // Debit bank account (use chart_account_id from bank_accounts table)
             {
-              accountId: parseInt(entry.bankAccountId?.toString() || '0'),
+              accountId: (() => {
+                const bankAccount = bankAccounts.find(ba => ba.id === parseInt(entry.bankAccountId?.toString() || '0'));
+                return bankAccount ? bankAccount.chartAccountId : 0;
+              })(),
               description: entry.description,
               debitAmount: amount.toFixed(2),
               creditAmount: '0.00',
@@ -479,7 +492,14 @@ const EnhancedBulkCapture = () => {
             },
             // Credit VAT account if applicable
             ...(vatAmount > 0 ? [{
-              accountId: parseInt(entry.vatTypeId?.toString() || '0'),
+              accountId: (() => {
+                // Find VAT Output account from chart of accounts
+                const vatAccount = chartOfAccounts.find(acc => 
+                  acc.accountName === 'VAT Output' &&
+                  acc.accountType === 'Liability'
+                );
+                return vatAccount ? vatAccount.id : 98; // Default to known VAT Output account
+              })(),
               description: `VAT on ${entry.description}`,
               debitAmount: '0.00',
               creditAmount: vatAmount.toFixed(2),
