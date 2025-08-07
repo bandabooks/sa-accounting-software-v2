@@ -116,15 +116,45 @@ const EnhancedBulkCapture = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Fetch recent bulk capture journal entries
+  // Fetch recent bulk capture journal entries (today's entries only)
   const { data: recentEntries = [] } = useQuery<any[]>({
-    queryKey: ['/api/journal-entries', 'bulk-capture'],
+    queryKey: ['/api/journal-entries', 'bulk-capture-today'],
     queryFn: async () => {
       const entries = await apiRequest('/api/journal-entries');
-      // Filter only bulk capture entries (those with sourceModule starting with 'bulk-')
-      return entries.filter((entry: any) => 
-        entry.sourceModule && (entry.sourceModule.startsWith('bulk-') || entry.sourceModule === 'bulk-income' || entry.sourceModule === 'bulk-expense')
-      ).slice(0, 10); // Show last 10 entries
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+      
+      console.log('Filtering entries for today:', todayString);
+      console.log('Total entries fetched:', entries.length);
+      
+      // Filter only bulk capture entries from today
+      const filteredEntries = entries.filter((entry: any) => {
+        // Handle both date string and timestamp formats
+        let entryDate = entry.transactionDate;
+        if (entryDate) {
+          // Convert to date string for comparison
+          if (typeof entryDate === 'string' && entryDate.includes('T')) {
+            entryDate = entryDate.split('T')[0];
+          } else {
+            entryDate = new Date(entryDate).toISOString().split('T')[0];
+          }
+        }
+        
+        const isBulkCapture = entry.entryNumber && entry.entryNumber.startsWith('bulk-');
+        const isToday = entryDate === todayString;
+        
+        if (isBulkCapture && isToday) {
+          console.log('Found bulk capture entry for today:', entry.entryNumber, entryDate);
+        }
+        
+        return isBulkCapture && isToday;
+      });
+      
+      console.log('Filtered bulk capture entries:', filteredEntries.length);
+      
+      return filteredEntries
+        .sort((a, b) => new Date(b.createdAt || b.transactionDate).getTime() - new Date(a.createdAt || a.transactionDate).getTime())
+        .slice(0, 20); // Show last 20 entries from today
     },
     refetchInterval: 15000, // Refresh every 15 seconds
   });
