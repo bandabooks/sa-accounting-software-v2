@@ -1,0 +1,68 @@
+You are enhancing an existing Node.js accounting system named **Taxnify** with a working General Entry module. Now build a fully functional **Bulk Capture Module** using the exact structure and logic from the General Entry module.
+
+### 🧩 GOAL:
+- Capture multiple Income or Expense entries in a single form/table
+- Use the same date format, validation, and accounting logic as the General Entry module
+- Fix all known issues, especially around dates (string expected), null constraints, and missing account links
+
+---
+
+### 🔧 TECH STACK
+- Node.js backend (Express, Prisma or Sequelize for DB)
+- React frontend (with modals and table entry forms)
+- Tailwind CSS/Bootstrap for styling
+- PostgreSQL database
+
+---
+
+### 🎯 FEATURE OVERVIEW
+
+1. **Bulk Capture Page** (`/bulk-capture`)
+   - Let user select `Entry Type`: `Income` or `Expense`
+   - Allow multiple rows with inputs:
+     - `Transaction Date` (use `YYYY-MM-DD`, match General Entry logic)
+     - `Description`
+     - `Reference` (optional)
+     - `Account` (dropdown from COA)
+     - `Debit` / `Credit`
+     - `VAT Type` (dropdown or auto if applicable)
+   - Pre-fill or auto-assign:
+     - Bank Account
+     - Revenue Account / Expense Account
+     - VAT Accounts (based on entry type)
+
+2. **Validation**
+   - Match logic from General Entry: total debits = total credits per row
+   - Date must be `string` (`YYYY-MM-DD`)
+   - Account, amount, and description must not be null
+
+3. **Upload Integration (Optional Phase)**
+   - Allow PDF/JPG upload per row for scanned receipts/invoices
+   - File should attach to journal entry as a receipt proof
+
+4. **Smart Suggestions (Optional Phase 2)**
+   - Use filename or uploaded text to suggest account mappings (if OCR enabled)
+
+---
+
+### 📦 DATABASE STRUCTURE (Reuse Existing)
+
+Use the same schema as General Entry:
+```ts
+journal_entries {
+  id
+  entry_number
+  transaction_date (string)
+  description
+  reference
+  created_by
+}
+
+journal_lines {
+  id
+  journal_entry_id
+  account_id
+  description
+  debit
+  credit
+}
