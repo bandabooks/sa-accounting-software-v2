@@ -788,11 +788,18 @@ const EnhancedBulkCapture = () => {
                               <SelectValue placeholder="Choose income account..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {chartOfAccounts.map(account => (
-                                <SelectItem key={account.id} value={account.id.toString()}>
-                                  {account.accountCode} - {account.accountName}
-                                </SelectItem>
-                              ))}
+                              {chartOfAccounts
+                                .filter(account => account.accountType === 'Revenue')
+                                .map(account => (
+                                  <SelectItem key={account.id} value={account.id.toString()}>
+                                    {account.accountCode} - {account.accountName}
+                                  </SelectItem>
+                                ))}
+                              {chartOfAccounts.filter(account => account.accountType === 'Revenue').length === 0 && (
+                                <div className="p-2 text-sm text-red-500 text-center">
+                                  No Revenue accounts found. Please create Revenue accounts in Chart of Accounts.
+                                </div>
+                              )}
                             </SelectContent>
                           </Select>
                         </td>
