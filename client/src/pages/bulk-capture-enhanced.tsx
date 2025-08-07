@@ -105,7 +105,7 @@ const EnhancedBulkCapture = () => {
       vatRate: '15.00',
       vatAmount: '0.00',
       netAmount: '0.00',
-      status: 'draft',
+      status: 'finalized',
     }));
     setExpenseEntries(defaultEntries);
   }, [quickDate]);
@@ -1150,7 +1150,7 @@ const EnhancedBulkCapture = () => {
               Bulk Capture Sessions
             </CardTitle>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Process saved bulk entries into journal entries for general ledger integration
+              Professional transaction recording with automatic journal entry creation and posting
             </p>
           </CardHeader>
           <CardContent>
