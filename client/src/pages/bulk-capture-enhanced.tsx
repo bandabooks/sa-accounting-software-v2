@@ -16,11 +16,13 @@ import {
   Plus, 
   Save, 
   CheckCircle,
+  CheckCircle2,
   Clock,
   Calculator,
   CreditCard,
   Calendar
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "@shared/vat-constants";
 
@@ -67,6 +69,8 @@ const EnhancedBulkCapture = () => {
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
   const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successDetails, setSuccessDetails] = useState<{count: number, type: string}>({count: 0, type: ''});
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -419,10 +423,8 @@ const EnhancedBulkCapture = () => {
       return responses;
     },
     onSuccess: (responses: any[]) => {
-      toast({
-        title: "Success",
-        description: `Successfully created ${responses.length} expense journal entries`,
-      });
+      setSuccessDetails({ count: responses.length, type: 'expense' });
+      setShowSuccessModal(true);
       // Reset the form
       initializeExpenseEntries();
       // Refetch journal entries and sessions
@@ -513,10 +515,8 @@ const EnhancedBulkCapture = () => {
       return responses;
     },
     onSuccess: (responses: any[]) => {
-      toast({
-        title: "Success",
-        description: `Successfully created ${responses.length} income journal entries`,
-      });
+      setSuccessDetails({ count: responses.length, type: 'income' });
+      setShowSuccessModal(true);
       // Reset the form
       initializeIncomeEntries();
       // Refetch journal entries and sessions
@@ -1217,6 +1217,46 @@ const EnhancedBulkCapture = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Professional Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              {successDetails.type === 'income' ? 'Income Entries' : 'Expense Entries'} Created Successfully
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 text-center">
+            <p className="text-gray-600 mb-6">
+              Successfully created <span className="font-semibold text-green-600">{successDetails.count}</span> {successDetails.type} journal {successDetails.count === 1 ? 'entry' : 'entries'}. 
+              {successDetails.type === 'income' ? ' Your revenue has been recorded with proper VAT handling.' : ' Your expenses have been recorded with proper VAT handling.'}
+            </p>
+            <div className="space-y-3">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-green-700 font-medium">Journal Entries Created:</span>
+                  <span className="text-green-900 font-semibold">{successDetails.count}</span>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-700 font-medium">Transaction Type:</span>
+                  <span className="text-blue-900 font-semibold capitalize">{successDetails.type}</span>
+                </div>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setShowSuccessModal(false)}
+              className="mt-6 w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              Continue Working
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
