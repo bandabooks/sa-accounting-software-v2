@@ -90,6 +90,11 @@ const EnhancedBulkCapture = () => {
     queryKey: ['/api/bank-accounts'],
   });
 
+  // Fetch VAT types to get the latest options including VAT Exclusive
+  const { data: vatTypes = [] } = useQuery<any[]>({
+    queryKey: ['/api/companies/2/vat-types'],
+  });
+
   // Initialize 10 default expense entries
   const initializeExpenseEntries = useCallback(() => {
     const defaultEntries: ExpenseEntry[] = Array.from({ length: 10 }, () => ({
@@ -147,14 +152,19 @@ const EnhancedBulkCapture = () => {
     let vatAmount = 0;
     let netAmount = 0;
 
-    // VAT type 1 = Standard Rate (15% - inclusive by default)
+    // VAT type 1 = Standard Rate (15% - VAT Inclusive)
+    // VAT type 86 = Standard Rate (15% - VAT Exclusive)
     // VAT type 2 = Zero Rated (0%)
     // VAT type 3 = Exempt (0%)
-    // VAT type 4 = Out of Scope (0%)
+    // VAT type 4,5 = Not Reportable/Out of Scope (0%)
     if (vatTypeId === 1) {
-      // Standard rate - assume inclusive calculation
+      // Standard rate - VAT Inclusive calculation
       vatAmount = numAmount * (numVatRate / (100 + numVatRate));
       netAmount = numAmount - vatAmount;
+    } else if (vatTypeId === 86) {
+      // Standard rate - VAT Exclusive calculation
+      vatAmount = numAmount * (numVatRate / 100);
+      netAmount = numAmount; // Net amount equals the entered amount for exclusive
     } else {
       // Zero rated, exempt, or out of scope
       vatAmount = 0;
@@ -193,16 +203,24 @@ const EnhancedBulkCapture = () => {
       totalVAT += vatAmount;
       totalNet += netAmount;
 
-      // VAT breakdown by type ID (1=STD, 2=ZER, 3=EXE, 4=OUT)
+      // VAT breakdown by type ID:
+      // 1 = Standard Rate (VAT Inclusive)
+      // 86 = Standard Rate (VAT Exclusive) 
+      // 2 = Zero-Rated
+      // 3 = Exempt
+      // 4,5 = Not Reportable/Out of Scope
       if (entry.vatTypeId === 1) {
         vatBreakdown.vatInclusive += amount;
+      } else if (entry.vatTypeId === 86) {
+        vatBreakdown.vatExclusive += amount;
       } else if (entry.vatTypeId === 2) {
         vatBreakdown.zeroRated += amount;
       } else if (entry.vatTypeId === 3) {
         vatBreakdown.exempt += amount;
-      } else if (entry.vatTypeId === 4) {
+      } else if (entry.vatTypeId === 4 || entry.vatTypeId === 5) {
         vatBreakdown.noVAT += amount;
       } else {
+        // Fallback for any other VAT types
         vatBreakdown.vatExclusive += amount;
       }
     });
