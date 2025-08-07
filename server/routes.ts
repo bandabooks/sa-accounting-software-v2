@@ -135,6 +135,9 @@ import {
 import { z } from "zod";
 import { createPayFastService } from "./payfast";
 import { emailService } from "./services/emailService";
+import { db } from "./db";
+import { sql, eq, and, like } from "drizzle-orm";
+import { journalEntries } from "@shared/schema";
 
 // Validation middleware
 function validateRequest(schema: { body?: z.ZodSchema }) {
@@ -2875,34 +2878,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk Capture Transaction Counts - Frontend Compatible Endpoint
+  // Bulk Capture Transaction Counts - Live Transaction Matrix API
   app.get("/api/bulk-capture/transaction-counts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user!.companyId;
       const today = new Date().toISOString().split('T')[0];
       
-      // Fast count query for bulk capture entries (journal entries with bulk source)
+      // Query bulk capture entries (journal entries with bulk prefix in entry number)
+      // All bulk capture entries are automatically finalized when created
       const stats = await db.select({
-        totalToday: sql<number>`COUNT(*)`.as('totalToday'),
-        finalizedToday: sql<number>`SUM(CASE WHEN status = 'posted' THEN 1 ELSE 0 END)`.as('finalizedToday'),
-        draftToday: sql<number>`SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END)`.as('draftToday')
+        totalToday: sql<number>`COUNT(*)`.as('totalToday')
       })
       .from(journalEntries)
       .where(
         and(
-          eq(journalEntries.companyId, companyId),
+          eq(journalEntries.companyId, companyId!),
           like(journalEntries.entryNumber, 'bulk-%'),
           sql`DATE(${journalEntries.transactionDate}) = ${today}`
         )
       );
 
-      const result = stats[0] || { totalToday: 0, finalizedToday: 0, draftToday: 0 };
+      const result = stats[0] || { totalToday: 0 };
+      const totalCount = Number(result.totalToday);
       
-      // Return in the format expected by frontend
       res.json({
-        totalToday: Number(result.totalToday),
-        finalizedToday: Number(result.finalizedToday),
-        draftToday: Number(result.draftToday)
+        totalToday: totalCount,
+        finalizedToday: totalCount, // All bulk capture entries are finalized 
+        draftToday: 0 // No draft entries in bulk capture
       });
     } catch (error) {
       console.error("Bulk capture transaction counts error:", error);
@@ -2910,6 +2912,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalToday: 0, 
         finalizedToday: 0, 
         draftToday: 0 
+      });
+    }
+  });
+
+  // Bulk Capture Summary API with date filtering
+  app.get("/api/bulk-capture/summary", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user!.companyId;
+      const queryDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
+      
+      // Query bulk capture entries for specified date
+      const stats = await db.select({
+        totalToday: sql<number>`COUNT(*)`.as('totalToday'),
+        savedEntries: sql<number>`SUM(CASE WHEN status = 'posted' THEN 1 ELSE 0 END)`.as('savedEntries'),
+        draftEntries: sql<number>`SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END)`.as('draftEntries')
+      })
+      .from(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.companyId, companyId!),
+          like(journalEntries.entryNumber, 'bulk-%'),
+          sql`DATE(${journalEntries.transactionDate}) = ${queryDate}`
+        )
+      );
+
+      const result = stats[0] || { totalToday: 0, savedEntries: 0, draftEntries: 0 };
+      
+      res.json({
+        total_today: Number(result.totalToday),
+        saved_entries: Number(result.savedEntries),
+        draft_entries: Number(result.draftEntries),
+        date: queryDate
+      });
+    } catch (error) {
+      console.error("Bulk capture summary error:", error);
+      res.status(500).json({ 
+        total_today: 0, 
+        saved_entries: 0, 
+        draft_entries: 0,
+        date: req.query.date || new Date().toISOString().split('T')[0],
+        error: 'Failed to fetch bulk capture summary'
       });
     }
   });
