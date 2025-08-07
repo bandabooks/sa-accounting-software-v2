@@ -2851,8 +2851,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fast count query for bulk capture entries (journal entries with bulk source)
       const stats = await db.select({
         totalToday: sql<number>`COUNT(*)`.as('totalToday'),
-        finalizedToday: sql<number>`SUM(CASE WHEN status = 'posted' THEN 1 ELSE 0 END)`.as('finalizedToday'),
-        draftToday: sql<number>`SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END)`.as('draftToday')
+        finalizedToday: sql<number>`SUM(CASE WHEN ${journalEntries.isPosted} = true THEN 1 ELSE 0 END)`.as('finalizedToday'),
+        draftToday: sql<number>`SUM(CASE WHEN ${journalEntries.isPosted} = false THEN 1 ELSE 0 END)`.as('draftToday')
       })
       .from(journalEntries)
       .where(
@@ -2885,9 +2885,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date().toISOString().split('T')[0];
       
       // Query bulk capture entries (journal entries with bulk prefix in entry number)
-      // All bulk capture entries are automatically finalized when created
       const stats = await db.select({
-        totalToday: sql<number>`COUNT(*)`.as('totalToday')
+        totalToday: sql<number>`COUNT(*)`.as('totalToday'),
+        finalizedToday: sql<number>`SUM(CASE WHEN ${journalEntries.isPosted} = true THEN 1 ELSE 0 END)`.as('finalizedToday'),
+        draftToday: sql<number>`SUM(CASE WHEN ${journalEntries.isPosted} = false THEN 1 ELSE 0 END)`.as('draftToday')
       })
       .from(journalEntries)
       .where(
@@ -2898,13 +2899,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
       );
 
-      const result = stats[0] || { totalToday: 0 };
-      const totalCount = Number(result.totalToday);
+      const result = stats[0] || { totalToday: 0, finalizedToday: 0, draftToday: 0 };
       
       res.json({
-        totalToday: totalCount,
-        finalizedToday: totalCount, // All bulk capture entries are finalized 
-        draftToday: 0 // No draft entries in bulk capture
+        totalToday: Number(result.totalToday),
+        finalizedToday: Number(result.finalizedToday),
+        draftToday: Number(result.draftToday)
       });
     } catch (error) {
       console.error("Bulk capture transaction counts error:", error);
@@ -2925,8 +2925,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Query bulk capture entries for specified date
       const stats = await db.select({
         totalToday: sql<number>`COUNT(*)`.as('totalToday'),
-        savedEntries: sql<number>`SUM(CASE WHEN status = 'posted' THEN 1 ELSE 0 END)`.as('savedEntries'),
-        draftEntries: sql<number>`SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END)`.as('draftEntries')
+        savedEntries: sql<number>`SUM(CASE WHEN ${journalEntries.isPosted} = true THEN 1 ELSE 0 END)`.as('savedEntries'),
+        draftEntries: sql<number>`SUM(CASE WHEN ${journalEntries.isPosted} = false THEN 1 ELSE 0 END)`.as('draftEntries')
       })
       .from(journalEntries)
       .where(
