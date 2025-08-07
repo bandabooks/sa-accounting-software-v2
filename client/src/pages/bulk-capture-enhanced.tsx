@@ -1377,6 +1377,117 @@ const EnhancedBulkCapture = () => {
         </Card>
       )}
 
+      {/* Today's Journal Entries Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center justify-between">
+            <div className="flex items-center">
+              <CheckCircle2 className="w-5 h-5 mr-2" />
+              Today's Journal Entries
+            </div>
+            <div className="flex items-center space-x-2">
+              {journalEntries.some(entry => !entry.isPosted) && (
+                <Button
+                  onClick={() => postAllDraftsMutation.mutate()}
+                  disabled={postAllDraftsMutation.isPending}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {postAllDraftsMutation.isPending ? 'Posting...' : 'Post All Drafts'}
+                </Button>
+              )}
+              <Badge variant="outline" className="text-gray-600">
+                {journalEntries.length} entries today
+              </Badge>
+            </div>
+          </CardTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            All journal entries created today with bulk capture and direct posting capabilities
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {journalEntries.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No journal entries created today</p>
+                <p className="text-xs mt-1">Start by adding income or expense entries above</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="pb-2">Status</th>
+                      <th className="pb-2">Entry #</th>
+                      <th className="pb-2">Date</th>
+                      <th className="pb-2">Description</th>
+                      <th className="pb-2">Reference</th>
+                      <th className="pb-2">Debit</th>
+                      <th className="pb-2">Credit</th>
+                      <th className="pb-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {journalEntries.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50">
+                        <td className="py-3">
+                          <Badge
+                            variant={entry.isPosted ? "default" : "secondary"}
+                            className={`text-xs ${
+                              entry.isPosted 
+                                ? "bg-green-100 text-green-800 hover:bg-green-200" 
+                                : "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                            }`}
+                          >
+                            {entry.isPosted ? "Posted" : "Draft"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 text-sm font-medium text-gray-900">
+                          {entry.entryNumber}
+                        </td>
+                        <td className="py-3 text-sm text-gray-600">
+                          {format(new Date(entry.transactionDate), 'MMM dd, yyyy')}
+                        </td>
+                        <td className="py-3 text-sm text-gray-900 max-w-xs truncate">
+                          {entry.description}
+                        </td>
+                        <td className="py-3 text-sm text-gray-600">
+                          {entry.reference || '-'}
+                        </td>
+                        <td className="py-3 text-sm font-mono text-green-600">
+                          R {parseFloat(entry.totalDebit).toFixed(2)}
+                        </td>
+                        <td className="py-3 text-sm font-mono text-blue-600">
+                          R {parseFloat(entry.totalCredit).toFixed(2)}
+                        </td>
+                        <td className="py-3">
+                          {!entry.isPosted ? (
+                            <Button
+                              onClick={() => postSingleEntryMutation.mutate(entry.id)}
+                              disabled={postSingleEntryMutation.isPending}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs border-green-300 text-green-700 hover:bg-green-50"
+                            >
+                              {postSingleEntryMutation.isPending ? 'Posting...' : 'Post'}
+                            </Button>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-gray-500">
+                              Locked
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Professional Success Modal */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="sm:max-w-md">
