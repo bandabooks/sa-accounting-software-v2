@@ -2875,6 +2875,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk Capture Transaction Counts - Frontend Compatible Endpoint
+  app.get("/api/bulk-capture/transaction-counts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fast count query for bulk capture entries (journal entries with bulk source)
+      const stats = await db.select({
+        totalToday: sql<number>`COUNT(*)`.as('totalToday'),
+        finalizedToday: sql<number>`SUM(CASE WHEN status = 'posted' THEN 1 ELSE 0 END)`.as('finalizedToday'),
+        draftToday: sql<number>`SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END)`.as('draftToday')
+      })
+      .from(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.companyId, companyId),
+          like(journalEntries.entryNumber, 'bulk-%'),
+          sql`DATE(${journalEntries.transactionDate}) = ${today}`
+        )
+      );
+
+      const result = stats[0] || { totalToday: 0, finalizedToday: 0, draftToday: 0 };
+      
+      // Return in the format expected by frontend
+      res.json({
+        totalToday: Number(result.totalToday),
+        finalizedToday: Number(result.finalizedToday),
+        draftToday: Number(result.draftToday)
+      });
+    } catch (error) {
+      console.error("Bulk capture transaction counts error:", error);
+      res.status(500).json({ 
+        totalToday: 0, 
+        finalizedToday: 0, 
+        draftToday: 0 
+      });
+    }
+  });
+
   // Supplier Payments
   app.get("/api/supplier-payments", async (req, res) => {
     try {
