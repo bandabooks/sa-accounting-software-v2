@@ -814,66 +814,7 @@ const EnhancedBulkCapture = () => {
             </CardContent>
           </Card>
 
-          {/* Recent Transactions */}
-          <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-slate-900 flex items-center justify-between">
-                <div className="flex items-center">
-                  <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Recent Saved Transactions
-                </div>
-                <Badge variant="outline" className="text-slate-600">
-                  {recentEntries.length} entries
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentEntries.length > 0 ? (
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {recentEntries.map((entry: any, index: number) => (
-                    <div key={entry.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <Badge variant={entry.sourceModule === 'bulk-income' ? 'default' : 'secondary'} className={
-                            entry.sourceModule === 'bulk-income' 
-                              ? 'bg-green-100 text-green-700 border-green-200'
-                              : 'bg-red-100 text-red-700 border-red-200'
-                          }>
-                            {entry.sourceModule === 'bulk-income' ? 'Income' : 'Expense'}
-                          </Badge>
-                          <span className="font-medium text-slate-900">{entry.entryNumber}</span>
-                          <Badge variant="outline" className={
-                            entry.status === 'posted' 
-                              ? 'border-blue-300 text-blue-700 bg-blue-50'
-                              : 'border-orange-300 text-orange-700 bg-orange-50'
-                          }>
-                            {entry.status === 'posted' ? 'Posted' : 'Draft'}
-                          </Badge>
-                        </div>
-                        <div className="mt-1 text-sm text-slate-600">
-                          {entry.description} • {format(new Date(entry.transactionDate), 'dd MMM yyyy')}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-slate-900">
-                          R {parseFloat(entry.totalDebit).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {format(new Date(entry.createdAt), 'HH:mm')}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No saved transactions yet</p>
-                  <p className="text-sm">Start capturing income or expenses to see them here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
 
           {/* Quick Controls */}
           <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
