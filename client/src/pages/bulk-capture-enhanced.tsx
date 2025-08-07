@@ -1311,18 +1311,8 @@ const EnhancedBulkCapture = () => {
               Today's Journal Entries
             </div>
             <div className="flex items-center space-x-2">
-              {journalEntries.some(entry => !entry.isPosted) && (
-                <Button
-                  onClick={() => postAllDraftsMutation.mutate()}
-                  disabled={postAllDraftsMutation.isPending}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {postAllDraftsMutation.isPending ? 'Posting...' : 'Post All Drafts'}
-                </Button>
-              )}
               <Badge variant="outline" className="text-gray-600">
-                {journalEntries.length} entries today
+                {transactionCounts?.totalToday || 0} entries today
               </Badge>
             </div>
           </CardTitle>
@@ -1332,7 +1322,7 @@ const EnhancedBulkCapture = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {journalEntries.length === 0 ? (
+            {recentEntries.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>No journal entries created today</p>
@@ -1354,7 +1344,7 @@ const EnhancedBulkCapture = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {journalEntries.map((entry) => (
+                    {recentEntries.map((entry) => (
                       <tr key={entry.id} className="hover:bg-gray-50">
                         <td className="py-3">
                           <Badge
