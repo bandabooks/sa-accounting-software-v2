@@ -30,7 +30,7 @@ export async function seedDatabase() {
       });
       console.log("✓ Default company created");
     } else {
-      defaultCompany = existingCompanies[0];
+      defaultCompany = existingCompanies[0] || { id: 1 };
     }
 
     // Create production admin user if it doesn't exist
