@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -18,7 +19,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
-const accountFormSchema = insertChartOfAccountSchema.omit({ companyId: true, createdAt: true, updatedAt: true });
+const accountFormSchema = z.object({
+  accountCode: z.string().min(1, "Account code is required"),
+  accountName: z.string().min(1, "Account name is required"),
+  accountType: z.string().min(1, "Account type is required"),
+  accountSubType: z.string().min(1, "Account sub type is required"),
+  normalBalance: z.enum(["Debit", "Credit"]),
+  level: z.number().min(1).max(5),
+  isActive: z.boolean(),
+  isSystemAccount: z.boolean(),
+  description: z.string().optional(),
+  taxType: z.string().optional(),
+});
 
 type AccountFormData = z.infer<typeof accountFormSchema>;
 
@@ -216,28 +228,16 @@ export default function ChartOfAccounts() {
       description: "",
       accountType: "Asset",
       accountSubType: "Current Asset",
-      normalBalance: "Debit",
+      normalBalance: "Debit" as const,
       level: 2,
       isActive: true,
       isSystemAccount: false,
-      taxType: undefined,
+      taxType: "",
     },
   });
 
   const editForm = useForm<AccountFormData>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: {
-      accountCode: "",
-      accountName: "",
-      description: "",
-      accountType: "Asset",
-      accountSubType: "Current Asset",
-      normalBalance: "Debit",
-      level: 2,
-      isActive: true,
-      isSystemAccount: false,
-      taxType: undefined,
-    },
   });
 
   const filteredAccounts = accounts.filter((account) => {
@@ -249,14 +249,8 @@ export default function ChartOfAccounts() {
     return matchesSearch && matchesType;
   });
 
-  const accountTypeGroups = filteredAccounts.reduce((groups: Record<string, ChartOfAccountWithBalance[]>, account) => {
-    const type = account.accountType;
-    if (!groups[type]) {
-      groups[type] = [];
-    }
-    groups[type].push(account);
-    return groups;
-  }, {});
+  // For table display, we'll show all accounts in one table instead of grouping
+  const displayAccounts = filteredAccounts;
 
   const onCreateSubmit = (data: AccountFormData) => {
     createMutation.mutate(data);
@@ -564,8 +558,8 @@ export default function ChartOfAccounts() {
         </CardContent>
       </Card>
 
-      {/* Accounts List */}
-      {Object.keys(accountTypeGroups).length === 0 ? (
+      {/* Accounts Table */}
+      {displayAccounts.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -589,73 +583,59 @@ export default function ChartOfAccounts() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(accountTypeGroups).map(([type, typeAccounts]) => (
-            <Card key={type}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Badge className={getAccountTypeColor(type)}>
-                    {type}
-                  </Badge>
-                  <span className="text-sm text-gray-500">
-                    ({(typeAccounts as ChartOfAccountWithBalance[]).length} accounts)
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(typeAccounts as ChartOfAccountWithBalance[]).map((account) => (
-                    <div
-                      key={account.id}
-                      className="flex items-start justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-sm font-medium text-gray-600 dark:text-gray-400">
-                                {account.accountCode}
-                              </span>
-                              {account.isSystemAccount && (
-                                <Badge variant="secondary" className="text-xs">
-                                  System
-                                </Badge>
-                              )}
-                              <Badge 
-                                variant={account.isActive ? "default" : "secondary"} 
-                                className={`text-xs ${account.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
-                              >
-                                {account.isActive ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </div>
-                            <h3 className={`font-medium ${account.isActive ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-500'}`}>
-                              {account.accountName}
-                            </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {account.accountSubType} • {account.normalBalance} Balance
-                              {account.taxType && ` • ${account.taxType}`}
-                            </p>
-                            {account.description && (
-                              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                                {account.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">
-                              {formatCurrency(account.currentBalance)}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              Level {account.level}
-                            </div>
-                          </div>
-                        </div>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">Account Code</TableHead>
+                  <TableHead>Account Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right w-[140px]">Amount</TableHead>
+                  <TableHead className="w-[200px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {displayAccounts.map((account) => (
+                  <TableRow key={account.id} className={!account.isActive ? "opacity-60" : ""}>
+                    <TableCell className="font-mono font-medium">
+                      <div className="flex items-center gap-2">
+                        {account.accountCode}
+                        {account.isSystemAccount && (
+                          <Badge variant="secondary" className="text-xs">
+                            System
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 ml-4">
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className={account.isActive ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-500'}>
+                          {account.accountName}
+                        </span>
+                        <Badge className={getAccountTypeColor(account.accountType)}>
+                          {account.accountType}
+                        </Badge>
+                        <Badge 
+                          variant={account.isActive ? "default" : "secondary"} 
+                          className={`text-xs ${account.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
+                        >
+                          {account.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">
+                      {account.description || account.accountType}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(account.currentBalance)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2 cursor-pointer">
+                              <div className="flex items-center gap-1 cursor-pointer">
                                 <Switch
                                   checked={account.isActive}
                                   onCheckedChange={() => handleToggleActivation(account)}
@@ -663,9 +643,9 @@ export default function ChartOfAccounts() {
                                   className={account.isActive ? "data-[state=checked]:bg-green-500" : ""}
                                 />
                                 {account.isActive ? (
-                                  <Power className="h-4 w-4 text-green-600" />
+                                  <Power className="h-3 w-3 text-green-600" />
                                 ) : (
-                                  <PowerOff className="h-4 w-4 text-gray-400" />
+                                  <PowerOff className="h-3 w-3 text-gray-400" />
                                 )}
                               </div>
                             </TooltipTrigger>
@@ -692,13 +672,13 @@ export default function ChartOfAccounts() {
                           </Button>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Edit Dialog */}
