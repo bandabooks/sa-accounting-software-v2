@@ -172,17 +172,19 @@ export default function EstimateCreate() {
         const formattedItems = existingEstimate.items.map((item: any) => ({
           productId: undefined, // Estimate items don't store productId in DB, only description
           description: item.description || "",
-          quantity: item.quantity || "1",
-          unitPrice: item.unitPrice || "0.00",
-          vatRate: item.vatRate || "15.00",
+          quantity: String(item.quantity || "1"),
+          unitPrice: String(item.unitPrice || "0.00"),
+          vatRate: String(item.vatRate || "15.00"),
           vatInclusive: item.vatInclusive !== undefined ? item.vatInclusive : true,
-          vatAmount: item.vatAmount || "0.00",
+          vatAmount: String(item.vatAmount || "0.00"),
           vatTypeId: item.vatTypeId || 1
         }));
-        setItems(formattedItems);
         console.log('Formatted items for editing:', formattedItems);
+        setItems(formattedItems);
         // Initialize description rows for existing items
         setDescriptionRows(formattedItems.map((item: any) => calculateRows(item.description || "")));
+      } else {
+        console.log('No items found in estimate or items array is empty');
       }
     }
   }, [isEditing, existingEstimate, vatSettings]);
