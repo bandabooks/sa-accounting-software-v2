@@ -1748,7 +1748,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Payment request body:", req.body);
       
-      const validatedData = insertPaymentSchema.parse(req.body);
+      // Add default companyId if not provided (for backwards compatibility)
+      const paymentData = {
+        ...req.body,
+        companyId: req.body.companyId || 2 // Default company ID
+      };
+      
+      const validatedData = insertPaymentSchema.parse(paymentData);
       console.log("Validated payment data:", validatedData);
       
       // Create the payment

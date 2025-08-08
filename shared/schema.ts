@@ -1434,7 +1434,7 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 });
 
 export const insertPaymentSchema = z.object({
-  companyId: z.number(),
+  companyId: z.number().optional(), // Optional in frontend, assigned by backend
   invoiceId: z.number(),
   bankAccountId: z.number().optional(),
   amount: z.string(),
