@@ -171,10 +171,10 @@ export default function EstimateCreate() {
         console.log('Populating estimate items:', existingEstimate.items);
         
         // Wait for products to load, then try to match descriptions to existing products
-        if (productsData && Array.isArray(productsData)) {
+        if (products && Array.isArray(products)) {
           const formattedItems = existingEstimate.items.map((item: any) => {
             // Try to find a product that matches the description
-            const matchingProduct = productsData.find((product: any) => 
+            const matchingProduct = products.find((product: any) => 
               product.description && item.description && 
               product.description.toLowerCase().trim() === item.description.toLowerCase().trim()
             );
@@ -216,7 +216,7 @@ export default function EstimateCreate() {
         console.log('No items found in estimate or items array is empty');
       }
     }
-  }, [isEditing, existingEstimate, vatSettings, productsData]);
+  }, [isEditing, existingEstimate, vatSettings, products]);
 
   // Dynamic VAT calculation using database VAT types (same as invoice)
   const calculateItemVAT = (item: EstimateItem) => {
