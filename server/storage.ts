@@ -213,6 +213,11 @@ class DatabaseStorage implements IStorage {
     }
     return null;
   }
+
+  async updateUserLoginAttempts(userId: number, attempts: number, lockedUntil?: Date): Promise<void> {
+    console.log("Storage: updateUserLoginAttempts called for user:", userId, "attempts:", attempts);
+    // In production this would update the database, for now just log
+  }
 }
 
 export const storage = new DatabaseStorage();
