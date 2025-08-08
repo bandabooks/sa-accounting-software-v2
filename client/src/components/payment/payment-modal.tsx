@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -58,6 +59,7 @@ interface PaymentModalProps {
   invoiceTotal: string;
   remainingAmount: string;
   onPaymentAdded: (paymentAmount?: string) => void;
+  invoiceNumber?: string;
 }
 
 export default function PaymentModal({ 
@@ -66,7 +68,8 @@ export default function PaymentModal({
   invoiceId, 
   invoiceTotal, 
   remainingAmount, 
-  onPaymentAdded 
+  onPaymentAdded,
+  invoiceNumber 
 }: PaymentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -164,6 +167,9 @@ export default function PaymentModal({
               {isPaidInFull ? "Paid in Full" : "Outstanding Balance"}
             </Badge>
           </DialogTitle>
+          <DialogDescription className="text-gray-600">
+            Record a payment for invoice {invoiceNumber || `#${invoiceId}`} with a total amount of {formatCurrency(invoiceTotal)}.
+          </DialogDescription>
           
           <Separator className="my-4" />
           

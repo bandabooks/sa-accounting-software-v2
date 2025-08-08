@@ -18,9 +18,10 @@ import RecurringInvoice from "@/components/invoice/recurring-invoice";
 import { useState, useRef } from "react";
 
 // Payment Modal Wrapper that calculates remaining amount
-function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPaymentAdded }: {
+function PaymentModalWrapper({ invoiceId, invoiceTotal, invoiceNumber, isOpen, onClose, onPaymentAdded }: {
   invoiceId: number;
   invoiceTotal: string;
+  invoiceNumber?: string;
   isOpen: boolean;
   onClose: () => void;
   onPaymentAdded: (paymentAmount?: string) => void;
@@ -67,6 +68,7 @@ function PaymentModalWrapper({ invoiceId, invoiceTotal, isOpen, onClose, onPayme
       invoiceTotal={invoiceTotal}
       remainingAmount={remainingAmount}
       onPaymentAdded={handlePaymentAdded}
+      invoiceNumber={invoiceNumber}
     />
   );
 }
@@ -567,6 +569,7 @@ function InvoiceDetail() {
       <PaymentModalWrapper
         invoiceId={invoiceId}
         invoiceTotal={invoice.total}
+        invoiceNumber={invoice.invoiceNumber}
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onPaymentAdded={handlePaymentAdded}

@@ -2165,6 +2165,7 @@ export class DatabaseStorage implements IStorage {
       paid: allInvoices.filter(i => i.status === "paid").length,
       overdue: allInvoices.filter(i => 
         (i.status === "sent" || i.status === "partially_paid") && 
+        i.dueDate && 
         new Date(i.dueDate) < today
       ).length,
       partiallyPaid: allInvoices.filter(i => i.status === "partially_paid").length
