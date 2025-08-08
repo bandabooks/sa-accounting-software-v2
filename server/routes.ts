@@ -1762,8 +1762,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get real-time updates for frontend
       const [bankAccounts, dashboardStats, invoiceUpdate] = await Promise.all([
-        storage.getBankAccounts(companyId),
-        storage.getDashboardStats(companyId),
+        storage.getBankAccounts(validatedData.companyId),
+        storage.getDashboardStats(validatedData.companyId),
         validatedData.invoiceId ? storage.getInvoice(validatedData.invoiceId) : null
       ]);
       
