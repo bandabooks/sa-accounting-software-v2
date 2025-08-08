@@ -1144,15 +1144,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select({
       id: userPermissions.id,
       userId: userPermissions.userId,
-      roleId: userPermissions.roleId,
-      moduleId: userPermissions.moduleId,
-      permissionType: userPermissions.permissionType,
-      enabled: userPermissions.enabled,
-      grantedAt: userPermissions.grantedAt,
-      permission: userPermissions.permission
+      companyId: userPermissions.companyId,
+      systemRoleId: userPermissions.systemRoleId,
+      companyRoleId: userPermissions.companyRoleId,
+      customPermissions: userPermissions.customPermissions,
+      isActive: userPermissions.isActive,
+      grantedAt: userPermissions.grantedAt
     }).from(userPermissions)
-    .leftJoin(users, eq(userPermissions.userId, users.id))
-    .leftJoin(userRoles, eq(userPermissions.roleId, userRoles.id));
+    .leftJoin(users, eq(userPermissions.userId, users.id));
   }
 
   async getRole(id: number): Promise<UserRole | undefined> {
@@ -1251,14 +1250,15 @@ export class DatabaseStorage implements IStorage {
         id: auditLogs.id,
         userId: auditLogs.userId,
         action: auditLogs.action,
-        resourceType: auditLogs.resourceType,
+        resource: auditLogs.resource,
         resourceId: auditLogs.resourceId,
-        description: auditLogs.description,
         details: auditLogs.details,
         oldValues: auditLogs.oldValues,
         newValues: auditLogs.newValues,
         timestamp: auditLogs.timestamp,
-        createdAt: auditLogs.createdAt,
+        ipAddress: auditLogs.ipAddress,
+        userAgent: auditLogs.userAgent,
+        companyId: auditLogs.companyId,
         user: {
           id: users.id,
           name: users.name,
@@ -1483,7 +1483,10 @@ export class DatabaseStorage implements IStorage {
   async createInvoice(insertInvoice: InsertInvoice, items: Omit<InsertInvoiceItem, 'invoiceId'>[]): Promise<InvoiceWithItems> {
     const [invoice] = await db
       .insert(invoices)
-      .values(insertInvoice)
+      .values({
+        ...insertInvoice,
+        companyId: insertInvoice.companyId || 1 // Ensure companyId is present
+      })
       .returning();
 
     const createdItems: InvoiceItem[] = [];
