@@ -107,6 +107,10 @@ export default function InvoiceCreate() {
     queryFn: customersApi.getAll
   });
 
+  const { data: products } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
   const { data: invoices } = useQuery({
     queryKey: ["/api/invoices"],
     queryFn: invoicesApi.getAll
@@ -121,7 +125,7 @@ export default function InvoiceCreate() {
 
   // Populate form when editing existing invoice
   useEffect(() => {
-    if (existingInvoice && isEditing) {
+    if (existingInvoice && isEditing && products) {
       setFormData({
         customerId: existingInvoice.customerId,
         issueDate: new Date(existingInvoice.issueDate),
@@ -136,16 +140,27 @@ export default function InvoiceCreate() {
       });
 
       if (existingInvoice.items && existingInvoice.items.length > 0) {
-        const invoiceItems: InvoiceItem[] = existingInvoice.items.map(item => ({
-          productId: undefined, // Reset productId as the schema doesn't include it
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          vatRate: item.vatRate,
-          vatInclusive: item.vatInclusive || false,
-          vatAmount: item.vatAmount,
-          vatTypeId: item.vatInclusive ? 2 : 1 // Convert to VAT type (2=inclusive, 1=exclusive)
-        }));
+        const invoiceItems: InvoiceItem[] = existingInvoice.items.map(item => {
+          // Smart product matching: try to find a product that matches the description
+          const matchingProduct = products.find((product: any) => {
+            const productDescription = product.description || product.name;
+            // Match by exact description or name, or if the item description contains the product name
+            return productDescription === item.description ||
+                   product.name === item.description ||
+                   item.description.toLowerCase().includes(product.name.toLowerCase());
+          });
+
+          return {
+            productId: matchingProduct?.id, // Set productId if we found a matching product
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            vatRate: item.vatRate,
+            vatInclusive: item.vatInclusive || false,
+            vatAmount: item.vatAmount,
+            vatTypeId: item.vatInclusive ? 2 : 1 // Convert to VAT type (2=inclusive, 1=exclusive)
+          };
+        });
         setItems(invoiceItems);
         
         // Set up description rows for existing items based on their content
@@ -153,7 +168,7 @@ export default function InvoiceCreate() {
         setDescriptionRows(itemRows);
       }
     }
-  }, [existingInvoice, isEditing]);
+  }, [existingInvoice, isEditing, products]);
 
   const createMutation = useMutation({
     mutationFn: (data: { invoice: InsertInvoice; items: Omit<InsertInvoiceItem, 'invoiceId'>[] }) => 
