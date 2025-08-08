@@ -260,12 +260,25 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       const vatRate = parseFloat(item.vatRate?.toString() || "15");
       const lineTotal = quantity * unitPrice;
       
-      // Determine if VAT is inclusive - check item's vatInclusive property or fallback to invoice level
-      const isVatInclusive = item.vatInclusive !== undefined ? item.vatInclusive : true; // Default to inclusive for SA
+      // For SA invoices, prices are typically VAT inclusive
+      // Check the invoice vatInclusive setting or default to true
+      const isVatInclusive = invoice.vatInclusive !== false; // Default to inclusive for SA
+      
+      // Debug logging
+      console.log('PDF VAT Calculation:', {
+        quantity,
+        unitPrice,
+        lineTotal,
+        vatRate,
+        isVatInclusive,
+        item: item
+      });
       
       // Calculate VAT using the same utility as the UI
       const vatCalculation = calculateVAT(lineTotal, vatRate, isVatInclusive);
       const lineVatAmount = vatCalculation.vatAmount;
+      
+      console.log('VAT Result:', vatCalculation);
       
       const lineVatText = formatCurrency(lineVatAmount);
       pdf.text(lineVatText, 165, currentY, { align: 'right' });
