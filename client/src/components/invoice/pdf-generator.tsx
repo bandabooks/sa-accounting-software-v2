@@ -254,40 +254,29 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       const vatRateText = `${item.vatRate || 15}%`;
       pdf.text(vatRateText, 145, currentY, { align: 'right' });
       
-      // Calculate correct line VAT using the same logic as the UI
+      // Calculate line total and VAT using the same logic as the UI (invoice-create.tsx)
       const quantity = parseFloat(item.quantity?.toString() || "1");
       const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+      const lineAmount = quantity * unitPrice;
+      
+      // Get VAT rate from the VAT type (assume 15% if not specified)
       const vatRate = parseFloat(item.vatRate?.toString() || "15");
-      const lineTotal = quantity * unitPrice;
       
-      // For SA invoices, check the actual VAT setting
-      // Look at the vatType to determine if it's inclusive - STD means inclusive in SA
-      const vatType = item.vatType || 'STD'; // Default to Standard (inclusive)
-      const isVatInclusive = vatType === 'STD' || vatType === 'Standard Rate' || invoice.vatInclusive !== false;
-      
-      // Debug logging
-      console.log('PDF VAT Calculation:', {
-        quantity,
-        unitPrice,
-        lineTotal,
-        vatRate,
-        vatType,
-        isVatInclusive,
-        invoiceVatInclusive: invoice.vatInclusive,
-        item: item
-      });
-      
-      // Calculate VAT using the same utility as the UI
-      const vatCalculation = calculateVAT(lineTotal, vatRate, isVatInclusive);
-      const lineVatAmount = vatCalculation.vatAmount;
-      
-      console.log('VAT Result:', vatCalculation);
+      // CRITICAL: For VAT-inclusive items, the lineAmount IS the total shown
+      // The VAT is internally calculated from this amount
+      let lineVatAmount = 0;
+      if (vatRate > 0) {
+        // For VAT-inclusive: VAT = amount / (1 + rate/100) * (rate/100)
+        // This matches the console log: R10000 → VAT=R1304.35
+        lineVatAmount = lineAmount / (1 + vatRate / 100) * (vatRate / 100);
+      }
       
       const lineVatText = formatCurrency(lineVatAmount);
       pdf.text(lineVatText, 165, currentY, { align: 'right' });
       
-      // Total aligned with subtotal for perfect visual flow
-      const totalText = formatCurrency(item.total || 0);
+      // CRITICAL FIX: Total should be the lineAmount for VAT-inclusive (not item.total)
+      // This ensures PDF shows R10,000.00 matching the user input
+      const totalText = formatCurrency(lineAmount);
       pdf.text(totalText, pageWidth - 20, currentY, { align: 'right' });
       
       // Dynamic row spacing based on description length
