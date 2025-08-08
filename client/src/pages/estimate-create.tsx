@@ -166,19 +166,21 @@ export default function EstimateCreate() {
         vatCalculationMethod: (vatSettings as any)?.defaultVatCalculationMethod || "inclusive"
       });
 
-      // Populate items
+      // Populate items - Note: estimate items don't store productId in database
       if (existingEstimate.items && existingEstimate.items.length > 0) {
+        console.log('Populating estimate items:', existingEstimate.items);
         const formattedItems = existingEstimate.items.map((item: any) => ({
-          productId: item.productId || undefined,
+          productId: undefined, // Estimate items don't store productId in DB, only description
           description: item.description || "",
           quantity: item.quantity || "1",
           unitPrice: item.unitPrice || "0.00",
           vatRate: item.vatRate || "15.00",
-          vatInclusive: item.vatInclusive || true,
+          vatInclusive: item.vatInclusive !== undefined ? item.vatInclusive : true,
           vatAmount: item.vatAmount || "0.00",
           vatTypeId: item.vatTypeId || 1
         }));
         setItems(formattedItems);
+        console.log('Formatted items for editing:', formattedItems);
         // Initialize description rows for existing items
         setDescriptionRows(formattedItems.map((item: any) => calculateRows(item.description || "")));
       }
