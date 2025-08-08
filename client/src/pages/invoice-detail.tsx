@@ -407,8 +407,28 @@ function InvoiceDetail() {
                     <td className="py-3 px-3 text-center">{item.quantity}</td>
                     <td className="py-3 px-3 text-right">{formatCurrency(item.unitPrice)}</td>
                     <td className="py-3 px-3 text-center">{item.vatRate}%</td>
-                    <td className="py-3 px-3 text-right">{formatCurrency(item.vatAmount || 0)}</td>
-                    <td className="py-3 px-3 text-right font-medium">{formatCurrency(item.total)}</td>
+                    <td className="py-3 px-3 text-right">{formatCurrency((() => {
+                      // Calculate Line VAT using the same logic as PDF generator
+                      const quantity = parseFloat(item.quantity?.toString() || "1");
+                      const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+                      const lineAmount = quantity * unitPrice;
+                      const vatRate = parseFloat(item.vatRate?.toString() || "15");
+                      
+                      // For VAT-inclusive: VAT = amount ÷ (1 + rate/100) × (rate/100)
+                      let lineVatAmount = 0;
+                      if (vatRate > 0) {
+                        lineVatAmount = lineAmount / (1 + vatRate / 100) * (vatRate / 100);
+                      }
+                      return lineVatAmount;
+                    })())}</td>
+                    <td className="py-3 px-3 text-right font-medium">{formatCurrency((() => {
+                      // Calculate Total using the same logic as PDF generator
+                      const quantity = parseFloat(item.quantity?.toString() || "1");
+                      const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+                      const lineAmount = quantity * unitPrice;
+                      // For VAT-inclusive, the lineAmount IS the total (R10,000.00)
+                      return lineAmount;
+                    })())}</td>
                   </tr>
                 ))}
               </tbody>
