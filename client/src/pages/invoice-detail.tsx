@@ -400,11 +400,13 @@ function InvoiceDetail() {
                     <tr key={index} className="hover:bg-blue-50 border-b border-gray-100">
                       <td className="py-3 px-3 text-gray-600">{index + 1}</td>
                       <td className="py-3 px-3">
-                        <div className="font-medium text-blue-700">{item.productName || item.name || 'Service Item'}</div>
+                        <div className="font-medium text-blue-700">
+                          {item.productName || item.name || item.description || 'Service Item'}
+                        </div>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="font-medium">{item.description}</div>
-                        {item.notes && (
+                        <div className="font-medium">{item.additionalDescription || item.notes || '-'}</div>
+                        {item.notes && item.additionalDescription !== item.notes && (
                           <div className="text-xs text-gray-500 mt-1">{item.notes}</div>
                         )}
                       </td>
