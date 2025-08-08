@@ -74,6 +74,18 @@ const getAccountTypeColor = (type: string) => {
   }
 };
 
+const getCardBackgroundColor = (type: string) => {
+  switch (type) {
+    case "Asset": return "bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-100";
+    case "Liability": return "bg-red-50 border-red-200 text-red-900 dark:bg-red-950 dark:border-red-800 dark:text-red-100";
+    case "Equity": return "bg-purple-50 border-purple-200 text-purple-900 dark:bg-purple-950 dark:border-purple-800 dark:text-purple-100";
+    case "Revenue": return "bg-green-50 border-green-200 text-green-900 dark:bg-green-950 dark:border-green-800 dark:text-green-100";
+    case "Cost of Goods Sold": return "bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-100";
+    case "Expense": return "bg-orange-50 border-orange-200 text-orange-900 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-100";
+    default: return "bg-gray-50 border-gray-200 text-gray-900 dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100";
+  }
+};
+
 const formatCurrency = (amount: string | number | null | undefined) => {
   const value = typeof amount === 'string' ? parseFloat(amount) : amount;
   // Handle NaN, null, undefined, or invalid values
@@ -535,48 +547,51 @@ export default function ChartOfAccounts() {
       {/* Summary Statistics */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-4 text-sm text-gray-600 dark:text-gray-400">
-            <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3 text-sm">
+            {/* General Statistics */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 shadow-sm flex items-center gap-2 text-gray-900 dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100">
               <FileText className="h-4 w-4" />
-              <span>Total Accounts: <span className="font-medium text-gray-900 dark:text-gray-100">{accounts.length}</span></span>
+              <span>Total: <span className="font-semibold">{accounts.length}</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 shadow-sm flex items-center gap-2 text-emerald-900 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-100">
               <BarChart className="h-4 w-4" />
-              <span>Active: <span className="font-medium text-green-600">{accounts.filter(a => a.isActive).length}</span></span>
+              <span>Active: <span className="font-semibold">{accounts.filter(a => a.isActive).length}</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 shadow-sm flex items-center gap-2 text-sky-900 dark:bg-sky-950 dark:border-sky-800 dark:text-sky-100">
               <TrendingUp className="h-4 w-4" />
-              <span>Unique Codes: <span className="font-medium text-blue-600">{new Set(accounts.map(a => a.accountCode)).size}</span></span>
+              <span>Unique: <span className="font-semibold">{new Set(accounts.map(a => a.accountCode)).size}</span></span>
             </div>
             {filteredAccounts.length !== accounts.length && (
-              <div className="flex items-center gap-2">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 shadow-sm flex items-center gap-2 text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-100">
                 <Search className="h-4 w-4" />
-                <span>Filtered: <span className="font-medium text-orange-600">{filteredAccounts.length}</span></span>
+                <span>Filtered: <span className="font-semibold">{filteredAccounts.length}</span></span>
               </div>
             )}
-            <div className="flex items-center gap-2">
+            
+            {/* Account Type Statistics */}
+            <div className={`${getCardBackgroundColor('Asset')} rounded-lg p-3 shadow-sm flex items-center gap-2 border`}>
               <Wallet className="h-4 w-4" />
-              <span>Assets: <span className="font-medium text-blue-700">{accounts.filter(a => a.isActive && a.accountType === 'Asset').length}</span></span>
+              <span>Assets: <span className="font-semibold">{accounts.filter(a => a.isActive && a.accountType === 'Asset').length}</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`${getCardBackgroundColor('Liability')} rounded-lg p-3 shadow-sm flex items-center gap-2 border`}>
               <CreditCard className="h-4 w-4" />
-              <span>Liabilities: <span className="font-medium text-red-600">{accounts.filter(a => a.isActive && a.accountType === 'Liability').length}</span></span>
+              <span>Liabilities: <span className="font-semibold">{accounts.filter(a => a.isActive && a.accountType === 'Liability').length}</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`${getCardBackgroundColor('Equity')} rounded-lg p-3 shadow-sm flex items-center gap-2 border`}>
               <PiggyBank className="h-4 w-4" />
-              <span>Equity: <span className="font-medium text-purple-600">{accounts.filter(a => a.isActive && a.accountType === 'Equity').length}</span></span>
+              <span>Equity: <span className="font-semibold">{accounts.filter(a => a.isActive && a.accountType === 'Equity').length}</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`${getCardBackgroundColor('Revenue')} rounded-lg p-3 shadow-sm flex items-center gap-2 border`}>
               <DollarSign className="h-4 w-4" />
-              <span>Revenue: <span className="font-medium text-green-700">{accounts.filter(a => a.isActive && a.accountType === 'Revenue').length}</span></span>
+              <span>Revenue: <span className="font-semibold">{accounts.filter(a => a.isActive && a.accountType === 'Revenue').length}</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`${getCardBackgroundColor('Cost of Goods Sold')} rounded-lg p-3 shadow-sm flex items-center gap-2 border`}>
               <Package className="h-4 w-4" />
-              <span>COGS: <span className="font-medium text-amber-600">{accounts.filter(a => a.isActive && a.accountType === 'Cost of Goods Sold').length}</span></span>
+              <span>COGS: <span className="font-semibold">{accounts.filter(a => a.isActive && a.accountType === 'Cost of Goods Sold').length}</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`${getCardBackgroundColor('Expense')} rounded-lg p-3 shadow-sm flex items-center gap-2 border`}>
               <Receipt className="h-4 w-4" />
-              <span>Expenses: <span className="font-medium text-orange-700">{accounts.filter(a => a.isActive && a.accountType === 'Expense').length}</span></span>
+              <span>Expenses: <span className="font-semibold">{accounts.filter(a => a.isActive && a.accountType === 'Expense').length}</span></span>
             </div>
           </div>
         </CardContent>
