@@ -582,13 +582,14 @@ export default function InvoiceCreate() {
                       />
                     </div>
 
-                    {/* Description Column */}
+                    {/* Description Column - Expandable like Additional Notes */}
                     <div className="col-span-3">
-                      <Input
-                        placeholder="Enter item description..."
+                      <Textarea
+                        placeholder="Enter detailed item description..."
                         value={item.description}
                         onChange={(e) => updateItem(index, 'description', e.target.value)}
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[60px] resize-y"
+                        rows={2}
                       />
                     </div>
 
@@ -829,12 +830,12 @@ export default function InvoiceCreate() {
                       ) : (
                         <div className="flex items-center justify-center">
                           <FileText className="h-5 w-5 mr-2" />
-                          Create Invoice
+                          {isEditing ? 'Update Invoice' : 'Create Invoice'}
                         </div>
                       )}
                     </Button>
                     <p className="text-xs text-gray-500 text-center mt-2">
-                      Journal entry will be automatically created
+                      {isEditing ? 'Changes will be saved and journal entry updated' : 'Journal entry will be automatically created'}
                     </p>
                   </div>
                 </div>

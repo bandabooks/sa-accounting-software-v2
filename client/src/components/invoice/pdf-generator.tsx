@@ -157,16 +157,17 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
     pdf.setFillColor(29, 78, 216); // Blue-700 exactly
     pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F'); // Full width to match payment box alignment
     
-    // Crystal white bold headers matching React component exactly
+    // Crystal white bold headers matching React component exactly with Product/Service column
     pdf.setFontSize(8);
     pdf.setFont("helvetica", "bold"); // Bold font for headers
     pdf.setTextColor(255, 255, 255); // Crystal white text
     pdf.text("#", 25, tableStartY + 6);
-    pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 85, tableStartY + 6, { align: 'right' });
+    pdf.text("Product/Service", 35, tableStartY + 6);
+    pdf.text("Description", 65, tableStartY + 6);
+    pdf.text("Qty", 100, tableStartY + 6, { align: 'right' });
     pdf.text("Unit Price", 120, tableStartY + 6, { align: 'right' });
     pdf.text("VAT Rate", 145, tableStartY + 6, { align: 'right' });
-    pdf.text("Line VAT", 170, tableStartY + 6, { align: 'right' });
+    pdf.text("Line VAT", 165, tableStartY + 6, { align: 'right' });
     pdf.text("Total", pageWidth - 25, tableStartY + 6, { align: 'right' }); // Adjusted to prevent cutoff
 
     // Table rows with improved spacing and alignment
@@ -190,12 +191,17 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
       pdf.text((index + 1).toString(), 25, currentY);
       
+      // Product/Service column - show product name or service type
+      pdf.setTextColor(75, 85, 99); // Gray-600 for product/service
+      const productService = item.productName || "Service"; // Use productName if available, otherwise "Service"
+      pdf.text(productService, 35, currentY);
+      
       // Description with full text display - up to 6 lines with expandable space
       pdf.setTextColor(0, 0, 0);
       let description = item.description || "N/A";
       
-      // Calculate available width for description (from position 35 to quantity column at 85)
-      const maxDescriptionWidth = 47; // Expanded available space
+      // Calculate available width for description (from position 65 to quantity column at 100)
+      const maxDescriptionWidth = 32; // Available space for description column
       
       // Split description into lines that fit within the available width
       const words = description.split(' ');
@@ -223,7 +229,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       
       // Display each line
       displayLines.forEach((line, lineIndex) => {
-        pdf.text(line, 35, currentY + (lineIndex * 4));
+        pdf.text(line, 65, currentY + (lineIndex * 4));
       });
       
       // If we had more than 6 lines, add ellipsis to the last line
@@ -231,15 +237,15 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
         const lastLineIndex = maxLines - 1;
         const lastLine = displayLines[lastLineIndex];
         const ellipsisLine = lastLine.substring(0, lastLine.length - 3) + '...';
-        pdf.text(ellipsisLine, 35, currentY + (lastLineIndex * 4));
+        pdf.text(ellipsisLine, 65, currentY + (lastLineIndex * 4));
       }
       
       // Store the number of lines used for row spacing calculation
       const descriptionLinesUsed = Math.min(displayLines.length, maxLines);
       
-      // Professional data alignment matching optimized headers
+      // Professional data alignment matching optimized headers with adjusted positions
       const qtyText = (item.quantity?.toString() || "1");
-      pdf.text(qtyText, 85, currentY, { align: 'right' });
+      pdf.text(qtyText, 100, currentY, { align: 'right' });
       
       const unitPriceText = formatCurrency(item.unitPrice || 0);
       pdf.text(unitPriceText, 120, currentY, { align: 'right' });
@@ -248,7 +254,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       pdf.text(vatRateText, 145, currentY, { align: 'right' });
       
       const lineVatText = formatCurrency(item.vatAmount || 0);
-      pdf.text(lineVatText, 170, currentY, { align: 'right' });
+      pdf.text(lineVatText, 165, currentY, { align: 'right' });
       
       // Total aligned with subtotal for perfect visual flow
       const totalText = formatCurrency(item.total || 0);
