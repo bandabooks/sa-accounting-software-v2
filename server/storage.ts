@@ -1476,22 +1476,7 @@ export class DatabaseStorage implements IStorage {
     const [customer] = await db.select().from(customers).where(eq(customers.id, invoice.customerId));
     if (!customer) return undefined;
 
-    // Join invoice items with products to get product names
-    const itemsWithProducts = await db
-      .select({
-        item: invoiceItems,
-        product: products
-      })
-      .from(invoiceItems)
-      .leftJoin(products, eq(invoiceItems.productId, products.id))
-      .where(eq(invoiceItems.invoiceId, id));
-    
-    // Transform the joined data to include product names in the items
-    const items = itemsWithProducts.map(row => ({
-      ...row.item,
-      productName: row.product?.name || null,
-      productSku: row.product?.sku || null
-    }));
+    const items = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, id));
     
     return {
       ...invoice,

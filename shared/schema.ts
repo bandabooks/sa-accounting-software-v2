@@ -215,7 +215,6 @@ export const invoiceItems = pgTable("invoice_items", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   invoiceId: integer("invoice_id").notNull(),
-  productId: integer("product_id").references(() => products.id),
   description: text("description").notNull(),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
@@ -227,7 +226,6 @@ export const invoiceItems = pgTable("invoice_items", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyIdx: index("invoice_items_company_idx").on(table.companyId),
-  productIdx: index("invoice_items_product_idx").on(table.productId),
 }));
 
 export const estimates = pgTable("estimates", {
