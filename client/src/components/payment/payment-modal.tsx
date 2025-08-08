@@ -18,6 +18,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -191,8 +198,7 @@ export default function PaymentModal({
                     name="amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                          <DollarSign className="w-5 h-5" />
+                        <FormLabel className="text-lg font-bold text-gray-800">
                           Payment Amount
                         </FormLabel>
                         <FormControl>
@@ -297,34 +303,34 @@ export default function PaymentModal({
                           <Building2 className="w-5 h-5" />
                           Deposit To Bank Account
                         </FormLabel>
-                        <div className="mt-4 space-y-3">
-                          {bankAccounts.map((account: any) => (
-                            <div
-                              key={account.id}
-                              onClick={() => field.onChange(account.id.toString())}
-                              className={`cursor-pointer p-4 rounded-lg border-2 transition-all hover:border-blue-400 ${
-                                field.value === account.id.toString()
-                                  ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                                  : 'border-gray-300 hover:bg-gray-50'
-                              }`}
-                            >
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <span className="font-semibold text-lg">{account.accountName}</span>
-                                  <div className="text-sm text-gray-600">
-                                    {account.bankName} - {account.accountNumber}
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-16 text-lg">
+                              <SelectValue placeholder="Select bank account..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {bankAccounts
+                              .sort((a: any, b: any) => {
+                                // Put system default (first account) at the top
+                                if (a.isSystemDefault) return -1;
+                                if (b.isSystemDefault) return 1;
+                                return a.accountName.localeCompare(b.accountName);
+                              })
+                              .map((account: any) => (
+                                <SelectItem key={account.id} value={account.id.toString()}>
+                                  <div className="flex justify-between items-center w-full">
+                                    <div className="text-left">
+                                      <div className="font-semibold">{account.accountName}</div>
+                                      <div className="text-sm text-gray-600">
+                                        {account.bankName} - {account.accountNumber} | Balance: {formatCurrency(account.currentBalance || 0)}
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-sm text-gray-500">Current Balance</div>
-                                  <div className="font-bold text-lg text-green-600">
-                                    {formatCurrency(account.currentBalance || 0)}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
