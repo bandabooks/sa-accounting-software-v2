@@ -1274,16 +1274,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/invoices/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertInvoiceSchema.partial().parse(req.body);
-      const invoice = await storage.updateInvoice(id, validatedData);
+      const { invoice: invoiceData, items: itemsData } = req.body;
+      
+      // Update the main invoice data
+      const validatedInvoiceData = insertInvoiceSchema.partial().parse(invoiceData || req.body);
+      const invoice = await storage.updateInvoice(id, validatedInvoiceData);
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
-      res.json(invoice);
+      
+      // Update invoice items if provided
+      if (itemsData && Array.isArray(itemsData)) {
+        // First delete existing items for this invoice
+        await storage.deleteInvoiceItems(id);
+        
+        // Then add the new items
+        const validatedItems = itemsData.map(item => 
+          insertInvoiceItemSchema.omit({ id: true }).parse({
+            ...item,
+            invoiceId: id,
+            companyId: invoice.companyId
+          })
+        );
+        
+        await storage.createInvoiceItems(validatedItems);
+      }
+      
+      // Return the updated invoice with items
+      const updatedInvoiceWithItems = await storage.getInvoice(id);
+      res.json(updatedInvoiceWithItems);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
+      console.error("Failed to update invoice:", error);
       res.status(500).json({ message: "Failed to update invoice" });
     }
   });

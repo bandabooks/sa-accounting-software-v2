@@ -53,8 +53,8 @@ export const invoicesApi = {
   create: (data: { invoice: InsertInvoice; items: Omit<InsertInvoiceItem, 'invoiceId'>[] }): Promise<InvoiceWithItems> => 
     apiRequest("/api/invoices", "POST", data).then(res => res.json()),
   
-  update: (id: number, invoice: Partial<InsertInvoice>): Promise<Invoice> => 
-    apiRequest(`/api/invoices/${id}`, "PUT", invoice).then(res => res.json()),
+  update: (id: number, data: { invoice?: Partial<InsertInvoice>; items?: Omit<InsertInvoiceItem, 'invoiceId'>[] } | Partial<InsertInvoice>): Promise<Invoice> => 
+    apiRequest(`/api/invoices/${id}`, "PUT", data).then(res => res.json()),
   
   updateStatus: (id: number, status: string): Promise<Invoice> => 
     apiRequest(`/api/invoices/${id}/status`, "PUT", { status }).then(res => res.json()),

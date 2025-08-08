@@ -460,8 +460,10 @@ export interface IStorage {
   // Invoice Items
   getInvoiceItems(invoiceId: number): Promise<InvoiceItem[]>;
   createInvoiceItem(item: InsertInvoiceItem): Promise<InvoiceItem>;
+  createInvoiceItems(items: InsertInvoiceItem[]): Promise<InvoiceItem[]>;
   updateInvoiceItem(id: number, item: Partial<InsertInvoiceItem>): Promise<InvoiceItem | undefined>;
   deleteInvoiceItem(id: number): Promise<boolean>;
+  deleteInvoiceItems(invoiceId: number): Promise<boolean>;
 
   // Estimates
   getAllEstimates(): Promise<EstimateWithCustomer[]>;
@@ -1825,6 +1827,14 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
+  async createInvoiceItems(insertItems: InsertInvoiceItem[]): Promise<InvoiceItem[]> {
+    const items = await db
+      .insert(invoiceItems)
+      .values(insertItems)
+      .returning();
+    return items;
+  }
+
   async updateInvoiceItem(id: number, updateData: Partial<InsertInvoiceItem>): Promise<InvoiceItem | undefined> {
     const [item] = await db
       .update(invoiceItems)
@@ -1836,6 +1846,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvoiceItem(id: number): Promise<boolean> {
     const result = await db.delete(invoiceItems).where(eq(invoiceItems.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async deleteInvoiceItems(invoiceId: number): Promise<boolean> {
+    const result = await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
     return result.rowCount !== null && result.rowCount > 0;
   }
 

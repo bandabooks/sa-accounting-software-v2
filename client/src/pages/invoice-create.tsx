@@ -142,7 +142,7 @@ export default function InvoiceCreate() {
       if (existingInvoice.items && existingInvoice.items.length > 0) {
         const invoiceItems: InvoiceItem[] = existingInvoice.items.map(item => {
           // Smart product matching: try to find a product that matches the description
-          const matchingProduct = products.find((product: any) => {
+          const matchingProduct = (products as any[])?.find((product: any) => {
             const productDescription = product.description || product.name;
             // Match by exact description or name, or if the item description contains the product name
             return productDescription === item.description ||
@@ -192,8 +192,8 @@ export default function InvoiceCreate() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { id: number; invoice: Partial<InsertInvoice> }) => 
-      invoicesApi.update(data.id, data.invoice),
+    mutationFn: (data: { id: number; invoice: Partial<InsertInvoice>; items?: Omit<InsertInvoiceItem, 'invoiceId'>[] }) => 
+      invoicesApi.update(data.id, data),
     onSuccess: (invoice) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
@@ -378,7 +378,7 @@ export default function InvoiceCreate() {
     }
 
     if (isEditing && editId) {
-      // Update existing invoice
+      // Update existing invoice with items
       const invoiceData: Partial<InsertInvoice> = {
         customerId: formData.customerId,
         issueDate: formData.issueDate,
@@ -390,7 +390,18 @@ export default function InvoiceCreate() {
         notes: formData.notes
       };
 
-      updateMutation.mutate({ id: Number(editId), invoice: invoiceData });
+      const itemsData: Omit<InsertInvoiceItem, 'invoiceId'>[] = validItems.map(item => ({
+        companyId: 2, // Using default company for now
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        vatRate: item.vatRate,
+        vatAmount: item.vatAmount,
+        vatInclusive: item.vatInclusive || false,
+        total: (parseFloat(item.quantity) * parseFloat(item.unitPrice)).toFixed(2)
+      }));
+
+      updateMutation.mutate({ id: Number(editId), invoice: invoiceData, items: itemsData });
     } else {
       // Create new invoice
       const invoiceNumber = generateInvoiceNumber(invoices?.length || 0);
