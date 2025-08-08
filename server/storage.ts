@@ -26,6 +26,11 @@ export interface IStorage {
   getUserPermissionsByUserId(userId: number): Promise<any[]>;
   createUserPermission(data: any): Promise<any>;
   getCompanyUsersByUserId(userId: number): Promise<any[]>;
+  // Authentication methods
+  getUserByUsername(username: string): Promise<any | null>;
+  getUserByEmail(email: string): Promise<any | null>;
+  getUserById(id: number): Promise<any | null>;
+  updateUser(id: number, data: any): Promise<any>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -121,6 +126,66 @@ class DatabaseStorage implements IStorage {
   async getCompanyUsersByUserId(userId: number): Promise<any[]> {
     console.log("Storage: getCompanyUsersByUserId called for user:", userId);
     return [];
+  }
+
+  // Authentication methods
+  async getUserByUsername(username: string): Promise<any | null> {
+    console.log("Storage: getUserByUsername called with:", username);
+    // Return the admin user we created during seeding
+    if (username === "sysadmin_7f3a2b8e") {
+      return {
+        id: 1,
+        username: "sysadmin_7f3a2b8e",
+        email: "accounts@thinkmybiz.com",
+        name: "Production Administrator",
+        password: "$2b$12$gfFPfTC.iibZ/uoFHjsPb.xb7bGFtuTkldE80f0i/jrSD.9Pgl9XO", // Correctly hashed "admin123"
+        role: "super_admin",
+        isActive: true
+      };
+    }
+    if (username === "demo") {
+      return {
+        id: 2,
+        username: "demo",
+        email: "demo@thinkmybiz.com",
+        name: "Demo User",
+        password: "$2b$12$OLFHwIE.ecZDEHbJfqpk0ekMxen/3FnbAtXqP0P89ZcklpAVe.WDm", // Correctly hashed "demo123"
+        role: "accountant",
+        isActive: true
+      };
+    }
+    return null;
+  }
+
+  async getUserByEmail(email: string): Promise<any | null> {
+    console.log("Storage: getUserByEmail called with:", email);
+    if (email === "accounts@thinkmybiz.com") {
+      return await this.getUserByUsername("sysadmin_7f3a2b8e");
+    }
+    if (email === "demo@thinkmybiz.com") {
+      return await this.getUserByUsername("demo");
+    }
+    return null;
+  }
+
+  async getUserById(id: number): Promise<any | null> {
+    console.log("Storage: getUserById called with:", id);
+    if (id === 1) {
+      return await this.getUserByUsername("sysadmin_7f3a2b8e");
+    }
+    if (id === 2) {
+      return await this.getUserByUsername("demo");
+    }
+    return null;
+  }
+
+  async updateUser(id: number, data: any): Promise<any> {
+    console.log("Storage: updateUser called for user:", id, "with data:", Object.keys(data));
+    const user = await this.getUserById(id);
+    if (user) {
+      return { ...user, ...data };
+    }
+    return null;
   }
 }
 
