@@ -62,7 +62,7 @@ export default function EstimateCreate() {
     customerId: 0,
     issueDate: new Date(),
     expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    status: "draft" as "draft" | "sent" | "accepted" | "declined" | "expired",
+    status: "draft" as "draft" | "sent" | "accepted" | "expired" | "viewed" | "rejected",
     subtotal: "0.00",
     vatAmount: "0.00", 
     total: "0.00",
@@ -84,18 +84,34 @@ export default function EstimateCreate() {
     }
   ]);
 
+  // Track dynamic rows for each description field - Same as invoice
+  const [descriptionRows, setDescriptionRows] = useState<number[]>([2]);
+
+  // Helper function to calculate optimal rows based on content - Same as invoice
+  const calculateRows = (text: string, minRows: number = 2, maxRows: number = 8) => {
+    if (!text) return minRows;
+    
+    // Calculate approximate rows needed based on character count and line breaks
+    const charsPerRow = 50; // Approximate characters per row
+    const estimatedRows = Math.ceil(text.length / charsPerRow);
+    const lineBreaks = (text.match(/\n/g) || []).length;
+    const totalRows = Math.max(estimatedRows, lineBreaks + 1);
+    
+    return Math.min(Math.max(totalRows, minRows), maxRows);
+  };
+
   // Fetch data same as invoice
   const { data: customers = [] } = useQuery({
     queryKey: ["/api/customers"],
     retry: false,
   });
 
-  const { data: estimates = [] } = useQuery({
+  const { data: estimates = [] as any[] } = useQuery({
     queryKey: ["/api/estimates"],
     retry: false,
   });
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [] as any[] } = useQuery({
     queryKey: ["/api/products"],
     retry: false,
   });
@@ -107,12 +123,13 @@ export default function EstimateCreate() {
 
   // Fetch VAT types from database for dynamic calculation (same as invoice)
   const { data: vatTypesData = [] } = useQuery({
-    queryKey: ["/api/companies", 2, "vat-types"],
+    queryKey: ["/api/companies", activeCompany?.id || 2, "vat-types"],
+    enabled: !!activeCompany?.id,
     retry: false,
   });
 
   // Fetch VAT settings for calculation method
-  const { data: vatSettings } = useQuery({
+  const { data: vatSettings = {} } = useQuery({
     queryKey: [`/api/companies/${activeCompany?.id}/vat-settings`],
     enabled: !!activeCompany?.id,
     retry: false,
@@ -146,7 +163,7 @@ export default function EstimateCreate() {
         notes: existingEstimate.notes || "",
         terms: existingEstimate.terms || "",
         globalVatType: "1", // Set to standard rate
-        vatCalculationMethod: vatSettings?.defaultVatCalculationMethod || "inclusive"
+        vatCalculationMethod: (vatSettings as any)?.defaultVatCalculationMethod || "inclusive"
       });
 
       // Populate items
@@ -162,6 +179,8 @@ export default function EstimateCreate() {
           vatTypeId: item.vatTypeId || 1
         }));
         setItems(formattedItems);
+        // Initialize description rows for existing items
+        setDescriptionRows(formattedItems.map((item: any) => calculateRows(item.description || "")));
       }
     }
   }, [isEditing, existingEstimate, vatSettings]);
@@ -219,11 +238,15 @@ export default function EstimateCreate() {
       vatAmount: "0.00",
       vatTypeId: parseInt(formData.globalVatType) // Use global VAT type as default
     }]);
+    // Add a new row entry for the description field
+    setDescriptionRows(prev => [...prev, 2]);
   };
 
   const removeItem = (index: number) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
+      // Remove the corresponding row entry
+      setDescriptionRows(prev => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -306,7 +329,7 @@ export default function EstimateCreate() {
     // Calculate totals using global VAT types and settings
     const vatCalculations = validItems.map(item => {
       const vatType = vatTypes.find(vt => vt.id === item.vatTypeId);
-      const method = vatSettings?.defaultVatMethod || 'inclusive';
+      const method = (vatSettings as any)?.defaultVatMethod || 'inclusive';
       
       if (!vatType) {
         console.warn(`VAT Type not found for ID: ${item.vatTypeId}, using zero VAT`);
@@ -379,7 +402,7 @@ export default function EstimateCreate() {
         const vatType = vatTypes.find(vt => vt.id === item.vatTypeId);
         
         return {
-          companyId: activeCompany?.id || 2, // Match invoice format
+          companyId: (activeCompany as any)?.id || 2, // Match invoice format
           productId: item.productId || null,
           description: item.description,
           quantity: isNaN(parseFloat(item.quantity)) ? '1.00' : parseFloat(item.quantity).toFixed(2),
@@ -501,7 +524,7 @@ export default function EstimateCreate() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-6">
-        <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-6">
+        <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content - Estimate Details and Items */}
           <div className="lg:col-span-2 space-y-6">
@@ -671,11 +694,21 @@ export default function EstimateCreate() {
 
                       {/* Description Column */}
                       <div className="col-span-3">
-                        <Input
+                        <Textarea
                           placeholder="Enter item description..."
                           value={item.description}
-                          onChange={(e) => updateItem(index, 'description', e.target.value)}
-                          className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                          onChange={(e) => {
+                            updateItem(index, 'description', e.target.value);
+                            // Update the rows for this specific field based on content
+                            const newRows = calculateRows(e.target.value);
+                            setDescriptionRows(prev => {
+                              const updated = [...prev];
+                              updated[index] = newRows;
+                              return updated;
+                            });
+                          }}
+                          rows={descriptionRows[index] || 2}
+                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none transition-all duration-200 ease-in-out"
                         />
                       </div>
 
