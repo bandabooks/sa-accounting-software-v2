@@ -128,6 +128,32 @@ class DatabaseStorage implements IStorage {
     return [];
   }
 
+  // Authentication methods - Additional methods needed for auth middleware
+  async getUser(id: number): Promise<any | null> {
+    return await this.getUserById(id);
+  }
+
+  async getSessionByToken(sessionToken: string): Promise<any | null> {
+    console.log("Storage: getSessionByToken called with token:", sessionToken.substring(0, 8) + "...");
+    // Mock session - in real implementation this would query the database
+    return null;
+  }
+
+  async updateSessionActivity(sessionId: number): Promise<void> {
+    console.log("Storage: updateSessionActivity called for session:", sessionId);
+  }
+
+  async getUserActiveCompany(userId: number): Promise<any | null> {
+    console.log("Storage: getUserActiveCompany called for user:", userId);
+    // Return a mock company for now
+    return { id: 1, name: "Demo Company", slug: "demo-company" };
+  }
+
+  async createAuditLog(data: any): Promise<any> {
+    console.log("Storage: createAuditLog called:", data.action, data.resource);
+    return { id: 1, ...data };
+  }
+
   // Authentication methods
   async getUserByUsername(username: string): Promise<any | null> {
     console.log("Storage: getUserByUsername called with:", username);
@@ -138,7 +164,7 @@ class DatabaseStorage implements IStorage {
         username: "sysadmin_7f3a2b8e",
         email: "accounts@thinkmybiz.com",
         name: "Production Administrator",
-        password: "$2b$12$gfFPfTC.iibZ/uoFHjsPb.xb7bGFtuTkldE80f0i/jrSD.9Pgl9XO", // Correctly hashed "admin123"
+        password: "$2b$12$ROo1XgbdU0ipVePz1DnEkeNcG/Ee4MVfF9WWXkBZIDkKllSynIC6K", // Correctly hashed "F@1976#23b48%"
         role: "super_admin",
         isActive: true
       };
