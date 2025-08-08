@@ -148,7 +148,7 @@ export default function EstimateCreate() {
 
   // Populate form when editing
   useEffect(() => {
-    if (isEditing && existingEstimate) {
+    if (isEditing && existingEstimate && products) {
       console.log('Loading existing estimate data:', existingEstimate);
       
       // Populate form data
@@ -166,24 +166,35 @@ export default function EstimateCreate() {
         vatCalculationMethod: (vatSettings as any)?.defaultVatCalculationMethod || "inclusive"
       });
 
-      // Populate items
+      // Populate items with smart product matching
       if (existingEstimate.items && existingEstimate.items.length > 0) {
-        const formattedItems = existingEstimate.items.map((item: any) => ({
-          productId: item.productId || undefined,
-          description: item.description || "",
-          quantity: item.quantity || "1",
-          unitPrice: item.unitPrice || "0.00",
-          vatRate: item.vatRate || "15.00",
-          vatInclusive: item.vatInclusive || true,
-          vatAmount: item.vatAmount || "0.00",
-          vatTypeId: item.vatTypeId || 1
-        }));
+        const formattedItems = existingEstimate.items.map((item: any) => {
+          // Smart product matching: try to find a product that matches the description
+          const matchingProduct = (products as any[])?.find((product: any) => {
+            const productDescription = product.description || product.name;
+            // Match by exact description or name, or if the item description contains the product name
+            return productDescription === item.description ||
+                   product.name === item.description ||
+                   item.description.toLowerCase().includes(product.name.toLowerCase());
+          });
+
+          return {
+            productId: matchingProduct?.id, // Set productId if we found a matching product
+            description: item.description || "",
+            quantity: item.quantity || "1",
+            unitPrice: item.unitPrice || "0.00",
+            vatRate: item.vatRate || "15.00",
+            vatInclusive: item.vatInclusive || true,
+            vatAmount: item.vatAmount || "0.00",
+            vatTypeId: item.vatTypeId || 1
+          };
+        });
         setItems(formattedItems);
         // Initialize description rows for existing items
         setDescriptionRows(formattedItems.map((item: any) => calculateRows(item.description || "")));
       }
     }
-  }, [isEditing, existingEstimate, vatSettings]);
+  }, [isEditing, existingEstimate, vatSettings, products]);
 
   // Dynamic VAT calculation using database VAT types (same as invoice)
   const calculateItemVAT = (item: EstimateItem) => {
