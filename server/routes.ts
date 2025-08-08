@@ -1473,7 +1473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Then add the new items
         const validatedItems = itemsData.map(item => 
-          createEstimateItemSchema.parse({
+          insertEstimateItemSchema.omit({ id: true }).parse({
             ...item,
             estimateId: id,
             companyId: updatedEstimate.companyId
