@@ -123,15 +123,15 @@ export default function EstimateCreate() {
 
   // Fetch VAT types from database for dynamic calculation (same as invoice)
   const { data: vatTypesData = [] } = useQuery({
-    queryKey: ["/api/companies", activeCompany?.id || 2, "vat-types"],
-    enabled: !!activeCompany?.id,
+    queryKey: ["/api/companies", (activeCompany as any)?.id || 2, "vat-types"],
+    enabled: !!(activeCompany as any)?.id,
     retry: false,
   });
 
   // Fetch VAT settings for calculation method
-  const { data: vatSettings = {} } = useQuery({
-    queryKey: [`/api/companies/${activeCompany?.id}/vat-settings`],
-    enabled: !!activeCompany?.id,
+  const { data: vatSettings = { defaultVatCalculationMethod: "inclusive" } } = useQuery({
+    queryKey: [`/api/companies/${(activeCompany as any)?.id}/vat-settings`],
+    enabled: !!(activeCompany as any)?.id,
     retry: false,
   });
 
@@ -493,7 +493,7 @@ export default function EstimateCreate() {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       showSuccess(
         "Estimate Created Successfully!",
-        `Estimate EST-${String((estimates?.length || 0) + 1).padStart(4, '0')} has been created.`
+        `Estimate EST-${String((Array.isArray(estimates) ? estimates.length : 0) + 1).padStart(4, '0')} has been created.`
       );
       setLocation("/estimates");
     },
@@ -569,7 +569,7 @@ export default function EstimateCreate() {
           </div>
           <div className="flex items-center space-x-3">
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-              {isEditing && existingEstimate ? existingEstimate.estimateNumber : `EST-${String((estimates?.length || 0) + 1).padStart(4, '0')}`}
+              {isEditing && existingEstimate ? existingEstimate.estimateNumber : `EST-${String((Array.isArray(estimates) ? estimates.length : 0) + 1).padStart(4, '0')}`}
             </Badge>
           </div>
         </div>
@@ -874,7 +874,7 @@ export default function EstimateCreate() {
                           Estimate Number
                         </span>
                         <Badge variant="outline" className="bg-white text-blue-700 border-blue-200 font-mono">
-                          EST-{String((estimates?.length || 0) + 1).padStart(4, '0')}
+                          EST-{String((Array.isArray(estimates) ? estimates.length : 0) + 1).padStart(4, '0')}
                         </Badge>
                       </div>
                       
@@ -885,7 +885,7 @@ export default function EstimateCreate() {
                         <Badge className={`${
                           formData.status === 'accepted' ? 'bg-green-100 text-green-800' :
                           formData.status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                          formData.status === 'declined' ? 'bg-red-100 text-red-800' :
+                          formData.status === 'rejected' ? 'bg-red-100 text-red-800' :
                           formData.status === 'expired' ? 'bg-gray-100 text-gray-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
