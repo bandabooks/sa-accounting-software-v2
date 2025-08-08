@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils-invoice";
-import { CreditCard, DollarSign, Receipt, Trash2 } from "lucide-react";
+import { CreditCard, Banknote, Receipt, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
@@ -53,7 +53,7 @@ export default function PaymentHistory({ invoiceId }: PaymentHistoryProps) {
   const getPaymentIcon = (method: string) => {
     switch (method) {
       case "cash":
-        return <DollarSign className="w-4 h-4" />;
+        return <Banknote className="w-4 h-4" />;
       case "card":
         return <CreditCard className="w-4 h-4" />;
       default:

@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Mail, Edit, Download, Repeat, CreditCard, Eye, FileText, Building2, Calendar, MapPin, Phone } from "lucide-react";
+import { Printer, Mail, Edit, Download, Repeat, CreditCard, Eye, FileText, Building2, Calendar, MapPin, Phone, ArrowLeft } from "lucide-react";
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
@@ -207,6 +207,14 @@ function InvoiceDetail() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/invoices")}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              </Button>
               <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white">
                 <FileText className="h-8 w-8" />
               </div>
