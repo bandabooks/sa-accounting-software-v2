@@ -1181,6 +1181,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search endpoint for customers (for bulk capture)
+  app.get("/api/customers/search", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const search = req.query.search as string || "";
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      const customers = await storage.getAllCustomers();
+      
+      let filteredCustomers = customers;
+      if (search) {
+        filteredCustomers = customers.filter(customer => 
+          customer.name.toLowerCase().includes(search.toLowerCase()) ||
+          customer.email?.toLowerCase().includes(search.toLowerCase()) ||
+          customer.phone?.toLowerCase().includes(search.toLowerCase()) ||
+          customer.companyName?.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      const searchOptions = filteredCustomers
+        .slice(0, limit)
+        .map(customer => ({
+          value: customer.id.toString(),
+          label: customer.name,
+          description: customer.email || customer.companyName || undefined,
+          searchableText: `${customer.name} ${customer.email || ''} ${customer.companyName || ''}`.toLowerCase(),
+          data: customer
+        }));
+      
+      res.json(searchOptions);
+    } catch (error) {
+      console.error('Error searching customers:', error);
+      res.status(500).json({ error: 'Failed to search customers' });
+    }
+  });
+
   // Invoices with search
   app.get("/api/invoices", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
@@ -2732,6 +2767,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Supplier deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete supplier" });
+    }
+  });
+
+  // Search endpoint for suppliers (for bulk capture)
+  app.get("/api/suppliers/search", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const search = req.query.search as string || "";
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      const suppliers = await storage.getAllSuppliers();
+      
+      let filteredSuppliers = suppliers;
+      if (search) {
+        filteredSuppliers = suppliers.filter(supplier => 
+          supplier.name.toLowerCase().includes(search.toLowerCase()) ||
+          supplier.email?.toLowerCase().includes(search.toLowerCase()) ||
+          supplier.phone?.toLowerCase().includes(search.toLowerCase()) ||
+          supplier.companyRegistration?.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      const searchOptions = filteredSuppliers
+        .slice(0, limit)
+        .map(supplier => ({
+          value: supplier.id.toString(),
+          label: supplier.name,
+          description: supplier.email || supplier.companyRegistration || undefined,
+          searchableText: `${supplier.name} ${supplier.email || ''} ${supplier.companyRegistration || ''}`.toLowerCase(),
+          data: supplier
+        }));
+      
+      res.json(searchOptions);
+    } catch (error) {
+      console.error('Error searching suppliers:', error);
+      res.status(500).json({ error: 'Failed to search suppliers' });
     }
   });
 
@@ -5644,6 +5714,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search endpoint for chart of accounts (for bulk capture)
+  app.get("/api/chart-of-accounts/search", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const search = req.query.search as string || "";
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      const accounts = await storage.getAllChartOfAccounts(companyId);
+      
+      let filteredAccounts = accounts;
+      if (search) {
+        filteredAccounts = accounts.filter(account => 
+          account.accountName.toLowerCase().includes(search.toLowerCase()) ||
+          account.accountCode.toLowerCase().includes(search.toLowerCase()) ||
+          account.description?.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      const searchOptions = filteredAccounts
+        .slice(0, limit)
+        .map(account => ({
+          value: account.id.toString(),
+          label: `${account.accountCode} - ${account.accountName}`,
+          description: account.description || undefined,
+          searchableText: `${account.accountCode} ${account.accountName} ${account.description || ''}`.toLowerCase(),
+          data: account
+        }));
+      
+      res.json(searchOptions);
+    } catch (error) {
+      console.error('Error searching chart of accounts:', error);
+      res.status(500).json({ error: 'Failed to search chart of accounts' });
+    }
+  });
+
   // Industry Templates Routes
   app.get("/api/industry-templates", authenticate, async (req, res) => {
     try {
@@ -5918,6 +6023,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting bank account:", error);
       res.status(500).json({ error: "Failed to delete bank account" });
+    }
+  });
+
+  // Search endpoint for bank accounts (for bulk capture)
+  app.get("/api/bank-accounts/search", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const search = req.query.search as string || "";
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      const bankAccounts = await storage.getAllBankAccounts(companyId);
+      
+      let filteredAccounts = bankAccounts;
+      if (search) {
+        filteredAccounts = bankAccounts.filter(account => 
+          account.accountName.toLowerCase().includes(search.toLowerCase()) ||
+          account.bankName?.toLowerCase().includes(search.toLowerCase()) ||
+          account.accountNumber?.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      // Sort by default first, then by account name
+      const sortedAccounts = filteredAccounts.sort((a, b) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return a.accountName.localeCompare(b.accountName);
+      });
+      
+      const searchOptions = sortedAccounts
+        .slice(0, limit)
+        .map(account => ({
+          value: account.id.toString(),
+          label: account.accountName,
+          description: `${account.bankName || ''} ${account.accountNumber || ''}`.trim() || undefined,
+          searchableText: `${account.accountName} ${account.bankName || ''} ${account.accountNumber || ''}`.toLowerCase(),
+          data: { ...account, isDefault: account.isDefault || false }
+        }));
+      
+      res.json(searchOptions);
+    } catch (error) {
+      console.error('Error searching bank accounts:', error);
+      res.status(500).json({ error: 'Failed to search bank accounts' });
     }
   });
 

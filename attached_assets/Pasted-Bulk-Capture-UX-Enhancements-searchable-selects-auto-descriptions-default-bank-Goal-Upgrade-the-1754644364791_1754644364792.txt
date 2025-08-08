@@ -1,0 +1,76 @@
+Bulk Capture UX Enhancements (searchable selects, auto-descriptions, default bank)
+Goal:
+Upgrade the Bulk Income and Bulk Expense entry grids so that:
+
+account, client/supplier, and bank selects are searchable;
+
+choosing an account auto-populates the row’s Description from the Chart of Accounts (CoA);
+
+a default bank account is preselected (the first created bank account; in our data this is “ABSA Business Cheque”).
+
+Requirements
+1) Searchable selects (Income + Expense tabs)
+Replace existing <select>s for Income Account, Client, Bank Account (and on Expenses: Expense Account, Supplier, Bank Account) with an accessible searchable combobox.
+
+Accept keyboard navigation (↑/↓, Enter, Esc), type-ahead with 300ms debounce, and a Clear (×) control.
+
+Large lists must be performant: virtualize results (e.g., react-window) and support server-side filtering.
+
+Show “No results for ‘{q}’” and a loading spinner on fetch.
+
+2) Auto-populate Description from CoA (both tabs)
+When an Income Account (or Expense Account) is selected, auto-fill the Description cell with the CoA description tied to that account code.
+
+If the user already typed a custom description, only overwrite when the account is changed (not on every re-render).
+
+If the selected account has no stored description, fallback to the account name.
+
+If the user changes the account again, update the description accordingly (but do not overwrite if the user edited the description after the last auto-fill—track descriptionWasEdited:boolean per row).
+
+3) Default bank account
+On page load and when adding new rows, preselect the default bank account defined as the earliest created bank account (ORDER BY created_at ASC LIMIT 1).
+
+If a bank is flagged is_default=true, prefer that; otherwise use earliest created.
+
+If the default is deleted/disabled, fall back to the next earliest.
+
+Apply the same defaulting on the Bulk Expense tab (the debit bank).
+
+Users can still change the bank per row; do not auto-revert once edited.
+
+4) Apply to both tabs consistently
+Bulk Income: searchable Income Account, Client, Bank Account; description auto-fill from CoA.
+
+Bulk Expenses: searchable Expense Account, Supplier, Bank Account; description auto-fill from CoA.
+
+API / Data
+Add lightweight search endpoints (server-side filter + pagination):
+
+GET /api/search/accounts?q=&type=income|expense&page=&limit= → {items:[{id, code, name, description}], total}
+
+GET /api/search/clients?q=&page=&limit= → {items:[{id, displayName}]…}
+
+GET /api/search/suppliers?q=&page=&limit=
+
+GET /api/search/banks?q=&page=&limit=
+
+GET /api/banks/default → {id, name} (or include is_default and created_at in /banks and compute on FE)
+
+Ensure CoA items include code, name, description.
+
+DB migration (if needed):
+
+Add is_default boolean default false to bank_accounts.
+
+One-time job: set is_default=true for the earliest created bank if no default exists.
+
+Frontend Implementation (React/TS)
+Create <SearchCombo/> component (headless, ARIA combobox):
+
+Props: value, onChange(item), fetchOptions(query,page), getLabel(item), placeholder, disabled, allowClear.
+
+Internally: debounce input 300ms, infinite scroll/virtualize, loading/empty states.
+
+Replace selects in the grid with <SearchCombo/>.
+
+Row state per grid row:
