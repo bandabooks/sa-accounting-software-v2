@@ -590,6 +590,7 @@ export default function ChartOfAccounts() {
                 <TableRow>
                   <TableHead className="w-[120px]">Account Code</TableHead>
                   <TableHead>Account Name</TableHead>
+                  <TableHead className="w-[140px]">Account Type</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right w-[140px]">Amount</TableHead>
                   <TableHead className="w-[200px]">Actions</TableHead>
@@ -613,9 +614,6 @@ export default function ChartOfAccounts() {
                         <span className={account.isActive ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-500'}>
                           {account.accountName}
                         </span>
-                        <Badge className={getAccountTypeColor(account.accountType)}>
-                          {account.accountType}
-                        </Badge>
                         <Badge 
                           variant={account.isActive ? "default" : "secondary"} 
                           className={`text-xs ${account.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
@@ -624,8 +622,13 @@ export default function ChartOfAccounts() {
                         </Badge>
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <Badge className={getAccountTypeColor(account.accountType)}>
+                        {account.accountType}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-gray-600 dark:text-gray-400">
-                      {account.description || account.accountType}
+                      {account.description || `${account.accountName} - ${account.accountSubType}`}
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(account.currentBalance)}
