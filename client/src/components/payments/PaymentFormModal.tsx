@@ -88,30 +88,16 @@ export function PaymentFormModal({
 
   const createPaymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
-      const token = localStorage.getItem('authToken');
-      const sessionToken = localStorage.getItem('sessionToken');
-      
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      };
-      
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      
-      if (sessionToken) {
-        headers["X-Session-Token"] = sessionToken;
-      }
-      
       const response = await fetch("/api/payments", {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           ...data,
           amount: data.amount.toString(),
           paymentDate: data.paymentDate.toISOString(),
         }),
-        credentials: "include",
       });
       
       if (!response.ok) {

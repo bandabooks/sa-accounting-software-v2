@@ -1718,33 +1718,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment routes
-  app.get("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/payments", async (req, res) => {
     try {
-      const companyId = req.user?.companyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
-      }
-      
       const payments = await storage.getAllPayments();
-      // Filter payments by company
-      const companyPayments = payments.filter(p => p.companyId === companyId);
-      res.json(companyPayments);
+      res.json(payments);
     } catch (error) {
       console.error("Error fetching payments:", error);
       res.status(500).json({ message: "Failed to fetch payments" });
     }
   });
 
-  app.get("/api/invoices/:id/payments", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/invoices/:id/payments", async (req, res) => {
     try {
       const invoiceId = parseInt(req.params.id);
-      const companyId = req.user?.companyId;
-      
-      if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
-      }
-      
-      // Verify the invoice belongs to the user's company
       const invoice = await storage.getInvoice(invoiceId);
       if (!invoice || invoice.companyId !== companyId) {
         return res.status(404).json({ message: "Invoice not found" });
@@ -1758,17 +1744,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/payments", async (req, res) => {
     try {
       console.log("Payment request body:", req.body);
-      const companyId = req.user.companyId;
       
-      // Add companyId from authenticated user
-      const paymentData = {
-        ...req.body,
-        companyId
-      };
-      const validatedData = insertPaymentSchema.parse(paymentData);
+      const validatedData = insertPaymentSchema.parse(req.body);
       console.log("Validated payment data:", validatedData);
       
       // Create the payment
@@ -1818,16 +1798,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.put("/api/payments/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user?.companyId;
-      
-      if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
-      }
-      
-      // Verify the payment belongs to the user's company
       const existingPayment = await storage.getAllPayments();
       const payment = existingPayment.find(p => p.id === id && p.companyId === companyId);
       if (!payment) {
@@ -1853,16 +1826,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/payments/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user?.companyId;
-      
-      if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
-      }
-      
-      // Verify the payment belongs to the user's company
       const existingPayments = await storage.getAllPayments();
       const payment = existingPayments.find(p => p.id === id && p.companyId === companyId);
       if (!payment) {
