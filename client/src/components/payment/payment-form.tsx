@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CreditCard, DollarSign, Receipt, Banknote, CreditCard as CardIcon, Building2, Smartphone } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
+import { apiRequest } from "@/lib/queryClient";
 
 const paymentFormSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
@@ -90,22 +91,12 @@ export default function PaymentForm({
   const onSubmit = async (data: PaymentFormData) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/payments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...data,
-          bankAccountId: parseInt(data.bankAccountId),
-          invoiceId,
-          status: "completed",
-        }),
+      const response = await apiRequest("/api/payments", "POST", {
+        ...data,
+        bankAccountId: parseInt(data.bankAccountId),
+        invoiceId,
+        status: "completed",
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to record payment");
-      }
 
       // Reset form and notify parent
       form.reset({

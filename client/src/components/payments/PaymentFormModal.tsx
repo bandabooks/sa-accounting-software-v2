@@ -88,15 +88,12 @@ export function PaymentFormModal({
 
   const createPaymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
-      const response = await apiRequest("/api/payments", {
-        method: "POST",
-        body: JSON.stringify({
-          ...data,
-          amount: data.amount.toString(),
-          paymentDate: data.paymentDate.toISOString(),
-        }),
+      const response = await apiRequest("/api/payments", "POST", {
+        ...data,
+        amount: data.amount.toString(),
+        paymentDate: data.paymentDate.toISOString(),
       });
-      return response as PaymentResponse;
+      return response.json() as Promise<PaymentResponse>;
     },
     onSuccess: (response) => {
       handlePaymentSuccess(response);

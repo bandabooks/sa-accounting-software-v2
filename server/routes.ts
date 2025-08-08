@@ -1718,21 +1718,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payment routes
-  app.get("/api/payments", async (req, res) => {
+  app.get("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
       const payments = await storage.getAllPayments();
-      res.json(payments);
+      // Filter payments by company
+      const companyPayments = payments.filter(p => p.companyId === companyId);
+      res.json(companyPayments);
     } catch (error) {
+      console.error("Error fetching payments:", error);
       res.status(500).json({ message: "Failed to fetch payments" });
     }
   });
 
-  app.get("/api/invoices/:id/payments", async (req, res) => {
+  app.get("/api/invoices/:id/payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const invoiceId = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      // Verify the invoice belongs to the user's company
+      const invoice = await storage.getInvoice(invoiceId);
+      if (!invoice || invoice.companyId !== companyId) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
       const payments = await storage.getPaymentsByInvoice(invoiceId);
       res.json(payments);
     } catch (error) {
+      console.error("Error fetching invoice payments:", error);
       res.status(500).json({ message: "Failed to fetch invoice payments" });
     }
   });
@@ -1797,32 +1818,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/payments/:id", async (req, res) => {
+  app.put("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertPaymentSchema.partial().parse(req.body);
-      const payment = await storage.updatePayment(id, validatedData);
+      const companyId = req.user?.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      // Verify the payment belongs to the user's company
+      const existingPayment = await storage.getAllPayments();
+      const payment = existingPayment.find(p => p.id === id && p.companyId === companyId);
       if (!payment) {
         return res.status(404).json({ message: "Payment not found" });
       }
-      res.json(payment);
+      
+      const validatedData = insertPaymentSchema.partial().parse(req.body);
+      const updatedPayment = await storage.updatePayment(id, validatedData);
+      if (!updatedPayment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
+      // Log the update
+      await logAudit(req.user?.id || 0, 'UPDATE', 'payments', id, validatedData);
+      
+      res.json(updatedPayment);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
+      console.error("Error updating payment:", error);
       res.status(500).json({ message: "Failed to update payment" });
     }
   });
 
-  app.delete("/api/payments/:id", async (req, res) => {
+  app.delete("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      // Verify the payment belongs to the user's company
+      const existingPayments = await storage.getAllPayments();
+      const payment = existingPayments.find(p => p.id === id && p.companyId === companyId);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
       const success = await storage.deletePayment(id);
       if (!success) {
         return res.status(404).json({ message: "Payment not found" });
       }
+      
+      // Log the deletion
+      await logAudit(req.user?.id || 0, 'DELETE', 'payments', id, null);
+      
       res.json({ message: "Payment deleted successfully" });
     } catch (error) {
+      console.error("Error deleting payment:", error);
       res.status(500).json({ message: "Failed to delete payment" });
     }
   });
