@@ -91,12 +91,36 @@ export default function PaymentForm({
   const onSubmit = async (data: PaymentFormData) => {
     setIsSubmitting(true);
     try {
-      const response = await apiRequest("/api/payments", "POST", {
-        ...data,
-        bankAccountId: parseInt(data.bankAccountId),
-        invoiceId,
-        status: "completed",
+      const token = localStorage.getItem('authToken');
+      const sessionToken = localStorage.getItem('sessionToken');
+      
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      if (sessionToken) {
+        headers["X-Session-Token"] = sessionToken;
+      }
+      
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          ...data,
+          bankAccountId: parseInt(data.bankAccountId),
+          invoiceId,
+          status: "completed",
+        }),
+        credentials: "include",
       });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
 
       // Reset form and notify parent
       form.reset({
