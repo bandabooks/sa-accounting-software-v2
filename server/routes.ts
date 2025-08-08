@@ -735,7 +735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Get permissions from role assignments for regular users
           try {
-            const permissions = await storage.getUserPermission(user.id, user.companyId || 1);
+            const permissions = await storage.getUserPermission(user.id, user.activeCompanyId || 1);
             userPermissions = permissions ? [permissions.toString()] : [];
           } catch (error) {
             // Fallback to default permissions based on user role
@@ -1039,7 +1039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Dashboard - protected route with company isolation
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.activeCompanyId;
       
       // Get comprehensive dashboard data
       const [

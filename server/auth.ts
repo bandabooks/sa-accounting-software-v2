@@ -270,20 +270,30 @@ export const ROLES = {
   },
 } as const;
 
+// Type definition that matches the database User object with additional auth properties
+export interface AuthUser {
+  id: number;
+  username: string;
+  name: string;
+  email: string;
+  role: string;
+  permissions: string[];
+  companyId?: number;
+}
+
 export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: number;
-    username: string;
-    name: string;
-    email: string;
-    role: string;
-    permissions: string[];
-    companyId?: number;
-  };
+  user?: AuthUser;
   session?: {
     id: number;
     sessionToken: string;
   };
+}
+
+// Extend Express Request to support our authenticated user type
+declare global {
+  namespace Express {
+    interface User extends AuthUser {}
+  }
 }
 
 // JWT secret - in production, this should be from environment variables
