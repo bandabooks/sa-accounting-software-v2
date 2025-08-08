@@ -169,25 +169,54 @@ export default function EstimateCreate() {
       // Populate items - Note: estimate items don't store productId in database
       if (existingEstimate.items && existingEstimate.items.length > 0) {
         console.log('Populating estimate items:', existingEstimate.items);
-        const formattedItems = existingEstimate.items.map((item: any) => ({
-          productId: undefined, // Estimate items don't store productId in DB, only description
-          description: item.description || "",
-          quantity: String(item.quantity || "1"),
-          unitPrice: String(item.unitPrice || "0.00"),
-          vatRate: String(item.vatRate || "15.00"),
-          vatInclusive: item.vatInclusive !== undefined ? item.vatInclusive : true,
-          vatAmount: String(item.vatAmount || "0.00"),
-          vatTypeId: item.vatTypeId || 1
-        }));
-        console.log('Formatted items for editing:', formattedItems);
-        setItems(formattedItems);
-        // Initialize description rows for existing items
-        setDescriptionRows(formattedItems.map((item: any) => calculateRows(item.description || "")));
+        
+        // Wait for products to load, then try to match descriptions to existing products
+        if (productsData && Array.isArray(productsData)) {
+          const formattedItems = existingEstimate.items.map((item: any) => {
+            // Try to find a product that matches the description
+            const matchingProduct = productsData.find((product: any) => 
+              product.description && item.description && 
+              product.description.toLowerCase().trim() === item.description.toLowerCase().trim()
+            );
+            
+            return {
+              productId: matchingProduct ? matchingProduct.id : undefined,
+              description: item.description || "",
+              quantity: String(item.quantity || "1"),
+              unitPrice: String(item.unitPrice || "0.00"),
+              vatRate: String(item.vatRate || "15.00"),
+              vatInclusive: item.vatInclusive !== undefined ? item.vatInclusive : true,
+              vatAmount: String(item.vatAmount || "0.00"),
+              vatTypeId: item.vatTypeId || 1
+            };
+          });
+          
+          console.log('Formatted items for editing with product matching:', formattedItems);
+          setItems(formattedItems);
+          // Initialize description rows for existing items
+          setDescriptionRows(formattedItems.map((item: any) => calculateRows(item.description || "")));
+        } else {
+          // Products not loaded yet, set items without productId for now
+          const formattedItems = existingEstimate.items.map((item: any) => ({
+            productId: undefined,
+            description: item.description || "",
+            quantity: String(item.quantity || "1"),
+            unitPrice: String(item.unitPrice || "0.00"),
+            vatRate: String(item.vatRate || "15.00"),
+            vatInclusive: item.vatInclusive !== undefined ? item.vatInclusive : true,
+            vatAmount: String(item.vatAmount || "0.00"),
+            vatTypeId: item.vatTypeId || 1
+          }));
+          
+          console.log('Formatted items for editing (products not loaded yet):', formattedItems);
+          setItems(formattedItems);
+          setDescriptionRows(formattedItems.map((item: any) => calculateRows(item.description || "")));
+        }
       } else {
         console.log('No items found in estimate or items array is empty');
       }
     }
-  }, [isEditing, existingEstimate, vatSettings]);
+  }, [isEditing, existingEstimate, vatSettings, productsData]);
 
   // Dynamic VAT calculation using database VAT types (same as invoice)
   const calculateItemVAT = (item: EstimateItem) => {
