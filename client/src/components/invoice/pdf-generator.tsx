@@ -190,13 +190,48 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
       pdf.text((index + 1).toString(), 25, currentY);
       
-      // Description with font-medium styling
+      // Description with font-medium styling - show full text
       pdf.setTextColor(0, 0, 0);
       let description = item.description || "N/A";
-      if (description.length > 20) { // Shorter to prevent overlap
-        description = description.substring(0, 17) + "...";
+      
+      // Calculate available width for description (from position 35 to column 85)
+      const maxDescriptionWidth = 45; // Available space in PDF units
+      const currentFont = pdf.getFontList();
+      
+      // If description is too long, wrap it to multiple lines
+      if (pdf.getTextWidth(description) > maxDescriptionWidth) {
+        // Split text to fit in available width
+        const words = description.split(' ');
+        let line1 = '';
+        let line2 = '';
+        
+        // Build first line
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line1 + (line1 ? ' ' : '') + words[i];
+          if (pdf.getTextWidth(testLine) > maxDescriptionWidth && line1) {
+            // Start second line with remaining words
+            line2 = words.slice(i).join(' ');
+            break;
+          } else {
+            line1 = testLine;
+          }
+        }
+        
+        // Display first line
+        pdf.text(line1, 35, currentY);
+        
+        // Display second line if it exists (with smaller font)
+        if (line2) {
+          pdf.setFontSize(7); // Smaller font for second line
+          pdf.setTextColor(75, 85, 99); // Gray-600 for continuation
+          pdf.text(line2.length > 35 ? line2.substring(0, 32) + '...' : line2, 35, currentY + 4);
+          pdf.setFontSize(8); // Reset font size
+          pdf.setTextColor(0, 0, 0); // Reset color
+        }
+      } else {
+        // Description fits in one line
+        pdf.text(description, 35, currentY);
       }
-      pdf.text(description, 35, currentY);
       
       // Professional data alignment matching optimized headers
       const qtyText = (item.quantity?.toString() || "1");
@@ -301,11 +336,26 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
     
     // Add "Amount Paid" line if there are payments
     if (totalPaid > 0) {
+      pdf.setTextColor(0, 0, 0);
       pdf.text("Amount Paid:", paymentStatusX + 4, currentPaymentY);
-      pdf.setTextColor(34, 197, 94); // Green-500 for paid amount
+      
+      // Add background for better visibility of green paid amount
       const paidText = formatCurrency(totalPaid.toFixed(2));
       const paidWidth = pdf.getTextWidth(paidText);
-      pdf.text(paidText, paymentStatusX + paymentStatusWidth - 4 - paidWidth, currentPaymentY);
+      const paidX = paymentStatusX + paymentStatusWidth - 4 - paidWidth;
+      
+      // Light green background for paid amount
+      pdf.setFillColor(220, 252, 231); // Green-100 background
+      pdf.rect(paidX - 2, currentPaymentY - 4, paidWidth + 4, 6, 'F');
+      
+      // Green border for emphasis
+      pdf.setDrawColor(34, 197, 94); // Green-500 border
+      pdf.setLineWidth(0.5);
+      pdf.rect(paidX - 2, currentPaymentY - 4, paidWidth + 4, 6, 'S');
+      
+      // Green text on background
+      pdf.setTextColor(21, 128, 61); // Green-700 for better contrast on light background
+      pdf.text(paidText, paidX, currentPaymentY);
       currentPaymentY += 6;
       
       // Add separator line before outstanding balance
