@@ -71,7 +71,7 @@ export default function PaymentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch bank accounts
-  const { data: bankAccounts = [] } = useQuery({
+  const { data: bankAccounts = [] } = useQuery<any[]>({
     queryKey: ["/api/bank-accounts"],
   });
 
@@ -89,15 +89,18 @@ export default function PaymentModal({
   // Update amount when remaining amount changes
   useEffect(() => {
     if (isOpen) {
+      // Set first bank account as default
+      const defaultBankAccount = bankAccounts.length > 0 ? bankAccounts[0]?.id?.toString() || "" : "";
+      
       form.reset({
         amount: remainingAmount,
         paymentMethod: "cash",
-        bankAccountId: "",
+        bankAccountId: defaultBankAccount,
         reference: "",
         notes: "",
       });
     }
-  }, [remainingAmount, isOpen, form]);
+  }, [remainingAmount, isOpen, form, bankAccounts]);
 
   const onSubmit = async (data: PaymentFormData) => {
     setIsSubmitting(true);
@@ -305,11 +308,11 @@ export default function PaymentModal({
                         </FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-16 text-lg">
+                            <SelectTrigger className="h-14 text-base border-2 hover:border-blue-400 focus:border-blue-500 bg-white">
                               <SelectValue placeholder="Select bank account..." />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="max-h-80 overflow-y-auto">
                             {bankAccounts
                               .sort((a: any, b: any) => {
                                 // Put system default (first account) at the top
@@ -317,14 +320,28 @@ export default function PaymentModal({
                                 if (b.isSystemDefault) return 1;
                                 return a.accountName.localeCompare(b.accountName);
                               })
-                              .map((account: any) => (
-                                <SelectItem key={account.id} value={account.id.toString()}>
-                                  <div className="flex justify-between items-center w-full">
-                                    <div className="text-left">
-                                      <div className="font-semibold">{account.accountName}</div>
-                                      <div className="text-sm text-gray-600">
-                                        {account.bankName} - {account.accountNumber} | Balance: {formatCurrency(account.currentBalance || 0)}
+                              .map((account: any, index: number) => (
+                                <SelectItem 
+                                  key={account.id} 
+                                  value={account.id.toString()}
+                                  className="p-4 my-1 cursor-pointer hover:bg-blue-50 focus:bg-blue-50 data-[highlighted]:bg-blue-50 border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="flex flex-col w-full">
+                                    <div className="flex items-center justify-between">
+                                      <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                        {index === 0 && (
+                                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">DEFAULT</span>
+                                        )}
+                                        {account.accountName}
                                       </div>
+                                      <div className="text-right">
+                                        <div className="font-bold text-green-600 text-sm">
+                                          {formatCurrency(account.currentBalance || 0)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-sm text-gray-600 mt-1">
+                                      {account.bankName} • {account.accountNumber}
                                     </div>
                                   </div>
                                 </SelectItem>
