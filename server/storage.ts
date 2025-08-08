@@ -2741,7 +2741,7 @@ export class DatabaseStorage implements IStorage {
       if (bankAccount) {
         await this.createJournalEntryLine({
           journalEntryId: journalEntry.id,
-          accountId: bankAccount.chartOfAccountsId || 1, // Bank account from COA
+          accountId: bankAccount.chartAccountId || 1, // Bank account from COA
           description: `Payment received - ${bankAccount.accountName}`,
           debitAmount: parseFloat(payment.amount),
           creditAmount: 0
@@ -2750,7 +2750,7 @@ export class DatabaseStorage implements IStorage {
 
       // Credit: Accounts Receivable (Asset decreases) 
       if (invoice) {
-        const receivablesAccount = await this.getAccountByCode(payment.companyId, '1200'); // Accounts Receivable
+        const receivablesAccount = await this.getChartOfAccountByCode(payment.companyId, '1200'); // Accounts Receivable
         if (receivablesAccount) {
           await this.createJournalEntryLine({
             journalEntryId: journalEntry.id,
@@ -2973,7 +2973,7 @@ export class DatabaseStorage implements IStorage {
       // Get expense category account or default to general expenses
       let expenseAccountId = expense.categoryId;
       if (!expenseAccountId) {
-        const generalExpense = await this.getAccountByCode(expense.companyId, '5000');
+        const generalExpense = await this.getChartOfAccountByCode(expense.companyId, '5000');
         expenseAccountId = generalExpense?.id || 1;
       }
 
@@ -2989,7 +2989,7 @@ export class DatabaseStorage implements IStorage {
       // Credit: Accounts Payable or Bank Account
       if (!expense.isPaid) {
         // Accounts Payable
-        const payableAccount = await this.getAccountByCode(expense.companyId, '2000');
+        const payableAccount = await this.getChartOfAccountByCode(expense.companyId, '2000');
         if (payableAccount) {
           await this.createJournalEntryLine({
             journalEntryId: journalEntry.id,
@@ -3001,7 +3001,7 @@ export class DatabaseStorage implements IStorage {
         }
       } else {
         // Bank Account (assuming cash payment)
-        const bankAccount = await this.getAccountByCode(expense.companyId, '1100');
+        const bankAccount = await this.getChartOfAccountByCode(expense.companyId, '1100');
         if (bankAccount) {
           await this.createJournalEntryLine({
             journalEntryId: journalEntry.id,
@@ -5946,6 +5946,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(journalEntries.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  async createJournalEntryLine(line: Omit<InsertJournalEntryLine, 'id'>): Promise<JournalEntryLine> {
+    const [newLine] = await db.insert(journalEntryLines).values(line).returning();
+    return newLine;
   }
 
   async postJournalEntry(id: number): Promise<JournalEntry | undefined> {

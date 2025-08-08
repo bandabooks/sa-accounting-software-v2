@@ -1350,6 +1350,7 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 });
 
 export const insertInvoiceSchema = z.object({
+  companyId: z.number(),
   customerId: z.number(),
   invoiceNumber: z.string(),
   issueDate: z.string().transform((str) => new Date(str)),
@@ -1357,7 +1358,7 @@ export const insertInvoiceSchema = z.object({
   subtotal: z.string(),
   vatAmount: z.string(),
   total: z.string(),
-  status: z.enum(["draft", "sent", "paid", "overdue"]).default("draft"),
+  status: z.enum(["draft", "sent", "paid", "overdue", "partially_paid"]).default("draft"),
   notes: z.string().optional(),
 });
 
@@ -1366,6 +1367,7 @@ export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
 });
 
 export const insertEstimateSchema = z.object({
+  companyId: z.number(),
   customerId: z.number(),
   estimateNumber: z.string(),
   issueDate: z.string().transform((str) => new Date(str)),
@@ -1373,7 +1375,7 @@ export const insertEstimateSchema = z.object({
   subtotal: z.string(),
   vatAmount: z.string(),
   total: z.string(),
-  status: z.enum(["draft", "sent", "accepted", "rejected"]).default("draft"),
+  status: z.enum(["draft", "sent", "viewed", "accepted", "rejected", "expired"]).default("draft"),
   notes: z.string().optional(),
 });
 
