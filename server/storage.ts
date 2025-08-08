@@ -31,6 +31,12 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<any | null>;
   getUserById(id: number): Promise<any | null>;
   updateUser(id: number, data: any): Promise<any>;
+  getUser(id: number): Promise<any | null>;
+  getSessionByToken(sessionToken: string): Promise<any | null>;
+  updateSessionActivity(sessionId: number): Promise<void>;
+  getUserActiveCompany(userId: number): Promise<any | null>;
+  createAuditLog(data: any): Promise<any>;
+  updateUserLoginAttempts(userId: number, attempts: number, lockedUntil?: Date): Promise<void>;
 }
 
 class DatabaseStorage implements IStorage {
