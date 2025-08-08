@@ -190,48 +190,52 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
       pdf.text((index + 1).toString(), 25, currentY);
       
-      // Description with font-medium styling - show full text
+      // Description with full text display - up to 6 lines with expandable space
       pdf.setTextColor(0, 0, 0);
       let description = item.description || "N/A";
       
-      // Calculate available width for description (from position 35 to column 85)
-      const maxDescriptionWidth = 45; // Available space in PDF units
-      const currentFont = pdf.getFontList();
+      // Calculate available width for description (from position 35 to quantity column at 85)
+      const maxDescriptionWidth = 47; // Expanded available space
       
-      // If description is too long, wrap it to multiple lines
-      if (pdf.getTextWidth(description) > maxDescriptionWidth) {
-        // Split text to fit in available width
-        const words = description.split(' ');
-        let line1 = '';
-        let line2 = '';
-        
-        // Build first line
-        for (let i = 0; i < words.length; i++) {
-          const testLine = line1 + (line1 ? ' ' : '') + words[i];
-          if (pdf.getTextWidth(testLine) > maxDescriptionWidth && line1) {
-            // Start second line with remaining words
-            line2 = words.slice(i).join(' ');
-            break;
-          } else {
-            line1 = testLine;
-          }
+      // Split description into lines that fit within the available width
+      const words = description.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+        if (pdf.getTextWidth(testLine) > maxDescriptionWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = words[i];
+        } else {
+          currentLine = testLine;
         }
-        
-        // Display first line
-        pdf.text(line1, 35, currentY);
-        
-        // Display second line if it exists (with smaller font)
-        if (line2) {
-          pdf.setFontSize(7); // Smaller font for second line
-          pdf.setTextColor(75, 85, 99); // Gray-600 for continuation
-          pdf.text(line2.length > 35 ? line2.substring(0, 32) + '...' : line2, 35, currentY + 4);
-          pdf.setFontSize(8); // Reset font size
-          pdf.setTextColor(0, 0, 0); // Reset color
-        }
-      } else {
-        // Description fits in one line
-        pdf.text(description, 35, currentY);
       }
+      
+      // Add the last line
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      
+      // Limit to 6 lines maximum and display all lines
+      const maxLines = 6;
+      const displayLines = lines.slice(0, maxLines);
+      
+      // Display each line
+      displayLines.forEach((line, lineIndex) => {
+        pdf.text(line, 35, currentY + (lineIndex * 4));
+      });
+      
+      // If we had more than 6 lines, add ellipsis to the last line
+      if (lines.length > maxLines) {
+        const lastLineIndex = maxLines - 1;
+        const lastLine = displayLines[lastLineIndex];
+        const ellipsisLine = lastLine.substring(0, lastLine.length - 3) + '...';
+        pdf.text(ellipsisLine, 35, currentY + (lastLineIndex * 4));
+      }
+      
+      // Store the number of lines used for row spacing calculation
+      const descriptionLinesUsed = Math.min(displayLines.length, maxLines);
       
       // Professional data alignment matching optimized headers
       const qtyText = (item.quantity?.toString() || "1");
@@ -250,7 +254,9 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       const totalText = formatCurrency(item.total || 0);
       pdf.text(totalText, pageWidth - 20, currentY, { align: 'right' });
       
-      currentY += 12; // Better row spacing
+      // Dynamic row spacing based on description length
+      const rowExtraHeight = Math.max(0, (descriptionLinesUsed - 1) * 4);
+      currentY += 12 + rowExtraHeight; // Base spacing plus extra height for multi-line descriptions
     });
 
     // EXACTLY MATCH REACT SUMMARY SECTION
