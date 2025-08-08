@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Printer, Mail, Edit, Download, Repeat, CreditCard, Eye, FileText, Building2, Calendar, MapPin, Phone, ArrowLeft } from "lucide-react";
 import { invoicesApi } from "@/lib/api";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useGlobalNotification } from "@/contexts/NotificationContext";
 import PaymentModal from "@/components/payment/payment-modal";
@@ -231,6 +232,9 @@ function InvoiceDetail() {
                   <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
                     <Calendar className="h-4 w-4 mr-1" />
                     Created {formatDate(invoice.createdAt!)}
+                    <span className="text-xs ml-2 text-gray-400">
+                      {format(new Date(invoice.createdAt!), 'HH:mm')}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -330,7 +334,7 @@ function InvoiceDetail() {
               <h2 className="text-3xl font-bold tracking-wide text-gray-800">TAX INVOICE</h2>
               <div className="mt-3 text-sm space-y-1">
                 <div>Invoice #: <span className="font-semibold">{invoice.invoiceNumber}</span></div>
-                <div>Date: <span>{formatDate(invoice.createdAt!)}</span></div>
+                <div>Date: <span>{formatDate(invoice.createdAt!)} at {format(new Date(invoice.createdAt!), 'HH:mm')}</span></div>
                 <div>Due: <span>{formatDate(invoice.dueDate!)}</span></div>
                 <div>Status: <span className={`font-medium ${getStatusTextColor(invoice.status)}`}>
                   {invoice.status.toUpperCase()}
