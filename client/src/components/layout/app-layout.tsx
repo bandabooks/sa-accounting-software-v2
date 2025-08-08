@@ -14,7 +14,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <MobileHeader />
       <main className="flex-1 lg:ml-72">
         <Header />
-        <div className="p-6 lg:pt-6 pt-20">
+        <div className="p-6 pt-24">
           {children}
         </div>
       </main>
