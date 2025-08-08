@@ -400,7 +400,7 @@ export default function InvoiceCreate() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-6">
-        <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-6">
+        <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
           {/* Client Information Section */}
           <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b">
@@ -558,8 +558,8 @@ export default function InvoiceCreate() {
               {/* Professional Table Header - With VAT Column */}
               <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200">
                 <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  <div className="col-span-2">Product/Service</div>
-                  <div className="col-span-3">Description</div>
+                  <div className="col-span-3">Product/Service</div>
+                  <div className="col-span-2">Description</div>
                   <div className="col-span-1 text-center">Qty</div>
                   <div className="col-span-2 text-center">Unit Price</div>
                   <div className="col-span-2 text-center">VAT Type</div>
@@ -572,8 +572,8 @@ export default function InvoiceCreate() {
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {items.map((item, index) => (
                   <div key={index} className="grid grid-cols-12 gap-2 px-4 py-4 items-center bg-white dark:bg-gray-900">
-                    {/* Product/Service Column */}
-                    <div className="col-span-2">
+                    {/* Product/Service Column - Increased width for better visibility */}
+                    <div className="col-span-3">
                       <ProductServiceSelect
                         value={item.productId}
                         onValueChange={(productId) => updateItem(index, 'productId', productId)}
@@ -583,7 +583,7 @@ export default function InvoiceCreate() {
                     </div>
 
                     {/* Description Column - Expandable like Additional Notes */}
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <Textarea
                         placeholder="Enter detailed item description..."
                         value={item.description}
