@@ -7487,65 +7487,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Banking Methods
-  async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
-    const accounts = await db
-      .select({
-        bank_accounts: bankAccounts,
-        chart_of_accounts: chartOfAccounts
-      })
-      .from(bankAccounts)
-      .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
-      .where(eq(bankAccounts.companyId, companyId));
-
-    // Get transactions for each account
-    const accountsWithTransactions = await Promise.all(
-      accounts.map(async (row) => {
-        const account = row.bank_accounts;
-        const chartAccount = row.chart_of_accounts;
-        
-        const transactions = await db
-          .select()
-          .from(bankTransactions)
-          .where(eq(bankTransactions.bankAccountId, account.id))
-          .orderBy(desc(bankTransactions.transactionDate))
-          .limit(10);
-
-        return {
-          ...account,
-          chartAccount: chartAccount || null,
-          transactions: transactions || []
-        };
-      })
-    );
-
-    return accountsWithTransactions;
-  }
-
-  async getBankAccount(id: number): Promise<BankAccount | undefined> {
-    const [account] = await db.select().from(bankAccounts).where(eq(bankAccounts.id, id));
-    return account;
-  }
-
-  async createBankAccount(data: InsertBankAccount): Promise<BankAccount> {
-    const [account] = await db.insert(bankAccounts).values(data).returning();
-    return account;
-  }
-
-  async updateBankAccount(id: number, data: Partial<InsertBankAccount>): Promise<BankAccount | undefined> {
-    const [account] = await db
-      .update(bankAccounts)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(bankAccounts.id, id))
-      .returning();
-    return account;
-  }
-
-  async deleteBankAccount(id: number): Promise<boolean> {
-    const result = await db.delete(bankAccounts).where(eq(bankAccounts.id, id));
-    return result.rowCount > 0;
-  }
-
   async getAllBankTransactions(companyId: number, bankAccountId?: number): Promise<BankTransaction[]> {
     let query = db.select().from(bankTransactions).where(eq(bankTransactions.companyId, companyId));
     
