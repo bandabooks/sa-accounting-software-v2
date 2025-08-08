@@ -86,6 +86,22 @@ export default function InvoiceCreate() {
     }
   ]);
 
+  // Track dynamic rows for each description field
+  const [descriptionRows, setDescriptionRows] = useState<number[]>([2]);
+
+  // Helper function to calculate optimal rows based on content
+  const calculateRows = (text: string, minRows: number = 2, maxRows: number = 8) => {
+    if (!text) return minRows;
+    
+    // Calculate approximate rows needed based on character count and line breaks
+    const charsPerRow = 50; // Approximate characters per row
+    const estimatedRows = Math.ceil(text.length / charsPerRow);
+    const lineBreaks = (text.match(/\n/g) || []).length;
+    const totalRows = Math.max(estimatedRows, lineBreaks + 1);
+    
+    return Math.min(Math.max(totalRows, minRows), maxRows);
+  };
+
   const { data: customers } = useQuery({
     queryKey: ["/api/customers"],
     queryFn: customersApi.getAll
@@ -131,6 +147,10 @@ export default function InvoiceCreate() {
           vatTypeId: item.vatInclusive ? 2 : 1 // Convert to VAT type (2=inclusive, 1=exclusive)
         }));
         setItems(invoiceItems);
+        
+        // Set up description rows for existing items based on their content
+        const itemRows = invoiceItems.map(item => calculateRows(item.description));
+        setDescriptionRows(itemRows);
       }
     }
   }, [existingInvoice, isEditing]);
@@ -188,11 +208,15 @@ export default function InvoiceCreate() {
       vatAmount: "0.00",
       vatTypeId: 1 // Default to Standard Rate (15%) - Same as bulk capture
     }]);
+    
+    // Add default rows for new item
+    setDescriptionRows([...descriptionRows, 2]);
   };
 
   const removeItem = (index: number) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
+      setDescriptionRows(descriptionRows.filter((_, i) => i !== index));
     }
   };
 
@@ -252,6 +276,13 @@ export default function InvoiceCreate() {
     const newItems = [...items];
     (newItems[index] as any)[field] = value;
     
+    // Auto-resize description field when description changes
+    if (field === 'description') {
+      const newRows = [...descriptionRows];
+      newRows[index] = calculateRows(value.toString());
+      setDescriptionRows(newRows);
+    }
+    
     // Auto-calculate VAT amount when relevant fields change
     if (field === 'quantity' || field === 'unitPrice' || field === 'vatTypeId' || field === 'vatRate') {
       const calculatedVAT = calculateItemVAT(newItems[index]);
@@ -272,14 +303,21 @@ export default function InvoiceCreate() {
 
   const handleProductSelect = (index: number, product: Product) => {
     const newItems = [...items];
+    const productDescription = product.description || product.name;
+    
     newItems[index] = {
       ...newItems[index],
       productId: product.id,
-      description: product.description || product.name,
+      description: productDescription,
       unitPrice: product.unitPrice,
       vatRate: product.vatRate || "15",
       vatTypeId: product.vatRate === "0" ? 2 : 1 // Smart VAT type detection (2=zero_rated, 1=standard)
     };
+    
+    // Auto-expand description field based on product description length
+    const newRows = [...descriptionRows];
+    newRows[index] = calculateRows(productDescription);
+    setDescriptionRows(newRows);
     
     // Calculate VAT amount for the updated item
     const calculatedVAT = calculateItemVAT(newItems[index]);
@@ -582,14 +620,14 @@ export default function InvoiceCreate() {
                       />
                     </div>
 
-                    {/* Description Column - Expandable like Additional Notes */}
+                    {/* Description Column - Auto-expanding based on content */}
                     <div className="col-span-2">
                       <Textarea
                         placeholder="Enter detailed item description..."
                         value={item.description}
                         onChange={(e) => updateItem(index, 'description', e.target.value)}
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[60px] resize-y"
-                        rows={2}
+                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[60px] resize-y transition-all duration-200"
+                        rows={descriptionRows[index] || 2}
                       />
                     </div>
 
