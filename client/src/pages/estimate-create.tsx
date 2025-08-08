@@ -525,8 +525,11 @@ export default function EstimateCreate() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-6">
         <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
-            
-            {/* Client Information */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Content - Left Side */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Client Information */}
             <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
               <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-b">
                 <CardTitle className="flex items-center text-gray-900 dark:text-white">
@@ -804,9 +807,7 @@ export default function EstimateCreate() {
               </CardContent>
             </Card>
 
-            {/* Professional Estimate Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left side - Additional Information */}
+              {/* Additional Information */}
               <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
                 <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-b">
                   <CardTitle className="flex items-center text-gray-900 dark:text-white">
@@ -816,73 +817,37 @@ export default function EstimateCreate() {
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Estimate Number
-                      </span>
-                      <Badge variant="outline" className="bg-white text-blue-700 border-blue-200 font-mono">
-                        EST-{String((estimates?.length || 0) + 1).padStart(4, '0')}
-                      </Badge>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Notes
+                      </Label>
+                      <Textarea
+                        placeholder="Additional notes for this estimate..."
+                        value={formData.notes}
+                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                      />
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Status
-                      </span>
-                      <Badge className={`${
-                        formData.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                        formData.status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                        formData.status === 'declined' ? 'bg-red-100 text-red-800' :
-                        formData.status === 'expired' ? 'bg-gray-100 text-gray-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
-                      </Badge>
-                    </div>
-
-                    {shouldShowVATFields && (
-                      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-                        <h4 className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-2 flex items-center">
-                          <AlertCircle className="h-4 w-4 mr-2" />
-                          VAT Information
-                        </h4>
-                        <div className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
-                          <p>VAT calculations are applied automatically based on your selected VAT types. Ensure your VAT registration status is correctly configured in settings.</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Notes
-                        </Label>
-                        <Textarea
-                          placeholder="Additional notes for this estimate..."
-                          value={formData.notes}
-                          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Terms & Conditions
-                        </Label>
-                        <Textarea
-                          placeholder="Terms and conditions for this estimate..."
-                          value={formData.terms}
-                          onChange={(e) => setFormData(prev => ({ ...prev, terms: e.target.value }))}
-                          className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
-                        />
-                      </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Terms & Conditions
+                      </Label>
+                      <Textarea
+                        placeholder="Terms and conditions for this estimate..."
+                        value={formData.terms}
+                        onChange={(e) => setFormData(prev => ({ ...prev, terms: e.target.value }))}
+                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                      />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Estimate Summary */}
+            {/* Right Side - Estimate Summary */}
+            <div className="lg:col-span-1">
+              <Card className="shadow-lg border-0 bg-white dark:bg-gray-800 sticky top-6">
             <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
               <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-b">
                 <CardTitle className="flex items-center text-gray-900 dark:text-white">
