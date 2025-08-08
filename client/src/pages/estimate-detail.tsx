@@ -73,35 +73,15 @@ export default function EstimateDetail() {
   // Convert to invoice mutation
   const convertToInvoiceMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/estimates/${id}/convert-to-invoice`, "POST");
+      const response = await apiRequest(`/api/estimates/${id}/convert-to-invoice`, "POST");
+      return response.json();
     },
     onSuccess: (data: any) => {
-      console.log("Convert to invoice response:", data);
-      console.log("Data keys:", Object.keys(data));
-      console.log("Full response structure:", JSON.stringify(data, null, 2));
-      
-      // Try different possible response structures
-      const invoiceId = data?.id || data?.data?.id || data?.invoice?.id;
-      console.log("Invoice ID:", invoiceId);
-      
-      if (!invoiceId) {
-        console.error("No invoice ID found in response:", data);
-        toast({
-          title: "Error",
-          description: "Invoice created but unable to navigate. Please check the invoices list.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       successModal.showSuccess(
         "Converted to Invoice Successfully!",
-        `Estimate ${(estimate as any)?.estimateNumber} has been converted to Invoice ${data.invoiceNumber || 'successfully'}.`,
+        `Estimate ${(estimate as any)?.estimateNumber} has been converted to Invoice ${data.invoiceNumber}.`,
         "View Invoice",
-        () => {
-          console.log("Navigating to:", `/invoices/${invoiceId}`);
-          setLocation(`/invoices/${invoiceId}`);
-        }
+        () => setLocation(`/invoices/${data.id}`)
       );
     },
     onError: () => {
