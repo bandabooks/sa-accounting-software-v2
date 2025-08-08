@@ -76,11 +76,18 @@ export default function EstimateDetail() {
       return apiRequest(`/api/estimates/${id}/convert-to-invoice`, "POST");
     },
     onSuccess: (data: any) => {
+      console.log("Convert to invoice response:", data);
+      const invoiceId = data.id;
+      console.log("Invoice ID:", invoiceId);
+      
       successModal.showSuccess(
         "Converted to Invoice Successfully!",
         `Estimate ${(estimate as any)?.estimateNumber} has been converted to Invoice ${data.invoiceNumber}.`,
         "View Invoice",
-        () => setLocation(`/invoices/${data.id}`)
+        () => {
+          console.log("Navigating to:", `/invoices/${invoiceId}`);
+          setLocation(`/invoices/${invoiceId}`);
+        }
       );
     },
     onError: () => {
