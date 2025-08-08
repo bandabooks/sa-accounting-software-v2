@@ -1,0 +1,275 @@
+Cash and Cash Equivalents – Physical cash, bank balances, and short-term highly liquid investments readily convertible to cash.
+
+Petty Cash – Small amount of cash kept on hand for day-to-day minor expenses.
+
+Bank - Savings Account – Savings account held for storing business funds and earning interest.
+
+Foreign Currency Account – Bank account for holding funds in foreign currencies for international transactions.
+
+Bank Account - Current – Main business transaction account for daily operational deposits and payments.
+
+Bank Account - Savings – Business savings account used to set aside surplus cash.
+
+Bank Account - Credit Card – Credit card facility used for business purchases and payments.
+
+Bank Account - Money Market – Short-term investment account offering higher interest rates.
+
+Prepaid Expenses – Payments made in advance for goods or services to be received in the future.
+
+VAT Input – Value-added tax paid on purchases, claimable from the tax authority.
+
+FNB Business Current Account – Current account with First National Bank for daily business transactions.
+
+ABSA Business Cheque Account – Cheque account with ABSA Bank for business use.
+
+Capitec Business Account – Business account held at Capitec Bank.
+
+Standard Bank Business Current – Current account with Standard Bank for business transactions.
+
+Nedbank Business Account – Business account held with Nedbank.
+
+Discovery Bank Business – Business account with Discovery Bank for operational banking.
+
+GSD Standard Bank – Standard Bank account dedicated to GSD-related business operations.
+
+Accounts Receivable – Amounts owed to the business by customers for credit sales.
+
+Inventory – Goods held for sale in the ordinary course of business.
+
+Raw Materials – Basic materials used in the production of goods.
+
+Work in Progress – Partially completed goods in the manufacturing process.
+
+Finished Goods – Completed products ready for sale.
+
+Goods for Resale – Purchased goods intended for resale without further processing.
+
+Property, Plant & Equipment – Tangible assets used in operations over multiple periods.
+
+Land and Buildings – Real estate owned for operational use or investment.
+
+Motor Vehicles – Vehicles owned for business purposes.
+
+Furniture and Fittings – Office furniture, fixtures, and fittings.
+
+Computer Equipment – Computers, servers, and related IT hardware.
+
+Machinery and Equipment – Machines and tools used in production or service delivery.
+
+Accumulated Depreciation – Total depreciation expense recorded against fixed assets.
+
+Accum Depreciation - Buildings – Total depreciation recorded for buildings.
+
+Accum Depreciation - Vehicles – Total depreciation recorded for motor vehicles.
+
+Accum Depreciation - Furniture – Total depreciation recorded for furniture and fittings.
+
+Accum Depreciation - Computers – Total depreciation recorded for computer equipment.
+
+Accum Depreciation - Machinery – Total depreciation recorded for machinery and equipment.
+
+Intangible Assets – Non-physical assets with value, such as intellectual property.
+
+Goodwill – Excess value paid over the fair value of net assets during acquisition.
+
+Software Licenses – Licenses to use purchased or subscription-based software.
+
+Patents and Trademarks – Registered rights for inventions, brands, or designs.
+
+Investments – Funds placed into financial assets for long-term returns.
+
+Long-term Investments – Investments intended to be held for more than one year.
+
+Short-term Investments – Investments intended to be held for less than one year.
+
+Liabilities
+
+Accounts Payable – Amounts owed to suppliers for goods or services received on credit.
+
+Trade Creditors – Suppliers to whom the company owes money for inventory or materials.
+
+Accrued Expenses – Expenses incurred but not yet paid.
+
+VAT Output – VAT collected on sales and payable to the tax authority.
+
+PAYE Payable – Employee income tax withheld and payable to SARS.
+
+UIF Payable – Contributions payable to the Unemployment Insurance Fund.
+
+SDL Payable – Skills Development Levy payable to SARS.
+
+WCA Payable – Contributions payable to the Workers' Compensation Fund.
+
+Short-term Loans – Loans payable within the next 12 months.
+
+Bank Overdraft – Negative bank balance from withdrawals exceeding deposits.
+
+Credit Cards – Outstanding credit card balances payable to banks.
+
+Long-term Debt – Loans and borrowings repayable beyond 12 months.
+
+Mortgage Payable – Loan secured by property repayable over time.
+
+Vehicle Finance – Loan obligations for purchased vehicles.
+
+Equity
+
+Share Capital – Funds invested by shareholders in exchange for shares.
+
+Retained Earnings – Accumulated profits not yet distributed as dividends.
+
+Current Year Earnings – Net profit or loss for the current financial year.
+
+Members Equity – Capital invested by members in a close corporation.
+
+Drawings – Withdrawals of cash or assets by owners for personal use.
+
+Revenue
+
+Sales Revenue – Income from selling goods to customers.
+
+Service Revenue – Income from providing services to clients.
+
+Consulting Revenue – Income earned from consultancy services.
+
+Rental Revenue – Income from leasing property or assets.
+
+Other Revenue – Miscellaneous income from activities not classified elsewhere.
+
+Interest Income – Earnings from interest-bearing accounts or loans.
+
+Dividend Income – Earnings from shareholdings in other companies.
+
+Foreign Exchange Gains – Profit from favorable currency exchange rate movements.
+
+Cost of Goods Sold
+
+Cost of Goods Sold – Direct costs attributable to goods sold during a period.
+
+Cost of Materials – Costs of raw materials used in production.
+
+Cost of Labor - Direct – Wages paid to workers directly involved in production.
+
+Manufacturing Overhead – Indirect costs incurred during manufacturing.
+
+Cost of Services – Direct costs incurred to deliver a service.
+
+Freight & Shipping Costs – Transportation costs for goods purchased or sold.
+
+Import Duties – Taxes paid on imported goods.
+
+Inventory Adjustments – Adjustments made for inventory valuation changes.
+
+Obsolete Inventory Write-off – Value of inventory written off as unsellable.
+
+Expenses
+
+Administrative Expenses – General operating costs not directly tied to sales.
+
+Salaries & Wages - Admin – Salaries for administrative staff.
+
+Employee Benefits – Non-wage benefits such as health insurance or retirement contributions.
+
+Pension Contributions – Employer payments into employee pension schemes.
+
+Medical Aid Contributions – Employer contributions to employee medical aid.
+
+UIF Contributions – Employer contributions to the Unemployment Insurance Fund.
+
+SDL Contributions – Employer contributions to the Skills Development Levy.
+
+WCA Contributions – Employer payments to the Workers' Compensation Fund.
+
+Office Rent – Rental payments for office space.
+
+Utilities – Costs for services such as electricity, water, and waste removal.
+
+Electricity – Cost of electricity consumed.
+
+Water & Rates – Water supply and municipal rates charges.
+
+Telephone & Internet – Communication and internet service costs.
+
+Postage & Courier – Mailing and delivery expenses.
+
+Office Supplies – Consumable items used in daily operations.
+
+Stationery – Paper, pens, and other office stationery items.
+
+Cleaning & Maintenance – Costs of cleaning services and maintenance.
+
+Security – Costs for security services and systems.
+
+Professional Fees – Payments for professional services (legal, accounting, consulting).
+
+Legal Fees – Costs for legal representation and advice.
+
+Accounting & Audit Fees – Payments for accounting, audit, and related services.
+
+Consulting Fees – Costs of hiring external consultants.
+
+Tax Preparation Fees – Professional fees for tax return preparation.
+
+Marketing & Advertising – Costs to promote the business.
+
+Website & Online Marketing – Costs for maintaining a website and digital marketing.
+
+Print Advertising – Costs for print-based marketing materials.
+
+Trade Shows & Events – Costs for participating in exhibitions and events.
+
+Sales Commissions – Payments to sales staff based on performance.
+
+Travel & Accommodation – Costs for business travel and lodging.
+
+Local Travel – Transportation expenses within local areas.
+
+Overseas Travel – Costs for international business travel.
+
+Meals & Entertainment – Costs for meals and entertainment in a business context.
+
+Motor Vehicle Expenses – General vehicle operating expenses.
+
+Fuel – Fuel purchases for business vehicles.
+
+Vehicle Maintenance – Costs to service and repair vehicles.
+
+Vehicle Insurance – Insurance premiums for company vehicles.
+
+Vehicle Licenses – Licensing fees for vehicles.
+
+Insurance – Premiums for general business insurance policies.
+
+Building Insurance – Insurance coverage for company buildings.
+
+Equipment Insurance – Insurance coverage for equipment and machinery.
+
+Public Liability Insurance – Insurance protecting against third-party claims.
+
+Professional Indemnity Insurance – Insurance protecting against professional errors or omissions.
+
+Finance Costs – Interest and fees on borrowed funds.
+
+Interest Expense – Interest paid on loans and borrowings.
+
+Bank Charges – Fees charged by banks for account services.
+
+Foreign Exchange Losses – Losses from unfavorable currency movements.
+
+Loss on Sale of Assets – Loss incurred when selling an asset below its book value.
+
+Depreciation & Amortisation – Allocation of asset costs over their useful lives.
+
+Depreciation - Buildings – Depreciation expense for buildings.
+
+Depreciation - Vehicles – Depreciation expense for vehicles.
+
+Depreciation - Furniture – Depreciation expense for furniture and fittings.
+
+Depreciation - Computers – Depreciation expense for computer equipment.
+
+Depreciation - Machinery – Depreciation expense for machinery and equipment.
+
+Amortisation - Software – Amortisation expense for software licenses.
+
+Amortisation - Goodwill – Amortisation expense for goodwill.
