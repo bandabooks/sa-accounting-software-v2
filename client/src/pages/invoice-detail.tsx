@@ -537,7 +537,7 @@ function InvoiceDetail() {
         </div>
 
         {/* Fixed Payment Section - Right Side Floating */}
-        <div className="fixed top-80 right-8 w-80 z-40">
+        <div className="fixed top-48 right-8 w-80 z-40">
           <div className="space-y-6">
             {/* Record Payment Section */}
             <Card className="shadow-lg border-l-4 border-l-green-500">
