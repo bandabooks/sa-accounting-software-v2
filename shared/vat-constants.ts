@@ -10,16 +10,7 @@ export const UNIFIED_VAT_TYPES = [
     isActive: true,
     isSystemType: true
   },
-  {
-    id: 'vat_exclusive',
-    code: 'STD_EX',
-    name: 'VAT Exclusive (Standard)',
-    rate: 15.00,
-    description: 'Standard VAT rate of 15% (amount excludes VAT)',
-    category: 'standard',
-    isActive: true,
-    isSystemType: true
-  },
+
   {
     id: 'zero_rated',
     code: 'ZER',
@@ -60,9 +51,6 @@ export const calculateVATAmount = (amount: number, vatType: string): number => {
   if (vatType === 'vat_inclusive') {
     // VAT = Amount * (Rate / (100 + Rate))
     return Number((amount * (vatTypeConfig.rate / (100 + vatTypeConfig.rate))).toFixed(2));
-  } else if (vatType === 'vat_exclusive') {
-    // VAT = Amount * (Rate / 100)
-    return Number((amount * (vatTypeConfig.rate / 100)).toFixed(2));
   }
   
   return 0;
@@ -73,9 +61,8 @@ export const calculateNetAmount = (amount: number, vatType: string): number => {
   
   if (vatType === 'vat_inclusive') {
     return Number((amount - vatAmount).toFixed(2));
-  } else {
-    return Number(amount.toFixed(2));
   }
+  return Number(amount.toFixed(2));
 };
 
 export const getVATTypeConfig = (vatTypeId: string) => {
