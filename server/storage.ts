@@ -1438,22 +1438,32 @@ export class DatabaseStorage implements IStorage {
   async getAllInvoices(companyId?: number): Promise<InvoiceWithCustomer[]> {
     let query = db
       .select({
-        invoice: invoices,
+        invoice: {
+          ...invoices,
+          paidAmount: sql<string>`COALESCE(SUM(${payments.amount}), 0)`.as('paid_amount')
+        },
         customer: customers
       })
       .from(invoices)
-      .leftJoin(customers, eq(invoices.customerId, customers.id));
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(payments, and(
+        eq(payments.invoiceId, invoices.id),
+        eq(payments.status, 'completed')
+      ));
 
     // Apply company filtering if companyId is provided
     if (companyId) {
       query = query.where(eq(invoices.companyId, companyId));
     }
 
-    const result = await query.orderBy(desc(invoices.id));
+    const result = await query
+      .groupBy(invoices.id, customers.id)
+      .orderBy(desc(invoices.id));
     
     return result.map(row => ({
       ...row.invoice,
-      customer: row.customer!
+      customer: row.customer!,
+      paidAmount: row.invoice.paidAmount
     }));
   }
 

@@ -402,11 +402,20 @@ export default function Invoices() {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Payment Progress</span>
                         <span className="font-semibold text-gray-800">
-                          {invoice.status === 'paid' ? '100%' : '0%'}
+                          {(() => {
+                            const total = parseFloat(invoice.total || "0");
+                            const paid = parseFloat((invoice as any).paidAmount || "0");
+                            const percentage = total > 0 ? Math.round((paid / total) * 100) : 0;
+                            return `${Math.min(100, percentage)}%`;
+                          })()} 
                         </span>
                       </div>
                       <Progress 
-                        value={invoice.status === 'paid' ? 100 : 0} 
+                        value={(() => {
+                          const total = parseFloat(invoice.total || "0");
+                          const paid = parseFloat((invoice as any).paidAmount || "0");
+                          return total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+                        })()} 
                         className="h-2 bg-gray-200"
                       />
                     </div>
@@ -415,7 +424,7 @@ export default function Invoices() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Issue Date</span>
-                        <span className="font-medium text-gray-800">{formatDate(invoice.createdAt)}</span>
+                        <span className="font-medium text-gray-800">{formatDate(invoice.createdAt || new Date())}</span>
                       </div>
                       {invoice.dueDate && (
                         <div className="flex justify-between">
