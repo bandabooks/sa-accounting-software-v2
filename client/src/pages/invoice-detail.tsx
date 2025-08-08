@@ -509,7 +509,7 @@ function InvoiceDetail() {
           </div>
 
           {/* Record Payment Button */}
-          {invoice.status !== "paid" && (
+          {(
             <Card className="shadow-lg">
               <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
                 <CardTitle className="flex items-center gap-2 text-green-800">
