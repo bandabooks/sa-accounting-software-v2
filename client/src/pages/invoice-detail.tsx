@@ -205,10 +205,10 @@ function InvoiceDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Fixed Professional Header - Always Visible */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      {/* Professional Header */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
@@ -218,31 +218,34 @@ function InvoiceDetail() {
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
               </Button>
-              <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white">
-                <FileText className="h-6 w-6" />
+              <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white">
+                <FileText className="h-8 w-8" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                   Invoice {invoice.invoiceNumber}
                 </h1>
-                <div className="flex items-center mt-1 space-x-3">
-                  <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
+                <div className="flex items-center mt-2 space-x-4">
+                  <span className={`inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
                     {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                    <Calendar className="h-3 w-3 mr-1" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
                     Created {formatDate(invoice.createdAt!)}
+                    <span className="text-xs ml-2 text-gray-400">
+                      {format(new Date(invoice.createdAt!), 'HH:mm')}
+                    </span>
                   </span>
                 </div>
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <Select
                 value={invoice.status}
                 onValueChange={(value) => updateStatusMutation.mutate(value)}
               >
-                <SelectTrigger className="w-32 h-8 text-sm">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -255,41 +258,46 @@ function InvoiceDetail() {
               
               <Button 
                 variant="outline"
-                size="sm"
                 onClick={() => setIsPDFPreviewOpen(true)}
                 className="border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300"
               >
-                <Eye size={14} className="mr-1" />
+                <Eye size={16} className="mr-2" />
                 Preview
               </Button>
               
               <Button 
                 variant="outline"
-                size="sm"
                 onClick={() => setIsEmailModalOpen(true)}
                 className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-300"
               >
-                <Mail size={14} className="mr-1" />
+                <Mail size={16} className="mr-2" />
                 Send
               </Button>
               
               <Button 
                 variant="outline"
-                size="sm"
                 onClick={handlePrintPDF}
                 className="border-purple-200 text-purple-700 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-300"
               >
-                <Download size={14} className="mr-1" />
+                <Download size={16} className="mr-2" />
                 PDF
               </Button>
               
               <Button 
                 variant="outline"
-                size="sm"
+                onClick={() => setIsRecurringModalOpen(true)}
+                className="border-orange-200 text-orange-700 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-300"
+              >
+                <Repeat size={16} className="mr-2" />
+                Recurring
+              </Button>
+              
+              <Button 
+                variant="outline"
                 onClick={() => setLocation(`/invoices/create?edit=${invoice.id}`)}
                 className="border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300"
               >
-                <Edit size={14} className="mr-1" />
+                <Edit size={16} className="mr-2" />
                 Edit
               </Button>
             </div>
@@ -297,237 +305,275 @@ function InvoiceDetail() {
         </div>
       </div>
 
-      {/* Main Content with proper top margin for fixed header */}
-      <div className="pt-24 min-h-screen">
-        <div className="flex gap-8 px-6">
-          {/* Invoice Document - Left Side */}
-          <div className="flex-1 max-w-4xl">
-            {/* Professional Invoice Document */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 font-sans border border-gray-200">
-              
-              {/* Sticky Invoice Header */}
-              <div className="sticky top-20 bg-white z-40 -mx-8 px-8 py-4 border-b border-gray-200 mb-6">
-                <div className="flex justify-between items-start">
+      {/* Main Content with Floating Payment Section */}
+      <div className="relative">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          {/* Professional Invoice Document */}
+          <div className="bg-white rounded-2xl shadow-lg p-10 font-sans border border-gray-200">
+            
+            {/* Header Section */}
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <div className="flex items-center mb-2">
+                  <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white mr-3">
+                    <Building2 className="h-8 w-8" />
+                  </div>
                   <div>
-                    <div className="flex items-center mb-2">
-                      <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white mr-3">
-                        <Building2 className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-blue-700">Think Mybiz Accounting</h2>
-                        <p className="text-xs text-gray-500">Professional Invoice Management</p>
-                      </div>
+                    <h1 className="text-2xl font-bold text-blue-700">Think Mybiz Accounting</h1>
+                    <p className="text-sm text-gray-500">Professional Invoice Management</p>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-600 mt-2">
+                  <div>info@thinkmybiz.com | +27 12 345 6789</div>
+                  <div>PO Box 1234, Midrand, 1685</div>
+                  <div>VAT #: 4455667788 | Reg: 2019/123456/07</div>
+                </div>
+              </div>
+              
+              <div className="text-right">
+                <h2 className="text-3xl font-bold tracking-wide text-gray-800">TAX INVOICE</h2>
+                <div className="mt-3 text-sm space-y-1">
+                  <div>Invoice #: <span className="font-semibold">{invoice.invoiceNumber}</span></div>
+                  <div>Date: <span>{formatDate(invoice.createdAt!)} at {format(new Date(invoice.createdAt!), 'HH:mm')}</span></div>
+                  <div>Due: <span>{formatDate(invoice.dueDate!)}</span></div>
+                  <div>Status: <span className={`font-medium ${getStatusTextColor(invoice.status)}`}>
+                    {invoice.status.toUpperCase()}
+                  </span></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Addresses Section */}
+            <div className="grid grid-cols-2 gap-8 mb-8">
+              <div>
+                <div className="font-semibold mb-2 text-gray-700 border-b border-gray-200 pb-1">Bill To:</div>
+                <div className="space-y-1">
+                  <div className="font-bold text-lg">{invoice.customer.name}</div>
+                  {invoice.customer.email && (
+                    <div className="text-sm">{invoice.customer.email}</div>
+                  )}
+                  {invoice.customer.phone && (
+                    <div className="text-sm">{invoice.customer.phone}</div>
+                  )}
+                  {invoice.customer.address && (
+                    <div className="text-sm">
+                      {invoice.customer.address}
+                      {invoice.customer.city && `, ${invoice.customer.city}`}
+                      {invoice.customer.postalCode && `, ${invoice.customer.postalCode}`}
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      <div>info@thinkmybiz.com | +27 12 345 6789</div>
-                      <div>PO Box 1234, Midrand, 1685</div>
-                      <div>VAT #: 4455667788 | Reg: 2019/123456/07</div>
-                    </div>
+                  )}
+                  {invoice.customer.vatNumber && (
+                    <div className="text-xs text-gray-500 mt-2">VAT #: {invoice.customer.vatNumber}</div>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <div className="font-semibold mb-2 text-gray-700 border-b border-gray-200 pb-1">From:</div>
+                <div className="space-y-1">
+                  <div className="font-bold">Think Mybiz Accounting</div>
+                  <div className="text-sm">info@thinkmybiz.com</div>
+                  <div className="text-sm">+27 12 345 6789</div>
+                  <div className="text-sm">PO Box 1234, Midrand, 1685</div>
+                  <div className="text-xs text-gray-500 mt-2">VAT #: 4455667788</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Items Table */}
+            <div className="mb-6">
+              <table className="w-full text-sm border-t border-b border-gray-200">
+                <thead>
+                  <tr className="bg-blue-700 text-white">
+                    <th className="py-3 px-3 font-semibold text-left">#</th>
+                    <th className="py-3 px-3 font-semibold text-left">Description</th>
+                    <th className="py-3 px-3 font-semibold text-center">Qty</th>
+                    <th className="py-3 px-3 font-semibold text-right">Unit Price</th>
+                    <th className="py-3 px-3 font-semibold text-center">VAT Rate</th>
+                    <th className="py-3 px-3 font-semibold text-right">Line VAT</th>
+                    <th className="py-3 px-3 font-semibold text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(invoice as any).items?.map((item: any, index: number) => (
+                    <tr key={index} className="hover:bg-blue-50 border-b border-gray-100">
+                      <td className="py-3 px-3 text-gray-600">{index + 1}</td>
+                      <td className="py-3 px-3">
+                        <div className="font-medium">{item.description}</div>
+                        {item.notes && (
+                          <div className="text-xs text-gray-500 mt-1">{item.notes}</div>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-center">{item.quantity}</td>
+                      <td className="py-3 px-3 text-right">{formatCurrency(item.unitPrice)}</td>
+                      <td className="py-3 px-3 text-center">{item.vatRate}%</td>
+                      <td className="py-3 px-3 text-right">{formatCurrency((() => {
+                        // Calculate Line VAT using the same logic as PDF generator
+                        const quantity = parseFloat(item.quantity?.toString() || "1");
+                        const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+                        const lineAmount = quantity * unitPrice;
+                        const vatRate = parseFloat(item.vatRate?.toString() || "15");
+                        
+                        // For VAT-inclusive: VAT = amount ÷ (1 + rate/100) × (rate/100)
+                        let lineVatAmount = 0;
+                        if (vatRate > 0) {
+                          lineVatAmount = lineAmount / (1 + vatRate / 100) * (vatRate / 100);
+                        }
+                        return lineVatAmount;
+                      })())}</td>
+                      <td className="py-3 px-3 text-right font-medium">{formatCurrency((() => {
+                        // Calculate Total using the same logic as PDF generator
+                        const quantity = parseFloat(item.quantity?.toString() || "1");
+                        const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+                        const lineAmount = quantity * unitPrice;
+                        // For VAT-inclusive, the lineAmount IS the total (R10,000.00)
+                        return lineAmount;
+                      })())}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Summary Section */}
+            <div className="flex justify-end mb-8">
+              <div className="w-full max-w-sm">
+                <div className="space-y-2">
+                  <div className="flex justify-between py-1">
+                    <span>Subtotal:</span>
+                    <span className="font-semibold">{formatCurrency(invoice.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span>VAT (15%):</span>
+                    <span className="font-semibold">{formatCurrency(invoice.vatAmount)}</span>
+                  </div>
+                  <div className="flex justify-between py-3 border-t border-gray-300 mt-3">
+                    <span className="font-bold text-lg">TOTAL:</span>
+                    <span className="font-bold text-xl text-blue-700">{formatCurrency(invoice.total)}</span>
                   </div>
                   
-                  <div className="text-right">
-                    <h3 className="text-2xl font-bold tracking-wide text-gray-800">TAX INVOICE</h3>
-                    <div className="mt-2 text-sm space-y-1">
-                      <div>Invoice #: <span className="font-semibold">{invoice.invoiceNumber}</span></div>
-                      <div>Date: <span>{formatDate(invoice.createdAt!)} at {format(new Date(invoice.createdAt!), 'HH:mm')}</span></div>
-                      <div>Due: <span>{formatDate(invoice.dueDate!)}</span></div>
-                      <div>Status: <span className={`font-medium ${getStatusTextColor(invoice.status)}`}>
-                        {invoice.status.toUpperCase()}
-                      </span></div>
-                    </div>
-                  </div>
+                  {/* Payment Status */}
+                  <PaymentStatusSummary invoiceId={invoiceId} invoiceTotal={invoice.total} />
                 </div>
               </div>
-              
-              {/* Addresses Section */}
-              <div className="grid grid-cols-2 gap-8 mb-8">
-                <div>
-                  <div className="font-semibold mb-2 text-gray-700 border-b border-gray-200 pb-1">Bill To:</div>
-                  <div className="space-y-1">
-                    <div className="font-bold text-lg">{invoice.customer.name}</div>
-                    {invoice.customer.email && (
-                      <div className="text-sm">{invoice.customer.email}</div>
-                    )}
-                    {invoice.customer.phone && (
-                      <div className="text-sm">{invoice.customer.phone}</div>
-                    )}
-                    {invoice.customer.address && (
-                      <div className="text-sm">
-                        {invoice.customer.address}
-                        {invoice.customer.city && `, ${invoice.customer.city}`}
-                        {invoice.customer.postalCode && `, ${invoice.customer.postalCode}`}
-                      </div>
-                    )}
-                    {invoice.customer.vatNumber && (
-                      <div className="text-xs text-gray-500 mt-2">VAT #: {invoice.customer.vatNumber}</div>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="font-semibold mb-2 text-gray-700 border-b border-gray-200 pb-1">From:</div>
-                  <div className="space-y-1">
-                    <div className="font-bold">Think Mybiz Accounting</div>
-                    <div className="text-sm">info@thinkmybiz.com</div>
-                    <div className="text-sm">+27 12 345 6789</div>
-                    <div className="text-sm">PO Box 1234, Midrand, 1685</div>
-                    <div className="text-xs text-gray-500 mt-2">VAT #: 4455667788</div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Items Table */}
-              <div className="mb-6">
-                <table className="w-full text-sm border-t border-b border-gray-200">
-                  <thead>
-                    <tr className="bg-blue-700 text-white">
-                      <th className="py-3 px-3 font-semibold text-left">#</th>
-                      <th className="py-3 px-3 font-semibold text-left">Description</th>
-                      <th className="py-3 px-3 font-semibold text-center">Qty</th>
-                      <th className="py-3 px-3 font-semibold text-right">Unit Price</th>
-                      <th className="py-3 px-3 font-semibold text-center">VAT Rate</th>
-                      <th className="py-3 px-3 font-semibold text-right">Line VAT</th>
-                      <th className="py-3 px-3 font-semibold text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(invoice as any).items?.map((item: any, index: number) => (
-                      <tr key={index} className="hover:bg-blue-50 border-b border-gray-100">
-                        <td className="py-3 px-3 text-gray-600">{index + 1}</td>
-                        <td className="py-3 px-3">
-                          <div className="font-medium">{item.description}</div>
-                          {item.notes && (
-                            <div className="text-xs text-gray-500 mt-1">{item.notes}</div>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-center">{item.quantity}</td>
-                        <td className="py-3 px-3 text-right">{formatCurrency(item.unitPrice)}</td>
-                        <td className="py-3 px-3 text-center">{item.vatRate}%</td>
-                        <td className="py-3 px-3 text-right">{formatCurrency((() => {
-                          // Calculate Line VAT using the same logic as PDF generator
-                          const quantity = parseFloat(item.quantity?.toString() || "1");
-                          const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
-                          const lineAmount = quantity * unitPrice;
-                          const vatRate = parseFloat(item.vatRate?.toString() || "15");
-                          
-                          // For VAT-inclusive: VAT = amount ÷ (1 + rate/100) × (rate/100)
-                          let lineVatAmount = 0;
-                          if (vatRate > 0) {
-                            lineVatAmount = lineAmount / (1 + vatRate / 100) * (vatRate / 100);
-                          }
-                          return lineVatAmount;
-                        })())}</td>
-                        <td className="py-3 px-3 text-right font-medium">{formatCurrency((() => {
-                          // Calculate Total using the same logic as PDF generator
-                          const quantity = parseFloat(item.quantity?.toString() || "1");
-                          const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
-                          const lineAmount = quantity * unitPrice;
-                          // For VAT-inclusive, the lineAmount IS the total (R10,000.00)
-                          return lineAmount;
-                        })())}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Summary Section */}
-              <div className="flex justify-end mb-8">
-                <div className="w-full max-w-sm">
-                  <div className="space-y-2">
-                    <div className="flex justify-between py-1">
-                      <span>Subtotal:</span>
-                      <span className="font-semibold">{formatCurrency(invoice.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>VAT (15%):</span>
-                      <span className="font-semibold">{formatCurrency(invoice.vatAmount)}</span>
-                    </div>
-                    <div className="flex justify-between py-3 border-t border-gray-300 mt-3">
-                      <span className="font-bold text-lg">TOTAL:</span>
-                      <span className="font-bold text-xl text-blue-700">{formatCurrency(invoice.total)}</span>
-                    </div>
-                    
-                    {/* Payment Status */}
-                    <PaymentStatusSummary invoiceId={invoiceId} invoiceTotal={invoice.total} />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Payment Instructions */}
-              <div className="mt-8 p-4 bg-gray-100 rounded-lg border text-sm">
-                <div className="font-bold text-gray-700 mb-2">Payment Details:</div>
-                <div className="space-y-1">
-                  <div>Bank: ABSA Bank | Account: 123456789 | Branch: 632005</div>
-                  <div>Reference: <span className="font-semibold">{invoice.invoiceNumber}</span></div>
-                  <div className="text-xs text-gray-600 mt-2">
-                    Please use the invoice number as your payment reference for quick allocation.
-                  </div>
-                </div>
-              </div>
-              
-              {/* Notes Section */}
-              {invoice.notes && (
-                <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <div className="font-semibold text-gray-700 mb-2">Additional Notes:</div>
-                  <div className="text-sm text-gray-700">{invoice.notes}</div>
-                </div>
-              )}
+            </div>
 
-              {/* Footer */}
-              <div className="mt-8 text-xs text-gray-400 border-t pt-4 space-y-2">
-                <div>
-                  Thank you for your business! For queries, contact info@thinkmybiz.com or call +27 12 345 6789.
+            {/* Payment Instructions */}
+            <div className="mt-8 p-4 bg-gray-100 rounded-lg border text-sm">
+              <div className="font-bold text-gray-700 mb-2">Payment Details:</div>
+              <div className="space-y-1">
+                <div>Bank: ABSA Bank | Account: 123456789 | Branch: 632005</div>
+                <div>Reference: <span className="font-semibold">{invoice.invoiceNumber}</span></div>
+                <div className="text-xs text-gray-600 mt-2">
+                  Please use the invoice number as your payment reference for quick allocation.
                 </div>
-                <div>
-                  Company Reg: 2019/123456/07 | VAT: 4455667788 | Tax Clearance: Valid
-                </div>
-                <div>
-                  This is a computer-generated document. No signature required.
-                </div>
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            {invoice.notes && (
+              <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="font-semibold text-gray-700 mb-2">Additional Notes:</div>
+                <div className="text-sm text-gray-700">{invoice.notes}</div>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="mt-8 text-xs text-gray-400 border-t pt-4 space-y-2">
+              <div>
+                Thank you for your business! For queries, contact info@thinkmybiz.com or call +27 12 345 6789.
+              </div>
+              <div>
+                Company Reg: 2019/123456/07 | VAT: 4455667788 | Tax Clearance: Valid
+              </div>
+              <div>
+                This is a computer-generated document. No signature required.
               </div>
             </div>
           </div>
 
-          {/* Fixed Payment Section - Right Side */}
-          <div className="w-80 flex-shrink-0">
-            <div className="sticky top-28 space-y-6">
-              {/* Record Payment Section */}
-              <Card className="shadow-lg border-l-4 border-l-green-500">
-                <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
-                  <CardTitle className="flex items-center gap-2 text-green-800">
-                    <CreditCard className="w-5 h-5" />
-                    Record Payment
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="mb-4">
-                      <div className="text-2xl font-bold text-gray-800">{formatCurrency(invoice.total)}</div>
-                      <div className="text-sm text-gray-600">Invoice Total</div>
-                    </div>
-                    <Button 
-                      onClick={() => setIsPaymentModalOpen(true)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white h-10 font-semibold"
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Record Payment
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Action Buttons Below Invoice */}
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Button 
+              onClick={() => setIsPDFPreviewOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
+            >
+              <Eye size={18} className="mr-2" />
+              Preview PDF
+            </Button>
+            
+            <Button 
+              onClick={() => setIsEmailModalOpen(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3"
+            >
+              <Mail size={18} className="mr-2" />
+              Send Invoice
+            </Button>
+            
+            <Button 
+              onClick={handlePrintPDF}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3"
+            >
+              <Download size={18} className="mr-2" />
+              Download PDF
+            </Button>
+            
+            <Button 
+              onClick={() => setIsRecurringModalOpen(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3"
+            >
+              <Repeat size={18} className="mr-2" />
+              Set Recurring
+            </Button>
+            
+            <Button 
+              onClick={() => setLocation(`/invoices/create?edit=${invoice.id}`)}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3"
+            >
+              <Edit size={18} className="mr-2" />
+              Edit Invoice
+            </Button>
+          </div>
+        </div>
 
-              {/* Payment History Section */}
-              <div ref={paymentHistoryRef} className="bg-white rounded-lg shadow-lg border">
-                <div className="p-4 border-b bg-gray-50">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Payment History
-                  </h3>
+        {/* Fixed Payment Section - Right Side Floating */}
+        <div className="fixed top-1/2 right-8 transform -translate-y-1/2 w-80 z-40">
+          <div className="space-y-6">
+            {/* Record Payment Section */}
+            <Card className="shadow-lg border-l-4 border-l-green-500">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b">
+                <CardTitle className="flex items-center gap-2 text-green-800">
+                  <CreditCard className="w-5 h-5" />
+                  Record Payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <div className="mb-4">
+                    <div className="text-2xl font-bold text-gray-800">{formatCurrency(invoice.total)}</div>
+                    <div className="text-sm text-gray-600">Invoice Total</div>
+                  </div>
+                  <Button 
+                    onClick={() => setIsPaymentModalOpen(true)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white h-10 font-semibold"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Record Payment
+                  </Button>
                 </div>
-                <div className="max-h-96 overflow-y-auto">
-                  <PaymentHistory invoiceId={invoiceId} />
-                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment History Section */}
+            <div ref={paymentHistoryRef} className="bg-white rounded-lg shadow-lg border">
+              <div className="p-4 border-b bg-gray-50">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Payment History
+                </h3>
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                <PaymentHistory invoiceId={invoiceId} />
               </div>
             </div>
           </div>
