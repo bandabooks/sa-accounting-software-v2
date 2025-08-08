@@ -714,7 +714,7 @@ export default function EstimateCreate() {
                         <Input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="1"
                           value={item.quantity}
                           onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                           className="text-center border-gray-300 focus:ring-2 focus:ring-blue-500"
