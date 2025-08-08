@@ -1828,15 +1828,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email invoice functionality
-  app.post("/api/invoices/send-email", async (req, res) => {
+  app.post("/api/invoices/send-email", authenticate, async (req, res) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { invoiceId, to, subject, message } = req.body;
+      
+      if (!invoiceId) {
+        return res.status(400).json({ message: "Invoice ID is required" });
+      }
+      
+      // Get the invoice to verify it exists and belongs to the user's company
+      const invoice = await storage.getInvoice(invoiceId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      // Check if invoice belongs to user's company
+      if (invoice.companyId !== authReq.user?.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       
       // For demo purposes, we'll simulate email sending
       // In production, you would integrate with SendGrid or another email service
       console.log("Email sent simulation:", { invoiceId, to, subject, message });
       
-      res.json({ message: "Email sent successfully" });
+      // Update invoice status to "sent" after successful email sending
+      const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, "sent");
+      if (!updatedInvoice) {
+        console.error("Failed to update invoice status after email sent");
+      }
+      
+      // Log the email sending action
+      await logAudit(authReq.user?.id || 0, 'EMAIL_SENT', 'invoices', invoiceId, {
+        recipient: to,
+        subject: subject,
+        previousStatus: invoice.status,
+        newStatus: 'sent'
+      });
+      
+      res.json({ 
+        message: "Email sent successfully",
+        invoice: updatedInvoice 
+      });
     } catch (error) {
       console.error("Error sending email:", error);
       res.status(500).json({ message: "Failed to send email" });
@@ -1844,15 +1877,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email estimate functionality
-  app.post("/api/estimates/send-email", async (req, res) => {
+  app.post("/api/estimates/send-email", authenticate, async (req, res) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { estimateId, to, subject, message } = req.body;
+      
+      if (!estimateId) {
+        return res.status(400).json({ message: "Estimate ID is required" });
+      }
+      
+      // Get the estimate to verify it exists and belongs to the user's company
+      const estimate = await storage.getEstimate(estimateId);
+      if (!estimate) {
+        return res.status(404).json({ message: "Estimate not found" });
+      }
+      
+      // Check if estimate belongs to user's company
+      if (estimate.companyId !== authReq.user?.companyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       
       // For demo purposes, we'll simulate email sending
       // In production, you would integrate with SendGrid or another email service
       console.log("Estimate email sent simulation:", { estimateId, to, subject, message });
       
-      res.json({ message: "Email sent successfully" });
+      // Update estimate status to "sent" after successful email sending
+      const updatedEstimate = await storage.updateEstimate(estimateId, { status: "sent" });
+      if (!updatedEstimate) {
+        console.error("Failed to update estimate status after email sent");
+      }
+      
+      // Log the email sending action
+      await logAudit(authReq.user?.id || 0, 'EMAIL_SENT', 'estimates', estimateId, {
+        recipient: to,
+        subject: subject,
+        previousStatus: estimate.status,
+        newStatus: 'sent'
+      });
+      
+      res.json({ 
+        message: "Email sent successfully",
+        estimate: updatedEstimate 
+      });
     } catch (error) {
       console.error("Error sending estimate email:", error);
       res.status(500).json({ message: "Failed to send email" });
