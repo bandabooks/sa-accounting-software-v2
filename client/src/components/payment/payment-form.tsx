@@ -301,7 +301,7 @@ export default function PaymentForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {bankAccounts.map((account: any) => (
+                          {(bankAccounts as any[]).map((account: any) => (
                             <SelectItem key={account.id} value={account.id.toString()}>
                               <div className="flex flex-col py-1">
                                 <span className="font-medium">{account.accountName}</span>

@@ -76,13 +76,13 @@ export function PaymentFormModal({
   });
 
   // Fetch invoices for dropdown
-  const { data: invoices } = useQuery({
+  const { data: invoices = [] } = useQuery({
     queryKey: ["/api/invoices"],
     enabled: !invoiceId, // Only fetch if no specific invoice provided
   });
 
   // Fetch bank accounts for dropdown
-  const { data: bankAccounts } = useQuery({
+  const { data: bankAccounts = [] } = useQuery({
     queryKey: ["/api/bank-accounts"],
   });
 
@@ -104,10 +104,13 @@ export function PaymentFormModal({
         throw new Error(`${response.status}: ${response.statusText}`);
       }
       
-      return response.json() as Promise<PaymentResponse>;
+      return response.json();
     },
     onSuccess: (response) => {
-      handlePaymentSuccess(response);
+      // For compatibility with the real-time hook, wrap the response
+      if (response && typeof response === 'object') {
+        handlePaymentSuccess({ payment: response, realTimeUpdates: { totalBankBalance: '0', totalRevenue: '0', bankAccounts: [], dashboardStats: {} } });
+      }
       onClose();
       form.reset();
     },
@@ -153,7 +156,7 @@ export function PaymentFormModal({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {(invoices || []).map((invoice: any) => (
+                          {(invoices as any[]).map((invoice: any) => (
                             <SelectItem key={invoice.id} value={invoice.id.toString()}>
                               {invoice.invoiceNumber} - R{parseFloat(invoice.totalAmount).toFixed(2)}
                             </SelectItem>
@@ -179,7 +182,7 @@ export function PaymentFormModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(bankAccounts || []).map((account: any) => (
+                        {(bankAccounts as any[]).map((account: any) => (
                           <SelectItem key={account.id} value={account.id.toString()}>
                             {account.accountName} - R{parseFloat(account.currentBalance || '0').toFixed(2)}
                           </SelectItem>
