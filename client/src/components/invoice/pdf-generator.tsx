@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { InvoiceWithCustomer } from "@shared/schema";
+import { calculateVAT } from "@shared/vat-utils";
 
 // Helper functions
 const formatCurrency = (amount: string | number) => {
@@ -253,7 +254,20 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       const vatRateText = `${item.vatRate || 15}%`;
       pdf.text(vatRateText, 145, currentY, { align: 'right' });
       
-      const lineVatText = formatCurrency(item.vatAmount || 0);
+      // Calculate correct line VAT using the same logic as the UI
+      const quantity = parseFloat(item.quantity?.toString() || "1");
+      const unitPrice = parseFloat(item.unitPrice?.toString() || "0");
+      const vatRate = parseFloat(item.vatRate?.toString() || "15");
+      const lineTotal = quantity * unitPrice;
+      
+      // Determine if VAT is inclusive - check item's vatInclusive property or fallback to invoice level
+      const isVatInclusive = item.vatInclusive !== undefined ? item.vatInclusive : true; // Default to inclusive for SA
+      
+      // Calculate VAT using the same utility as the UI
+      const vatCalculation = calculateVAT(lineTotal, vatRate, isVatInclusive);
+      const lineVatAmount = vatCalculation.vatAmount;
+      
+      const lineVatText = formatCurrency(lineVatAmount);
       pdf.text(lineVatText, 165, currentY, { align: 'right' });
       
       // Total aligned with subtotal for perfect visual flow
