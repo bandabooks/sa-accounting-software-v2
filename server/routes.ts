@@ -1370,7 +1370,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const companyId = req.user.companyId;
+      console.log(`Fetching estimate ${id} for company ${companyId}`);
+      
       const estimate = await storage.getEstimate(id);
+      console.log(`Retrieved estimate:`, estimate ? `ID ${estimate.id} with ${estimate.items?.length || 0} items` : 'null');
       
       // Verify estimate belongs to user's company
       if (!estimate || estimate.companyId !== companyId) {
@@ -1379,6 +1382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(estimate);
     } catch (error) {
+      console.error("Error fetching estimate:", error);
       res.status(500).json({ message: "Failed to fetch estimate" });
     }
   });
