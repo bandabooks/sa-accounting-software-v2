@@ -1464,24 +1464,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedEstimate) {
         return res.status(404).json({ message: "Failed to update estimate" });
       }
-
-      // Handle estimate items update (same logic as invoice update)
-      const itemsData = validatedData.items;
-      if (itemsData && Array.isArray(itemsData)) {
-        // First delete existing items for this estimate
-        await storage.deleteEstimateItems(id);
-        
-        // Then add the new items
-        const validatedItems = itemsData.map(item => 
-          insertEstimateItemSchema.omit({ id: true }).parse({
-            ...item,
-            estimateId: id,
-            companyId: updatedEstimate.companyId
-          })
-        );
-        
-        await storage.createEstimateItems(validatedItems);
-      }
       
       // Get the full estimate with items to return
       const fullEstimate = await storage.getEstimate(id);

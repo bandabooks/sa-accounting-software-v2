@@ -1956,19 +1956,6 @@ export class DatabaseStorage implements IStorage {
     return estimate || undefined;
   }
 
-  async deleteEstimateItems(estimateId: number): Promise<boolean> {
-    const result = await db.delete(estimateItems).where(eq(estimateItems.estimateId, estimateId));
-    return result.rowCount !== null && result.rowCount > 0;
-  }
-
-  async createEstimateItems(insertItems: InsertEstimateItem[]): Promise<EstimateItem[]> {
-    const items = await db
-      .insert(estimateItems)
-      .values(insertItems)
-      .returning();
-    return items;
-  }
-
   async deleteEstimate(id: number): Promise<boolean> {
     // Delete associated items first
     await db.delete(estimateItems).where(eq(estimateItems.estimateId, id));
