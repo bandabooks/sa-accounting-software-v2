@@ -1732,7 +1732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const invoiceId = parseInt(req.params.id);
       const invoice = await storage.getInvoice(invoiceId);
-      if (!invoice || invoice.companyId !== companyId) {
+      if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
       
