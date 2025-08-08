@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertChartOfAccountSchema, type ChartOfAccountWithBalance } from "@shared/schema";
-import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, Zap, Power, PowerOff, RefreshCw } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, Zap, Power, PowerOff, RefreshCw, Wallet, CreditCard, PiggyBank, DollarSign, Package, Receipt } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -535,7 +535,7 @@ export default function ChartOfAccounts() {
       {/* Summary Statistics */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-4 text-sm text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span>Total Accounts: <span className="font-medium text-gray-900 dark:text-gray-100">{accounts.length}</span></span>
@@ -554,6 +554,30 @@ export default function ChartOfAccounts() {
                 <span>Filtered: <span className="font-medium text-orange-600">{filteredAccounts.length}</span></span>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              <span>Assets: <span className="font-medium text-blue-700">{accounts.filter(a => a.isActive && a.accountType === 'Asset').length}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              <span>Liabilities: <span className="font-medium text-red-600">{accounts.filter(a => a.isActive && a.accountType === 'Liability').length}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <PiggyBank className="h-4 w-4" />
+              <span>Equity: <span className="font-medium text-purple-600">{accounts.filter(a => a.isActive && a.accountType === 'Equity').length}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              <span>Revenue: <span className="font-medium text-green-700">{accounts.filter(a => a.isActive && a.accountType === 'Revenue').length}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              <span>COGS: <span className="font-medium text-amber-600">{accounts.filter(a => a.isActive && a.accountType === 'Cost of Goods Sold').length}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              <span>Expenses: <span className="font-medium text-orange-700">{accounts.filter(a => a.isActive && a.accountType === 'Expense').length}</span></span>
+            </div>
           </div>
         </CardContent>
       </Card>
