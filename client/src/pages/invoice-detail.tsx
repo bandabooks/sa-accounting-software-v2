@@ -307,7 +307,7 @@ function InvoiceDetail() {
 
       {/* Main Content with Floating Payment Section */}
       <div className="relative">
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="max-w-6xl mx-auto px-6 py-8">
           {/* Professional Invoice Document */}
           <div className="bg-white rounded-2xl shadow-lg p-10 font-sans border border-gray-200">
             
@@ -386,6 +386,7 @@ function InvoiceDetail() {
                 <thead>
                   <tr className="bg-blue-700 text-white">
                     <th className="py-3 px-3 font-semibold text-left">#</th>
+                    <th className="py-3 px-3 font-semibold text-left">Product/Service</th>
                     <th className="py-3 px-3 font-semibold text-left">Description</th>
                     <th className="py-3 px-3 font-semibold text-center">Qty</th>
                     <th className="py-3 px-3 font-semibold text-right">Unit Price</th>
@@ -398,6 +399,9 @@ function InvoiceDetail() {
                   {(invoice as any).items?.map((item: any, index: number) => (
                     <tr key={index} className="hover:bg-blue-50 border-b border-gray-100">
                       <td className="py-3 px-3 text-gray-600">{index + 1}</td>
+                      <td className="py-3 px-3">
+                        <div className="font-medium text-blue-700">{item.productName || item.name || 'Service Item'}</div>
+                      </td>
                       <td className="py-3 px-3">
                         <div className="font-medium">{item.description}</div>
                         {item.notes && (
