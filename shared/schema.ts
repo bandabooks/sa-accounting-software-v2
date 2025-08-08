@@ -1350,7 +1350,7 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 });
 
 export const insertInvoiceSchema = z.object({
-  companyId: z.number(),
+  companyId: z.number().optional(), // Optional in frontend, assigned by backend from auth context
   customerId: z.number(),
   invoiceNumber: z.string(),
   issueDate: z.string().transform((str) => new Date(str)),
@@ -1367,7 +1367,7 @@ export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
 });
 
 export const insertEstimateSchema = z.object({
-  companyId: z.number(),
+  companyId: z.number().optional(), // Optional in frontend, assigned by backend from auth context
   customerId: z.number(),
   estimateNumber: z.string(),
   issueDate: z.string().transform((str) => new Date(str)),
