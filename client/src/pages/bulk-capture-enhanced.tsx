@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SearchCombo, type SearchComboOption } from "@/components/ui/search-combo";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VATTypeSelect } from "@/components/ui/vat-type-select";
@@ -177,23 +176,8 @@ const EnhancedBulkCapture = () => {
     refetchInterval: 15000, // Refresh every 15 seconds
   });
 
-  // Get default bank account (first created or marked as default)
-  const getDefaultBankAccount = useCallback(() => {
-    if (bankAccounts.length === 0) return null;
-    
-    // First check for a bank account marked as default
-    const defaultAccount = bankAccounts.find(account => account.isDefault);
-    if (defaultAccount) return defaultAccount;
-    
-    // If no default found, use the first created (lowest id)
-    return bankAccounts.reduce((earliest, current) => 
-      current.id < earliest.id ? current : earliest
-    );
-  }, [bankAccounts]);
-
   // Initialize 10 default expense entries
   const initializeExpenseEntries = useCallback(() => {
-    const defaultBankAccount = getDefaultBankAccount();
     const defaultEntries: ExpenseEntry[] = Array.from({ length: 10 }, () => ({
       transactionDate: quickDate,
       categoryId: 0,
@@ -203,18 +187,16 @@ const EnhancedBulkCapture = () => {
       vatRate: '15.00',
       vatAmount: '0.00',
       netAmount: '0.00',
-      bankAccountId: defaultBankAccount?.id || undefined,
       status: 'draft',
     }));
     setExpenseEntries(defaultEntries);
-  }, [quickDate, getDefaultBankAccount]);
+  }, [quickDate]);
 
   // Initialize 10 default income entries
   const initializeIncomeEntries = useCallback(() => {
     // Find the first revenue account as default, or leave as empty string if none
     const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
     const defaultIncomeAccountId = revenueAccounts.length > 0 ? revenueAccounts[0].id : '';
-    const defaultBankAccount = getDefaultBankAccount();
     
     const defaultEntries: IncomeEntry[] = Array.from({ length: 10 }, () => ({
       transactionDate: quickDate,
@@ -225,11 +207,10 @@ const EnhancedBulkCapture = () => {
       vatRate: '15.00',
       vatAmount: '0.00',
       netAmount: '0.00',
-      bankAccountId: defaultBankAccount?.id || undefined,
       status: 'draft',
     }));
     setIncomeEntries(defaultEntries);
-  }, [quickDate, chartOfAccounts, getDefaultBankAccount]);
+  }, [quickDate, chartOfAccounts]);
 
   // Initialize entries on mount and tab change
   useEffect(() => {
@@ -377,28 +358,6 @@ const EnhancedBulkCapture = () => {
     });
   }, [calculateVAT]);
 
-  // Post single entry mutation
-  const postSingleEntryMutation = useMutation({
-    mutationFn: async (entryId: number) => {
-      return await apiRequest(`/api/journal-entries/${entryId}/post`, 'POST', {});
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Journal entry posted successfully",
-      });
-      // Refetch entries
-      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to post journal entry",
-        variant: "destructive",
-      });
-    },
-  });
-
   // Update income entry field
   const updateIncomeEntry = useCallback((index: number, field: keyof IncomeEntry, value: string | number) => {
     setIncomeEntries(prev => {
@@ -421,21 +380,6 @@ const EnhancedBulkCapture = () => {
       return updated;
     });
   }, [calculateVAT]);
-
-  // Auto-populate description from Chart of Accounts
-  const handleAccountSelection = useCallback((index: number, accountId: string, option?: SearchComboOption) => {
-    if (option?.data?.description && !incomeEntries[index].description) {
-      updateIncomeEntry(index, 'description', option.data.description);
-    }
-    updateIncomeEntry(index, 'incomeAccountId', accountId ? parseInt(accountId) : '');
-  }, [incomeEntries, updateIncomeEntry]);
-
-  const handleExpenseAccountSelection = useCallback((index: number, categoryId: string, option?: SearchComboOption) => {
-    if (option?.data?.description && !expenseEntries[index].description) {
-      updateExpenseEntry(index, 'description', option.data.description);
-    }
-    updateExpenseEntry(index, 'categoryId', categoryId ? parseInt(categoryId) : 0);
-  }, [expenseEntries, updateExpenseEntry]);
 
   // Apply quick date to all entries
   const applyQuickDateToAll = useCallback(() => {
@@ -983,16 +927,28 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <SearchCombo
+                          <Select
                             value={entry.incomeAccountId ? entry.incomeAccountId.toString() : ''}
-                            onValueChange={(value, option) => handleAccountSelection(index, value, option)}
-                            placeholder="Choose income account..."
-                            searchPlaceholder="Search accounts..."
-                            endpoint="/api/chart-of-accounts/search"
-                            className="w-full"
-                            emptyMessage="No revenue accounts found"
-                            aria-label={`Income account for row ${index + 1}`}
-                          />
+                            onValueChange={(value) => updateIncomeEntry(index, 'incomeAccountId', value ? parseInt(value) : '')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose income account..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {chartOfAccounts
+                                .filter(account => account.accountType === 'Revenue')
+                                .map(account => (
+                                  <SelectItem key={account.id} value={account.id.toString()}>
+                                    {account.accountCode} - {account.accountName}
+                                  </SelectItem>
+                                ))}
+                              {chartOfAccounts.filter(account => account.accountType === 'Revenue').length === 0 && (
+                                <div className="p-2 text-sm text-red-500 text-center">
+                                  No Revenue accounts found. Please create Revenue accounts in Chart of Accounts.
+                                </div>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </td>
                         <td className="p-3">
                           <Input
@@ -1013,18 +969,21 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <SearchCombo
+                          <Select
                             value={entry.clientId?.toString() || ''}
                             onValueChange={(value) => updateIncomeEntry(index, 'clientId', value ? parseInt(value) : 0)}
-                            placeholder="Choose client..."
-                            searchPlaceholder="Search clients..."
-                            endpoint="/api/customers/search"
-                            className="w-full"
-                            emptyMessage="No clients found"
-                            createLabel="Create client: {search}"
-                            onCreate={(searchTerm) => console.log('Create customer:', searchTerm)}
-                            aria-label={`Client for row ${index + 1}`}
-                          />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map(customer => (
+                                <SelectItem key={customer.id} value={customer.id.toString()}>
+                                  {customer.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </td>
                         <td className="p-3">
                           <VATTypeSelect
@@ -1034,16 +993,21 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <SearchCombo
+                          <Select
                             value={entry.bankAccountId?.toString() || ''}
                             onValueChange={(value) => updateIncomeEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
-                            placeholder="Choose bank account..."
-                            searchPlaceholder="Search bank accounts..."
-                            endpoint="/api/bank-accounts/search"
-                            className="w-full"
-                            emptyMessage="No bank accounts found"
-                            aria-label={`Bank account for row ${index + 1}`}
-                          />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose bank..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map(account => (
+                                <SelectItem key={account.id} value={account.id.toString()}>
+                                  {account.accountName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </td>
                       </tr>
                     ))}
@@ -1173,16 +1137,23 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <SearchCombo
-                            value={entry.categoryId?.toString() || ''}
-                            onValueChange={(value, option) => handleExpenseAccountSelection(index, value, option)}
-                            placeholder="Choose expense account..."
-                            searchPlaceholder="Search expense accounts..."
-                            endpoint="/api/chart-of-accounts/search"
-                            className="w-full"
-                            emptyMessage="No expense accounts found"
-                            aria-label={`Expense account for row ${index + 1}`}
-                          />
+                          <Select
+                            value={entry.categoryId.toString()}
+                            onValueChange={(value) => updateExpenseEntry(index, 'categoryId', parseInt(value))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose expense..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {chartOfAccounts
+                                .filter(account => account.accountType === 'Expense' || account.accountType === 'Cost of Goods Sold')
+                                .map(account => (
+                                  <SelectItem key={account.id} value={account.id.toString()}>
+                                    {account.accountCode} - {account.accountName}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
                         </td>
                         <td className="p-3">
                           <Input
@@ -1203,18 +1174,21 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <SearchCombo
+                          <Select
                             value={entry.supplierId?.toString() || ''}
                             onValueChange={(value) => updateExpenseEntry(index, 'supplierId', value ? parseInt(value) : 0)}
-                            placeholder="Choose supplier..."
-                            searchPlaceholder="Search suppliers..."
-                            endpoint="/api/suppliers/search"
-                            className="w-full"
-                            emptyMessage="No suppliers found"
-                            createLabel="Create supplier: {search}"
-                            onCreate={(searchTerm) => console.log('Create supplier:', searchTerm)}
-                            aria-label={`Supplier for row ${index + 1}`}
-                          />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {suppliers.map(supplier => (
+                                <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                  {supplier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </td>
                         <td className="p-3">
                           <VATTypeSelect
@@ -1224,16 +1198,21 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <SearchCombo
+                          <Select
                             value={entry.bankAccountId?.toString() || ''}
                             onValueChange={(value) => updateExpenseEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
-                            placeholder="Choose bank account..."
-                            searchPlaceholder="Search bank accounts..."
-                            endpoint="/api/bank-accounts/search"
-                            className="w-full"
-                            emptyMessage="No bank accounts found"
-                            aria-label={`Bank account for row ${index + 1}`}
-                          />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose bank..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map(account => (
+                                <SelectItem key={account.id} value={account.id.toString()}>
+                                  {account.accountName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </td>
                       </tr>
                     ))}
