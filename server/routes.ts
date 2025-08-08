@@ -1396,6 +1396,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     items: z.array(createEstimateItemSchema)
   });
 
+  // Separate schema for estimate updates - estimateNumber is optional for updates
+  const updateEstimateSchema = z.object({
+    estimate: insertEstimateSchema.extend({
+      estimateNumber: z.string().optional(), // Make optional for updates
+    }),
+    items: z.array(createEstimateItemSchema)
+  });
+
   app.post("/api/estimates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       console.log('Received estimate creation request:', JSON.stringify(req.body, null, 2));
@@ -1440,7 +1448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const companyId = req.user.companyId;
-      const validatedData = createEstimateSchema.parse(req.body);
+      const validatedData = updateEstimateSchema.parse(req.body);
       
       // Check if estimate exists and belongs to company
       const existingEstimate = await storage.getEstimate(id);

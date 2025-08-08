@@ -379,9 +379,29 @@ export default function EstimateCreate() {
         vatAmount: sanitizedFormData.vatAmount,
         total: sanitizedFormData.total,
         notes: sanitizedFormData.notes
+        // Note: estimateNumber is now optional for updates
       };
 
-      updateEstimate.mutate({ id: parseInt(editId), data: estimateData, items: validItems });
+      // Format items for update with required total field
+      const formattedItems = validItems.map((item, index) => {
+        const vatCalc = vatCalculations[index];
+        const vatType = vatTypes.find(vt => vt.id === item.vatTypeId);
+        
+        return {
+          companyId: (activeCompany as any)?.id || 2,
+          productId: item.productId || null,
+          description: item.description,
+          quantity: isNaN(parseFloat(item.quantity)) ? '1.00' : parseFloat(item.quantity).toFixed(2),
+          unitPrice: isNaN(parseFloat(item.unitPrice)) ? '0.00' : parseFloat(item.unitPrice).toFixed(2),
+          vatRate: vatType ? parseFloat(vatType.rate).toFixed(2) : '0.00',
+          vatAmount: isNaN(vatCalc.itemVat) ? '0.00' : vatCalc.itemVat.toFixed(2),
+          vatInclusive: item.vatInclusive || false,
+          vatTypeId: item.vatTypeId || 1,
+          total: isNaN(vatCalc.itemGross) ? '0.00' : vatCalc.itemGross.toFixed(2) // Required total field
+        };
+      });
+
+      updateEstimate.mutate({ id: parseInt(editId), data: estimateData, items: formattedItems });
     } else {
       // Create new estimate - format data to match server schema
       const estimateData: InsertEstimate = {
