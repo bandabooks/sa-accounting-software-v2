@@ -525,9 +525,6 @@ export default function EstimateCreate() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-6">
         <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content - Estimate Details and Items */}
-          <div className="lg:col-span-2 space-y-6">
             
             {/* Client Information */}
             <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
@@ -885,7 +882,7 @@ export default function EstimateCreate() {
               </Card>
             </div>
 
-            {/* Right side - Estimate Summary */}
+            {/* Estimate Summary */}
             <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
               <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-b">
                 <CardTitle className="flex items-center text-gray-900 dark:text-white">
@@ -983,8 +980,6 @@ export default function EstimateCreate() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
         </form>
       </main>
     </div>
