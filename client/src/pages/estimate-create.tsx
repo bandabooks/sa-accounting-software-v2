@@ -807,48 +807,73 @@ export default function EstimateCreate() {
               </CardContent>
             </Card>
 
-              {/* Additional Information */}
-              <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-                <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-b">
-                  <CardTitle className="flex items-center text-gray-900 dark:text-white">
-                    <Info className="h-5 w-5 mr-2 text-orange-600" />
-                    Additional Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Notes
-                      </Label>
-                      <Textarea
-                        placeholder="Additional notes for this estimate..."
-                        value={formData.notes}
-                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Terms & Conditions
-                      </Label>
-                      <Textarea
-                        placeholder="Terms and conditions for this estimate..."
-                        value={formData.terms}
-                        onChange={(e) => setFormData(prev => ({ ...prev, terms: e.target.value }))}
-                        className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+              {/* Additional Information and Summary Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left - Additional Information */}
+                <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+                  <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-b">
+                    <CardTitle className="flex items-center text-gray-900 dark:text-white">
+                      <Info className="h-5 w-5 mr-2 text-orange-600" />
+                      Additional Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Estimate Number
+                        </span>
+                        <Badge variant="outline" className="bg-white text-blue-700 border-blue-200 font-mono">
+                          EST-{String((estimates?.length || 0) + 1).padStart(4, '0')}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Status
+                        </span>
+                        <Badge className={`${
+                          formData.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                          formData.status === 'sent' ? 'bg-blue-100 text-blue-800' :
+                          formData.status === 'declined' ? 'bg-red-100 text-red-800' :
+                          formData.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
+                        </Badge>
+                      </div>
 
-            {/* Right Side - Estimate Summary */}
-            <div className="lg:col-span-1">
-              <Card className="shadow-lg border-0 bg-white dark:bg-gray-800 sticky top-6">
-            <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Notes
+                          </Label>
+                          <Textarea
+                            placeholder="Additional notes for this estimate..."
+                            value={formData.notes}
+                            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                            className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Terms & Conditions
+                          </Label>
+                          <Textarea
+                            placeholder="Terms and conditions for this estimate..."
+                            value={formData.terms}
+                            onChange={(e) => setFormData(prev => ({ ...prev, terms: e.target.value }))}
+                            className="border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Right - Estimate Summary */}
+                <Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
               <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-b">
                 <CardTitle className="flex items-center text-gray-900 dark:text-white">
                   <FileText className="h-5 w-5 mr-2 text-emerald-600" />
@@ -945,6 +970,9 @@ export default function EstimateCreate() {
                 </div>
               </CardContent>
             </Card>
+              </div>
+            </div>
+          </div>
         </form>
       </main>
     </div>
