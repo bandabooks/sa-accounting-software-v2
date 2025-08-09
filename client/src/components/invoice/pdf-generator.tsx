@@ -164,10 +164,10 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
     pdf.setTextColor(255, 255, 255); // Crystal white text
     pdf.text("#", 25, tableStartY + 6);
     pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 110, tableStartY + 6, { align: 'right' });
-    pdf.text("Unit Price", 130, tableStartY + 6, { align: 'right' });
-    pdf.text("VAT Rate", 150, tableStartY + 6, { align: 'right' });
-    pdf.text("Line VAT", 170, tableStartY + 6, { align: 'right' });
+    pdf.text("Qty", 115, tableStartY + 6, { align: 'right' });
+    pdf.text("Unit Price", 140, tableStartY + 6, { align: 'right' });
+    pdf.text("VAT Rate", 165, tableStartY + 6, { align: 'right' });
+    pdf.text("Line VAT", 185, tableStartY + 6, { align: 'right' });
     pdf.text("Total", pageWidth - 25, tableStartY + 6, { align: 'right' }); // Adjusted to prevent cutoff
 
     // Table rows with improved spacing and alignment
@@ -240,13 +240,13 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       
       // Professional data alignment matching optimized headers with adjusted positions
       const qtyText = (item.quantity?.toString() || "1");
-      pdf.text(qtyText, 100, currentY, { align: 'right' });
+      pdf.text(qtyText, 115, currentY, { align: 'right' });
       
       const unitPriceText = formatCurrency(item.unitPrice || 0);
-      pdf.text(unitPriceText, 120, currentY, { align: 'right' });
+      pdf.text(unitPriceText, 140, currentY, { align: 'right' });
       
       const vatRateText = `${item.vatRate || 15}%`;
-      pdf.text(vatRateText, 145, currentY, { align: 'right' });
+      pdf.text(vatRateText, 165, currentY, { align: 'right' });
       
       // Calculate line total and VAT using the same logic as the UI (invoice-create.tsx)
       const quantity = parseFloat(item.quantity?.toString() || "1");
@@ -266,7 +266,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       }
       
       const lineVatText = formatCurrency(lineVatAmount);
-      pdf.text(lineVatText, 165, currentY, { align: 'right' });
+      pdf.text(lineVatText, 185, currentY, { align: 'right' });
       
       // CRITICAL FIX: Total should be the lineAmount for VAT-inclusive (not item.total)
       // This ensures PDF shows R10,000.00 matching the user input
