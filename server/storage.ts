@@ -5664,6 +5664,12 @@ export class DatabaseStorage implements IStorage {
     })));
   }
 
+  async getChartOfAccountById(id: number): Promise<ChartOfAccount | undefined> {
+    const [account] = await db.select().from(chartOfAccounts)
+      .where(eq(chartOfAccounts.id, id));
+    return account || undefined;
+  }
+
   async getActiveChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
     const accounts = await db.select().from(chartOfAccounts)
       .where(

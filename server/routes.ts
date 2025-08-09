@@ -2120,11 +2120,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate internal expense reference number
       const internalExpenseRef = await storage.generateExpenseReference(req.user.companyId);
       
+      // Get category name from categoryId if provided
+      let categoryName = req.body.category || "General Expense";
+      if (req.body.categoryId) {
+        const account = await storage.getChartOfAccountById(req.body.categoryId);
+        if (account) {
+          categoryName = account.accountName;
+        }
+      }
+      
       const validatedData = insertExpenseSchema.parse({
         ...req.body,
         companyId: req.user.companyId,
         createdBy: req.user.id,
         internalExpenseRef,
+        category: categoryName, // Ensure category field is populated
       });
       
       console.log("Creating expense with validated data:", validatedData);

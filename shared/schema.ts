@@ -839,6 +839,7 @@ export const expenses = pgTable("expenses", {
   supplierId: integer("supplier_id"), // Reference to supplier
   bankAccountId: integer("bank_account_id").references(() => bankAccounts.id), // Reference to bank account used for payment
   description: text("description").notNull(),
+  category: text("category").notNull(), // Category name from Chart of Accounts (legacy field for DB compatibility)
   categoryId: integer("category_id"), // Reference to Chart of Accounts
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Gross amount
   vatType: text("vat_type").notNull().default("No VAT"), // 'Inclusive', 'Exclusive', 'No VAT'
