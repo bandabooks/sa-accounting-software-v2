@@ -174,21 +174,122 @@ export default function CustomerPaymentsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-semibold text-gray-900">No payments recorded</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Get started by recording your first customer payment
-            </p>
-            <div className="mt-6">
-              <Link href="/customer-payments/record">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Record Payment
-                </Button>
-              </Link>
+          {payments.length === 0 ? (
+            <div className="text-center py-8">
+              <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-semibold text-gray-900">No payments recorded</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Get started by recording your first customer payment
+              </p>
+              <div className="mt-6">
+                <Link href="/customer-payments/record">
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Record Payment
+                  </Button>
+                </Link>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Payment ID</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Customer</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Invoice</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Amount</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Payment Date</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Method</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Reference</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments
+                    .filter(payment => {
+                      const matchesSearch = searchTerm === "" || 
+                        payment.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        payment.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        payment.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+                      const matchesStatus = statusFilter === "all" || payment.status === statusFilter;
+                      return matchesSearch && matchesStatus;
+                    })
+                    .map((payment, index) => (
+                      <tr key={payment.id} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                        <td className="py-3 px-4">
+                          <span className="text-sm font-medium text-gray-900">#{payment.id}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">
+                              {payment.customerName || 'Unknown Customer'}
+                            </span>
+                            {payment.customerEmail && (
+                              <span className="text-xs text-gray-500">{payment.customerEmail}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-gray-900">
+                            {payment.invoiceNumber || `Invoice #${payment.invoiceId}`}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm font-semibold text-green-600">
+                            {formatCurrency(payment.amount)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-gray-900">
+                            {new Date(payment.paymentDate).toLocaleDateString('en-ZA')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge className={getPaymentMethodBadge(payment.paymentMethod)}>
+                            {payment.paymentMethod?.replace('_', ' ').toUpperCase() || 'BANK TRANSFER'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge className={getStatusBadge(payment.status)}>
+                            {payment.status?.toUpperCase() || 'COMPLETED'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-gray-600">
+                            {payment.reference || '-'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Receipt className="mr-2 h-4 w-4" />
+                                Print Receipt
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Payment
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

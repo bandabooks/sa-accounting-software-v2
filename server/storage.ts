@@ -476,6 +476,7 @@ export interface IStorage {
   // Payments
   getAllPayments(): Promise<Payment[]>;
   getPaymentsByInvoice(invoiceId: number): Promise<Payment[]>;
+  getPaymentsByCompany(companyId: number): Promise<any[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: number, payment: Partial<InsertPayment>): Promise<Payment | undefined>;
   deletePayment(id: number): Promise<boolean>;
@@ -2721,6 +2722,40 @@ export class DatabaseStorage implements IStorage {
 
   async getPaymentsByInvoice(invoiceId: number): Promise<Payment[]> {
     return await db.select().from(payments).where(eq(payments.invoiceId, invoiceId)).orderBy(desc(payments.id));
+  }
+
+  async getPaymentsByCompany(companyId: number): Promise<any[]> {
+    try {
+      const result = await db
+        .select({
+          id: payments.id,
+          amount: payments.amount,
+          paymentDate: payments.paymentDate,
+          paymentMethod: payments.paymentMethod,
+          status: payments.status,
+          reference: payments.reference,
+          notes: payments.notes,
+          invoiceId: payments.invoiceId,
+          createdAt: payments.createdAt,
+          invoice: {
+            invoiceNumber: invoices.invoiceNumber,
+            customer: {
+              name: customers.name,
+              email: customers.email
+            }
+          }
+        })
+        .from(payments)
+        .leftJoin(invoices, eq(payments.invoiceId, invoices.id))
+        .leftJoin(customers, eq(invoices.customerId, customers.id))
+        .where(eq(payments.companyId, companyId))
+        .orderBy(desc(payments.createdAt));
+
+      return result;
+    } catch (error) {
+      console.error("Error fetching payments by company:", error);
+      return [];
+    }
   }
 
   async createPayment(insertPayment: InsertPayment): Promise<Payment> {

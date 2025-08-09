@@ -4226,7 +4226,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/customer-payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user.companyId;
-      res.json([]);
+      
+      // Get all payments for this company with customer and invoice details
+      const payments = await storage.getPaymentsByCompany(companyId);
+      
+      // Format payments with additional customer and invoice information
+      const formattedPayments = payments.map(payment => ({
+        id: payment.id,
+        amount: payment.amount,
+        paymentDate: payment.paymentDate,
+        paymentMethod: payment.paymentMethod || 'bank_transfer',
+        status: payment.status || 'completed',
+        reference: payment.reference,
+        notes: payment.notes,
+        invoiceId: payment.invoiceId,
+        invoiceNumber: payment.invoice?.invoiceNumber,
+        customerName: payment.invoice?.customer?.name,
+        customerEmail: payment.invoice?.customer?.email,
+        createdAt: payment.createdAt
+      }));
+      
+      res.json(formattedPayments);
     } catch (error) {
       console.error("Error fetching customer payments:", error);
       res.status(500).json({ message: "Failed to fetch customer payments" });
@@ -4235,12 +4255,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/customer-payments/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      const companyId = req.user.companyId;
+      
+      // Get all payments for stats calculation
+      const payments = await storage.getPaymentsByCompany(companyId);
+      const invoices = await storage.getAllInvoices();
+      
+      // Calculate total payments
+      const totalPayments = payments.length;
+      const totalAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+      
+      // Calculate outstanding from all invoices
+      const outstandingAmount = invoices.reduce((sum, invoice) => {
+        if (invoice.status !== 'paid') {
+          return sum + parseFloat(invoice.total);
+        }
+        return sum;
+      }, 0);
+      
+      // Calculate today's payments
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayPayments = payments.filter(payment => {
+        const paymentDate = new Date(payment.paymentDate);
+        return paymentDate >= today;
+      });
+      
+      const paymentsToday = todayPayments.length;
+      const amountToday = todayPayments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+      
+      // Calculate this month's payments
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      thisMonth.setHours(0, 0, 0, 0);
+      const thisMonthPayments = payments.filter(payment => {
+        const paymentDate = new Date(payment.paymentDate);
+        return paymentDate >= thisMonth;
+      });
+      const thisMonthAmount = thisMonthPayments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+      
+      // Count unpaid invoices
+      const outstandingInvoices = invoices.filter(invoice => invoice.status !== 'paid').length;
+      
+      // Calculate average payment
+      const averagePayment = totalPayments > 0 ? totalAmount / totalPayments : 0;
+      
       const stats = {
-        totalPayments: 0,
-        totalAmount: 0,
-        outstandingAmount: 0,
-        overdueAmount: 0
+        totalPayments: totalPayments,
+        totalReceived: totalAmount,
+        totalAmount: totalAmount,
+        outstanding: outstandingAmount,
+        outstandingAmount: outstandingAmount,
+        outstandingInvoices: outstandingInvoices,
+        paymentsToday: paymentsToday,
+        amountToday: amountToday,
+        thisMonth: thisMonthAmount,
+        averagePayment: averagePayment
       };
+      
       res.json(stats);
     } catch (error) {
       console.error("Error fetching customer payment stats:", error);
