@@ -163,12 +163,12 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
     pdf.setFont("helvetica", "bold"); // Bold font for headers
     pdf.setTextColor(255, 255, 255); // Crystal white text
     pdf.text("#", 25, tableStartY + 6);
-    pdf.text("Description", 35, tableStartY + 6);
-    pdf.text("Qty", 115, tableStartY + 6, { align: 'right' });
-    pdf.text("Unit Price", 140, tableStartY + 6, { align: 'right' });
-    pdf.text("VAT Rate", 165, tableStartY + 6, { align: 'right' });
-    pdf.text("Line VAT", 185, tableStartY + 6, { align: 'right' });
-    pdf.text("Total", pageWidth - 25, tableStartY + 6, { align: 'right' }); // Adjusted to prevent cutoff
+    pdf.text("Description", 40, tableStartY + 6);
+    pdf.text("Qty", 108, tableStartY + 6, { align: 'center' });
+    pdf.text("Unit Price", 128, tableStartY + 6, { align: 'center' });
+    pdf.text("VAT Rate", 148, tableStartY + 6, { align: 'center' });
+    pdf.text("Line VAT", 168, tableStartY + 6, { align: 'center' });
+    pdf.text("Total", 188, tableStartY + 6, { align: 'center' });
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
@@ -222,9 +222,9 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       const maxLines = 6;
       const displayLines = lines.slice(0, maxLines);
       
-      // Display each line
+      // Display each line with proper alignment
       displayLines.forEach((line, lineIndex) => {
-        pdf.text(line, 65, currentY + (lineIndex * 4));
+        pdf.text(line, 35, currentY + (lineIndex * 4));
       });
       
       // If we had more than 6 lines, add ellipsis to the last line
@@ -232,7 +232,7 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
         const lastLineIndex = maxLines - 1;
         const lastLine = displayLines[lastLineIndex];
         const ellipsisLine = lastLine.substring(0, lastLine.length - 3) + '...';
-        pdf.text(ellipsisLine, 65, currentY + (lastLineIndex * 4));
+        pdf.text(ellipsisLine, 35, currentY + (lastLineIndex * 4));
       }
       
       // Store the number of lines used for row spacing calculation
@@ -240,13 +240,13 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       
       // Professional data alignment matching optimized headers with adjusted positions
       const qtyText = (item.quantity?.toString() || "1");
-      pdf.text(qtyText, 115, currentY, { align: 'right' });
+      pdf.text(qtyText, 108, currentY, { align: 'center' });
       
       const unitPriceText = formatCurrency(item.unitPrice || 0);
-      pdf.text(unitPriceText, 140, currentY, { align: 'right' });
+      pdf.text(unitPriceText, 128, currentY, { align: 'center' });
       
       const vatRateText = `${item.vatRate || 15}%`;
-      pdf.text(vatRateText, 165, currentY, { align: 'right' });
+      pdf.text(vatRateText, 148, currentY, { align: 'center' });
       
       // Calculate line total and VAT using the same logic as the UI (invoice-create.tsx)
       const quantity = parseFloat(item.quantity?.toString() || "1");
@@ -266,12 +266,12 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       }
       
       const lineVatText = formatCurrency(lineVatAmount);
-      pdf.text(lineVatText, 185, currentY, { align: 'right' });
+      pdf.text(lineVatText, 168, currentY, { align: 'center' });
       
       // CRITICAL FIX: Total should be the lineAmount for VAT-inclusive (not item.total)
       // This ensures PDF shows R10,000.00 matching the user input
       const totalText = formatCurrency(lineAmount);
-      pdf.text(totalText, pageWidth - 20, currentY, { align: 'right' });
+      pdf.text(totalText, 188, currentY, { align: 'center' });
       
       // Dynamic row spacing based on description length
       const rowExtraHeight = Math.max(0, (descriptionLinesUsed - 1) * 4);
