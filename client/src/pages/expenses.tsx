@@ -4,14 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, Search, Filter, DollarSign, Receipt, TrendingUp, 
   PieChart, Building, Calendar, FileText, CheckCircle2,
-  XCircle, Clock, Eye, Edit, Trash2
+  XCircle, Clock, Eye, Edit, Trash2, Download, Upload,
+  BarChart3, TrendingDown, AlertCircle, Copy, RefreshCw
 } from "lucide-react";
 import AddExpenseModal from "@/components/expenses/AddExpenseModal";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ExpenseMetrics {
   totalExpenses: string;
@@ -32,7 +37,14 @@ interface ExpenseMetrics {
 
 export default function ExpensesPage() {
   const { user } = useAuth() as { user: any };
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("current_month");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -69,6 +81,62 @@ export default function ExpensesPage() {
     })}`;
   };
 
+  // Delete expense mutation
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/expenses/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics'] });
+      toast({
+        title: "Expense Deleted",
+        description: "The expense has been successfully deleted.",
+      });
+      setDeleteConfirmOpen(false);
+      setExpenseToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete expense",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDeleteExpense = (id: number) => {
+    setExpenseToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (expenseToDelete) {
+      deleteExpenseMutation.mutate(expenseToDelete);
+    }
+  };
+
+  const handleExportExpenses = async () => {
+    try {
+      const response = await apiRequest('/api/expenses/export', 'GET');
+      // Create downloadable CSV
+      const csvContent = response.data;
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `expenses-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Could not export expenses data",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'paid':
@@ -100,10 +168,16 @@ export default function ExpensesPage() {
             Manage your business expenses with integrated supplier tracking and VAT compliance
           </p>
         </div>
-        <Button onClick={() => setAddExpenseOpen(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add New Expense
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportExpenses} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button onClick={() => setAddExpenseOpen(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add New Expense
+          </Button>
+        </div>
       </div>
 
       {/* Metrics Cards */}
@@ -320,13 +394,29 @@ export default function ExpensesPage() {
                         <td className="p-3">{getStatusBadge(expense.paidStatus)}</td>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setSelectedExpense(expense)}
+                              title="View Details"
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setEditingExpense(expense)}
+                              title="Edit Expense"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteExpense(expense.id)}
+                              title="Delete Expense"
+                              className="text-red-600 hover:text-red-700"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -346,6 +436,113 @@ export default function ExpensesPage() {
         open={addExpenseOpen}
         onOpenChange={setAddExpenseOpen}
       />
+
+      {/* Edit Expense Modal */}
+      {editingExpense && (
+        <AddExpenseModal
+          open={!!editingExpense}
+          onOpenChange={(open) => !open && setEditingExpense(null)}
+          expenseToEdit={editingExpense}
+        />
+      )}
+
+      {/* Expense Detail Modal */}
+      {selectedExpense && (
+        <Dialog open={!!selectedExpense} onOpenChange={(open) => !open && setSelectedExpense(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Expense Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Internal Reference</label>
+                  <p className="font-mono font-medium">{selectedExpense.internalExpenseRef}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Supplier Invoice #</label>
+                  <p>{selectedExpense.supplierInvoiceNumber || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Description</label>
+                  <p>{selectedExpense.description}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Supplier</label>
+                  <p>{selectedExpense.supplier?.name || 'No Supplier'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Category</label>
+                  <p>{selectedExpense.category?.accountName || 'Uncategorized'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Date</label>
+                  <p>{new Date(selectedExpense.expenseDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Financial Information */}
+              <div className="border-t pt-4">
+                <h3 className="font-medium mb-3">Financial Details</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Net Amount</label>
+                    <p className="font-mono text-lg">{formatCurrency(selectedExpense.amount)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">VAT Amount</label>
+                    <p className="font-mono text-lg">{formatCurrency(selectedExpense.vatAmount)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Total Amount</label>
+                    <p className="font-mono text-lg font-bold">
+                      {formatCurrency(parseFloat(selectedExpense.amount) + parseFloat(selectedExpense.vatAmount))}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="border-t pt-4">
+                <label className="text-sm font-medium text-muted-foreground">Payment Status</label>
+                <div className="mt-1">
+                  {getStatusBadge(selectedExpense.paidStatus)}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 border-t pt-4">
+                <Button variant="outline" onClick={() => setEditingExpense(selectedExpense)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Expense
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedExpense(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this expense? This action cannot be undone and will remove the expense from all reports and calculations.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete Expense
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

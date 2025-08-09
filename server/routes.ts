@@ -2189,10 +2189,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: "Expense not found" });
       }
+      await logAudit(req.user.id, 'DELETE', 'expense', id);
       res.status(204).send();
     } catch (error) {
       console.error("Failed to delete expense:", error);
       res.status(500).json({ message: "Failed to delete expense" });
+    }
+  });
+
+  // Export expenses to CSV
+  app.get("/api/expenses/export", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      const expenses = await storage.getAllExpenses(companyId);
+      
+      // Generate CSV content
+      const headers = [
+        'Internal Reference',
+        'Supplier Invoice Number',
+        'Description',
+        'Supplier',
+        'Category',
+        'Amount',
+        'VAT Amount',
+        'Total Amount',
+        'VAT Type',
+        'VAT Rate',
+        'Date',
+        'Payment Status',
+        'Bank Account',
+        'Created Date'
+      ];
+      
+      const csvRows = [headers.join(',')];
+      
+      expenses.forEach((expense: any) => {
+        const row = [
+          expense.internalExpenseRef || '',
+          expense.supplierInvoiceNumber || '',
+          `"${expense.description || ''}"`,
+          `"${expense.supplier?.name || 'No Supplier'}"`,
+          `"${expense.category?.accountName || 'Uncategorized'}"`,
+          expense.amount || '0.00',
+          expense.vatAmount || '0.00',
+          (parseFloat(expense.amount || '0') + parseFloat(expense.vatAmount || '0')).toFixed(2),
+          expense.vatType || 'No VAT',
+          expense.vatRate || '0.00',
+          expense.expenseDate || '',
+          expense.paidStatus || 'Unpaid',
+          expense.bankAccount?.accountName || '',
+          expense.createdAt || ''
+        ];
+        csvRows.push(row.join(','));
+      });
+      
+      const csvContent = csvRows.join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="expenses-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Failed to export expenses:", error);
+      res.status(500).json({ message: "Failed to export expenses" });
     }
   });
 

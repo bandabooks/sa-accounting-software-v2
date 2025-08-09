@@ -34,9 +34,10 @@ interface ExpenseFormData {
 interface AddExpenseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  expenseToEdit?: any;
 }
 
-export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalProps) {
+export default function AddExpenseModal({ open, onOpenChange, expenseToEdit }: AddExpenseModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -79,6 +80,45 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
     enabled: open,
   });
 
+  // Initialize form data when editing
+  useEffect(() => {
+    if (expenseToEdit && open) {
+      setFormData({
+        companyId: expenseToEdit.companyId,
+        supplierId: expenseToEdit.supplierId || undefined,
+        bankAccountId: expenseToEdit.bankAccountId || undefined,
+        description: expenseToEdit.description,
+        categoryId: expenseToEdit.categoryId || undefined,
+        category: expenseToEdit.category?.accountName || "",
+        amount: expenseToEdit.amount.toString(),
+        vatType: expenseToEdit.vatType || "No VAT",
+        vatRate: expenseToEdit.vatRate?.toString() || "15.00",
+        vatAmount: expenseToEdit.vatAmount?.toString() || "0.00",
+        expenseDate: expenseToEdit.expenseDate.split('T')[0],
+        paidStatus: expenseToEdit.paidStatus,
+        supplierInvoiceNumber: expenseToEdit.supplierInvoiceNumber || "",
+        attachmentUrl: expenseToEdit.attachmentUrl,
+        createdBy: expenseToEdit.createdBy
+      });
+    } else if (!expenseToEdit && open) {
+      // Reset form for new expense
+      setFormData({
+        companyId: (user as any)?.companyId || 0,
+        description: "",
+        amount: "",
+        vatType: "No VAT",
+        vatRate: "15.00",
+        vatAmount: "0.00",
+        expenseDate: new Date().toISOString().split('T')[0],
+        paidStatus: "Unpaid",
+        supplierInvoiceNumber: "",
+        categoryId: undefined,
+        category: "",
+        createdBy: user?.id || 0,
+      });
+    }
+  }, [expenseToEdit, open, user]);
+
   // Calculate VAT amounts whenever amount or VAT type changes
   useEffect(() => {
     calculateVAT();
@@ -109,13 +149,18 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
 
   const createExpenseMutation = useMutation({
     mutationFn: async (data: ExpenseFormData) => {
-      return await apiRequest('/api/expenses', 'POST', data);
+      if (expenseToEdit) {
+        return await apiRequest(`/api/expenses/${expenseToEdit.id}`, 'PUT', data);
+      } else {
+        return await apiRequest('/api/expenses', 'POST', data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics'] });
       toast({
-        title: "Expense Created",
-        description: "The expense has been successfully recorded.",
+        title: expenseToEdit ? "Expense Updated" : "Expense Created",
+        description: expenseToEdit ? "The expense has been successfully updated." : "The expense has been successfully recorded.",
       });
       onOpenChange(false);
       resetForm();
@@ -190,7 +235,7 @@ export default function AddExpenseModal({ open, onOpenChange }: AddExpenseModalP
           <DialogHeader className="flex-shrink-0 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              Add New Expense
+              {expenseToEdit ? "Edit Expense" : "Add New Expense"}
             </DialogTitle>
           </DialogHeader>
 
