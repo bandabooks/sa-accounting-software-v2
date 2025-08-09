@@ -1840,9 +1840,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/payments/:id", async (req, res) => {
+  app.put("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
       const existingPayment = await storage.getAllPayments();
       const payment = existingPayment.find(p => p.id === id && p.companyId === companyId);
       if (!payment) {
@@ -1868,9 +1869,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/payments/:id", async (req, res) => {
+  app.delete("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user.companyId;
       const existingPayments = await storage.getAllPayments();
       const payment = existingPayments.find(p => p.id === id && p.companyId === companyId);
       if (!payment) {

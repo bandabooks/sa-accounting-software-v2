@@ -1,19 +1,32 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, CreditCard, DollarSign, CheckCircle, Clock, Users, Receipt } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, CreditCard, DollarSign, CheckCircle, Clock, Users, Receipt, RefreshCw, FileText, Download, AlertTriangle, Undo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function CustomerPaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [editingPayment, setEditingPayment] = useState<any>(null);
+  const [deletingPayment, setDeletingPayment] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    amount: "",
+    paymentMethod: "",
+    status: "",
+    reference: "",
+    notes: ""
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -53,6 +66,107 @@ export default function CustomerPaymentsPage() {
     return methodColors[method as keyof typeof methodColors] || "bg-gray-100 text-gray-800";
   };
 
+  // Payment management mutations
+  const updatePaymentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      return await apiRequest(`/api/payments/${id}`, "PUT", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-payments/stats"] });
+      setEditingPayment(null);
+      toast({
+        title: "Success",
+        description: "Payment updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update payment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/payments/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-payments/stats"] });
+      setDeletingPayment(null);
+      toast({
+        title: "Success",
+        description: "Payment deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete payment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditPayment = (payment: any) => {
+    setEditingPayment(payment);
+    setEditForm({
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod || 'bank_transfer',
+      status: payment.status || 'completed',
+      reference: payment.reference || '',
+      notes: payment.notes || ''
+    });
+  };
+
+  const handleUpdatePayment = () => {
+    updatePaymentMutation.mutate({
+      id: editingPayment.id,
+      data: editForm
+    });
+  };
+
+  const handleDeletePayment = () => {
+    if (deletingPayment) {
+      deletePaymentMutation.mutate(deletingPayment.id);
+    }
+  };
+
+  const printReceipt = (payment: any) => {
+    // Generate and print payment receipt
+    const receiptContent = `
+      PAYMENT RECEIPT
+      ==================
+      Payment ID: #${payment.id}
+      Customer: ${payment.customerName}
+      Invoice: ${payment.invoiceNumber}
+      Amount: ${formatCurrency(payment.amount)}
+      Date: ${new Date(payment.paymentDate).toLocaleDateString('en-ZA')}
+      Method: ${payment.paymentMethod?.toUpperCase()}
+      Reference: ${payment.reference || 'N/A'}
+      ==================
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head><title>Payment Receipt</title></head>
+          <body>
+            <pre style="font-family: monospace; white-space: pre-wrap;">
+              ${receiptContent}
+            </pre>
+            <script>window.print(); window.close();</script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
   if (isLoading || statsLoading) {
     return (
       <div className="p-6">
@@ -75,14 +189,22 @@ export default function CustomerPaymentsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Customer Payments</h1>
-          <p className="text-gray-600">Record and track all customer payments and receipts</p>
+          <p className="text-gray-600">Record and track all customer payments with comprehensive management tools</p>
         </div>
-        <Link href="/customer-payments/record">
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Record Payment
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/credit-notes">
+            <Button variant="outline" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Credit Notes
+            </Button>
+          </Link>
+          <Link href="/customer-payment-record">
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Record Payment
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Dashboard */}
@@ -269,17 +391,32 @@ export default function CustomerPaymentsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => console.log('View payment details:', payment)}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => printReceipt(payment)}>
                                 <Receipt className="mr-2 h-4 w-4" />
                                 Print Receipt
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleEditPayment(payment)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit Payment
+                              </DropdownMenuItem>
+                              <Link href={`/credit-notes/create?invoiceId=${payment.invoiceId}`}>
+                                <DropdownMenuItem>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Create Credit Note
+                                </DropdownMenuItem>
+                              </Link>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setDeletingPayment(payment)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Payment
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -292,6 +429,108 @@ export default function CustomerPaymentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Payment Modal */}
+      <Dialog open={!!editingPayment} onOpenChange={() => setEditingPayment(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Payment #{editingPayment?.id}</DialogTitle>
+            <DialogDescription>
+              Update payment details for {editingPayment?.customerName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="amount">Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={editForm.amount}
+                onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Select value={editForm.paymentMethod} onValueChange={(value) => setEditForm({...editForm, paymentMethod: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="eft">EFT</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={editForm.status} onValueChange={(value) => setEditForm({...editForm, status: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="reference">Reference</Label>
+              <Input
+                id="reference"
+                value={editForm.reference}
+                onChange={(e) => setEditForm({...editForm, reference: e.target.value})}
+                placeholder="Payment reference"
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={editForm.notes}
+                onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                placeholder="Additional notes"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPayment(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdatePayment} disabled={updatePaymentMutation.isPending}>
+              {updatePaymentMutation.isPending ? "Updating..." : "Update Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Payment Confirmation */}
+      <AlertDialog open={!!deletingPayment} onOpenChange={() => setDeletingPayment(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Payment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete payment #{deletingPayment?.id} for {formatCurrency(deletingPayment?.amount || 0)}? 
+              This action cannot be undone and may affect invoice payment status.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePayment}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Payment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
