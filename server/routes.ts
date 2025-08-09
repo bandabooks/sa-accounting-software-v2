@@ -9054,12 +9054,55 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/credit-notes", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const data = insertCreditNoteSchema.parse(req.body);
-      const creditNote = await storage.createCreditNote({ ...data, companyId: req.user.companyId });
+      const companyId = req.user.companyId;
+      const formData = req.body;
+      
+      // Calculate totals from items
+      const items = formData.items || [];
+      let subtotal = 0;
+      let vatAmount = 0;
+      
+      items.forEach((item: any) => {
+        const itemSubtotal = parseFloat(item.quantity || "0") * parseFloat(item.unitPrice || "0");
+        const itemVatAmount = parseFloat(item.vatAmount || "0");
+        subtotal += itemSubtotal;
+        vatAmount += itemVatAmount;
+      });
+      
+      const total = subtotal + vatAmount;
+      
+      // Prepare credit note data with calculated values
+      const creditNoteData = {
+        companyId,
+        customerId: parseInt(formData.customerId),
+        originalInvoiceId: formData.invoiceId ? parseInt(formData.invoiceId) : null,
+        creditNoteNumber: formData.creditNoteNumber,
+        issueDate: formData.issueDate,
+        reason: formData.reason,
+        reasonDescription: formData.notes,
+        status: formData.status || "draft",
+        subtotal: subtotal.toFixed(2),
+        vatAmount: vatAmount.toFixed(2),
+        total: total.toFixed(2),
+        appliedAmount: "0.00",
+        remainingAmount: total.toFixed(2),
+        currency: "ZAR",
+        notes: formData.notes,
+        isVatInclusive: formData.isVatInclusive || false,
+        createdBy: req.user.id
+      };
+      
+      // Validate the prepared data
+      const validatedData = insertCreditNoteSchema.parse(creditNoteData);
+      const creditNote = await storage.createCreditNote(validatedData);
+      
       await logAudit(req.user.id, 'CREATE', 'credit_note', creditNote.id, null, creditNote);
       res.json(creditNote);
     } catch (error) {
       console.error("Failed to create credit note:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
       res.status(500).json({ message: "Failed to create credit note" });
     }
   });
