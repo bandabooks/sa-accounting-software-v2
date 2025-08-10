@@ -156,8 +156,11 @@ export default function AddExpenseModal({ open, onOpenChange, expenseToEdit }: A
       }
     },
     onSuccess: () => {
+      // Invalidate all expense-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics'] });
+      // Also refresh the page data
+      window.location.reload();
       toast({
         title: expenseToEdit ? "Expense Updated" : "Expense Created",
         description: expenseToEdit ? "The expense has been successfully updated." : "The expense has been successfully recorded.",

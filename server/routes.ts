@@ -2081,6 +2081,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add filtered expense endpoint that matches frontend expectations
+  app.get("/api/expenses/metrics/:dateFilter", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      const dateFilter = req.params.dateFilter;
+      const metrics = await storage.getExpenseMetrics(companyId, dateFilter);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Failed to fetch expense metrics:", error);
+      res.status(500).json({ message: "Failed to fetch expense metrics" });
+    }
+  });
+
+  // Add filtered expense listing endpoint
+  app.get("/api/expenses/:dateFilter/:statusFilter/:supplierFilter/:categoryFilter", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      const expenses = await storage.getAllExpenses(companyId);
+      res.json(expenses);
+    } catch (error) {
+      console.error("Failed to fetch expenses:", error);
+      res.status(500).json({ message: "Failed to fetch expenses" });
+    }
+  });
+
   app.get("/api/expenses/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);

@@ -51,14 +51,16 @@ export default function ExpensesPage() {
   const [supplierFilter, setSupplierFilter] = useState("all_suppliers");
   const [categoryFilter, setCategoryFilter] = useState("all_categories");
 
-  // Fetch expenses
+  // Fetch expenses with proper endpoint
   const { data: expenses = [], isLoading } = useQuery({
-    queryKey: ['/api/expenses', searchTerm, dateFilter, statusFilter, supplierFilter, categoryFilter],
+    queryKey: ['/api/expenses', dateFilter, statusFilter, supplierFilter, categoryFilter],
+    queryFn: () => apiRequest(`/api/expenses/${dateFilter}/${statusFilter}/${supplierFilter}/${categoryFilter}`),
   }) as { data: any[], isLoading: boolean };
 
   // Fetch expense metrics
   const { data: metrics } = useQuery<ExpenseMetrics>({
     queryKey: ['/api/expenses/metrics', dateFilter],
+    queryFn: () => apiRequest(`/api/expenses/metrics/${dateFilter}`),
   });
 
   // Fetch suppliers for filter
