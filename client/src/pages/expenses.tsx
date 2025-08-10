@@ -227,14 +227,10 @@ export default function ExpensesPage() {
                      dateFilter === 'current_quarter' ? 'This Quarter' :
                      dateFilter === 'current_year' ? 'This Year' : 'Selected Period'}
                   </p>
-                  {metricsLoading ? (
-                    <p className="text-2xl font-bold">Loading...</p>
-                  ) : (
-                    <p className="text-2xl font-bold">{formatCurrency(filteredMetrics?.totalExpenses || "0")}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">{filteredMetrics?.expenseCount || 0} entries</p>
+                  <p className="text-2xl font-bold">{formatCurrency(filteredMetrics?.totalExpenses || allTimeMetrics?.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">{filteredMetrics?.expenseCount || allTimeMetrics?.expenseCount || 0} entries</p>
                   {/* Debug info */}
-                  <p className="text-xs text-blue-500">Raw: {filteredMetrics?.totalExpenses || "No data"}</p>
+                  <p className="text-xs text-blue-500">Filtered: {filteredMetrics?.totalExpenses || "No data"} | All: {allTimeMetrics?.totalExpenses || "No data"}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -246,7 +242,7 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Unpaid Expenses</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatCurrency(filteredMetrics?.unpaidExpenses || "0")}</p>
+                  <p className="text-2xl font-bold text-orange-600">{formatCurrency(filteredMetrics?.unpaidExpenses || allTimeMetrics?.unpaidExpenses || "0")}</p>
                   <p className="text-xs text-muted-foreground">Outstanding payments</p>
                 </div>
                 <XCircle className="h-8 w-8 text-orange-600" />
