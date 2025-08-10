@@ -166,9 +166,16 @@ export default function AddExpenseModal({ open, onOpenChange, expenseToEdit }: A
       resetForm();
     },
     onError: (error: any) => {
+      let errorMessage = error.message || "Failed to create expense";
+      
+      // Handle specific error types
+      if (error.message?.includes("Supplier invoice number already exists")) {
+        errorMessage = "This supplier invoice number is already used. Please use a different invoice number or leave it blank to auto-generate.";
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to create expense",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -278,14 +285,27 @@ export default function AddExpenseModal({ open, onOpenChange, expenseToEdit }: A
               {/* Supplier Invoice Number Field */}
               <div className="space-y-2">
                 <Label htmlFor="supplierInvoiceNumber">Supplier Invoice Number</Label>
-                <Input
-                  id="supplierInvoiceNumber"
-                  value={formData.supplierInvoiceNumber || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, supplierInvoiceNumber: e.target.value }))}
-                  placeholder="Enter supplier's invoice number (e.g., INV-12345)"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="supplierInvoiceNumber"
+                    value={formData.supplierInvoiceNumber || ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, supplierInvoiceNumber: e.target.value }))}
+                    placeholder="Enter supplier's invoice number (optional)"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setFormData(prev => ({ ...prev, supplierInvoiceNumber: "" }))}
+                    className="px-3"
+                    title="Clear invoice number"
+                  >
+                    ×
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  This field helps prevent duplicate entries. Each supplier invoice number must be unique per company.
+                  Optional: Leave blank to avoid duplicate checks. Each supplier invoice number must be unique per company.
                 </p>
               </div>
 

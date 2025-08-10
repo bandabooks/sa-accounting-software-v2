@@ -2103,8 +2103,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      // Check for duplicate supplier invoice number if provided
-      if (req.body.supplierInvoiceNumber) {
+      // Check for duplicate supplier invoice number if provided and not empty
+      if (req.body.supplierInvoiceNumber && req.body.supplierInvoiceNumber.trim() !== "") {
         const existingExpense = await storage.getExpenseBySupplierInvoiceNumber(
           req.user.companyId, 
           req.body.supplierInvoiceNumber
@@ -2112,7 +2112,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingExpense) {
           return res.status(400).json({ 
             message: "Supplier invoice number already exists",
-            details: `Invoice number "${req.body.supplierInvoiceNumber}" is already used for this company.`
+            details: `Invoice number "${req.body.supplierInvoiceNumber}" is already used for this company.`,
+            field: "supplierInvoiceNumber"
           });
         }
       }
