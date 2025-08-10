@@ -23,6 +23,7 @@ interface ExpenseMetrics {
   totalVatClaimed: string;
   paidExpenses: string;
   unpaidExpenses: string;
+  expenseCount: number;
   categoryBreakdown: Array<{
     category: string;
     amount: string;
@@ -191,6 +192,7 @@ export default function ExpensesPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
                   <p className="text-2xl font-bold">{formatCurrency(metrics.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">{metrics.expenseCount || 0} expense entries</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -275,16 +277,15 @@ export default function ExpensesPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">Payment Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="partially_paid">Partially Paid</SelectItem>
+                  <SelectItem value="Paid">Paid</SelectItem>
+                  <SelectItem value="Unpaid">Unpaid</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -350,14 +351,27 @@ export default function ExpensesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="p-8 text-center text-muted-foreground">
-                        No expenses found. Click "Add New Expense" to get started.
-                      </td>
-                    </tr>
-                  ) : (
-                    expenses.map((expense: any) => (
+                  {(() => {
+                    // Apply search filtering on the client side
+                    const filteredExpenses = expenses.filter((expense: any) => {
+                      if (searchTerm === "") return true;
+                      
+                      const searchLower = searchTerm.toLowerCase();
+                      return expense.description?.toLowerCase().includes(searchLower) ||
+                        expense.supplier?.name?.toLowerCase().includes(searchLower) ||
+                        expense.category?.accountName?.toLowerCase().includes(searchLower) ||
+                        expense.supplierInvoiceNumber?.toLowerCase().includes(searchLower) ||
+                        expense.amount?.toString().includes(searchTerm);
+                    });
+                    
+                    return filteredExpenses.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="p-8 text-center text-muted-foreground">
+                          {expenses.length === 0 ? "No expenses found. Click \"Add New Expense\" to get started." : "No expenses match your search criteria."}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredExpenses.map((expense: any) => (
                       <tr key={expense.id} className="border-b hover:bg-muted/50">
                         <td className="p-3">
                           <span className="font-mono text-sm font-medium">
@@ -424,8 +438,9 @@ export default function ExpensesPage() {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
+                      ))
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>

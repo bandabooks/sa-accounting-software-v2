@@ -2098,7 +2098,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses/:dateFilter/:statusFilter/:supplierFilter/:categoryFilter", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
-      const expenses = await storage.getAllExpenses(companyId);
+      const { dateFilter, statusFilter, supplierFilter, categoryFilter } = req.params;
+      
+      // Get all expenses first
+      let expenses = await storage.getAllExpenses(companyId);
+      
+      // Apply date filtering if needed (current_month filtering is already handled in getExpensesByDateRange)
+      if (dateFilter !== 'all_time') {
+        expenses = await storage.getExpensesByDateRange(companyId, dateFilter);
+      }
+      
+      // Apply status filtering
+      if (statusFilter !== 'all') {
+        expenses = expenses.filter((expense: any) => expense.paidStatus === statusFilter);
+      }
+      
+      // Apply supplier filtering
+      if (supplierFilter !== 'all_suppliers') {
+        expenses = expenses.filter((expense: any) => expense.supplierId?.toString() === supplierFilter);
+      }
+      
+      // Apply category filtering
+      if (categoryFilter !== 'all_categories') {
+        expenses = expenses.filter((expense: any) => expense.categoryId?.toString() === categoryFilter);
+      }
+      
       res.json(expenses);
     } catch (error) {
       console.error("Failed to fetch expenses:", error);

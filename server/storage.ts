@@ -3122,6 +3122,7 @@ export class DatabaseStorage implements IStorage {
     nonDeductibleAmount: string;
     paidExpenses: string;
     unpaidExpenses: string;
+    expenseCount: number;
     categoryBreakdown: Array<{
       category: string;
       amount: string;
@@ -3186,10 +3187,10 @@ export class DatabaseStorage implements IStorage {
         .filter(row => !row.expense.taxDeductible)
         .reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
       const paidExpenses = allExpenses
-        .filter(row => row.expense.isPaid)
+        .filter(row => row.expense.paidStatus === 'Paid')
         .reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
       const unpaidExpenses = allExpenses
-        .filter(row => !row.expense.isPaid)
+        .filter(row => row.expense.paidStatus === 'Unpaid')
         .reduce((sum, row) => sum + parseFloat(row.expense.amount), 0);
 
       // Category breakdown
@@ -3242,6 +3243,7 @@ export class DatabaseStorage implements IStorage {
         taxDeductibleAmount: taxDeductibleAmount.toFixed(2),
         nonDeductibleAmount: nonDeductibleAmount.toFixed(2),
         paidExpenses: paidExpenses.toFixed(2),
+        expenseCount: allExpenses.length,
         unpaidExpenses: unpaidExpenses.toFixed(2),
         categoryBreakdown,
         supplierBreakdown
@@ -3255,6 +3257,7 @@ export class DatabaseStorage implements IStorage {
         nonDeductibleAmount: '0.00',
         paidExpenses: '0.00',
         unpaidExpenses: '0.00',
+        expenseCount: 0,
         categoryBreakdown: [],
         supplierBreakdown: []
       };
