@@ -2356,6 +2356,569 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========================================
+  // PROFESSIONAL BILLS MANAGEMENT ROUTES
+  // ========================================
+
+  // Bills metrics endpoint
+  app.get("/api/bills/metrics/:period?", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Mock metrics for demonstration
+      const metrics = {
+        totalOutstanding: "25847.50",
+        overdueAmount: "4250.00",
+        thisMonthBills: "18500.00",
+        pendingApproval: "12750.00",
+        billCount: 15,
+        averageBill: "1723.17",
+        daysPayableOutstanding: 32
+      };
+
+      res.json(metrics);
+    } catch (error) {
+      console.error("Failed to fetch bills metrics:", error);
+      res.status(500).json({ message: "Failed to fetch bills metrics" });
+    }
+  });
+
+  // Get all bills with filters
+  app.get("/api/bills", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Mock bills data for demonstration
+      const bills = [
+        {
+          id: 1,
+          companyId: companyId,
+          billNumber: "BILL-2025-001",
+          supplierId: 1,
+          supplierName: "Office Supplies Co",
+          supplierInvoiceNumber: "INV-12345",
+          billDate: "2025-01-15",
+          dueDate: "2025-02-15",
+          description: "Monthly office supplies",
+          subtotal: "2850.00",
+          vatAmount: "427.50",
+          total: "3277.50",
+          paidAmount: "0.00",
+          status: "pending_approval",
+          approvalStatus: "pending",
+          paymentTerms: 30,
+          urgency: "normal",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+
+      res.json(bills);
+    } catch (error) {
+      console.error("Failed to fetch bills:", error);
+      res.status(500).json({ message: "Failed to fetch bills" });
+    }
+  });
+
+  // Export bills to CSV
+  app.get("/api/bills/export", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Generate CSV headers for bills export
+      const headers = [
+        'Bill Number',
+        'Supplier Name',
+        'Supplier Invoice Number',
+        'Bill Date',
+        'Due Date',
+        'Description',
+        'Subtotal',
+        'VAT Amount',
+        'Total Amount',
+        'Status',
+        'Approval Status',
+        'Payment Terms',
+        'Created Date'
+      ];
+
+      const csvRows = [headers.join(',')];
+
+      // Mock bill data for CSV export
+      const sampleBill = [
+        'BILL-2025-001',
+        '"Office Supplies Co"',
+        'INV-12345',
+        '2025-01-15',
+        '2025-02-15',
+        '"Monthly office supplies"',
+        '2850.00',
+        '427.50',
+        '3277.50',
+        'pending_approval',
+        'pending',
+        '30',
+        new Date().toISOString()
+      ];
+      csvRows.push(sampleBill.join(','));
+
+      const csvContent = csvRows.join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="bills-export-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Failed to export bills:", error);
+      res.status(500).json({ message: "Failed to export bills" });
+    }
+  });
+
+  // Approve bill
+  app.post("/api/bills/:id/approve", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const billId = parseInt(req.params.id);
+      const { comments } = req.body;
+
+      // Mock approval logic
+      await logAudit(req.user.id, 'APPROVE', 'bill', billId, null, { comments });
+
+      res.json({ 
+        message: "Bill approved successfully",
+        billId: billId,
+        approvedBy: req.user.id,
+        approvedAt: new Date().toISOString(),
+        comments: comments
+      });
+    } catch (error) {
+      console.error("Failed to approve bill:", error);
+      res.status(500).json({ message: "Failed to approve bill" });
+    }
+  });
+
+  // Reject bill
+  app.post("/api/bills/:id/reject", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const billId = parseInt(req.params.id);
+      const { rejectionReason } = req.body;
+
+      if (!rejectionReason || rejectionReason.trim() === "") {
+        return res.status(400).json({ message: "Rejection reason is required" });
+      }
+
+      // Mock rejection logic
+      await logAudit(req.user.id, 'REJECT', 'bill', billId, null, { rejectionReason });
+
+      res.json({ 
+        message: "Bill rejected successfully",
+        billId: billId,
+        rejectedBy: req.user.id,
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: rejectionReason
+      });
+    } catch (error) {
+      console.error("Failed to reject bill:", error);
+      res.status(500).json({ message: "Failed to reject bill" });
+    }
+  });
+
+  // Convert bill to expense
+  app.post("/api/bills/:id/convert-to-expense", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const billId = parseInt(req.params.id);
+
+      // Mock conversion logic
+      await logAudit(req.user.id, 'CONVERT', 'bill', billId, null, { convertedTo: 'expense' });
+
+      res.json({ 
+        message: "Bill converted to expense successfully",
+        billId: billId,
+        expenseId: billId + 1000, // Mock expense ID
+        convertedBy: req.user.id,
+        convertedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Failed to convert bill to expense:", error);
+      res.status(500).json({ message: "Failed to convert bill to expense" });
+    }
+  });
+
+  // ========================================
+  // RECURRING EXPENSES ROUTES
+  // ========================================
+
+  // Recurring expenses metrics
+  app.get("/api/recurring-expenses/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      const metrics = {
+        totalActiveTemplates: 8,
+        totalMonthlyValue: "14250.00",
+        nextDueAmount: "3850.00",
+        overdueCount: 2,
+        automatedExpenses: 6,
+        manualExpenses: 2
+      };
+
+      res.json(metrics);
+    } catch (error) {
+      console.error("Failed to fetch recurring expenses metrics:", error);
+      res.status(500).json({ message: "Failed to fetch recurring expenses metrics" });
+    }
+  });
+
+  // Get all recurring expenses with filters
+  app.get("/api/recurring-expenses", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Mock recurring expenses data
+      const recurringExpenses = [
+        {
+          id: 1,
+          companyId: companyId,
+          templateName: "Office Rent",
+          supplierId: 1,
+          supplierName: "Property Management Co",
+          description: "Monthly office rental payment",
+          categoryId: 1,
+          categoryName: "Rent & Utilities",
+          amount: "15000.00",
+          vatType: "exempt",
+          vatRate: "0.00",
+          frequency: "monthly",
+          startDate: "2025-01-01",
+          nextDueDate: "2025-02-01",
+          autoApprove: true,
+          isActive: true,
+          reminderDays: 5,
+          notes: "Due on 1st of every month",
+          createdBy: req.user.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          companyId: companyId,
+          templateName: "Software Subscriptions",
+          description: "Monthly software licenses",
+          categoryId: 2,
+          categoryName: "Software & Technology",
+          amount: "2500.00",
+          vatType: "standard",
+          vatRate: "15.00",
+          frequency: "monthly",
+          startDate: "2025-01-01",
+          nextDueDate: "2025-02-01",
+          autoApprove: false,
+          isActive: true,
+          reminderDays: 3,
+          createdBy: req.user.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+
+      res.json(recurringExpenses);
+    } catch (error) {
+      console.error("Failed to fetch recurring expenses:", error);
+      res.status(500).json({ message: "Failed to fetch recurring expenses" });
+    }
+  });
+
+  // Get recently generated expenses from templates
+  app.get("/api/recurring-expenses/recent-generated", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Mock recently generated expenses
+      const recentGenerated = [
+        {
+          id: 1,
+          templateId: 1,
+          templateName: "Office Rent",
+          amount: "15000.00",
+          generatedDate: new Date().toISOString(),
+          status: "posted"
+        },
+        {
+          id: 2,
+          templateId: 2,
+          templateName: "Software Subscriptions",
+          amount: "2500.00",
+          generatedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          status: "approved"
+        }
+      ];
+
+      res.json(recentGenerated);
+    } catch (error) {
+      console.error("Failed to fetch recent generated expenses:", error);
+      res.status(500).json({ message: "Failed to fetch recent generated expenses" });
+    }
+  });
+
+  // Toggle recurring expense template active status
+  app.patch("/api/recurring-expenses/:id/toggle", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const { isActive } = req.body;
+
+      // Mock toggle logic
+      await logAudit(req.user.id, 'UPDATE', 'recurring_expense_template', templateId, null, { isActive });
+
+      res.json({ 
+        message: `Template ${isActive ? 'activated' : 'deactivated'} successfully`,
+        templateId: templateId,
+        isActive: isActive,
+        updatedBy: req.user.id,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Failed to toggle template status:", error);
+      res.status(500).json({ message: "Failed to toggle template status" });
+    }
+  });
+
+  // Generate expense from template immediately
+  app.post("/api/recurring-expenses/:id/generate", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+
+      // Mock generation logic
+      const generatedExpenseId = Math.floor(Math.random() * 1000) + 1000;
+      
+      await logAudit(req.user.id, 'GENERATE', 'recurring_expense_template', templateId, null, { 
+        generatedExpenseId,
+        generationType: 'manual'
+      });
+
+      res.json({ 
+        message: "Expense generated successfully from template",
+        templateId: templateId,
+        generatedExpenseId: generatedExpenseId,
+        generatedBy: req.user.id,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Failed to generate expense from template:", error);
+      res.status(500).json({ message: "Failed to generate expense from template" });
+    }
+  });
+
+  // Delete recurring expense template
+  app.delete("/api/recurring-expenses/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+
+      // Mock deletion logic
+      await logAudit(req.user.id, 'DELETE', 'recurring_expense_template', templateId);
+
+      res.json({ 
+        message: "Recurring expense template deleted successfully",
+        templateId: templateId,
+        deletedBy: req.user.id,
+        deletedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Failed to delete recurring expense template:", error);
+      res.status(500).json({ message: "Failed to delete recurring expense template" });
+    }
+  });
+
+  // ========================================
+  // EXPENSE APPROVALS ROUTES
+  // ========================================
+
+  // Approval metrics
+  app.get("/api/approvals/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      const metrics = {
+        pendingCount: 5,
+        pendingAmount: "18750.00",
+        avgApprovalTime: 2.5,
+        approvedThisMonth: 23,
+        rejectedThisMonth: 2,
+        overdueApprovals: 3
+      };
+
+      res.json(metrics);
+    } catch (error) {
+      console.error("Failed to fetch approval metrics:", error);
+      res.status(500).json({ message: "Failed to fetch approval metrics" });
+    }
+  });
+
+  // Get pending approvals with filters
+  app.get("/api/approvals/pending", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Mock pending approvals
+      const pendingApprovals = [
+        {
+          id: 1,
+          expenseId: 1,
+          type: "expense",
+          description: "Business travel expenses for client meeting",
+          amount: "3750.00",
+          submittedBy: "EMP001",
+          submittedByName: "John Smith",
+          submittedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          supplierName: "Travel Agency Ltd",
+          category: "Travel & Entertainment",
+          approverLevel: 1,
+          approvalLimit: "5000.00",
+          urgency: "normal",
+          comments: "Please review travel receipts attached",
+          daysWaiting: 2
+        },
+        {
+          id: 2,
+          billId: 1,
+          type: "bill",
+          description: "Monthly office supplies invoice",
+          amount: "2850.00",
+          submittedBy: "EMP002",
+          submittedByName: "Jane Doe",
+          submittedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          supplierName: "Office Supplies Co",
+          category: "Office Supplies",
+          approverLevel: 1,
+          approvalLimit: "3000.00",
+          urgency: "low",
+          daysWaiting: 1
+        }
+      ];
+
+      res.json(pendingApprovals);
+    } catch (error) {
+      console.error("Failed to fetch pending approvals:", error);
+      res.status(500).json({ message: "Failed to fetch pending approvals" });
+    }
+  });
+
+  // Get approval history
+  app.get("/api/approvals/history", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Mock approval history
+      const approvalHistory = [
+        {
+          id: 1,
+          type: "expense",
+          description: "Office equipment purchase",
+          amount: "5250.00",
+          submittedBy: "EMP003",
+          approvedBy: "Production Administrator",
+          approvedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "approved",
+          comments: "Approved for Q1 equipment upgrade"
+        },
+        {
+          id: 2,
+          type: "bill",
+          description: "Software license renewal",
+          amount: "1850.00",
+          submittedBy: "EMP004",
+          approvedBy: "Production Administrator",
+          approvedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "rejected",
+          rejectionReason: "Budget not available for this software"
+        }
+      ];
+
+      res.json(approvalHistory);
+    } catch (error) {
+      console.error("Failed to fetch approval history:", error);
+      res.status(500).json({ message: "Failed to fetch approval history" });
+    }
+  });
+
+  // Approve expense/bill
+  app.post("/api/approvals/:id/approve", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const approvalId = parseInt(req.params.id);
+      const { comments } = req.body;
+
+      // Mock approval logic
+      await logAudit(req.user.id, 'APPROVE', 'approval', approvalId, null, { 
+        comments: comments || '',
+        approverName: req.user.name || 'Unknown User'
+      });
+
+      res.json({ 
+        message: "Approval completed successfully",
+        approvalId: approvalId,
+        approvedBy: req.user.id,
+        approvedAt: new Date().toISOString(),
+        comments: comments || ''
+      });
+    } catch (error) {
+      console.error("Failed to approve:", error);
+      res.status(500).json({ message: "Failed to approve" });
+    }
+  });
+
+  // Reject expense/bill
+  app.post("/api/approvals/:id/reject", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const approvalId = parseInt(req.params.id);
+      const { rejectionReason } = req.body;
+
+      if (!rejectionReason || rejectionReason.trim() === "") {
+        return res.status(400).json({ message: "Rejection reason is required" });
+      }
+
+      // Mock rejection logic
+      await logAudit(req.user.id, 'REJECT', 'approval', approvalId, null, { 
+        rejectionReason,
+        rejectedBy: req.user.name || 'Unknown User'
+      });
+
+      res.json({ 
+        message: "Rejection completed successfully",
+        approvalId: approvalId,
+        rejectedBy: req.user.id,
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: rejectionReason
+      });
+    } catch (error) {
+      console.error("Failed to reject:", error);
+      res.status(500).json({ message: "Failed to reject" });
+    }
+  });
+
   // VAT Returns
   app.get("/api/vat-returns", async (req, res) => {
     try {

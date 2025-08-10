@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import { 
   Plus, 
   Search, 
@@ -82,6 +83,7 @@ interface GeneratedExpense {
 }
 
 export default function RecurringExpenses() {
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -119,7 +121,8 @@ export default function RecurringExpenses() {
     mutationFn: async ({ templateId, isActive }: { templateId: number; isActive: boolean }) => {
       return apiRequest(`/api/recurring-expenses/${templateId}/toggle`, {
         method: 'PATCH',
-        body: { isActive },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive }),
       });
     },
     onSuccess: () => {
@@ -136,6 +139,7 @@ export default function RecurringExpenses() {
     mutationFn: async (templateId: number) => {
       return apiRequest(`/api/recurring-expenses/${templateId}/generate`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       });
     },
     onSuccess: () => {
@@ -153,6 +157,7 @@ export default function RecurringExpenses() {
     mutationFn: async (templateId: number) => {
       return apiRequest(`/api/recurring-expenses/${templateId}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
       });
     },
     onSuccess: () => {
@@ -233,7 +238,10 @@ export default function RecurringExpenses() {
               <Settings className="h-4 w-4" />
               Settings
             </Button>
-            <Button className="flex items-center gap-2">
+            <Button 
+              className="flex items-center gap-2"
+              onClick={() => setLocation("/recurring-expenses/create")}
+            >
               <Plus className="h-4 w-4" />
               Create Template
             </Button>
@@ -444,7 +452,7 @@ export default function RecurringExpenses() {
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            variant="destructive"
+                            className="text-red-600 focus:text-red-600"
                             onClick={() => deleteTemplateMutation.mutate(template.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -491,7 +499,6 @@ export default function RecurringExpenses() {
                               isActive: checked
                             })
                           }
-                          size="sm"
                         />
                         <span className="text-gray-600">
                           {template.isActive ? 'Active' : 'Inactive'}

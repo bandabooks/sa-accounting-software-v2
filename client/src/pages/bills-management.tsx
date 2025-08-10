@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import { 
   FileText, 
   Filter, 
@@ -89,6 +90,7 @@ interface Supplier {
 }
 
 export default function BillsManagement() {
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -128,7 +130,8 @@ export default function BillsManagement() {
     mutationFn: async ({ billId, comments }: { billId: number; comments?: string }) => {
       return apiRequest(`/api/bills/${billId}/approve`, {
         method: 'POST',
-        body: { comments },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comments }),
       });
     },
     onSuccess: () => {
@@ -153,7 +156,8 @@ export default function BillsManagement() {
     mutationFn: async ({ billId, reason }: { billId: number; reason: string }) => {
       return apiRequest(`/api/bills/${billId}/reject`, {
         method: 'POST',
-        body: { rejectionReason: reason },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejectionReason: reason }),
       });
     },
     onSuccess: () => {
@@ -178,6 +182,7 @@ export default function BillsManagement() {
     mutationFn: async (billId: number) => {
       return apiRequest(`/api/bills/${billId}/convert-to-expense`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       });
     },
     onSuccess: () => {
@@ -267,11 +272,18 @@ export default function BillsManagement() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => window.open('/api/bills/export', '_blank')}
+            >
               <Download className="h-4 w-4" />
               Export Bills
             </Button>
-            <Button className="flex items-center gap-2">
+            <Button 
+              className="flex items-center gap-2"
+              onClick={() => setLocation("/bills/create")}
+            >
               <Plus className="h-4 w-4" />
               Create Bill
             </Button>
@@ -623,7 +635,7 @@ export default function BillsManagement() {
                                 <Download className="mr-2 h-4 w-4" />
                                 Download PDF
                               </DropdownMenuItem>
-                              <DropdownMenuItem variant="destructive">
+                              <DropdownMenuItem className="text-red-600 focus:text-red-600">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
