@@ -66,10 +66,21 @@ export default function ExpensesPage() {
   });
 
   // Fetch current month metrics separately with company filtering
-  const { data: currentMonthMetrics } = useQuery<ExpenseMetrics>({
+  const { data: currentMonthMetrics, isLoading: metricsLoading } = useQuery<ExpenseMetrics>({
     queryKey: ['/api/expenses/metrics/current_month', user?.companyId],
-    queryFn: () => apiRequest(`/api/expenses/metrics/current_month`),
-    enabled: !!user?.companyId
+    queryFn: () => {
+      console.log('Fetching current month metrics...');
+      return apiRequest(`/api/expenses/metrics/current_month`);
+    },
+    enabled: !!user?.companyId,
+    staleTime: 0,
+    refetchOnMount: true,
+    onSuccess: (data) => {
+      console.log('Current month metrics received:', data);
+    },
+    onError: (error) => {
+      console.error('Error fetching current month metrics:', error);
+    }
   });
 
   // Fetch suppliers for filter
@@ -194,15 +205,14 @@ export default function ExpensesPage() {
       </div>
 
       {/* Metrics Cards */}
-      {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics.totalExpenses || "0")}</p>
-                  <p className="text-xs text-muted-foreground">{metrics.expenseCount || 0} expense entries</p>
+                  <p className="text-2xl font-bold">{formatCurrency(metrics?.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">{metrics?.expenseCount || 0} expense entries</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -214,8 +224,14 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">This Month</p>
-                  <p className="text-2xl font-bold">{formatCurrency(currentMonthMetrics?.totalExpenses || "0")}</p>
+                  {metricsLoading ? (
+                    <p className="text-2xl font-bold">Loading...</p>
+                  ) : (
+                    <p className="text-2xl font-bold">{formatCurrency(currentMonthMetrics?.totalExpenses || "0")}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">{currentMonthMetrics?.expenseCount || 0} entries</p>
+                  {/* Debug info */}
+                  <p className="text-xs text-blue-500">Raw: {currentMonthMetrics?.totalExpenses || "No data"}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -227,7 +243,7 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Paid Expenses</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(metrics.paidExpenses || "0")}</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(metrics?.paidExpenses || "0")}</p>
                 </div>
                 <CheckCircle2 className="h-8 w-8 text-green-600" />
               </div>
@@ -240,8 +256,8 @@ export default function ExpensesPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Average Expense</p>
                   <p className="text-2xl font-bold">{formatCurrency(
-                    metrics.expenseCount > 0 
-                      ? (parseFloat(metrics.totalExpenses) / metrics.expenseCount).toFixed(2)
+                    (metrics?.expenseCount || 0) > 0 
+                      ? (parseFloat(metrics?.totalExpenses || "0") / metrics.expenseCount).toFixed(2)
                       : "0"
                   )}</p>
                   <p className="text-xs text-muted-foreground">Per expense entry</p>
@@ -250,8 +266,7 @@ export default function ExpensesPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+      </div>
 
       {/* Filters */}
       <Card>
