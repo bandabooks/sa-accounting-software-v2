@@ -58,16 +58,18 @@ export default function ExpensesPage() {
     queryFn: () => apiRequest(`/api/expenses/${dateFilter}/${statusFilter}/${supplierFilter}/${categoryFilter}`),
   }) as { data: any[], isLoading: boolean };
 
-  // Fetch overall metrics
+  // Fetch overall metrics with company filtering
   const { data: metrics } = useQuery<ExpenseMetrics>({
-    queryKey: ['/api/expenses/metrics/all_time'],
+    queryKey: ['/api/expenses/metrics/all_time', user?.companyId],
     queryFn: () => apiRequest(`/api/expenses/metrics/all_time`),
+    enabled: !!user?.companyId
   });
 
-  // Fetch current month metrics separately  
+  // Fetch current month metrics separately with company filtering
   const { data: currentMonthMetrics } = useQuery<ExpenseMetrics>({
-    queryKey: ['/api/expenses/metrics/current_month'],
+    queryKey: ['/api/expenses/metrics/current_month', user?.companyId],
     queryFn: () => apiRequest(`/api/expenses/metrics/current_month`),
+    enabled: !!user?.companyId
   });
 
   // Fetch suppliers for filter
@@ -98,6 +100,8 @@ export default function ExpensesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics/all_time'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics/current_month'] });
       toast({
         title: "Expense Deleted",
         description: "The expense has been successfully deleted.",

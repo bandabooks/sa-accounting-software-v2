@@ -2060,7 +2060,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Expense Management Routes
   app.get("/api/expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      // CRITICAL: Always use actual companyId to prevent data leaks
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const expenses = await storage.getAllExpenses(companyId);
       res.json(expenses);
     } catch (error) {
@@ -2071,7 +2075,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/expenses/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      // CRITICAL: Always use actual companyId to prevent data leaks
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const dateFilter = req.query.dateFilter as string;
       const metrics = await storage.getExpenseMetrics(companyId, dateFilter);
       res.json(metrics);
@@ -2084,7 +2092,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add filtered expense endpoint that matches frontend expectations
   app.get("/api/expenses/metrics/:dateFilter", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      // CRITICAL: Always use actual companyId to prevent data leaks
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { dateFilter } = req.params;
       
       // Handle 'all_time' filter by passing undefined dateFilter 
@@ -2100,7 +2112,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add filtered expense listing endpoint
   app.get("/api/expenses/:dateFilter/:statusFilter/:supplierFilter/:categoryFilter", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
+      // CRITICAL: Always use actual companyId to prevent data leaks
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { dateFilter, statusFilter, supplierFilter, categoryFilter } = req.params;
       
       // Start with all expenses

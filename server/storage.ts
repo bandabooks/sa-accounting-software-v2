@@ -2861,6 +2861,7 @@ export class DatabaseStorage implements IStorage {
 
   // Enhanced Expenses with Supplier and Category Relations
   async getAllExpenses(companyId?: number): Promise<any[]> {
+    // CRITICAL: Always enforce company isolation for non-super-admin users
     let query = db
       .select({
         expense: expenses,
@@ -2871,8 +2872,12 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
       .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id));
 
+    // ALWAYS filter by company to prevent data leaks
     if (companyId) {
       query = query.where(eq(expenses.companyId, companyId));
+    } else {
+      // For super admin, still need to handle properly - don't show all companies mixed
+      query = query.where(sql`1=0`); // Return empty for undefined companyId
     }
 
     const result = await query.orderBy(desc(expenses.expenseDate));
@@ -3158,7 +3163,8 @@ export class DatabaseStorage implements IStorage {
     }>;
   }> {
     try {
-      let whereClause = companyId ? eq(expenses.companyId, companyId) : undefined;
+      // CRITICAL: Always enforce company filtering for metrics to prevent data leaks
+      let whereClause = companyId ? eq(expenses.companyId, companyId) : sql`1=0`;
       
       // Add date filtering
       if (dateFilter && dateFilter !== 'all_time') {
