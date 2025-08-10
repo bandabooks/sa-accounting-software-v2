@@ -56,17 +56,17 @@ export default function ExpensesPage() {
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ['/api/expenses', dateFilter, statusFilter, supplierFilter, categoryFilter],
     queryFn: () => apiRequest(`/api/expenses/${dateFilter}/${statusFilter}/${supplierFilter}/${categoryFilter}`),
-  }) as { data: any[], isLoading: boolean };
+  });
 
   // Fetch overall metrics (all-time) for Total Expenses card
-  const { data: allTimeMetrics } = useQuery<ExpenseMetrics>({
+  const { data: allTimeMetrics } = useQuery({
     queryKey: ['/api/expenses/metrics/all_time', user?.companyId],
     queryFn: () => apiRequest(`/api/expenses/metrics/all_time`),
     enabled: !!user?.companyId
   });
 
   // Fetch filtered metrics based on current date filter selection
-  const { data: filteredMetrics, isLoading: metricsLoading } = useQuery<ExpenseMetrics>({
+  const { data: filteredMetrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['/api/expenses/metrics', dateFilter, user?.companyId],
     queryFn: () => {
       console.log(`Fetching ${dateFilter} metrics...`);
@@ -80,7 +80,7 @@ export default function ExpensesPage() {
   // Fetch suppliers for filter
   const { data: suppliers } = useQuery({
     queryKey: ['/api/suppliers'],
-  }) as { data: any[] };
+  });
 
   // Fetch categories for filter (including Cost of Sales)
   const { data: categories } = useQuery({
@@ -88,7 +88,7 @@ export default function ExpensesPage() {
     select: (data: any) => data?.filter((account: any) => 
       account.accountType === 'Expense' || account.accountType === 'Cost of Sales'
     ),
-  }) as { data: any[] };
+  });
 
   const formatCurrency = (amount: string | number) => {
     return `R ${parseFloat(amount.toString()).toLocaleString('en-ZA', {
@@ -203,8 +203,8 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                  <p className="text-2xl font-bold">{formatCurrency(allTimeMetrics?.totalExpenses || "0")}</p>
-                  <p className="text-xs text-muted-foreground">{allTimeMetrics?.expenseCount || 0} expense entries</p>
+                  <p className="text-2xl font-bold">{formatCurrency((allTimeMetrics as any)?.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">{(allTimeMetrics as any)?.expenseCount || 0} expense entries</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -221,10 +221,10 @@ export default function ExpensesPage() {
                      dateFilter === 'current_quarter' ? 'This Quarter' :
                      dateFilter === 'current_year' ? 'This Year' : 'Selected Period'}
                   </p>
-                  <p className="text-2xl font-bold">{formatCurrency(filteredMetrics?.totalExpenses || allTimeMetrics?.totalExpenses || "0")}</p>
-                  <p className="text-xs text-muted-foreground">{filteredMetrics?.expenseCount || allTimeMetrics?.expenseCount || 0} entries</p>
+                  <p className="text-2xl font-bold">{formatCurrency((filteredMetrics as any)?.totalExpenses || (allTimeMetrics as any)?.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">{(filteredMetrics as any)?.expenseCount || (allTimeMetrics as any)?.expenseCount || 0} entries</p>
                   {/* Debug info */}
-                  <p className="text-xs text-blue-500">Filtered: {filteredMetrics?.totalExpenses || "No data"} | All: {allTimeMetrics?.totalExpenses || "No data"}</p>
+                  <p className="text-xs text-blue-500">Filtered: {(filteredMetrics as any)?.totalExpenses || "No data"} | All: {(allTimeMetrics as any)?.totalExpenses || "No data"}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -236,7 +236,7 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Unpaid Expenses</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatCurrency(filteredMetrics?.unpaidExpenses || allTimeMetrics?.unpaidExpenses || "0")}</p>
+                  <p className="text-2xl font-bold text-orange-600">{formatCurrency((filteredMetrics as any)?.unpaidExpenses || (allTimeMetrics as any)?.unpaidExpenses || "0")}</p>
                   <p className="text-xs text-muted-foreground">Outstanding payments</p>
                 </div>
                 <XCircle className="h-8 w-8 text-orange-600" />
@@ -250,8 +250,8 @@ export default function ExpensesPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Average Expense</p>
                   <p className="text-2xl font-bold">{formatCurrency(
-                    (allTimeMetrics?.expenseCount || 0) > 0 
-                      ? (parseFloat(allTimeMetrics?.totalExpenses || "0") / allTimeMetrics.expenseCount).toFixed(2)
+                    ((allTimeMetrics as any)?.expenseCount || 0) > 0 
+                      ? (parseFloat((allTimeMetrics as any)?.totalExpenses || "0") / (allTimeMetrics as any).expenseCount).toFixed(2)
                       : "0"
                   )}</p>
                   <p className="text-xs text-muted-foreground">Per expense entry</p>
