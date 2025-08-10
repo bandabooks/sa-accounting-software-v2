@@ -833,6 +833,7 @@ export const numberSequences = pgTable("number_sequences", {
 }));
 
 // Financial reporting tables
+// Enhanced Expense Management with Professional Features
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(), // Client/Company reference
@@ -848,9 +849,24 @@ export const expenses = pgTable("expenses", {
   expenseDate: date("expense_date").notNull(),
   paidStatus: text("paid_status").notNull().default("Unpaid"), // 'Paid', 'Unpaid', 'Partially Paid'
   attachmentUrl: text("attachment_url"), // File upload URL
-  // New fields for standalone expense module
+  // Professional Expense Management Fields
   supplierInvoiceNumber: text("supplier_invoice_number"), // Supplier's invoice/reference number with duplicate prevention
   internalExpenseRef: text("internal_expense_ref").notNull(), // Auto-generated internal reference (EXP-2025-0001)
+  billId: integer("bill_id"), // Reference to formal bill/accounts payable
+  purchaseOrderId: integer("purchase_order_id"), // Reference to originating purchase order
+  approvalStatus: text("approval_status").notNull().default("pending"), // pending, approved, rejected
+  approvedBy: integer("approved_by"), // User who approved the expense
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by"), // User who rejected the expense
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  recurringExpenseId: integer("recurring_expense_id"), // Reference to recurring expense template
+  isRecurring: boolean("is_recurring").default(false),
+  expenseType: text("expense_type").notNull().default("one_time"), // one_time, recurring, reimbursement
+  reimbursementStatus: text("reimbursement_status"), // pending, approved, paid (for employee reimbursements)
+  employeeId: integer("employee_id"), // For employee expense reimbursements
+  projectId: integer("project_id"), // For project-based expense tracking
+  departmentId: integer("department_id"), // For departmental expense allocation
   createdBy: integer("created_by").notNull(), // User who created the expense
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -860,9 +876,127 @@ export const expenses = pgTable("expenses", {
   categoryIdx: index("expenses_category_idx").on(table.categoryId),
   bankAccountIdx: index("expenses_bank_account_idx").on(table.bankAccountId),
   dateIdx: index("expenses_date_idx").on(table.expenseDate),
+  approvalStatusIdx: index("expenses_approval_status_idx").on(table.approvalStatus),
+  billIdx: index("expenses_bill_idx").on(table.billId),
+  purchaseOrderIdx: index("expenses_purchase_order_idx").on(table.purchaseOrderId),
+  recurringIdx: index("expenses_recurring_idx").on(table.recurringExpenseId),
+  typeIdx: index("expenses_type_idx").on(table.expenseType),
   // Unique constraint for supplier invoice number per company to prevent duplicates
   companySupplierInvoiceUnique: unique().on(table.companyId, table.supplierInvoiceNumber),
   internalRefIdx: index("expenses_internal_ref_idx").on(table.internalExpenseRef),
+}));
+
+// Bills/Accounts Payable - Formal supplier invoices requiring approval
+export const bills = pgTable("bills", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  billNumber: text("bill_number").notNull(), // Auto-generated BILL-2025-0001
+  supplierId: integer("supplier_id").notNull().references(() => suppliers.id),
+  supplierInvoiceNumber: text("supplier_invoice_number").notNull(), // Supplier's invoice number
+  billDate: date("bill_date").notNull(), // Date on supplier's invoice
+  dueDate: date("due_date").notNull(), // Payment due date
+  description: text("description").notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default("0.00"),
+  status: text("status").notNull().default("draft"), // draft, pending_approval, approved, rejected, paid, overdue
+  approvalStatus: text("approval_status").notNull().default("pending"), // pending, approved, rejected
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id), // 3-way matching
+  goodsReceiptId: integer("goods_receipt_id").references(() => goodsReceipts.id), // 3-way matching
+  paymentTerms: integer("payment_terms").default(30), // Days
+  attachmentUrl: text("attachment_url"), // Supplier invoice attachment
+  notes: text("notes"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyBillUnique: unique().on(table.companyId, table.billNumber),
+  companySupplierInvoiceUnique: unique().on(table.companyId, table.supplierInvoiceNumber),
+  companyIdx: index("bills_company_idx").on(table.companyId),
+  supplierIdx: index("bills_supplier_idx").on(table.supplierId),
+  statusIdx: index("bills_status_idx").on(table.status),
+  approvalStatusIdx: index("bills_approval_status_idx").on(table.approvalStatus),
+  dueDateIdx: index("bills_due_date_idx").on(table.dueDate),
+  purchaseOrderIdx: index("bills_purchase_order_idx").on(table.purchaseOrderId),
+}));
+
+// Bill Line Items - Detailed breakdown of bills
+export const billItems = pgTable("bill_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  billId: integer("bill_id").notNull().references(() => bills.id),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default("1.00"),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatType: text("vat_type").notNull().default("Inclusive"), // Inclusive, Exclusive, No VAT
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  lineTotal: decimal("line_total", { precision: 10, scale: 2 }).notNull(),
+  expenseCategoryId: integer("expense_category_id"), // Chart of Accounts reference
+  projectId: integer("project_id"), // For project cost allocation
+  departmentId: integer("department_id"), // For department cost allocation
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bill_items_company_idx").on(table.companyId),
+  billIdx: index("bill_items_bill_idx").on(table.billId),
+}));
+
+// Recurring Expenses - Templates for automated expense creation
+export const recurringExpenses = pgTable("recurring_expenses", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  templateName: text("template_name").notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  description: text("description").notNull(),
+  categoryId: integer("category_id").notNull(), // Chart of Accounts reference
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  vatType: text("vat_type").notNull().default("No VAT"),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  frequency: text("frequency").notNull(), // monthly, quarterly, annually, weekly
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"), // Optional end date
+  nextDueDate: date("next_due_date").notNull(),
+  autoApprove: boolean("auto_approve").default(false), // Auto-approve generated expenses
+  isActive: boolean("is_active").default(true),
+  reminderDays: integer("reminder_days").default(7), // Days before due date to remind
+  notes: text("notes"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("recurring_expenses_company_idx").on(table.companyId),
+  supplierIdx: index("recurring_expenses_supplier_idx").on(table.supplierId),
+  categoryIdx: index("recurring_expenses_category_idx").on(table.categoryId),
+  nextDueDateIdx: index("recurring_expenses_next_due_date_idx").on(table.nextDueDate),
+  activeIdx: index("recurring_expenses_active_idx").on(table.isActive),
+}));
+
+// Expense Approval Workflow
+export const expenseApprovals = pgTable("expense_approvals", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  expenseId: integer("expense_id").references(() => expenses.id),
+  billId: integer("bill_id").references(() => bills.id),
+  approverLevel: integer("approver_level").notNull().default(1), // 1, 2, 3 for multi-level approval
+  approverId: integer("approver_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  comments: text("comments"),
+  approvalLimit: decimal("approval_limit", { precision: 10, scale: 2 }), // Maximum amount this approver can approve
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("expense_approvals_company_idx").on(table.companyId),
+  expenseIdx: index("expense_approvals_expense_idx").on(table.expenseId),
+  billIdx: index("expense_approvals_bill_idx").on(table.billId),
+  approverIdx: index("expense_approvals_approver_idx").on(table.approverId),
+  statusIdx: index("expense_approvals_status_idx").on(table.status),
 }));
 
 export const vatReturns = pgTable("vat_returns", {
@@ -2011,6 +2145,36 @@ export const insertPurchaseRequisitionItemSchema = createInsertSchema(purchaseRe
   createdAt: true,
 });
 
+// Professional Expense Management - Insert Schemas
+export const insertBillSchema = createInsertSchema(bills).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBillItemSchema = createInsertSchema(billItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRecurringExpenseSchema = createInsertSchema(recurringExpenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExpenseApprovalSchema = createInsertSchema(expenseApprovals).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Updated expense schema to include new fields
+export const insertExpenseSchemaEnhanced = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type exports
 export type GoodsReceipt = typeof goodsReceipts.$inferSelect;
 export type InsertGoodsReceipt = z.infer<typeof insertGoodsReceiptSchema>;
@@ -2020,6 +2184,18 @@ export type PurchaseRequisition = typeof purchaseRequisitions.$inferSelect;
 export type InsertPurchaseRequisition = z.infer<typeof insertPurchaseRequisitionSchema>;
 export type PurchaseRequisitionItem = typeof purchaseRequisitionItems.$inferSelect;
 export type InsertPurchaseRequisitionItem = z.infer<typeof insertPurchaseRequisitionItemSchema>;
+
+// Professional Expense Management Types
+export type Bill = typeof bills.$inferSelect;
+export type InsertBill = z.infer<typeof insertBillSchema>;
+export type BillItem = typeof billItems.$inferSelect;
+export type InsertBillItem = z.infer<typeof insertBillItemSchema>;
+export type RecurringExpense = typeof recurringExpenses.$inferSelect;
+export type InsertRecurringExpense = z.infer<typeof insertRecurringExpenseSchema>;
+export type ExpenseApproval = typeof expenseApprovals.$inferSelect;
+export type InsertExpenseApproval = z.infer<typeof insertExpenseApprovalSchema>;
+export type EnhancedExpense = typeof expenses.$inferSelect;
+export type InsertExpenseEnhanced = z.infer<typeof insertExpenseSchemaEnhanced>;
 
 // Extended types for API responses
 export type InvoiceWithCustomer = Invoice & { customer: Customer };
@@ -2034,6 +2210,26 @@ export type PurchaseRequisitionWithUser = PurchaseRequisition & { requestedByUse
 export type PurchaseRequisitionWithItems = PurchaseRequisition & { items: PurchaseRequisitionItem[]; requestedByUser: User };
 export type SupplierPaymentWithSupplier = SupplierPayment & { supplier: Supplier };
 export type SupplierPaymentWithPurchaseOrder = SupplierPayment & { purchaseOrder?: PurchaseOrder };
+
+// Professional Expense Management Extended Types
+export type BillWithSupplier = Bill & { supplier: Supplier };
+export type BillWithItems = Bill & { items: BillItem[]; supplier: Supplier };
+export type BillWithFullDetails = Bill & { 
+  items: BillItem[]; 
+  supplier: Supplier; 
+  purchaseOrder?: PurchaseOrder;
+  goodsReceipt?: GoodsReceipt;
+  approvals: ExpenseApproval[];
+};
+export type ExpenseWithSupplier = EnhancedExpense & { supplier?: Supplier };
+export type ExpenseWithFullDetails = EnhancedExpense & { 
+  supplier?: Supplier; 
+  bill?: Bill;
+  purchaseOrder?: PurchaseOrder;
+  recurringExpense?: RecurringExpense;
+  approvals: ExpenseApproval[];
+};
+export type RecurringExpenseWithSupplier = RecurringExpense & { supplier?: Supplier };
 
 // Company settings table
 export const companySettings = pgTable("company_settings", {

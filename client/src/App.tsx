@@ -24,6 +24,9 @@ import FinancialReportsDetailed from "@/pages/financial-reports-detailed";
 import BusinessReports from "@/pages/business-reports";
 import GeneralReports from "@/pages/general-reports";
 import ExpensesStandalone from "@/pages/expenses-standalone";
+import BillsManagement from "@/pages/bills-management";
+import RecurringExpenses from "@/pages/recurring-expenses";
+import ExpenseApprovals from "@/pages/expense-approvals";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
 import PurchaseOrderCreate from "@/pages/purchase-order-create";
@@ -220,6 +223,21 @@ function AuthenticatedApp() {
         <Route path="/expenses">
           <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
             <ExpensesStandalone />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/bills">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <BillsManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/recurring-expenses">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <RecurringExpenses />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/expense-approvals">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <ExpenseApprovals />
           </ProtectedRoute>
         </Route>
         <Route path="/invoices">

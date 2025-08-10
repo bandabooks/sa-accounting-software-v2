@@ -41,11 +41,14 @@ const navigationGroups = [
   },
   {
     id: "expenses",
-    label: "Expenses",
+    label: "Expenses & Bills",
     icon: Receipt,
     module: "expenses",
     items: [
-      { path: "/expenses", label: "Expense Management", icon: Receipt, permission: "EXPENSE_VIEW", module: "expenses" }
+      { path: "/expenses", label: "Expense Management", icon: Receipt, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/bills", label: "Bills & Accounts Payable", icon: FileText, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/recurring-expenses", label: "Recurring Expenses", icon: Clock, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/expense-approvals", label: "Expense Approvals", icon: CheckCircle, permission: "EXPENSE_VIEW", module: "expenses" }
     ]
   },
   {
