@@ -5,11 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { DollarSign, FileText, Filter, Plus, Search, Calendar, TrendingDown, Receipt, CreditCard } from "lucide-react";
+import { DollarSign, FileText, Filter, Plus, Search, Calendar, TrendingDown, Receipt, CreditCard, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import AddExpenseModal from "@/components/expenses/AddExpenseModal";
 import { format } from "date-fns";
 
@@ -49,6 +52,8 @@ export default function ExpensesStandalone() {
   const queryClient = useQueryClient();
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("all_suppliers");
   const [selectedCategory, setSelectedCategory] = useState("all_categories");
@@ -98,6 +103,85 @@ export default function ExpensesStandalone() {
 
   const formatCurrency = (amount: string) => {
     return `R ${Number(amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`;
+  };
+
+  // Delete expense mutation
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (expenseId: number) => {
+      const response = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete expense');
+      }
+      return response.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/expenses/metrics/${selectedPeriod}`] });
+      toast({
+        title: "Success",
+        description: "Expense deleted successfully",
+      });
+      setDeletingExpense(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete expense",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update expense mutation  
+  const updateExpenseMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await fetch(`/api/expenses/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update expense');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/expenses/metrics/${selectedPeriod}`] });
+      toast({
+        title: "Success",
+        description: "Expense updated successfully",
+      });
+      setEditingExpense(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update expense",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteExpense = (expense: Expense) => {
+    setDeletingExpense(expense);
+  };
+
+  const confirmDeleteExpense = () => {
+    if (deletingExpense) {
+      deleteExpenseMutation.mutate(deletingExpense.id);
+    }
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
   };
 
   return (
@@ -348,11 +432,36 @@ export default function ExpensesStandalone() {
                         <span>{format(new Date(expense.expenseDate), "dd MMM yyyy")}</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold">{formatCurrency(expense.amount)}</div>
-                      <div className="text-sm text-muted-foreground">
-                        VAT: {formatCurrency(expense.vatAmount)}
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-lg font-bold">{formatCurrency(expense.amount)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          VAT: {formatCurrency(expense.vatAmount)}
+                        </div>
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditExpense(expense)}
+                            className="flex items-center gap-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Edit Expense
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteExpense(expense)}
+                            className="flex items-center gap-2 text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Expense
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </Card>
@@ -367,6 +476,40 @@ export default function ExpensesStandalone() {
           open={isAddModalOpen}
           onOpenChange={setIsAddModalOpen}
         />
+
+        {/* Edit Expense Modal */}
+        {editingExpense && (
+          <AddExpenseModal
+            open={!!editingExpense}
+            onOpenChange={(open) => !open && setEditingExpense(null)}
+            editingExpense={editingExpense}
+          />
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deletingExpense} onOpenChange={(open) => !open && setDeletingExpense(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the expense "{deletingExpense?.description}"? 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeletingExpense(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteExpense}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteExpenseMutation.isPending}
+              >
+                {deleteExpenseMutation.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
