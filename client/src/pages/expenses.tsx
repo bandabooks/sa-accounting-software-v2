@@ -58,10 +58,16 @@ export default function ExpensesPage() {
     queryFn: () => apiRequest(`/api/expenses/${dateFilter}/${statusFilter}/${supplierFilter}/${categoryFilter}`),
   }) as { data: any[], isLoading: boolean };
 
-  // Fetch expense metrics
+  // Fetch overall metrics
   const { data: metrics } = useQuery<ExpenseMetrics>({
-    queryKey: ['/api/expenses/metrics', dateFilter],
-    queryFn: () => apiRequest(`/api/expenses/metrics/${dateFilter}`),
+    queryKey: ['/api/expenses/metrics/all_time'],
+    queryFn: () => apiRequest(`/api/expenses/metrics/all_time`),
+  });
+
+  // Fetch current month metrics separately  
+  const { data: currentMonthMetrics } = useQuery<ExpenseMetrics>({
+    queryKey: ['/api/expenses/metrics/current_month'],
+    queryFn: () => apiRequest(`/api/expenses/metrics/current_month`),
   });
 
   // Fetch suppliers for filter
@@ -204,8 +210,8 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">This Month</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics.totalExpenses || "0")}</p>
-                  <p className="text-xs text-muted-foreground">Current month expenses</p>
+                  <p className="text-2xl font-bold">{formatCurrency(currentMonthMetrics?.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">{currentMonthMetrics?.expenseCount || 0} entries</p>
                 </div>
                 <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>

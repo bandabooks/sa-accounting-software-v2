@@ -3164,6 +3164,7 @@ export class DatabaseStorage implements IStorage {
       if (dateFilter && dateFilter !== 'all_time') {
         const now = new Date();
         let startDate: Date;
+        let endDate: Date = now;
         
         switch (dateFilter) {
           case 'current_month':
@@ -3171,6 +3172,7 @@ export class DatabaseStorage implements IStorage {
             break;
           case 'last_month':
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
             break;
           case 'current_quarter':
             const quarter = Math.floor(now.getMonth() / 3);
@@ -3184,9 +3186,16 @@ export class DatabaseStorage implements IStorage {
         }
         
         if (whereClause) {
-          whereClause = and(whereClause, sql`${expenses.expenseDate} >= ${startDate}`);
+          whereClause = and(
+            whereClause, 
+            sql`${expenses.expenseDate} >= ${startDate}`,
+            sql`${expenses.expenseDate} <= ${endDate}`
+          );
         } else {
-          whereClause = sql`${expenses.expenseDate} >= ${startDate}`;
+          whereClause = and(
+            sql`${expenses.expenseDate} >= ${startDate}`,
+            sql`${expenses.expenseDate} <= ${endDate}`
+          );
         }
       }
 

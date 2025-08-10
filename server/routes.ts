@@ -2085,8 +2085,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses/metrics/:dateFilter", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
-      const dateFilter = req.params.dateFilter;
-      const metrics = await storage.getExpenseMetrics(companyId, dateFilter);
+      const { dateFilter } = req.params;
+      
+      // Handle 'all_time' filter by passing undefined dateFilter 
+      const filterToUse = dateFilter === 'all_time' ? undefined : dateFilter;
+      const metrics = await storage.getExpenseMetrics(companyId, filterToUse);
       res.json(metrics);
     } catch (error) {
       console.error("Failed to fetch expense metrics:", error);
