@@ -6,12 +6,29 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Upload, Calculator, DollarSign, Plus } from "lucide-react";
+import { Calendar, Upload, Calculator, DollarSign, Plus, Trash2, Package, Repeat, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import AddSupplierModal from "@/components/suppliers/AddSupplierModal";
+
+interface LineItem {
+  id: string;
+  description: string;
+  categoryId?: number;
+  category: string;
+  productId?: number;
+  productName?: string;
+  quantity: number;
+  unitPrice: string;
+  amount: string;
+  vatType: "Inclusive" | "Exclusive" | "No VAT";
+  vatRate: string;
+  vatAmount: string;
+}
 
 interface ExpenseFormData {
   companyId: number;
@@ -26,9 +43,16 @@ interface ExpenseFormData {
   vatAmount: string;
   expenseDate: string;
   paidStatus: "Paid" | "Unpaid" | "Partially Paid";
-  supplierInvoiceNumber?: string; // New field for supplier invoice number
+  supplierInvoiceNumber?: string;
   attachmentUrl?: string;
   createdBy: number;
+  // Recurring expense fields
+  isRecurring: boolean;
+  recurringFrequency?: "weekly" | "monthly" | "yearly";
+  recurringStartDate?: string;
+  recurringEndDate?: string;
+  // Line items
+  lineItems: LineItem[];
 }
 
 interface AddExpenseModalProps {
@@ -55,12 +79,21 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
     categoryId: undefined,
     category: "",
     createdBy: user?.id || 0,
+    isRecurring: false,
+    recurringFrequency: "monthly",
+    recurringStartDate: new Date().toISOString().split('T')[0],
+    recurringEndDate: "",
+    lineItems: [],
   });
 
   const [netAmount, setNetAmount] = useState("0.00");
   const [grossAmount, setGrossAmount] = useState("0.00");
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState("basic");
+  const [totalNetAmount, setTotalNetAmount] = useState("0.00");
+  const [totalVatAmount, setTotalVatAmount] = useState("0.00");
+  const [totalGrossAmount, setTotalGrossAmount] = useState("0.00");
 
   // Effect to populate form when editing
   useEffect(() => {
@@ -80,6 +113,11 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
         paidStatus: editingExpense.paidStatus,
         supplierInvoiceNumber: editingExpense.supplierInvoiceNumber || "",
         createdBy: editingExpense.createdBy,
+        isRecurring: false,
+        recurringFrequency: "monthly",
+        recurringStartDate: new Date().toISOString().split('T')[0],
+        recurringEndDate: "",
+        lineItems: [],
       });
       setNetAmount(editingExpense.amount);
       setGrossAmount((parseFloat(editingExpense.amount) + parseFloat(editingExpense.vatAmount)).toFixed(2));
@@ -98,6 +136,11 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
         categoryId: undefined,
         category: "",
         createdBy: user?.id || 0,
+        isRecurring: false,
+        recurringFrequency: "monthly",
+        recurringStartDate: new Date().toISOString().split('T')[0],
+        recurringEndDate: "",
+        lineItems: [],
       });
       setNetAmount("0.00");
       setGrossAmount("0.00");
@@ -119,6 +162,12 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
   // Fetch Chart of Accounts (expense categories only)
   const { data: accounts } = useQuery({
     queryKey: ['/api/chart-of-accounts'],
+    enabled: open,
+  });
+
+  // Fetch Products
+  const { data: products } = useQuery({
+    queryKey: ['/api/products'],
     enabled: open,
   });
 
@@ -201,6 +250,11 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
       categoryId: undefined,
       category: "",
       createdBy: user?.id || 0,
+      isRecurring: false,
+      recurringFrequency: "monthly",
+      recurringStartDate: new Date().toISOString().split('T')[0],
+      recurringEndDate: "",
+      lineItems: [],
     });
     setNetAmount("0.00");
     setGrossAmount("0.00");
@@ -241,10 +295,104 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
     setShowAddSupplier(false);
   };
 
+  // Line item management functions
+  const addLineItem = () => {
+    const newLineItem: LineItem = {
+      id: Date.now().toString(),
+      description: "",
+      categoryId: undefined,
+      category: "",
+      productId: undefined,
+      productName: "",
+      quantity: 1,
+      unitPrice: "0.00",
+      amount: "0.00",
+      vatType: "No VAT",
+      vatRate: "15.00",
+      vatAmount: "0.00",
+    };
+    setFormData(prev => ({
+      ...prev,
+      lineItems: [...prev.lineItems, newLineItem]
+    }));
+  };
+
+  const removeLineItem = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      lineItems: prev.lineItems.filter(item => item.id !== id)
+    }));
+  };
+
+  const updateLineItem = (id: string, updates: Partial<LineItem>) => {
+    setFormData(prev => ({
+      ...prev,
+      lineItems: prev.lineItems.map(item => 
+        item.id === id ? { ...item, ...updates } : item
+      )
+    }));
+  };
+
+  const calculateLineItemAmount = (lineItem: LineItem) => {
+    const quantity = lineItem.quantity || 1;
+    const unitPrice = parseFloat(lineItem.unitPrice) || 0;
+    const amount = quantity * unitPrice;
+    const vatRate = parseFloat(lineItem.vatRate) || 0;
+
+    let netAmount, vatAmount, grossAmount;
+
+    if (lineItem.vatType === "No VAT") {
+      netAmount = amount;
+      vatAmount = 0;
+      grossAmount = amount;
+    } else if (lineItem.vatType === "Inclusive") {
+      netAmount = amount / (1 + vatRate / 100);
+      vatAmount = amount - netAmount;
+      grossAmount = amount;
+    } else { // Exclusive
+      netAmount = amount;
+      vatAmount = (amount * vatRate) / 100;
+      grossAmount = amount + vatAmount;
+    }
+
+    return {
+      amount: netAmount.toFixed(2),
+      vatAmount: vatAmount.toFixed(2),
+      grossAmount: grossAmount.toFixed(2)
+    };
+  };
+
+  // Calculate totals from line items
+  useEffect(() => {
+    if (formData.lineItems.length > 0) {
+      let totalNet = 0;
+      let totalVat = 0;
+      let totalGross = 0;
+
+      formData.lineItems.forEach(item => {
+        const calculated = calculateLineItemAmount(item);
+        totalNet += parseFloat(calculated.amount);
+        totalVat += parseFloat(calculated.vatAmount);
+        totalGross += parseFloat(calculated.grossAmount);
+      });
+
+      setTotalNetAmount(totalNet.toFixed(2));
+      setTotalVatAmount(totalVat.toFixed(2));
+      setTotalGrossAmount(totalGross.toFixed(2));
+
+      // Update main form data with totals
+      setFormData(prev => ({
+        ...prev,
+        amount: totalNet.toFixed(2),
+        vatAmount: totalVat.toFixed(2)
+      }));
+    }
+  }, [formData.lineItems]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0 pb-4 border-b">
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
@@ -253,7 +401,24 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
-            <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 min-h-0">
+            <div className="flex-1 overflow-y-auto px-2 py-4 min-h-0">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic" className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Basic Details
+                  </TabsTrigger>
+                  <TabsTrigger value="line-items" className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Line Items
+                  </TabsTrigger>
+                  <TabsTrigger value="recurring" className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4" />
+                    Recurring Options
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="basic" className="space-y-4 mt-4">
               {/* Supplier Field with Quick Add */}
               <div className="space-y-2">
                 <Label htmlFor="supplier">Supplier</Label>
@@ -352,6 +517,39 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Recurring Expense Checkbox */}
+              <div className="flex items-center space-x-2 p-4 bg-blue-50 rounded-lg border">
+                <Checkbox
+                  id="isRecurring"
+                  checked={formData.isRecurring}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, isRecurring: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="isRecurring" className="text-sm font-medium">
+                  Make this a recurring expense
+                </Label>
+                <div className="ml-auto">
+                  {formData.isRecurring && (
+                    <Select
+                      value={formData.recurringFrequency}
+                      onValueChange={(value: "weekly" | "monthly" | "yearly") =>
+                        setFormData(prev => ({ ...prev, recurringFrequency: value }))
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
 
               {/* Amount and VAT Section */}
@@ -526,6 +724,284 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                   </div>
                 </div>
               </div>
+                </TabsContent>
+
+                <TabsContent value="line-items" className="space-y-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Line Items</h3>
+                      <p className="text-sm text-gray-600">Add multiple expense items with products or categories</p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={addLineItem}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Line Item
+                    </Button>
+                  </div>
+
+                  {formData.lineItems.length > 0 ? (
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[200px]">Description</TableHead>
+                            <TableHead className="w-[150px]">Category/Product</TableHead>
+                            <TableHead className="w-[80px]">Qty</TableHead>
+                            <TableHead className="w-[100px]">Unit Price</TableHead>
+                            <TableHead className="w-[80px]">VAT Type</TableHead>
+                            <TableHead className="w-[80px]">VAT Rate</TableHead>
+                            <TableHead className="w-[100px]">Net Amount</TableHead>
+                            <TableHead className="w-[100px]">VAT Amount</TableHead>
+                            <TableHead className="w-[100px]">Total</TableHead>
+                            <TableHead className="w-[50px]">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {formData.lineItems.map((item) => {
+                            const calculated = calculateLineItemAmount(item);
+                            return (
+                              <TableRow key={item.id}>
+                                <TableCell>
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
+                                    placeholder="Item description"
+                                    className="w-full"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-2">
+                                    <Select
+                                      value={item.productId ? `product-${item.productId}` : item.categoryId ? `category-${item.categoryId}` : ""}
+                                      onValueChange={(value) => {
+                                        if (value.startsWith('product-')) {
+                                          const productId = parseInt(value.replace('product-', ''));
+                                          const product = (products as any)?.find((p: any) => p.id === productId);
+                                          updateLineItem(item.id, {
+                                            productId,
+                                            productName: product?.name || "",
+                                            categoryId: undefined,
+                                            category: "",
+                                            unitPrice: product?.price || "0.00"
+                                          });
+                                        } else if (value.startsWith('category-')) {
+                                          const categoryId = parseInt(value.replace('category-', ''));
+                                          const account = expenseAccounts.find((a: any) => a.id === categoryId);
+                                          updateLineItem(item.id, {
+                                            categoryId,
+                                            category: account?.accountName || "",
+                                            productId: undefined,
+                                            productName: ""
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select category or product" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <div className="px-2 py-1 text-xs font-semibold text-gray-500">Products</div>
+                                        {(products as any)?.map((product: any) => (
+                                          <SelectItem key={`product-${product.id}`} value={`product-${product.id}`}>
+                                            📦 {product.name} - R{product.price}
+                                          </SelectItem>
+                                        ))}
+                                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 border-t mt-1 pt-2">Categories</div>
+                                        {expenseAccounts.map((account: any) => (
+                                          <SelectItem key={`category-${account.id}`} value={`category-${account.id}`}>
+                                            📁 {account.accountName}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    step="0.01"
+                                    value={item.quantity}
+                                    onChange={(e) => updateLineItem(item.id, { quantity: parseFloat(e.target.value) || 1 })}
+                                    className="w-full"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.unitPrice}
+                                    onChange={(e) => updateLineItem(item.id, { unitPrice: e.target.value })}
+                                    className="w-full"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={item.vatType}
+                                    onValueChange={(value: "Inclusive" | "Exclusive" | "No VAT") =>
+                                      updateLineItem(item.id, { vatType: value })
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Exclusive">Exclusive</SelectItem>
+                                      <SelectItem value="Inclusive">Inclusive</SelectItem>
+                                      <SelectItem value="No VAT">No VAT</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.vatRate}
+                                    onChange={(e) => updateLineItem(item.id, { vatRate: e.target.value })}
+                                    disabled={item.vatType === "No VAT"}
+                                    className="w-full"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <span className="font-medium">R {calculated.amount}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="font-medium">R {calculated.vatAmount}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="font-bold">R {calculated.grossAmount}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeLineItem(item.id)}
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+
+                      {/* Line Items Totals */}
+                      <div className="bg-gray-50 p-4 border-t">
+                        <div className="flex justify-end space-x-8">
+                          <div className="text-sm">
+                            <span className="text-gray-600">Net Total: </span>
+                            <span className="font-semibold">R {totalNetAmount}</span>
+                          </div>
+                          <div className="text-sm">
+                            <span className="text-gray-600">VAT Total: </span>
+                            <span className="font-semibold">R {totalVatAmount}</span>
+                          </div>
+                          <div className="text-lg">
+                            <span className="text-gray-600">Grand Total: </span>
+                            <span className="font-bold">R {totalGrossAmount}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No line items added yet. Click "Add Line Item" to get started.</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="recurring" className="space-y-4 mt-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">Recurring Expense Settings</h3>
+                      <p className="text-sm text-gray-600">Configure automatic recurring for this expense</p>
+                    </div>
+
+                    <div className="flex items-center space-x-2 p-4 bg-blue-50 rounded-lg border">
+                      <Checkbox
+                        id="isRecurringTab"
+                        checked={formData.isRecurring}
+                        onCheckedChange={(checked) => 
+                          setFormData(prev => ({ ...prev, isRecurring: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="isRecurringTab" className="text-sm font-medium">
+                        Enable recurring expense
+                      </Label>
+                    </div>
+
+                    {formData.isRecurring && (
+                      <div className="space-y-4 p-4 border rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="frequency">Frequency</Label>
+                            <Select
+                              value={formData.recurringFrequency}
+                              onValueChange={(value: "weekly" | "monthly" | "yearly") =>
+                                setFormData(prev => ({ ...prev, recurringFrequency: value }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="yearly">Yearly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="startDate">Start Date</Label>
+                            <Input
+                              id="startDate"
+                              type="date"
+                              value={formData.recurringStartDate}
+                              onChange={(e) => setFormData(prev => ({ ...prev, recurringStartDate: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="endDate">End Date (Optional)</Label>
+                          <Input
+                            id="endDate"
+                            type="date"
+                            value={formData.recurringEndDate}
+                            onChange={(e) => setFormData(prev => ({ ...prev, recurringEndDate: e.target.value }))}
+                            placeholder="Leave blank for indefinite recurring"
+                          />
+                        </div>
+
+                        <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                          <div className="flex items-start gap-2">
+                            <Calendar className="h-4 w-4 text-yellow-600 mt-0.5" />
+                            <div className="text-sm">
+                              <p className="font-medium text-yellow-800">Recurring Schedule</p>
+                              <p className="text-yellow-700">
+                                This expense will be automatically created every{" "}
+                                <span className="font-semibold">{formData.recurringFrequency}</span>
+                                {formData.recurringStartDate && (
+                                  <> starting from <span className="font-semibold">{formData.recurringStartDate}</span></>
+                                )}
+                                {formData.recurringEndDate && (
+                                  <> until <span className="font-semibold">{formData.recurringEndDate}</span></>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
 
             {/* Fixed Bottom Actions */}
