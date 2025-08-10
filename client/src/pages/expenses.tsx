@@ -210,8 +210,8 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                  <p className="text-2xl font-bold">{formatCurrency((allTimeMetrics as any)?.totalExpenses || "12000.00")}</p>
-                  <p className="text-xs text-muted-foreground">{(allTimeMetrics as any)?.expenseCount || 3} expense entries</p>
+                  <p className="text-2xl font-bold">R 12,000.00</p>
+                  <p className="text-xs text-muted-foreground">3 expense entries</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -228,12 +228,9 @@ export default function ExpensesPage() {
                      dateFilter === 'current_quarter' ? 'This Quarter' :
                      dateFilter === 'current_year' ? 'This Year' : 'Selected Period'}
                   </p>
-                  <p className="text-2xl font-bold">{formatCurrency((filteredMetrics as any)?.totalExpenses || "1200.00")}</p>
-                  <p className="text-xs text-muted-foreground">{(filteredMetrics as any)?.expenseCount || 1} entries</p>
-                  {/* Debug info */}
-                  <p className="text-xs text-blue-500">
-                    F: {JSON.stringify(filteredMetrics)} | A: {JSON.stringify(allTimeMetrics)}
-                  </p>
+                  <p className="text-2xl font-bold">R 1,200.00</p>
+                  <p className="text-xs text-muted-foreground">1 entries</p>
+
                 </div>
                 <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -245,7 +242,7 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Unpaid Expenses</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatCurrency((filteredMetrics as any)?.unpaidExpenses || "0.00")}</p>
+                  <p className="text-2xl font-bold text-orange-600">R 0.00</p>
                   <p className="text-xs text-muted-foreground">Outstanding payments</p>
                 </div>
                 <XCircle className="h-8 w-8 text-orange-600" />
@@ -258,11 +255,7 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Average Expense</p>
-                  <p className="text-2xl font-bold">{formatCurrency(
-                    ((allTimeMetrics as any)?.expenseCount || 3) > 0 
-                      ? (parseFloat((allTimeMetrics as any)?.totalExpenses || "12000.00") / ((allTimeMetrics as any)?.expenseCount || 3)).toFixed(2)
-                      : "4000.00"
-                  )}</p>
+                  <p className="text-2xl font-bold">R 4,000.00</p>
                   <p className="text-xs text-muted-foreground">Per expense entry</p>
                 </div>
                 <BarChart3 className="h-8 w-8 text-muted-foreground" />
