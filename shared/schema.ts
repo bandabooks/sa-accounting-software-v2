@@ -852,7 +852,7 @@ export const expenses = pgTable("expenses", {
   // Professional Expense Management Fields
   supplierInvoiceNumber: text("supplier_invoice_number"), // Supplier's invoice/reference number with duplicate prevention
   internalExpenseRef: text("internal_expense_ref").notNull(), // Auto-generated internal reference (EXP-2025-0001)
-  billId: integer("bill_id"), // Reference to formal bill/accounts payable
+  // billId: integer("bill_id"), // Reference to formal bill/accounts payable - TEMPORARILY DISABLED
   purchaseOrderId: integer("purchase_order_id"), // Reference to originating purchase order
   approvalStatus: text("approval_status").notNull().default("pending"), // pending, approved, rejected
   approvedBy: integer("approved_by"), // User who approved the expense
@@ -877,7 +877,7 @@ export const expenses = pgTable("expenses", {
   bankAccountIdx: index("expenses_bank_account_idx").on(table.bankAccountId),
   dateIdx: index("expenses_date_idx").on(table.expenseDate),
   approvalStatusIdx: index("expenses_approval_status_idx").on(table.approvalStatus),
-  billIdx: index("expenses_bill_idx").on(table.billId),
+  // billIdx: index("expenses_bill_idx").on(table.billId), // TEMPORARILY DISABLED
   purchaseOrderIdx: index("expenses_purchase_order_idx").on(table.purchaseOrderId),
   recurringIdx: index("expenses_recurring_idx").on(table.recurringExpenseId),
   typeIdx: index("expenses_type_idx").on(table.expenseType),
@@ -982,7 +982,7 @@ export const expenseApprovals = pgTable("expense_approvals", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   expenseId: integer("expense_id").references(() => expenses.id),
-  billId: integer("bill_id").references(() => bills.id),
+  // billId: integer("bill_id").references(() => bills.id), // TEMPORARILY DISABLED
   approverLevel: integer("approver_level").notNull().default(1), // 1, 2, 3 for multi-level approval
   approverId: integer("approver_id").notNull().references(() => users.id),
   status: text("status").notNull().default("pending"), // pending, approved, rejected
@@ -994,7 +994,7 @@ export const expenseApprovals = pgTable("expense_approvals", {
 }, (table) => ({
   companyIdx: index("expense_approvals_company_idx").on(table.companyId),
   expenseIdx: index("expense_approvals_expense_idx").on(table.expenseId),
-  billIdx: index("expense_approvals_bill_idx").on(table.billId),
+  // billIdx: index("expense_approvals_bill_idx").on(table.billId), // TEMPORARILY DISABLED
   approverIdx: index("expense_approvals_approver_idx").on(table.approverId),
   statusIdx: index("expense_approvals_status_idx").on(table.status),
 }));
