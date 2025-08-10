@@ -1024,7 +1024,7 @@ const EnhancedBulkCapture = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-700">ACTIVE ENTRIES</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-700">ACTIVE ENTRIES2020</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-gray-900">
