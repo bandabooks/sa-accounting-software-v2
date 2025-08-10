@@ -27,10 +27,10 @@ export class EmailService {
   private config: EmailConfig | null = null;
 
   constructor() {
-    this.initializeService();
+    void this.initializeService();
   }
 
-  private initializeService() {
+  private async initializeService() {
     // Try SendGrid first (preferred for production)
     if (process.env.SENDGRID_API_KEY) {
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -59,7 +59,16 @@ export class EmailService {
         provider: 'smtp',
         smtp: smtpConfig,
       };
-      this.transporter = nodemailer.createTransporter(smtpConfig);
+      try {
+        this.transporter = nodemailer.createTransport(smtpConfig);
+        await this.transporter.verify();
+      } catch (error) {
+        console.error('SMTP configuration error:', error);
+        this.config = null;
+        this.transporter = null;
+      }
+    } else {
+      console.error('Email service not configured. Please set SENDGRID_API_KEY or SMTP environment variables.');
     }
   }
 
@@ -117,8 +126,10 @@ export class EmailService {
         throw new Error('Email service configuration error');
       }
     } catch (error) {
-      console.error('Failed to send email:', error);
-      throw error;
+      const provider = this.config?.provider || 'unknown provider';
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Failed to send email via ${provider}:`, message);
+      throw new Error(`Email service failed using ${provider}. Check configuration. ${message}`);
     }
   }
 
