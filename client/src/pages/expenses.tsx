@@ -203,10 +203,11 @@ export default function ExpensesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">VAT Claimed</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics.totalVatClaimed || "0")}</p>
+                  <p className="text-sm font-medium text-muted-foreground">This Month</p>
+                  <p className="text-2xl font-bold">{formatCurrency(metrics.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">Current month expenses</p>
                 </div>
-                <Receipt className="h-8 w-8 text-muted-foreground" />
+                <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -227,10 +228,15 @@ export default function ExpensesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Unpaid Expenses</p>
-                  <p className="text-2xl font-bold text-red-600">{formatCurrency(metrics.unpaidExpenses || "0")}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Average Expense</p>
+                  <p className="text-2xl font-bold">{formatCurrency(
+                    metrics.expenseCount > 0 
+                      ? (parseFloat(metrics.totalExpenses) / metrics.expenseCount).toFixed(2)
+                      : "0"
+                  )}</p>
+                  <p className="text-xs text-muted-foreground">Per expense entry</p>
                 </div>
-                <XCircle className="h-8 w-8 text-red-600" />
+                <BarChart3 className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>

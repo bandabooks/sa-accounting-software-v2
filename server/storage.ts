@@ -3083,7 +3083,30 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getExpensesByDateRange(startDate: Date, endDate: Date, companyId?: number): Promise<any[]> {
+  async getExpensesByDateRange(companyId?: number, dateFilter?: string): Promise<any[]> {
+    // Calculate date range based on filter
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
+    
+    switch (dateFilter) {
+      case 'current_month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'last_month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        break;
+      case 'current_quarter':
+        const quarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), quarter * 3, 1);
+        break;
+      case 'current_year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        startDate = new Date(0);
+    }
     let query = db
       .select({
         expense: expenses,
@@ -3093,18 +3116,18 @@ export class DatabaseStorage implements IStorage {
       .from(expenses)
       .leftJoin(suppliers, eq(expenses.supplierId, suppliers.id))
       .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id))
-      .where(and(
-        sql`${expenses.expenseDate} >= ${startDate}`,
-        sql`${expenses.expenseDate} <= ${endDate}`
-      ));
-
-    if (companyId) {
-      query = query.where(and(
-        sql`${expenses.expenseDate} >= ${startDate}`,
-        sql`${expenses.expenseDate} <= ${endDate}`,
-        eq(expenses.companyId, companyId)
-      ));
-    }
+      .where(
+        companyId 
+          ? and(
+              sql`${expenses.expenseDate} >= ${startDate}`,
+              sql`${expenses.expenseDate} <= ${endDate}`,
+              eq(expenses.companyId, companyId)
+            )
+          : and(
+              sql`${expenses.expenseDate} >= ${startDate}`,
+              sql`${expenses.expenseDate} <= ${endDate}`
+            )
+      );
 
     const result = await query.orderBy(desc(expenses.expenseDate));
     

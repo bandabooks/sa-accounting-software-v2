@@ -2100,12 +2100,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = req.user.role === 'super_admin' ? undefined : req.user.companyId;
       const { dateFilter, statusFilter, supplierFilter, categoryFilter } = req.params;
       
-      // Get all expenses first
+      // Start with all expenses
       let expenses = await storage.getAllExpenses(companyId);
       
-      // Apply date filtering if needed (current_month filtering is already handled in getExpensesByDateRange)
+      // Apply date filtering
       if (dateFilter !== 'all_time') {
-        expenses = await storage.getExpensesByDateRange(companyId, dateFilter);
+        const now = new Date();
+        let startDate: Date;
+        
+        switch (dateFilter) {
+          case 'current_month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case 'last_month':
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            break;
+          case 'current_quarter':
+            const quarter = Math.floor(now.getMonth() / 3);
+            startDate = new Date(now.getFullYear(), quarter * 3, 1);
+            break;
+          case 'current_year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          default:
+            startDate = new Date(0);
+        }
+        
+        expenses = expenses.filter((expense: any) => 
+          new Date(expense.expenseDate) >= startDate
+        );
       }
       
       // Apply status filtering
