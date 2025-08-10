@@ -74,13 +74,7 @@ export default function ExpensesPage() {
     },
     enabled: !!user?.companyId,
     staleTime: 0,
-    refetchOnMount: true,
-    onSuccess: (data) => {
-      console.log(`${dateFilter} metrics received:`, data);
-    },
-    onError: (error) => {
-      console.error(`Error fetching ${dateFilter} metrics:`, error);
-    }
+    refetchOnMount: true
   });
 
   // Fetch suppliers for filter
