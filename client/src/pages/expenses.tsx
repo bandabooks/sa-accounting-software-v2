@@ -58,28 +58,28 @@ export default function ExpensesPage() {
     queryFn: () => apiRequest(`/api/expenses/${dateFilter}/${statusFilter}/${supplierFilter}/${categoryFilter}`),
   }) as { data: any[], isLoading: boolean };
 
-  // Fetch overall metrics with company filtering
-  const { data: metrics } = useQuery<ExpenseMetrics>({
+  // Fetch overall metrics (all-time) for Total Expenses card
+  const { data: allTimeMetrics } = useQuery<ExpenseMetrics>({
     queryKey: ['/api/expenses/metrics/all_time', user?.companyId],
     queryFn: () => apiRequest(`/api/expenses/metrics/all_time`),
     enabled: !!user?.companyId
   });
 
-  // Fetch current month metrics separately with company filtering
-  const { data: currentMonthMetrics, isLoading: metricsLoading } = useQuery<ExpenseMetrics>({
-    queryKey: ['/api/expenses/metrics/current_month', user?.companyId],
+  // Fetch filtered metrics based on current date filter selection
+  const { data: filteredMetrics, isLoading: metricsLoading } = useQuery<ExpenseMetrics>({
+    queryKey: ['/api/expenses/metrics', dateFilter, user?.companyId],
     queryFn: () => {
-      console.log('Fetching current month metrics...');
-      return apiRequest(`/api/expenses/metrics/current_month`);
+      console.log(`Fetching ${dateFilter} metrics...`);
+      return apiRequest(`/api/expenses/metrics/${dateFilter}`);
     },
     enabled: !!user?.companyId,
     staleTime: 0,
     refetchOnMount: true,
     onSuccess: (data) => {
-      console.log('Current month metrics received:', data);
+      console.log(`${dateFilter} metrics received:`, data);
     },
     onError: (error) => {
-      console.error('Error fetching current month metrics:', error);
+      console.error(`Error fetching ${dateFilter} metrics:`, error);
     }
   });
 
@@ -111,8 +111,6 @@ export default function ExpensesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics/all_time'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses/metrics/current_month'] });
       toast({
         title: "Expense Deleted",
         description: "The expense has been successfully deleted.",
@@ -211,8 +209,8 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                  <p className="text-2xl font-bold">{formatCurrency(metrics?.totalExpenses || "0")}</p>
-                  <p className="text-xs text-muted-foreground">{metrics?.expenseCount || 0} expense entries</p>
+                  <p className="text-2xl font-bold">{formatCurrency(allTimeMetrics?.totalExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">{allTimeMetrics?.expenseCount || 0} expense entries</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -223,15 +221,20 @@ export default function ExpensesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">This Month</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {dateFilter === 'current_month' ? 'This Month' : 
+                     dateFilter === 'last_month' ? 'Last Month' :
+                     dateFilter === 'current_quarter' ? 'This Quarter' :
+                     dateFilter === 'current_year' ? 'This Year' : 'Selected Period'}
+                  </p>
                   {metricsLoading ? (
                     <p className="text-2xl font-bold">Loading...</p>
                   ) : (
-                    <p className="text-2xl font-bold">{formatCurrency(currentMonthMetrics?.totalExpenses || "0")}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(filteredMetrics?.totalExpenses || "0")}</p>
                   )}
-                  <p className="text-xs text-muted-foreground">{currentMonthMetrics?.expenseCount || 0} entries</p>
+                  <p className="text-xs text-muted-foreground">{filteredMetrics?.expenseCount || 0} entries</p>
                   {/* Debug info */}
-                  <p className="text-xs text-blue-500">Raw: {currentMonthMetrics?.totalExpenses || "No data"}</p>
+                  <p className="text-xs text-blue-500">Raw: {filteredMetrics?.totalExpenses || "No data"}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -242,10 +245,11 @@ export default function ExpensesPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Paid Expenses</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(metrics?.paidExpenses || "0")}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Unpaid Expenses</p>
+                  <p className="text-2xl font-bold text-orange-600">{formatCurrency(filteredMetrics?.unpaidExpenses || "0")}</p>
+                  <p className="text-xs text-muted-foreground">Outstanding payments</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
+                <XCircle className="h-8 w-8 text-orange-600" />
               </div>
             </CardContent>
           </Card>
@@ -256,8 +260,8 @@ export default function ExpensesPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Average Expense</p>
                   <p className="text-2xl font-bold">{formatCurrency(
-                    (metrics?.expenseCount || 0) > 0 
-                      ? (parseFloat(metrics?.totalExpenses || "0") / metrics.expenseCount).toFixed(2)
+                    (allTimeMetrics?.expenseCount || 0) > 0 
+                      ? (parseFloat(allTimeMetrics?.totalExpenses || "0") / allTimeMetrics.expenseCount).toFixed(2)
                       : "0"
                   )}</p>
                   <p className="text-xs text-muted-foreground">Per expense entry</p>
