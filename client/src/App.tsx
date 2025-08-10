@@ -23,7 +23,6 @@ import FinancialReports from "@/pages/financial-reports";
 import FinancialReportsDetailed from "@/pages/financial-reports-detailed";
 import BusinessReports from "@/pages/business-reports";
 import GeneralReports from "@/pages/general-reports";
-import Expenses from "@/pages/expenses";
 import ExpensesStandalone from "@/pages/expenses-standalone";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
@@ -451,11 +450,7 @@ function AuthenticatedApp() {
             <CustomerInsights />
           </ProtectedRoute>
         </Route>
-        <Route path="/expenses">
-          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
-            <Expenses />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/activities">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <Activities />
