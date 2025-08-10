@@ -229,7 +229,7 @@ export default function ExpensesPage() {
                      dateFilter === 'current_year' ? 'This Year' : 'Selected Period'}
                   </p>
                   <p className="text-2xl font-bold">R 1,200.00</p>
-                  <p className="text-xs text-muted-foreground">1 entries</p>
+                  <p className="text-xs text-muted-foreground">1 entry</p>
 
                 </div>
                 <Calendar className="h-8 w-8 text-muted-foreground" />
@@ -589,4 +589,4 @@ export default function ExpensesPage() {
       </AlertDialog>
     </div>
   );
-}
+}/* Cache bust Sun Aug 10 09:46:56 AM UTC 2025 */
