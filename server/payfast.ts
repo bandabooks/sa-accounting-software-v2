@@ -143,24 +143,24 @@ export class PayFastService {
   }
 }
 
-// Default PayFast configuration from environment
+// PayFast configuration from environment
 export function createPayFastService(): PayFastService {
   const config: PayFastConfig = {
-    merchantId: process.env.PAYFAST_MERCHANT_ID || '18432458', // Default merchant ID
-    merchantKey: process.env.PAYFAST_MERCHANT_KEY || 'm5vlzssivllny', // Default merchant key
-    passphrase: process.env.PAYFAST_PASSPHRASE || 'Testpayfastapi', // Default passphrase
-    testMode: false, // LIVE MODE ENABLED - Set to false for production payments
+    merchantId: process.env.PAYFAST_MERCHANT_ID || '',
+    merchantKey: process.env.PAYFAST_MERCHANT_KEY || '',
+    passphrase: process.env.PAYFAST_PASSPHRASE || '',
+    testMode: process.env.NODE_ENV === 'production' ? false : true,
   };
 
   console.log('PayFast service configuration:', {
-    merchantId: config.merchantId,
+    merchantId: config.merchantId ? '***hidden***' : 'missing',
     merchantKey: config.merchantKey ? '***hidden***' : 'missing',
     passphrase: config.passphrase ? '***hidden***' : 'missing',
-    testMode: config.testMode
+    testMode: config.testMode,
   });
 
-  if (!config.merchantId || !config.merchantKey) {
-    throw new Error('PayFast merchant ID and key are required');
+  if (!config.merchantId || !config.merchantKey || !config.passphrase) {
+    throw new Error('PayFast merchant ID, key, and passphrase are required');
   }
 
   return new PayFastService(config);
