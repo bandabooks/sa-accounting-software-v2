@@ -6572,6 +6572,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/chart-of-accounts/activate-essential", authenticate, async (req, res) => {
+    try {
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      await storage.activateEssentialBusinessAccounts(companyId);
+      res.json({ message: "Essential business accounts activated successfully" });
+    } catch (error) {
+      console.error("Error activating essential accounts:", error);
+      res.status(500).json({ error: "Failed to activate essential accounts" });
+    }
+  });
+
   // Industry Templates Routes
   app.get("/api/industry-templates", authenticate, async (req, res) => {
     try {

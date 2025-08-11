@@ -600,6 +600,7 @@ export interface IStorage {
   deleteChartOfAccount(id: number): Promise<boolean>;
   toggleAccountActivation(accountId: number, isActive: boolean, companyId: number): Promise<ChartOfAccount | undefined>;
   seedSouthAfricanChartOfAccounts(companyId: number): Promise<void>;
+  activateEssentialBusinessAccounts(companyId: number): Promise<void>;
   
   // Journal Entries
   getAllJournalEntries(companyId: number): Promise<JournalEntryWithLines[]>;
@@ -5818,7 +5819,91 @@ export class DatabaseStorage implements IStorage {
           isSystemAccount: account.isSystemAccount || false,
         }).onConflictDoNothing();
       }
+
+      // Activate essential business accounts by default
+      await this.activateEssentialBusinessAccounts(companyId);
     }
+  }
+
+  // Activate essential business accounts that every business needs
+  async activateEssentialBusinessAccounts(companyId: number): Promise<void> {
+    // Define essential account codes that should be active by default
+    const essentialAccountCodes = [
+      // Assets - Essential for business operations
+      '1100', // Bank Account - Current  
+      '1101', // Bank Account - Savings
+      '1110', // Petty Cash
+      '1150', // Accounts Receivable
+      '1200', // Inventory
+      '1300', // Equipment
+      '1400', // Vehicles
+      '1500', // Furniture & Fixtures
+      '1800', // Computer Equipment
+      
+      // Liabilities - Essential for business operations  
+      '2000', // Accounts Payable
+      '2100', // Credit Cards
+      '2200', // VAT Output
+      '2300', // PAYE Payable
+      '2400', // UIF Payable
+      '2500', // SDL Payable
+      '2600', // WCA Payable
+      
+      // Equity - Essential 
+      '3000', // Owner's Equity
+      '3100', // Retained Earnings
+      
+      // Revenue - Essential for sales
+      '4000', // Sales Revenue
+      '4001', // Service Revenue
+      
+      // Expenses - Essential for operations
+      '5000', // Cost of Goods Sold
+      '6000', // Administrative Expenses  
+      '6100', // Office Supplies
+      '6200', // Telephone & Internet
+      '6300', // Rent
+      '6400', // Utilities
+      '6500', // Insurance
+      '6600', // Professional Fees
+      '6700', // Bank Charges
+      '6800', // Travel & Entertainment
+    ];
+
+    // Get all accounts for this company that match essential codes
+    const accountsToActivate = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(
+        and(
+          eq(chartOfAccounts.companyId, companyId),
+          inArray(chartOfAccounts.accountCode, essentialAccountCodes)
+        )
+      );
+
+    // Activate each essential account in the company activation table
+    for (const account of accountsToActivate) {
+      await db
+        .insert(companyChartOfAccounts)
+        .values({
+          companyId,
+          accountId: account.id,
+          isActive: true,
+          activatedBy: 1, // System activation
+        })
+        .onConflictDoUpdate({
+          target: [companyChartOfAccounts.companyId, companyChartOfAccounts.accountId],
+          set: {
+            isActive: true,
+            activatedAt: sql`now()`,
+            activatedBy: 1,
+            deactivatedAt: null,
+            deactivatedBy: null,
+          },
+        });
+    }
+
+    console.log(`✓ Activated ${accountsToActivate.length} essential business accounts for company ${companyId}`);
   }
 
   async seedDefaultSouthAfricanBanks(companyId: number): Promise<void> {
