@@ -1155,17 +1155,6 @@ export const auditLogs = pgTable("audit_logs", {
   timestampIdx: index("audit_logs_timestamp_idx").on(table.timestamp),
 }));
 
-// Professional ID Tracking - ensures no reuse of IDs even after deletion
-export const idTracking = pgTable("id_tracking", {
-  id: serial("id").primaryKey(),
-  entityType: text("entity_type").notNull(), // 'user', 'company'
-  maxUsedId: integer("max_used_id").notNull().default(0), // Tracks highest used ID
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  entityTypeIdx: index("id_tracking_entity_type_idx").on(table.entityType),
-}));
-
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),

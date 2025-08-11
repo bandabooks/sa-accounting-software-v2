@@ -4,13 +4,13 @@ import { storage } from './storage';
  * Professional ID Generator Service
  * Generates unique incremental IDs for companies and users similar to Zoho's system
  * Company IDs start from 904886369 and increment
- * User IDs start from 003 and increment (simple format for users)
+ * User IDs start from 905886372 and increment
  */
 
 export class ProfessionalIdGenerator {
   // Base starting numbers for different entity types
   private static readonly COMPANY_ID_BASE = 904886369;
-  private static readonly USER_ID_BASE = 3; // Simple user IDs starting from 003
+  private static readonly USER_ID_BASE = 905886372;
   
   /**
    * Generate a unique company ID
@@ -46,24 +46,33 @@ export class ProfessionalIdGenerator {
   
   /**
    * Generate a unique user ID
-   * Format: Simple incremental numbers starting from 003 (zero-padded to 3 digits)
+   * Format: 9058863XX where XX increments
    */
   static async generateUserId(): Promise<string> {
     try {
-      // Get the highest existing user ID from all users (including deleted ones)
-      const maxUsedId = await storage.getMaxUsedUserId();
+      // Get the highest existing user ID
+      const existingUsers = await storage.getAllUsers();
       
-      // Start from USER_ID_BASE if no users exist, otherwise increment from max
-      const nextId = Math.max(this.USER_ID_BASE, maxUsedId + 1);
+      let maxId = this.USER_ID_BASE;
       
-      // Format as zero-padded 3-digit string (003, 004, 005, etc.)
-      return nextId.toString().padStart(3, '0');
+      // Find the highest existing user ID
+      for (const user of existingUsers) {
+        if (user.userId) {
+          const numericId = parseInt(user.userId);
+          if (!isNaN(numericId) && numericId >= this.USER_ID_BASE) {
+            maxId = Math.max(maxId, numericId);
+          }
+        }
+      }
+      
+      // Generate next incremental ID
+      const nextId = maxId + 1;
+      return nextId.toString();
       
     } catch (error) {
       console.error('Error generating user ID:', error);
-      // Fallback: use current timestamp modulo for uniqueness
-      const fallbackId = this.USER_ID_BASE + (Date.now() % 1000);
-      return fallbackId.toString().padStart(3, '0');
+      // Fallback to timestamp-based ID if there's an error
+      return (this.USER_ID_BASE + Date.now() % 1000000).toString();
     }
   }
   
@@ -77,7 +86,7 @@ export class ProfessionalIdGenerator {
   
   static isValidUserId(id: string): boolean {
     const numericId = parseInt(id);
-    return !isNaN(numericId) && numericId >= this.USER_ID_BASE && id.length >= 3;
+    return !isNaN(numericId) && numericId >= this.USER_ID_BASE;
   }
   
   /**
@@ -110,18 +119,11 @@ export class ProfessionalIdGenerator {
       
       for (const user of users) {
         if (!user.userId) {
-          const newUserId = currentId.toString().padStart(3, '0');
+          const newUserId = currentId.toString();
           await storage.updateUser(user.id, { userId: newUserId });
           console.log(`Assigned User ID ${newUserId} to user: ${user.username}`);
           currentId++;
         }
-      }
-      
-      // Update the max used user ID tracker
-      if (users.length > 0) {
-        const maxId = currentId - 1;
-        await storage.updateMaxUsedUserId(maxId);
-        console.log(`Set max used user ID tracker to: ${maxId}`);
       }
       
       console.log(`Migration completed for ${users.length} users`);

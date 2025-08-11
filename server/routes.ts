@@ -7927,44 +7927,6 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
     }
   });
 
-  // Professional User ID Migration (Super Admin)
-  app.post("/api/super-admin/migrate-user-ids", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
-    try {
-      const { ProfessionalIdGenerator } = await import('./idGenerator');
-      await ProfessionalIdGenerator.migrateExistingUsers();
-      
-      await logAudit(req.user!.id, 'MIGRATE', 'users', null, 'Migrated existing users to professional ID system');
-      
-      res.json({ 
-        success: true, 
-        message: 'User ID migration completed successfully' 
-      });
-    } catch (error) {
-      console.error("Failed to migrate user IDs:", error);
-      res.status(500).json({ message: "Failed to migrate user IDs" });
-    }
-  });
-
-  // Get all users with professional IDs (Super Admin)
-  app.get("/api/super-admin/users-with-ids", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      const usersWithIds = users.map(user => ({
-        id: user.id,
-        userId: user.user_id,
-        username: user.username,
-        name: user.name,
-        email: user.email,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-      }));
-      res.json(usersWithIds);
-    } catch (error) {
-      console.error("Failed to fetch users with IDs:", error);
-      res.status(500).json({ message: "Failed to fetch users with IDs" });
-    }
-  });
-
   // User Management (Super Admin)
   app.get("/api/super-admin/users", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
@@ -7972,7 +7934,6 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       // Remove sensitive data but preserve all user status fields
       const sanitizedUsers = users.map(user => ({
         id: user.id,
-        userId: user.userId, // Include professional ID
         username: user.username,
         name: user.name,
         email: user.email,
