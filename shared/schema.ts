@@ -6,6 +6,7 @@ import { relations } from "drizzle-orm";
 // Multi-Company Core Tables
 export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
+  companyId: text("company_id").notNull().unique(), // Professional Company ID like 904886369
   name: text("name").notNull(),
   displayName: text("display_name").notNull(),
   slug: text("slug").notNull().unique(),
@@ -1018,6 +1019,7 @@ export const vatReturns = pgTable("vat_returns", {
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().unique(), // Professional User ID like 904886372
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),

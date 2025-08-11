@@ -1075,6 +1075,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    // Import the ID generator here to avoid circular dependency
+    const { ProfessionalIdGenerator } = await import('./idGenerator');
+    
+    // Generate professional user ID if not provided
+    if (!insertUser.userId) {
+      insertUser.userId = await ProfessionalIdGenerator.generateUserId();
+    }
+    
     const [user] = await db
       .insert(users)
       .values(insertUser)
@@ -7502,6 +7510,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCompany(insertCompany: InsertCompany, userId?: number): Promise<Company> {
+    // Import the ID generator here to avoid circular dependency
+    const { ProfessionalIdGenerator } = await import('./idGenerator');
+    
+    // Generate professional company ID if not provided
+    if (!insertCompany.companyId) {
+      insertCompany.companyId = await ProfessionalIdGenerator.generateCompanyId();
+    }
+    
     const [company] = await db
       .insert(companies)
       .values(insertCompany)

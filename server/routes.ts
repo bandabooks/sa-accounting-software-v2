@@ -13136,6 +13136,76 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  console.log("All routes registered successfully, including SARS eFiling integration!");
+  // Professional ID System - Migration Endpoints
+  app.post("/api/admin/migrate-professional-ids", authenticate, requirePermission(PERMISSIONS.SYSTEM_ADMIN), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { ProfessionalIdGenerator } = await import('./idGenerator');
+      
+      // Run migration for companies and users
+      await ProfessionalIdGenerator.migrateExistingCompanies();
+      await ProfessionalIdGenerator.migrateExistingUsers();
+      
+      res.json({
+        success: true,
+        message: "Professional IDs have been successfully assigned to all existing companies and users"
+      });
+    } catch (error) {
+      console.error("Error migrating professional IDs:", error);
+      res.status(500).json({ error: "Failed to migrate professional IDs" });
+    }
+  });
+
+  // Get Professional ID status for a company
+  app.get("/api/companies/:id/professional-id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const company = await storage.getCompany(companyId);
+      
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      const { ProfessionalIdGenerator } = await import('./idGenerator');
+      
+      res.json({
+        companyId: company.companyId,
+        isValid: company.companyId ? ProfessionalIdGenerator.isValidCompanyId(company.companyId) : false,
+        displayName: company.displayName,
+        name: company.name
+      });
+    } catch (error) {
+      console.error("Error getting company professional ID:", error);
+      res.status(500).json({ error: "Failed to get company professional ID" });
+    }
+  });
+
+  // Get Professional ID status for current user
+  app.get("/api/users/me/professional-id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const { ProfessionalIdGenerator } = await import('./idGenerator');
+      
+      res.json({
+        userId: user.userId,
+        isValid: user.userId ? ProfessionalIdGenerator.isValidUserId(user.userId) : false,
+        username: user.username,
+        name: user.name
+      });
+    } catch (error) {
+      console.error("Error getting user professional ID:", error);
+      res.status(500).json({ error: "Failed to get user professional ID" });
+    }
+  });
+
+  console.log("All routes registered successfully, including SARS eFiling integration and Professional ID system!");
   return httpServer;
 }
