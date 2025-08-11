@@ -106,6 +106,7 @@ export default function ChartOfAccounts() {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<ChartOfAccountWithBalance | null>(null);
+  const [toggledAccountId, setToggledAccountId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -209,12 +210,14 @@ export default function ChartOfAccounts() {
       apiRequest(`/api/chart-of-accounts/${id}/toggle`, "PATCH", { isActive }),
     onSuccess: (_, { isActive }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
+      setToggledAccountId(null);
       toast({
         title: "Success",
         description: `Account ${isActive ? 'activated' : 'deactivated'} successfully`,
       });
     },
     onError: (error: any) => {
+      setToggledAccountId(null);
       toast({
         title: "Error",
         description: error.message?.includes("permissions") 
@@ -226,6 +229,7 @@ export default function ChartOfAccounts() {
   });
 
   const handleToggleActivation = (account: ChartOfAccountWithBalance) => {
+    setToggledAccountId(account.id);
     toggleActivationMutation.mutate({
       id: account.id,
       isActive: !account.isActive,
@@ -681,7 +685,7 @@ export default function ChartOfAccounts() {
                                 <Switch
                                   checked={account.isActive}
                                   onCheckedChange={() => handleToggleActivation(account)}
-                                  disabled={toggleActivationMutation.isPending}
+                                  disabled={toggledAccountId === account.id && toggleActivationMutation.isPending}
                                   className={account.isActive ? "data-[state=checked]:bg-green-500" : ""}
                                 />
                                 {account.isActive ? (
