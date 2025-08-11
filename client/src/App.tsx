@@ -20,7 +20,6 @@ import EstimateCreate from "@/pages/estimate-create";
 import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
-import FinancialReportsDetailed from "@/pages/financial-reports-detailed";
 import BusinessReports from "@/pages/business-reports";
 import GeneralReports from "@/pages/general-reports";
 import ExpensesStandalone from "@/pages/expenses-standalone";
@@ -103,8 +102,7 @@ import CustomerLifecycle from "@/pages/customer-lifecycle";
 import CommunicationCenter from "@/pages/communication-center";
 import CustomerSegments from "@/pages/customer-segments";
 import CustomerInsights from "@/pages/customer-insights";
-import SARSCompliance from "@/pages/sars-compliance";
-import SARSIntegration from "@/pages/sars-integration";
+
 import Integrations from "@/pages/integrations";
 import CIPCCompliance from "@/pages/cipc-compliance";
 import LabourCompliance from "@/pages/labour-compliance";
@@ -131,7 +129,7 @@ import PurchaseDashboard from "@/pages/purchase-dashboard";
 import PurchaseReports from "@/pages/purchase-reports";
 import GoodsReceipts from "@/pages/goods-receipts";
 import PurchaseRequisitions from "@/pages/purchase-requisitions";
-import EnhancedExpenses from "@/pages/enhanced-expenses";
+
 
 import Warehouses from "@/pages/warehouses";
 import LotBatchTracking from "@/pages/lot-batch-tracking";
@@ -419,11 +417,7 @@ function AuthenticatedApp() {
             <PurchaseRequisitions />
           </ProtectedRoute>
         </Route>
-        <Route path="/enhanced-expenses">
-          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
-            <EnhancedExpenses />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/products">
           <Products />
         </Route>
@@ -451,11 +445,7 @@ function AuthenticatedApp() {
             <FinancialReports />
           </ProtectedRoute>
         </Route>
-        <Route path="/financial-reports-detailed">
-          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
-            <FinancialReportsDetailed />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/business-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <BusinessReports />
@@ -780,16 +770,7 @@ function AuthenticatedApp() {
             <ComplianceClients />
           </ProtectedRoute>
         </Route>
-        <Route path="/compliance/sars">
-          <ProtectedRoute>
-            <SARSCompliance />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/sars-integration">
-          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
-            <SARSIntegration />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/integrations">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <Integrations />
