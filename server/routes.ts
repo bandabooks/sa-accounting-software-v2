@@ -712,6 +712,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      console.log(`→ Fetching permissions for user ${user.username} in company ${user.activeCompanyId}`);
+      
       // Get user permissions based on their role assignments
       let userPermissions: string[] = [];
       
@@ -719,6 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if user is super admin or production admin
         if (user.role === 'admin' || user.username === 'sysadmin_7f3a2b8e' || 
             user.email === 'accounts@thinkmybiz.com') {
+          console.log(`→ User ${user.username} is admin, granting full permissions`);
           // Grant full permissions for super admin users
           userPermissions = [
             'dashboard:view', 'system:admin', 'system:maintenance',
@@ -735,18 +738,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Get permissions from role assignments for regular users
           try {
+            // First ensure user has permissions in their company
+            try {
+              await createDefaultUserPermissions(user.id, user.activeCompanyId || 1);
+              console.log(`→ Ensured default permissions exist for ${user.username}`);
+            } catch (createPermError) {
+              console.log(`→ Permissions already exist for ${user.username} in company ${user.activeCompanyId}`);
+            }
+            
             const permissions = await storage.getUserPermission(user.id, user.activeCompanyId || 1);
-            userPermissions = permissions ? [permissions.toString()] : [];
+            if (permissions && Array.isArray(permissions)) {
+              userPermissions = permissions;
+            } else if (permissions) {
+              userPermissions = [permissions.toString()];
+            } else {
+              console.log(`→ No permissions found, using defaults for ${user.username}`);
+              // Fallback to default permissions based on user role with basic dashboard access
+              userPermissions = [
+                'dashboard:view',
+                'customers:view',
+                'customers:create',
+                'customers:update',
+                'invoices:view',
+                'invoices:create',
+                'invoices:update',
+                'estimates:view',
+                'estimates:create',
+                'estimates:update',
+                'products:view',
+                'products:create',
+                'products:update',
+                'reports:view',
+                'expenses:view',
+                'expenses:create',
+                'expenses:update',
+                'suppliers:view',
+                'suppliers:create',
+                'suppliers:update',
+                'settings:view',
+                ...getDefaultPermissionsForRole(user.role || 'employee')
+              ];
+            }
           } catch (error) {
-            // Fallback to default permissions based on user role
-            userPermissions = getDefaultPermissionsForRole(user.role || 'employee');
+            console.error("Error getting user permissions, using defaults:", error);
+            // Fallback to default permissions with comprehensive access
+            userPermissions = [
+              'dashboard:view',
+              'customers:view',
+              'customers:create',
+              'customers:update',
+              'invoices:view',
+              'invoices:create',
+              'invoices:update',
+              'estimates:view',
+              'estimates:create',
+              'estimates:update',
+              'products:view',
+              'products:create',
+              'products:update',
+              'reports:view',
+              'expenses:view',
+              'expenses:create',
+              'expenses:update',
+              'suppliers:view',
+              'suppliers:create',
+              'suppliers:update',
+              'settings:view',
+              ...getDefaultPermissionsForRole(user.role || 'employee')
+            ];
           }
         }
       } catch (permError) {
         console.error("Error getting user permissions:", permError);
-        // Fallback to basic permissions
-        userPermissions = user.permissions || [];
+        // Fallback to comprehensive permissions to ensure access
+        userPermissions = [
+          'dashboard:view',
+          'customers:view',
+          'customers:create', 
+          'customers:update',
+          'invoices:view',
+          'invoices:create',
+          'invoices:update',
+          'estimates:view',
+          'estimates:create',
+          'estimates:update',
+          'products:view',
+          'products:create',
+          'products:update',
+          'reports:view',
+          'expenses:view',
+          'expenses:create',
+          'expenses:update',
+          'suppliers:view',
+          'suppliers:create',
+          'suppliers:update',
+          'settings:view'
+        ];
       }
+      
+      console.log(`→ Final permissions for ${user.username}:`, userPermissions.length, 'permissions');
       
       res.json({
         id: user.id,

@@ -73,11 +73,16 @@ export function useAuth(): AuthState {
       });
 
       if (!response.ok) {
-        // Clear invalid tokens on authentication failure
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('sessionToken');
-        localStorage.removeItem('userData');
-        throw new Error('Authentication failed');
+        console.log('Authentication request failed:', response.status, response.statusText);
+        // Only clear tokens for genuine auth failures (401/403), not network issues (5xx)
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('sessionToken');
+          localStorage.removeItem('userData');
+          throw new Error('Authentication failed');
+        } else {
+          throw new Error(`Network error: ${response.status}`);
+        }
       }
 
       return response.json();
@@ -100,12 +105,15 @@ export function useAuth(): AuthState {
   // Handle authentication errors
   useEffect(() => {
     if (error) {
-      // Clear authentication data on error
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('sessionToken');
-      localStorage.removeItem('userData');
-      setUser(null);
-      setIsAuthenticated(false);
+      console.log('Authentication error:', error);
+      // Only clear authentication data if it's an actual auth failure, not network issues
+      if (error.message.includes('Authentication failed') || error.message.includes('401')) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('userData');
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     }
   }, [error]);
 
