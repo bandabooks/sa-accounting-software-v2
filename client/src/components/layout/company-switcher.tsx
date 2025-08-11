@@ -468,6 +468,11 @@ export default function CompanySwitcher() {
                       >
                         {userCompany.role}
                       </Badge>
+                      {company.companyId && (
+                        <span className="text-xs text-gray-500 font-mono">
+                          ID: {company.companyId}
+                        </span>
+                      )}
                       {company.industry && (
                         <span className="text-xs text-gray-500 truncate">
                           {company.industry}
