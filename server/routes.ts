@@ -12990,7 +12990,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Company Admin only - Connect company to SARS
   app.get("/api/sars/auth-url", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId;
+      const companyId = req.user?.activeCompanyId || req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13037,7 +13037,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Get company SARS connection status
   app.get("/api/sars/status", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId;
+      const companyId = req.user?.activeCompanyId || req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13072,7 +13072,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Test SARS connection
   app.post("/api/sars/test", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId;
+      const companyId = req.user?.activeCompanyId || req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13088,7 +13088,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Disconnect from SARS
   app.delete("/api/sars/disconnect", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId;
+      const companyId = req.user?.activeCompanyId || req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
