@@ -42,10 +42,12 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'vat:view', 'vat:manage'
   ],
 
-  // Accountant - Financial and reporting modules
+  // Accountant - Enhanced financial and reporting modules with full VAT/Expense access
   accountant: [
     'dashboard:view',
-    'purchases:view', 'purchases:create', 'purchases:update',
+    'purchases:view', 'purchases:create', 'purchases:update', 'purchases:delete',
+    'purchase_orders:view', 'purchase_orders:create', 'purchase_orders:update', 'purchase_orders:delete',
+    'suppliers:view', 'suppliers:create', 'suppliers:update', 'suppliers:delete',
     'accounting:view', 'chart_of_accounts:view', 'chart_of_accounts:update',
     'journal_entries:view', 'journal_entries:create', 'journal_entries:update',
     'banking:view', 'banking:create', 'banking:update', 'banking:reconciliation',
@@ -53,11 +55,13 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'invoices:view', 'invoices:create', 'invoices:update',
     'estimates:view',
     'payments:view', 'payments:create', 'payments:update',
-    'expenses:view', 'expenses:create', 'expenses:update',
-    'vat:view', 'vat:manage', 'vat:submit_returns'
+    'expenses:view', 'expenses:create', 'expenses:update', 'expenses:delete',
+    'expense_management:view', 'expense_management:create', 'expense_management:update',
+    'vat:view', 'vat:manage', 'vat:submit_returns', 'vat_returns:view', 'vat_returns:create',
+    'vat_reporting:view', 'vat_reporting:export'
   ],
 
-  // Bookkeeper - Basic financial data entry
+  // Bookkeeper - Enhanced data entry with purchase and VAT access
   bookkeeper: [
     'dashboard:view',
     'accounting:view', 'journal_entries:view', 'journal_entries:create',
@@ -66,7 +70,10 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'invoices:view', 'invoices:create', 'invoices:update',
     'estimates:view', 'estimates:create',
     'payments:view', 'payments:create',
-    'expenses:view', 'expenses:create',
+    'expenses:view', 'expenses:create', 'expenses:update',
+    'purchases:view', 'purchases:create', 'purchases:update',
+    'suppliers:view', 'suppliers:create', 'suppliers:update',
+    'vat:view', 'vat:manage',
     'customers:view', 'customers:create', 'customers:update',
     'products:view'
   ],
@@ -120,8 +127,10 @@ export const SUBSCRIPTION_PLAN_MODULES = {
   basic: [
     'dashboard', 'sales', 'purchases', 'products', 'customers', 
     'expenses', 'invoices', 'estimates', 'accounting', 'banking',
-    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
-    'payments', 'settings', 'basic_reports', 'basic_accounting'
+    'reports', 'inventory', 'vat', 'vat_management', 'chart_of_accounts', 
+    'journal_entries', 'payments', 'settings', 'suppliers', 'purchase_orders',
+    'expense_management', 'vat_returns', 'vat_reporting', 'basic_reports', 
+    'basic_accounting'
   ],
   
   standard: [
