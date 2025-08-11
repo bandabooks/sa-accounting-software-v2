@@ -2,7 +2,7 @@
 
 ## Overview
 
-Taxnify is a comprehensive business management platform for South African companies, offering unified accounting, compliance, and business operations. It provides complete functionalities including invoice management, CRM, financial reporting, purchase order management, and multi-company support. The platform aims to be a world-class solution with a strong focus on South African VAT compliance and SARS integration, comparable to industry leaders.
+Taxnify is evolving into a comprehensive professional practice management platform targeting South African tax practitioners, accountants, auditors, and CAs. The platform provides unified accounting, compliance, CRM-centric workflow management, and business operations. The CRM serves as the central hub for customer communication and practice management, with integrated document request workflows, engagement letter automation, and contract management. The platform aims to be a world-class solution with strong South African VAT compliance, SARS integration, and professional workflow automation comparable to industry leaders like Karbon.
 
 ## User Preferences
 
@@ -31,7 +31,7 @@ Preferred communication style: Simple, everyday language.
 - ✅ **Invoice Editing Database Persistence Fix (Aug 2025)**: Completely resolved critical issue where invoice item modifications (quantity, price, descriptions) were only updating UI calculations but not persisting to database. Enhanced backend API to handle both invoice header and items updates, implemented smart product matching for edit mode, and ensured all item changes now properly save to database. Invoice editing now maintains full data integrity across sessions.
 - ✅ **Expense Metrics Display Fix (Aug 2025)**: Resolved critical issue where expense metrics cards were showing R 0.00 instead of actual financial data. Identified and fixed dual expense page architecture (expenses.tsx vs expenses-standalone.tsx) where routing was using ExpensesStandalone component. Updated correct component to display proper values: Total Expenses (R 12,000.00), This Month (R 1,200.00), Unpaid Expenses (R 0.00), and Average Expense (R 4,000.00).
 
-**Next Phase**: Purchase Module Enhancement (Priority #2) - Implement missing procurement cycle components including Goods Receipts, Purchase Requisitions, Purchase Approval Workflows, Supplier Performance Management, Purchase Analytics, Contract Management, and Electronic Integration to establish complete enterprise purchasing workflow.
+**Next Phase**: CRM Professional Practice Management Transformation (Priority #1) - Transform CRM into central hub for customer communication and practice management targeting South African tax practitioners, accountants, auditors, and CAs. Implement document request workflows, engagement letter automation, contract module integration, and professional workflow simplification similar to Karbonhq.com platform standards.
 
 ## System Architecture
 
