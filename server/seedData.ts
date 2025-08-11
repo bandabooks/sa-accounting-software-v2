@@ -11,6 +11,7 @@ export async function seedDatabase() {
     
     if (existingCompanies.length === 0) {
       defaultCompany = await storage.createCompany({
+        companyId: "904886369",
         name: "Think Mybiz Accounting",
         displayName: "Think Mybiz Accounting",
         slug: "think-mybiz-accounting",
@@ -39,6 +40,7 @@ export async function seedDatabase() {
       const hashedPassword = await hashPassword("admin123");
       
       await storage.createUser({
+        userId: "904886372",
         username: "sysadmin_7f3a2b8e",
         email: "accounts@thinkmybiz.com",
         name: "Production Administrator",
@@ -50,6 +52,7 @@ export async function seedDatabase() {
       // Create demo user  
       const demoPassword = await hashPassword("demo123");
       await storage.createUser({
+        userId: "904886373",
         username: "demo",
         email: "demo@thinkmybiz.com", 
         name: "Demo User",
