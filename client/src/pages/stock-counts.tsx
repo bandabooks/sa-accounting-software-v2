@@ -14,6 +14,8 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 import { ClipboardList, Calendar, User, AlertTriangle, CheckCircle, Search, Plus, Edit2, Trash2, Play, Square, FileText, MapPin } from "lucide-react";
 
 // Form schema for stock count creation
@@ -167,6 +169,23 @@ export default function StockCounts() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading stock counts...' },
+      { isLoading: createMutation.isPending, message: 'Creating stock count...' },
+      { isLoading: updateMutation.isPending, message: 'Updating stock count...' },
+      { isLoading: deleteMutation.isPending, message: 'Deleting stock count...' },
+      { isLoading: startCountMutation.isPending, message: 'Starting stock count...' },
+      { isLoading: completeCountMutation.isPending, message: 'Completing stock count...' },
+    ],
+    progressSteps: ['Fetching stock counts', 'Loading warehouse data', 'Processing inventory data'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading stock counts..." />;
+  }
 
   const onSubmit = (data: StockCountFormData) => {
     if (selectedCount) {

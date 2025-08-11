@@ -10,6 +10,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 export default function CreditNotesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,20 +44,17 @@ export default function CreditNotesPage() {
     return statusColors[status as keyof typeof statusColors] || "bg-gray-100 text-gray-800";
   };
 
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading credit notes...' },
+      { isLoading: statsLoading, message: 'Loading statistics...' },
+    ],
+    progressSteps: ['Fetching credit notes', 'Loading statistics', 'Processing data'],
+  });
+
   if (isLoading || statsLoading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-          <div className="h-96 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading credit notes..." />;
   }
 
   return (

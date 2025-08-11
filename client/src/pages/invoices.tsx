@@ -22,6 +22,8 @@ import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils-invoice"
 import { MiniDashboard } from "@/components/MiniDashboard";
 import { DashboardCard } from "@/components/DashboardCard";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface AgingBucket {
   range: string;
@@ -57,10 +59,23 @@ export default function Invoices() {
     queryFn: invoicesApi.getAll
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/invoices/stats"],
     queryFn: () => apiRequest("/api/invoices/stats", "GET").then(res => res.json())
   });
+
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading invoices...' },
+      { isLoading: statsLoading, message: 'Loading invoice statistics...' },
+    ],
+    progressSteps: ['Fetching invoices', 'Processing data', 'Calculating totals'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading invoices..." />;
+  }
 
   const filteredInvoices = invoices?.filter(invoice => {
     const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -35,6 +35,8 @@ import {
   Settings
 } from "lucide-react";
 import { format } from "date-fns";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface PendingApproval {
   id: number;
@@ -153,6 +155,20 @@ export default function ExpenseApprovals() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading expense approvals...' },
+      { isLoading: approveMutation.isPending, message: 'Approving expense...' },
+      { isLoading: rejectMutation.isPending, message: 'Rejecting expense...' },
+    ],
+    progressSteps: ['Fetching pending approvals', 'Loading metrics data', 'Processing approval history'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading expense approvals..." />;
+  }
 
   const getUrgencyBadge = (urgency: string) => {
     const config = {

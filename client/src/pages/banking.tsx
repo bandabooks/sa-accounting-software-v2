@@ -34,6 +34,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import type { BankAccountWithTransactions, ChartOfAccount } from "@shared/schema";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 const bankAccountSchema = z.object({
   accountName: z.string().min(1, "Account name is required"),
@@ -217,12 +219,20 @@ export default function Banking() {
 
   const totalAccounts = bankAccounts.length;
 
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading bank accounts...' },
+      { isLoading: createAccountMutation.isPending, message: 'Creating account...' },
+      { isLoading: updateAccountMutation.isPending, message: 'Updating account...' },
+      { isLoading: createTransactionMutation.isPending, message: 'Creating transaction...' },
+      { isLoading: toggleAccountMutation.isPending, message: 'Updating status...' },
+    ],
+    progressSteps: ['Fetching accounts', 'Loading transactions', 'Processing data'],
+  });
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+    return <PageLoader message="Loading banking..." />;
   }
 
   return (

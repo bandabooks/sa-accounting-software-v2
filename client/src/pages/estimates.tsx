@@ -48,6 +48,8 @@ import { DashboardCard } from "@/components/DashboardCard";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { generateEstimatePDF } from "@/components/estimate/pdf-generator";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface EstimateTemplate {
   id: string;
@@ -185,10 +187,27 @@ export default function Estimates() {
     queryFn: estimatesApi.getAll
   });
 
-  const { data: stats = { total: 0, conversionRate: 0, accepted: 0, wonValue: 0 } } = useQuery({
+  const { data: stats = { total: 0, conversionRate: 0, accepted: 0, wonValue: 0 }, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/estimates/stats"],
     queryFn: () => apiRequest("/api/estimates/stats", "GET")
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading estimates...' },
+      { isLoading: statsLoading, message: 'Loading estimate statistics...' },
+      { isLoading: sendEmailMutation.isPending, message: 'Sending email...' },
+      { isLoading: deleteMutation.isPending, message: 'Deleting estimate...' },
+      { isLoading: updateStatusMutation.isPending, message: 'Updating status...' },
+      { isLoading: sendEstimateMutation.isPending, message: 'Sending estimate...' },
+    ],
+    progressSteps: ['Fetching estimates', 'Processing pipeline', 'Loading templates'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading estimates..." />;
+  }
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number; status: string; notes?: string }) => {

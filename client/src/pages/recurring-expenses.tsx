@@ -38,6 +38,8 @@ import {
   Bell
 } from "lucide-react";
 import { format, addDays } from "date-fns";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface RecurringExpense {
   id: number;
@@ -168,6 +170,21 @@ export default function RecurringExpenses() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading recurring expenses...' },
+      { isLoading: toggleActiveMutation.isPending, message: 'Updating template status...' },
+      { isLoading: generateNowMutation.isPending, message: 'Generating expense...' },
+      { isLoading: deleteTemplateMutation.isPending, message: 'Deleting template...' },
+    ],
+    progressSteps: ['Fetching recurring expenses', 'Loading metrics data', 'Processing templates'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading recurring expenses..." />;
+  }
 
   const getFrequencyBadge = (frequency: string) => {
     const config = {

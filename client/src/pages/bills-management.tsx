@@ -38,6 +38,8 @@ import {
   ArrowRight
 } from "lucide-react";
 import { format } from "date-fns";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface Bill {
   id: number;
@@ -150,6 +152,19 @@ export default function BillsManagement() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading bills and accounts payable...' },
+      { isLoading: approveBillMutation.isPending, message: 'Approving bill...' },
+    ],
+    progressSteps: ['Fetching bills data', 'Loading supplier information', 'Processing metrics'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading bills management..." />;
+  }
 
   // Reject bill mutation
   const rejectBillMutation = useMutation({

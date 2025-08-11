@@ -12,6 +12,8 @@ import { formatCurrency } from "@/lib/utils";
 import { MiniDashboard } from "@/components/MiniDashboard";
 import { DashboardCard } from "@/components/DashboardCard";
 import type { Product, ProductCategory } from "@shared/schema";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,7 +29,7 @@ export default function Products() {
     queryKey: ["/api/product-categories"],
   });
 
-  const { data: stats } = useQuery<{
+  const { data: stats, isLoading: statsLoading } = useQuery<{
     total: number;
     active: number;
     services: number;
@@ -35,6 +37,20 @@ export default function Products() {
   }>({
     queryKey: ["/api/products/stats"],
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: productsLoading, message: 'Loading products...' },
+      { isLoading: statsLoading, message: 'Loading product statistics...' },
+      { isLoading: deleteProductMutation.isPending, message: 'Deleting product...' },
+    ],
+    progressSteps: ['Fetching products', 'Loading categories', 'Processing inventory'],
+  });
+
+  if (productsLoading) {
+    return <PageLoader message="Loading products..." />;
+  }
 
   const deleteProductMutation = useMutation({
     mutationFn: async (id: number) => {

@@ -25,6 +25,8 @@ import { formatCurrency } from "@/lib/utils-invoice";
 import { TooltipWizard } from "@/components/onboarding/TooltipWizard";
 import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
 import { PaymentFormModal } from "@/components/payments/PaymentFormModal";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface DashboardWidget {
   id: string;
@@ -57,6 +59,14 @@ export default function Dashboard() {
     skipOnboarding,
   } = useOnboardingWizard();
 
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading dashboard data...' },
+    ],
+    progressSteps: ['Fetching statistics', 'Processing charts', 'Loading activities'],
+  });
+
   // Auto-refresh data every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -68,20 +78,7 @@ export default function Dashboard() {
   }, [refetch]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <div className="container mx-auto px-4 py-6">
-          <div className="animate-pulse space-y-6">
-            <div className="h-48 bg-gradient-to-r from-blue-200 to-purple-200 rounded-2xl"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-white/60 rounded-xl shadow-lg"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading dashboard data..." />;
   }
 
   // Return basic dashboard even if stats is null/undefined to prevent loading loop

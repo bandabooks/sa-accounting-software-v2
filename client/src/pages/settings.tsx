@@ -20,6 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CompanySettings } from "@shared/schema";
 import { VatStatusToggle } from "@/components/vat-management/vat-status-toggle";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 const companySettingsSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -218,6 +220,20 @@ export default function Settings() {
       fileInputRef.current.value = '';
     }
   };
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading settings...' },
+      { isLoading: updateSettingsMutation.isPending, message: 'Updating settings...' },
+      { isLoading: uploadLogoMutation.isPending, message: 'Uploading logo...' },
+    ],
+    progressSteps: ['Fetching company settings', 'Loading preferences', 'Preparing configuration'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading settings..." />;
+  }
 
   const onSubmit = (data: CompanySettingsFormData) => {
     updateSettingsMutation.mutate(data);

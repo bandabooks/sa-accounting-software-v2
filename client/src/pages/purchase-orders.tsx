@@ -12,6 +12,8 @@ import { Plus, Edit, Trash2, FileText, Search, Calendar, Package, DollarSign, Tr
 import { formatCurrency, formatDate } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface Supplier {
   id: number;
@@ -191,6 +193,21 @@ export default function PurchaseOrders() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading purchase orders...' },
+      { isLoading: createOrderMutation.isPending, message: 'Creating purchase order...' },
+      { isLoading: updateOrderMutation.isPending, message: 'Updating purchase order...' },
+      { isLoading: deleteOrderMutation.isPending, message: 'Deleting purchase order...' },
+    ],
+    progressSteps: ['Fetching orders', 'Loading suppliers', 'Processing data'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading purchase orders..." />;
+  }
 
   const filteredOrders = orders?.filter(order => {
     const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

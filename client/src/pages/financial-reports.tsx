@@ -44,6 +44,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface ReportData {
   id: string;
@@ -78,7 +80,7 @@ export default function FinancialReports() {
   };
 
   // Mock data queries - replace with real API calls
-  const { data: reportData } = useQuery({
+  const { data: reportData, isLoading } = useQuery({
     queryKey: ["/api/reports/summary", dateFrom, dateTo],
     queryFn: () => apiRequest(`/api/reports/summary?from=${dateFrom}&to=${dateTo}`, "GET"),
     select: (data) => ({
@@ -452,6 +454,18 @@ export default function FinancialReports() {
       ]
     }
   ];
+
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading financial reports...' },
+    ],
+    progressSteps: ['Fetching report data', 'Processing financial statements', 'Generating analytics'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading financial reports..." />;
+  }
 
   const handleReportClick = (report: any) => {
     if (report.data) {

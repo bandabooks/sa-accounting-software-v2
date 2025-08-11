@@ -18,6 +18,8 @@ import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { format } from "date-fns";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 const journalEntryFormSchema = insertJournalEntrySchema.omit({ 
   companyId: true, 
@@ -180,6 +182,21 @@ export default function JournalEntries() {
     control: form.control,
     name: "lines",
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: entriesLoading, message: 'Loading journal entries...' },
+      { isLoading: createMutation.isPending, message: 'Creating journal entry...' },
+      { isLoading: postMutation.isPending, message: 'Posting to general ledger...' },
+      { isLoading: reverseMutation.isPending, message: 'Reversing journal entry...' },
+    ],
+    progressSteps: ['Fetching journal entries', 'Loading chart of accounts', 'Preparing forms'],
+  });
+
+  if (entriesLoading) {
+    return <PageLoader message="Loading journal entries..." />;
+  }
 
   const watchedLines = form.watch("lines");
   const totalDebits = watchedLines.reduce((sum, line) => sum + parseFloat(line.debitAmount || "0"), 0);

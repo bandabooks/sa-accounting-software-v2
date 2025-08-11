@@ -9,6 +9,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BankCaptureWizard } from "@/components/bank-capture/BankCaptureWizard";
 import { ImportBatchList } from "@/components/bank-capture/ImportBatchList";
 import { BankFeedDashboard } from "@/components/stitch/BankFeedDashboard";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 export default function BankCapture() {
   const [, navigate] = useLocation();
@@ -24,9 +26,22 @@ export default function BankCapture() {
   });
 
   // Fetch bank accounts for dropdown
-  const { data: bankAccounts } = useQuery({
+  const { data: bankAccounts, isLoading: accountsLoading } = useQuery({
     queryKey: ['/api/bank-accounts'],
   });
+
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading import batches...' },
+      { isLoading: accountsLoading, message: 'Loading bank accounts...' },
+    ],
+    progressSteps: ['Fetching bank data', 'Loading transaction batches', 'Processing imports'],
+  });
+
+  if (isLoading || accountsLoading) {
+    return <PageLoader message="Loading bank capture..." />;
+  }
 
   const handleStartNewImport = () => {
     if (!accountId && bankAccounts?.length > 0) {

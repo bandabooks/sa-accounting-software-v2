@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils-invoice";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 export default function Payments() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,19 +25,16 @@ export default function Payments() {
 
   const totalPayments = payments.reduce((sum, payment) => sum + parseFloat(payment.amount || '0'), 0);
 
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading payments...' },
+    ],
+    progressSteps: ['Fetching payments', 'Calculating totals', 'Processing data'],
+  });
+
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Payments</h1>
-        </div>
-        <div className="animate-pulse space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          ))}
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading payments..." />;
   }
 
   return (

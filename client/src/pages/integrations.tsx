@@ -11,6 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 import { 
   Shield, 
   Building2, 
@@ -73,7 +75,7 @@ export default function Integrations() {
     queryFn: () => apiRequest('/api/sars/integration/status', 'GET'),
   });
 
-  const { data: sarsCredentials } = useQuery({
+  const { data: sarsCredentials, isLoading: credentialsLoading } = useQuery({
     queryKey: ['/api/sars/credentials'],
     queryFn: () => apiRequest('/api/sars/credentials', 'GET'),
   });
@@ -116,6 +118,21 @@ export default function Integrations() {
       });
     }
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading integrations...' },
+      { isLoading: credentialsLoading, message: 'Loading credentials...' },
+      { isLoading: testConnectionMutation.isPending, message: 'Testing connection...' },
+      { isLoading: saveCredentialsMutation.isPending, message: 'Saving credentials...' },
+    ],
+    progressSteps: ['Fetching integration status', 'Loading configuration', 'Processing settings'],
+  });
+
+  if (isLoading || credentialsLoading) {
+    return <PageLoader message="Loading integrations..." />;
+  }
 
   // Integration categories for better organization
   const integrationCategories = [
