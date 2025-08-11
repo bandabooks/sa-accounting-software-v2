@@ -9482,7 +9482,12 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
   app.get("/api/companies/my", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user.id;
+      const username = req.user.username;
+      console.log(`🏢 Fetching companies for user: ${username} (ID: ${userId})`);
+      
       const companies = await storage.getUserCompanies(userId);
+      console.log(`📋 Found ${companies.length} companies for ${username}:`, companies.map(c => c.company?.name || 'Unknown'));
+      
       res.json(companies);
     } catch (error) {
       console.error("Error fetching user companies:", error);
@@ -9493,10 +9498,16 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
   app.get("/api/companies/active", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user.id;
+      const username = req.user.username;
+      console.log(`🎯 Fetching active company for user: ${username} (ID: ${userId})`);
+      
       const activeCompany = await storage.getUserActiveCompany(userId);
       if (!activeCompany) {
+        console.log(`❌ No active company found for user ${username}`);
         return res.status(404).json({ message: "No active company found" });
       }
+      
+      console.log(`✅ Active company for ${username}: ${activeCompany.name} (ID: ${activeCompany.id})`);
       res.json(activeCompany);
     } catch (error) {
       console.error("Error fetching active company:", error);
