@@ -10002,7 +10002,7 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
     }
   });
 
-  app.put("/api/companies/:companyId/vat-settings", authenticate, async (req, res) => {
+  app.put("/api/companies/:companyId/vat-settings", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req, res) => {
     try {
       const companyId = parseInt(req.params.companyId);
       const { isVatRegistered, vatRegistrationNumber, vatRegistrationDate, vatPeriodMonths, vatSubmissionDay, vatInclusivePricing, defaultVatRate } = req.body;
