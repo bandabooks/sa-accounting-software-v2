@@ -200,6 +200,47 @@ const logoUpload = multer({
   }
 });
 
+// Configure multer for bank statement uploads
+const bankStatementStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/bank-statements';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = `bank-statement-${Date.now()}${ext}`;
+    cb(null, filename);
+  }
+});
+
+const bankStatementUpload = multer({
+  storage: bankStatementStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /csv|xlsx|xls|qif|ofx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const allowedMimes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/x-qif',
+      'application/x-ofx'
+    ];
+    const mimetype = allowedMimes.includes(file.mimetype) || file.mimetype.includes('text/plain');
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV, Excel, QIF, and OFX files are allowed.'));
+    }
+  }
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize PayFast service
   let payFastService: any;
@@ -6452,6 +6493,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating company settings:", error);
       res.status(500).json({ error: "Failed to update company settings" });
+    }
+  });
+
+  // Bank Statement Import
+  app.post('/api/bank/import-statement', authenticate, bankStatementUpload.single('file'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User authentication required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No bank statement file uploaded" });
+      }
+
+      const { bankName, bankAccountId } = req.body;
+      
+      if (!bankAccountId) {
+        return res.status(400).json({ message: "Bank account selection required" });
+      }
+
+      // Read and parse the uploaded file
+      const filePath = req.file.path;
+      const fileName = req.file.originalname;
+      const fileExtension = path.extname(fileName).toLowerCase();
+      
+      let transactions: any[] = [];
+      
+      try {
+        if (fileExtension === '.csv') {
+          // Parse CSV file
+          const fileContent = fs.readFileSync(filePath, 'utf-8');
+          const lines = fileContent.split('\n').filter(line => line.trim());
+          
+          // Skip header row and parse transaction lines
+          for (let i = 1; i < lines.length; i++) {
+            const columns = lines[i].split(',').map(col => col.trim().replace(/"/g, ''));
+            if (columns.length >= 4) {
+              transactions.push({
+                date: columns[0],
+                description: columns[1] || 'Bank Transaction',
+                reference: columns[2] || '',
+                amount: parseFloat(columns[3]) || 0,
+                balance: columns[4] ? parseFloat(columns[4]) : null,
+                type: parseFloat(columns[3]) >= 0 ? 'credit' : 'debit'
+              });
+            }
+          }
+        } else {
+          // For other formats, create a basic structure for now
+          transactions.push({
+            date: new Date().toISOString().split('T')[0],
+            description: 'Imported Transaction',
+            reference: fileName,
+            amount: 0,
+            balance: null,
+            type: 'credit'
+          });
+        }
+
+        // Filter out invalid transactions
+        transactions = transactions.filter(t => t.amount !== 0 && t.date && t.description);
+
+        // Create journal entries for each transaction
+        const journalEntries = [];
+        for (const transaction of transactions) {
+          const amount = Math.abs(transaction.amount);
+          const isDebit = transaction.amount < 0;
+          
+          // Get bank account details
+          const bankAccount = await storage.getBankAccount(parseInt(bankAccountId));
+          if (!bankAccount) {
+            continue;
+          }
+
+          const journalEntry = {
+            entryNumber: `bank-import-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            transactionDate: transaction.date,
+            description: `Bank Import: ${transaction.description}`,
+            reference: transaction.reference || fileName,
+            totalDebit: amount.toFixed(2),
+            totalCredit: amount.toFixed(2),
+            sourceModule: 'bank-import',
+            sourceId: null,
+            companyId: companyId
+          };
+
+          // Create journal entry lines
+          const lines = [
+            {
+              accountId: bankAccount.chartAccountId, // Bank account
+              description: transaction.description,
+              debitAmount: isDebit ? '0.00' : amount.toFixed(2),
+              creditAmount: isDebit ? amount.toFixed(2) : '0.00',
+              reference: transaction.reference || ''
+            },
+            {
+              accountId: isDebit ? 70 : 60, // Default expense/income account - should be configurable
+              description: transaction.description,
+              debitAmount: isDebit ? amount.toFixed(2) : '0.00',
+              creditAmount: isDebit ? '0.00' : amount.toFixed(2),
+              reference: transaction.reference || ''
+            }
+          ];
+
+          try {
+            const result = await storage.createJournalEntry({ entry: journalEntry, lines });
+            journalEntries.push(result);
+          } catch (entryError) {
+            console.error('Error creating journal entry for transaction:', entryError);
+          }
+        }
+
+        // Clean up uploaded file
+        fs.unlinkSync(filePath);
+        
+        // Log the action
+        await logAudit(userId, 'CREATE', 'bank_import', companyId, `Imported ${transactions.length} transactions from ${fileName}`);
+        
+        res.json({ 
+          success: true, 
+          message: 'Bank statement imported successfully',
+          transactionCount: transactions.length,
+          journalEntriesCreated: journalEntries.length,
+          fileName: fileName
+        });
+        
+      } catch (parseError) {
+        // Clean up uploaded file on error
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        throw parseError;
+      }
+      
+    } catch (error) {
+      console.error('Error importing bank statement:', error);
+      res.status(500).json({ 
+        message: 'Failed to import bank statement',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

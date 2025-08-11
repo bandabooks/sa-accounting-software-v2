@@ -20,7 +20,12 @@ import {
   Clock,
   Calculator,
   CreditCard,
-  Calendar
+  Calendar,
+  Upload,
+  FileSpreadsheet,
+  Landmark,
+  Download,
+  RefreshCw
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -70,11 +75,35 @@ interface CaptureMetrics {
   percentFinalized: number;
 }
 
+interface BankImportBatch {
+  id: number;
+  fileName: string;
+  uploadDate: string;
+  status: 'processing' | 'parsed' | 'validated' | 'completed' | 'failed';
+  bankName: string;
+  totalTransactions: number;
+  processedTransactions: number;
+  errorCount: number;
+  accountNumber?: string;
+}
+
+interface BankTransaction {
+  id?: number;
+  date: string;
+  description: string;
+  reference: string;
+  amount: number;
+  balance?: number;
+  type: 'debit' | 'credit';
+  category?: string;
+  status: 'pending' | 'matched' | 'ignored';
+}
+
 const EnhancedBulkCapture = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'income' | 'expense'>('income');
+  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'bank-import'>('income');
   const [expenseEntries, setExpenseEntries] = useState<ExpenseEntry[]>([]);
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
   const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -83,6 +112,13 @@ const EnhancedBulkCapture = () => {
   const [successDetails, setSuccessDetails] = useState<{count: number, type: string, status: 'draft' | 'finalized'}>({count: 0, type: '', status: 'finalized'});
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'finalized'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Bank import states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedBank, setSelectedBank] = useState<string>('First');
+  const [isUploading, setIsUploading] = useState(false);
+  const [bankImportBatches, setBankImportBatches] = useState<BankImportBatch[]>([]);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<string>('');
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -395,6 +431,66 @@ const EnhancedBulkCapture = () => {
       })));
     }
   }, [activeTab, quickDate]);
+
+  // Bank import functions
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  }, []);
+
+  const handleBankUpload = useCallback(async () => {
+    if (!selectedFile || !selectedBankAccount) {
+      toast({
+        title: "Error",
+        description: "Please select a file and bank account",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('bankName', selectedBank);
+      formData.append('bankAccountId', selectedBankAccount);
+
+      const response = await fetch('/api/bank/import-statement', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload bank statement');
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: "Success",
+        description: `Bank statement uploaded successfully. ${result.transactionCount} transactions imported.`,
+      });
+
+      // Reset form
+      setSelectedFile(null);
+      setSelectedBankAccount('');
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/bank/import-batches'] });
+      
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload bank statement",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [selectedFile, selectedBank, selectedBankAccount, toast, queryClient]);
 
   // Add more rows
   const addMoreRows = useCallback((count: number = 5) => {
@@ -709,23 +805,207 @@ const EnhancedBulkCapture = () => {
       </div>
 
       {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense')}>
-        <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense' | 'bank-import')}>
+        <TabsList className="grid w-full grid-cols-3 bg-gray-100">
           <TabsTrigger 
-            value="income" 
-            className="flex items-center space-x-2 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            value="bank-import" 
+            className="flex items-center space-x-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
           >
-            <TrendingUp className="w-4 h-4" />
-            <span>Income Capture</span>
+            <Upload className="w-4 h-4" />
+            <span>Bank Import</span>
           </TabsTrigger>
           <TabsTrigger 
             value="expense" 
             className="flex items-center space-x-2 data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
           >
             <TrendingDown className="w-4 h-4" />
-            <span>Expense Capture</span>
+            <span>Bulk Expenses</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="income" 
+            className="flex items-center space-x-2 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Bulk Income</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* Bank Import Tab */}
+        <TabsContent value="bank-import" className="space-y-6">
+          {/* Bank Import Upload Card */}
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold text-blue-900 flex items-center">
+                <Landmark className="w-5 h-5 mr-2" />
+                Bank Statement Import
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Upload Form */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* File Upload Section */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="bank-select" className="text-sm font-medium text-gray-700">
+                      Select Bank
+                    </Label>
+                    <Select value={selectedBank} onValueChange={setSelectedBank}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choose your bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FNB">FNB</SelectItem>
+                        <SelectItem value="Standard Bank">Standard Bank</SelectItem>
+                        <SelectItem value="ABSA">ABSA</SelectItem>
+                        <SelectItem value="Nedbank">Nedbank</SelectItem>
+                        <SelectItem value="Capitec">Capitec</SelectItem>
+                        <SelectItem value="Discovery Bank">Discovery Bank</SelectItem>
+                        <SelectItem value="TymeBank">TymeBank</SelectItem>
+                        <SelectItem value="African Bank">African Bank</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="bank-account-select" className="text-sm font-medium text-gray-700">
+                      Bank Account
+                    </Label>
+                    <Select value={selectedBankAccount} onValueChange={setSelectedBankAccount}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select bank account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts.map((account: any) => (
+                          <SelectItem key={account.id} value={account.id.toString()}>
+                            {account.accountName} - {account.accountNumber}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="file-upload" className="text-sm font-medium text-gray-700">
+                      Upload Statement File
+                    </Label>
+                    <div className="mt-2">
+                      <Input
+                        id="file-upload"
+                        type="file"
+                        accept=".csv,.xlsx,.xls,.qif,.ofx"
+                        onChange={handleFileSelect}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Supported formats: CSV, Excel (.xlsx, .xls), QIF, OFX
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upload Status Section */}
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Upload Status</h4>
+                    {selectedFile ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium">{selectedFile.name}</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Size: {(selectedFile.size / 1024).toFixed(1)} KB
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Type: {selectedFile.type || 'Unknown'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        No file selected
+                      </div>
+                    )}
+                  </div>
+
+                  <Button 
+                    onClick={handleBankUpload}
+                    disabled={!selectedFile || !selectedBankAccount || isUploading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isUploading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Import Transactions
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Quick Guide */}
+              <div className="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-4 border border-blue-200">
+                <h4 className="text-sm font-semibold text-blue-900 mb-2">Quick Import Guide</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Download your bank statement in CSV or Excel format</li>
+                  <li>• Select the corresponding bank account from the dropdown</li>
+                  <li>• Upload the file and we'll automatically parse transactions</li>
+                  <li>• Review and categorize imported transactions in the next step</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Imports (if any) */}
+          <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold text-gray-900 flex items-center">
+                <Download className="w-5 h-5 mr-2" />
+                Recent Imports
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {bankImportBatches.length > 0 ? (
+                <div className="space-y-3">
+                  {bankImportBatches.map((batch) => (
+                    <div key={batch.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          batch.status === 'completed' ? 'bg-green-500' :
+                          batch.status === 'failed' ? 'bg-red-500' :
+                          'bg-yellow-500'
+                        }`} />
+                        <div>
+                          <div className="text-sm font-medium">{batch.fileName}</div>
+                          <div className="text-xs text-gray-500">
+                            {batch.bankName} • {format(new Date(batch.uploadDate), 'MMM dd, yyyy')}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{batch.totalTransactions} transactions</div>
+                        <div className="text-xs text-gray-500">
+                          {batch.processedTransactions} processed
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <FileSpreadsheet className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No recent imports found</p>
+                  <p className="text-xs">Upload a bank statement to get started</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Income Tab */}
         <TabsContent value="income" className="space-y-6">
