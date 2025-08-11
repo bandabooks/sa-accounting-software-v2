@@ -214,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/uploads', express.static('uploads'));
 
   // Register multi-company routes
-  // registerCompanyRoutes(app); // Temporarily disable to avoid conflicts
+  registerCompanyRoutes(app);
   // Register enterprise feature routes
   registerEnterpriseRoutes(app);
   registerOnboardingRoutes(app);
@@ -1246,10 +1246,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyId: req.user.companyId || 1 // Use user's active company ID
       });
       const customer = await storage.createCustomer(validatedData);
-      
-      // Log audit trail
-      await logAudit(req.user.id, 'CREATE', 'customers', customer.id, validatedData);
-      
       res.status(201).json(customer);
     } catch (error) {
       console.error("Customer creation error:", error);
@@ -1301,20 +1297,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete customer" });
-    }
-  });
-
-  // OPTIONS method for customers endpoint
-  app.options("/api/customers", (req, res) => {
-    res.header("Allow", "GET, POST, OPTIONS");
-    res.sendStatus(200);
-  });
-
-  // Handle unsupported methods for customers
-  app.all("/api/customers", (req, res) => {
-    if (!["GET", "POST", "OPTIONS"].includes(req.method)) {
-      res.header("Allow", "GET, POST, OPTIONS");
-      return res.status(405).json({ message: `Method ${req.method} not allowed` });
     }
   });
 
@@ -3681,17 +3663,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/suppliers", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/suppliers", async (req, res) => {
     try {
       const validatedData = insertSupplierSchema.parse({
         ...req.body,
-        companyId: req.user.companyId || 1 // Use user's active company ID
+        companyId: 2 // Default company ID
       });
       const supplier = await storage.createSupplier(validatedData);
-      
-      // Log audit trail
-      await logAudit(req.user.id, 'CREATE', 'suppliers', supplier.id, validatedData);
-      
       res.status(201).json(supplier);
     } catch (error) {
       console.error("Supplier creation error:", error);
@@ -3729,20 +3707,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Supplier deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete supplier" });
-    }
-  });
-
-  // OPTIONS method for suppliers endpoint
-  app.options("/api/suppliers", (req, res) => {
-    res.header("Allow", "GET, POST, OPTIONS");
-    res.sendStatus(200);
-  });
-
-  // Handle unsupported methods for suppliers
-  app.all("/api/suppliers", (req, res) => {
-    if (!["GET", "POST", "OPTIONS"].includes(req.method)) {
-      res.header("Allow", "GET, POST, OPTIONS");
-      return res.status(405).json({ message: `Method ${req.method} not allowed` });
     }
   });
 
@@ -4379,90 +4343,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting product:", error);
       res.status(500).json({ message: "Failed to delete product" });
-    }
-  });
-
-  // OPTIONS method for products endpoint
-  app.options("/api/products", (req, res) => {
-    res.header("Allow", "GET, POST, OPTIONS");
-    res.sendStatus(200);
-  });
-
-  // Handle unsupported methods for products
-  app.all("/api/products", (req, res) => {
-    if (!["GET", "POST", "OPTIONS"].includes(req.method)) {
-      res.header("Allow", "GET, POST, OPTIONS");
-      return res.status(405).json({ message: `Method ${req.method} not allowed` });
-    }
-  });
-
-  // Services endpoints (services are products with isService=true)
-  app.get("/api/services", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const companyId = req.user.companyId;
-      const { search } = req.query;
-      
-      // Get all products where isService = true
-      const allProducts = await storage.getAllProducts(companyId);
-      const services = allProducts.filter(product => product.isService === true);
-      
-      if (search && typeof search === 'string') {
-        const filteredServices = services.filter(service => 
-          service.name.toLowerCase().includes(search.toLowerCase()) ||
-          (service.description && service.description.toLowerCase().includes(search.toLowerCase())) ||
-          (service.sku && service.sku.toLowerCase().includes(search.toLowerCase()))
-        );
-        return res.json(filteredServices);
-      }
-      
-      res.json(services);
-    } catch (error) {
-      console.error("Error fetching services:", error);
-      res.status(500).json({ message: "Failed to fetch services" });
-    }
-  });
-
-  app.post("/api/services", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const companyId = req.user.companyId || 1;
-      
-      // Convert string account IDs to integers if present and mark as service
-      const processedData = {
-        ...req.body,
-        companyId,
-        isService: true, // Always mark as service
-        trackInventory: false, // Services typically don't track inventory
-        incomeAccountId: req.body.incomeAccountId ? parseInt(req.body.incomeAccountId) : undefined,
-        expenseAccountId: req.body.expenseAccountId ? parseInt(req.body.expenseAccountId) : undefined,
-      };
-      
-      const serviceData = insertProductSchema.parse(processedData);
-      const service = await storage.createProduct(serviceData);
-      
-      // Log audit trail
-      await logAudit(req.user.id, 'CREATE', 'services', service?.id || 0, serviceData);
-      
-      res.status(201).json(service);
-    } catch (error) {
-      console.error("Error creating service:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create service" });
-    }
-  });
-
-  // OPTIONS method for services endpoint
-  app.options("/api/services", (req, res) => {
-    res.header("Allow", "GET, POST, OPTIONS");
-    res.sendStatus(200);
-  });
-
-  // Handle unsupported methods for services
-  app.all("/api/services", (req, res) => {
-    if (!["GET", "POST", "OPTIONS"].includes(req.method)) {
-      res.header("Allow", "GET, POST, OPTIONS");
-      return res.status(405).json({ message: `Method ${req.method} not allowed` });
     }
   });
 
@@ -9482,12 +9362,7 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
   app.get("/api/companies/my", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user.id;
-      const username = req.user.username;
-      console.log(`🏢 Fetching companies for user: ${username} (ID: ${userId})`);
-      
       const companies = await storage.getUserCompanies(userId);
-      console.log(`📋 Found ${companies.length} companies for ${username}:`, companies.map(c => c.company?.name || 'Unknown'));
-      
       res.json(companies);
     } catch (error) {
       console.error("Error fetching user companies:", error);
@@ -9498,16 +9373,10 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
   app.get("/api/companies/active", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user.id;
-      const username = req.user.username;
-      console.log(`🎯 Fetching active company for user: ${username} (ID: ${userId})`);
-      
       const activeCompany = await storage.getUserActiveCompany(userId);
       if (!activeCompany) {
-        console.log(`❌ No active company found for user ${username}`);
         return res.status(404).json({ message: "No active company found" });
       }
-      
-      console.log(`✅ Active company for ${username}: ${activeCompany.name} (ID: ${activeCompany.id})`);
       res.json(activeCompany);
     } catch (error) {
       console.error("Error fetching active company:", error);
@@ -9520,34 +9389,23 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       const userId = req.user.id;
       const { companyId } = req.body;
       
-      console.log(`🔄 Company switch request: User ${userId} -> Company ${companyId}`);
-      
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
 
       // Verify user has access to this company
       const userCompanies = await storage.getUserCompanies(userId);
-      console.log(`👤 User companies:`, userCompanies.map(uc => `${uc.companyId}:${uc.company?.name || 'Unknown'}`));
-      
       const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
       
       if (!hasAccess) {
-        console.log(`❌ Access denied: User ${userId} cannot access company ${companyId}`);
         return res.status(403).json({ message: "Access denied to this company" });
       }
 
       // Update user's active company
-      console.log(`💾 Setting active company ${companyId} for user ${userId}`);
       await storage.setUserActiveCompany(userId, companyId);
-      
-      // Verify the update worked
-      const updatedActiveCompany = await storage.getUserActiveCompany(userId);
-      console.log(`✅ Active company after update:`, updatedActiveCompany?.name, `(ID: ${updatedActiveCompany?.id})`);
       
       // Get the switched company details
       const company = await storage.getCompany(companyId);
-      console.log(`📋 Company details:`, company?.name);
       
       res.json({ 
         success: true, 
@@ -9555,7 +9413,7 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
         message: "Company switched successfully" 
       });
     } catch (error) {
-      console.error("❌ Error switching company:", error);
+      console.error("Error switching company:", error);
       res.status(500).json({ message: "Failed to switch company" });
     }
   });

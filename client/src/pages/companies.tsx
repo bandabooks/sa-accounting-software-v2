@@ -37,7 +37,7 @@ export default function Companies() {
   // Fetch company users when a company is selected
   const { data: companyUsers } = useQuery({
     queryKey: ["/api/companies", selectedCompany?.id, "users"],
-    enabled: !!selectedCompany?.id,
+    enabled: !!selectedCompany,
   });
 
   // Create company mutation

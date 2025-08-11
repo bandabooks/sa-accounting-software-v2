@@ -129,7 +129,6 @@ export default function CompanySwitcher() {
       window.location.reload();
     },
     onError: (error: any) => {
-      console.error("Company switch error:", error);
       toast({
         title: "Failed to switch company",
         description: error.message || "Please try again",
@@ -171,16 +170,12 @@ export default function CompanySwitcher() {
   });
 
   const handleSwitchCompany = async (companyId: number) => {
-    if (!companyId || companyId === activeCompany?.id) {
+    if (companyId === activeCompany?.id) {
       setIsOpen(false);
       return;
     }
     
-    try {
-      await switchCompanyMutation.mutateAsync(companyId);
-    } catch (error) {
-      console.error("Error switching company:", error);
-    }
+    await switchCompanyMutation.mutateAsync(companyId);
   };
 
   // Form handling functions
@@ -301,40 +296,8 @@ export default function CompanySwitcher() {
     );
   }
 
-  if (companiesLoading || activeCompanyLoading) {
-    return (
-      <div className="flex items-center space-x-2 animate-pulse">
-        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-        <div className="w-24 h-4 bg-gray-200 rounded"></div>
-      </div>
-    );
-  }
-
-  // Debug logging
-  console.log("CompanySwitcher state:", {
-    activeCompany,
-    userCompaniesLength: userCompanies.length,
-    userCompanies: userCompanies.map(uc => ({ 
-      id: uc.companyId, 
-      name: uc.company?.name || 'Unknown',
-      role: uc.role
-    }))
-  });
-
-  if (!activeCompany) {
-    return (
-      <div className="text-red-500 text-sm">
-        No active company found
-      </div>
-    );
-  }
-
-  if (userCompanies.length === 0) {
-    return (
-      <div className="text-yellow-600 text-sm">
-        No companies available
-      </div>
-    );
+  if (!activeCompany || userCompanies.length === 0) {
+    return null;
   }
 
   const getCompanyInitials = (name: string) => {
@@ -454,13 +417,8 @@ export default function CompanySwitcher() {
               <p className="text-xs text-gray-400 mt-1">Try a different search term</p>
             </div>
           ) : (
-            filteredCompanies.map((userCompany, index) => {
-            const company = userCompany?.company;
-            if (!company || !activeCompany) {
-              console.warn(`Missing company data for userCompany at index ${index}:`, userCompany);
-              return null;
-            }
-            
+            filteredCompanies.map((userCompany) => {
+            const company = userCompany.company;
             const isActive = company.id === activeCompany.id;
             
             return (
