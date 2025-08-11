@@ -7748,13 +7748,46 @@ export class DatabaseStorage implements IStorage {
     
     if (!user || !user.activeCompanyId) {
       // If no active company set, get the first company the user has access to
-      const userCompanies = await this.getUserCompanies(userId);
-      if (userCompanies.length > 0) {
-        const firstCompany = userCompanies[0].company;
-        await this.setUserActiveCompany(userId, firstCompany.id);
-        return firstCompany;
+      try {
+        const userCompanies = await this.getUserCompanies(userId);
+        if (userCompanies.length > 0 && userCompanies[0] && userCompanies[0].company) {
+          const firstCompany = userCompanies[0].company;
+          await this.setUserActiveCompany(userId, firstCompany.id);
+          return firstCompany;
+        }
+      } catch (companyError) {
+        console.error('Error getting user companies:', companyError);
       }
-      return undefined;
+      
+      // If user has no companies, create a default one
+      console.log(`→ User ${userId} has no companies, creating default company`);
+      try {
+        const defaultCompany = await this.createCompany({
+          name: `Default Company`,
+          displayName: `Default Company`,
+          industry: 'Professional Services',
+          registrationNumber: '',
+          vatNumber: '',
+          phone: '',
+          email: '',
+          address: '',
+          city: '',
+          province: '',
+          postalCode: '',
+          country: 'South Africa',
+          logo: null,
+        });
+        
+        // Add user to the new company
+        await this.addUserToCompany(userId, defaultCompany.id, 'owner');
+        await this.setUserActiveCompany(userId, defaultCompany.id);
+        
+        console.log(`→ Created default company ${defaultCompany.id} for user ${userId}`);
+        return defaultCompany;
+      } catch (error) {
+        console.error('Error creating default company:', error);
+        return undefined;
+      }
     }
 
     const [company] = await db
