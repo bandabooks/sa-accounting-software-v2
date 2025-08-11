@@ -2465,9 +2465,11 @@ export class DatabaseStorage implements IStorage {
         const year = new Date().getFullYear();
         const month = monthIndex + 1;
         
-        // Get revenue for this month
+        // Get revenue for this month - optimized with specific columns
         const monthlyInvoices = await db
-          .select()
+          .select({
+            total: invoices.total
+          })
           .from(invoices)
           .where(and(
             eq(invoices.companyId, companyId),
@@ -2478,9 +2480,11 @@ export class DatabaseStorage implements IStorage {
 
         const revenue = monthlyInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
 
-        // Get expenses for this month
+        // Get expenses for this month - simplified query
         const monthlyExpenses = await db
-          .select()
+          .select({
+            amount: expenses.amount
+          })
           .from(expenses)
           .where(and(
             eq(expenses.companyId, companyId),
@@ -2566,9 +2570,14 @@ export class DatabaseStorage implements IStorage {
         });
       });
 
-      // Recent expenses
+      // Recent expenses - simplified query
       const recentExpenses = await db
-        .select()
+        .select({
+          id: expenses.id,
+          description: expenses.description,
+          amount: expenses.amount,
+          expenseDate: expenses.expenseDate
+        })
         .from(expenses)
         .where(eq(expenses.companyId, companyId))
         .orderBy(desc(expenses.expenseDate))

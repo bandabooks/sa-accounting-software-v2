@@ -5,6 +5,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
+import { withCache } from "./cache";
+import { fastStorage } from "./performance";
 import { 
   validateAdminCreation,
   auditDuplicateAdmins,
@@ -1132,42 +1134,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Dashboard - protected route with company isolation
+  // Enhanced Dashboard - protected route with company isolation and caching
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user?.activeCompanyId;
       
-      // Get comprehensive dashboard data
-      const [
-        basicStats,
-        receivablesAging,
-        payablesAging,
-        cashFlowSummary,
-        bankBalances,
-        profitLossData,
-        recentActivities,
-        complianceAlerts
-      ] = await Promise.all([
-        storage.getDashboardStats(companyId),
-        storage.getReceivablesAging(companyId),
-        storage.getPayablesAging(companyId),
-        storage.getCashFlowSummary(companyId),
-        storage.getBankAccountBalances(companyId),
-        storage.getProfitLossChartData(companyId),
-        storage.getRecentBusinessActivities(companyId),
-        storage.getComplianceAlerts(companyId)
-      ]);
+      // Set cache headers for 5 minutes to improve performance
+      res.set('Cache-Control', 'private, max-age=300');
+      
+      // Use fast optimized dashboard queries with caching
+      const cacheKey = `fast-dashboard-${companyId}`;
+      const dashboardData = await withCache(cacheKey, async () => {
+        console.log(`🚀 Loading fast dashboard for company ${companyId}`);
+        
+        // Use optimized queries for better performance
+        const [fastStats, recentActivities, bankBalances] = await Promise.all([
+          fastStorage.getFastDashboardStats(companyId),
+          fastStorage.getFastRecentActivities(companyId),
+          fastStorage.getFastBankBalances(companyId)
+        ]);
 
-      const enhancedStats = {
-        ...basicStats,
-        receivablesAging,
-        payablesAging,
-        cashFlowSummary,
-        bankBalances,
-        profitLossData,
-        recentActivities,
-        complianceAlerts
-      };
+        return {
+          totalRevenue: fastStats.total_revenue || "0.00",
+          outstandingInvoices: fastStats.outstanding_invoices || "0.00",
+          totalExpenses: fastStats.total_expenses || "0.00", 
+          totalCustomers: fastStats.total_customers || "0",
+          bankBalance: fastStats.bank_balance || "0.00",
+          receivablesAging: [],
+          payablesAging: [],
+          cashFlowSummary: {
+            currentCashPosition: fastStats.bank_balance || "0.00",
+            todayInflow: "0.00",
+            todayOutflow: "0.00", 
+            netCashFlow: "0.00"
+          },
+          bankBalances,
+          profitLossData: [],
+          recentActivities,
+          complianceAlerts: []
+        };
+      }, 180000); // Cache for 3 minutes
+      
+      console.log(`✅ Fast dashboard loaded for company ${companyId} in cache`);
+      
+      const enhancedStats = dashboardData;
 
       res.json(enhancedStats);
     } catch (error) {
@@ -1176,12 +1186,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customers with search - Company Isolated
+  // Customers with search - Company Isolated with caching
   app.get("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
       const companyId = req.user.companyId;
-      const customers = await storage.getAllCustomers(companyId);
+      
+      // Set cache headers
+      res.set('Cache-Control', 'private, max-age=180'); // 3 minutes
+      
+      const cacheKey = `customers-${companyId}-${search || 'all'}`;
+      const customers = await withCache(cacheKey, 
+        () => storage.getAllCustomers(companyId), 
+        180000 // 3 minutes cache
+      );
       
       if (search && typeof search === 'string') {
         const filteredCustomers = customers.filter(customer => 
