@@ -3165,11 +3165,19 @@ export const bankAccounts = pgTable("bank_accounts", {
   reconcileBalance: decimal("reconcile_balance", { precision: 15, scale: 2 }).default("0.00"),
   lastReconciled: timestamp("last_reconciled"),
   chartAccountId: integer("chart_account_id").references(() => chartOfAccounts.id),
+  // Stitch integration fields
+  externalProvider: text("external_provider"), // 'stitch' | null for manual accounts
+  providerAccountId: text("provider_account_id"), // Stitch account ID
+  institutionName: text("institution_name"), // Bank institution name from Stitch
+  lastSyncAt: timestamp("last_sync_at"), // Last successful sync timestamp
   isActive: boolean("is_active").default(true),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("bank_accounts_company_idx").on(table.companyId),
+  providerAccountIdx: index("bank_accounts_provider_account_idx").on(table.providerAccountId),
+}));
 
 // Bank Transactions
 export const bankTransactions = pgTable("bank_transactions", {
@@ -3190,6 +3198,9 @@ export const bankTransactions = pgTable("bank_transactions", {
   status: text("status").default("pending"), // pending, cleared, reconciled
   importBatchId: integer("import_batch_id").references(() => importBatches.id), // Reference to import batch
   isImported: boolean("is_imported").default(false), // Whether this was imported from statement
+  source: text("source").default("manual"), // manual | feed (for Stitch sync)
+  isDuplicate: boolean("is_duplicate").default(false), // Marked as duplicate during import
+  reconciled: boolean("reconciled").default(false), // Whether reconciled with bank statement
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -3267,6 +3278,23 @@ export const importQueue = pgTable("import_queue", {
   rowNumberIdx: index("import_queue_row_number_idx").on(table.importBatchId, table.rowNumber),
 }));
 
+// Bank Feed Cursors - Track sync state for linked bank accounts
+export const bankFeedCursors = pgTable("bank_feed_cursors", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  provider: text("provider").notNull(), // 'stitch'
+  externalAccountId: text("external_account_id").notNull(),
+  txnCursor: text("txn_cursor"), // Provider paging cursor for transactions
+  lastSyncAt: timestamp("last_sync_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bank_feed_cursors_company_idx").on(table.companyId),
+  bankAccountIdx: index("bank_feed_cursors_bank_account_idx").on(table.bankAccountId),
+  externalAccountIdx: index("bank_feed_cursors_external_account_idx").on(table.externalAccountId),
+  providerIdx: index("bank_feed_cursors_provider_idx").on(table.provider),
+}));
+
 // General Ledger View (Real-time calculated from journal entries)
 export const generalLedger = pgTable("general_ledger", {
   id: serial("id").primaryKey(),
@@ -3335,6 +3363,12 @@ export const insertImportQueueSchema = createInsertSchema(importQueue).omit({
   createdAt: true,
 });
 
+// Bank feed cursor schema
+export const insertBankFeedCursorSchema = createInsertSchema(bankFeedCursors).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Banking and GL types
 export type BankAccount = typeof bankAccounts.$inferSelect;
 export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
@@ -3344,6 +3378,8 @@ export type ImportBatch = typeof importBatches.$inferSelect;
 export type InsertImportBatch = z.infer<typeof insertImportBatchSchema>;
 export type ImportQueue = typeof importQueue.$inferSelect;
 export type InsertImportQueue = z.infer<typeof insertImportQueueSchema>;
+export type BankFeedCursor = typeof bankFeedCursors.$inferSelect;
+export type InsertBankFeedCursor = z.infer<typeof insertBankFeedCursorSchema>;
 export type GeneralLedger = typeof generalLedger.$inferSelect;
 export type BankReconciliation = typeof bankReconciliations.$inferSelect;
 export type InsertBankReconciliation = z.infer<typeof insertBankReconciliationSchema>;

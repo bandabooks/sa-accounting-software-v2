@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Clock, Download } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Clock, Download, Landmark } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BankCaptureWizard } from "@/components/bank-capture/BankCaptureWizard";
 import { ImportBatchList } from "@/components/bank-capture/ImportBatchList";
+import { BankFeedDashboard } from "@/components/stitch/BankFeedDashboard";
 
 export default function BankCapture() {
   const [, navigate] = useLocation();
@@ -94,9 +95,9 @@ export default function BankCapture() {
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Bank Capture: Statement Upload</h1>
+          <h1 className="text-3xl font-bold">Bank Capture & Feeds</h1>
           <p className="text-muted-foreground mt-2">
-            Import and process bank statements with automatic duplicate detection and validation
+            Import bank statements manually or set up automated bank feeds for real-time transaction syncing
           </p>
         </div>
         <Button 
@@ -135,12 +136,20 @@ export default function BankCapture() {
         </Card>
       )}
 
-      <Tabs defaultValue="recent" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="bank-feeds" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="bank-feeds" className="flex items-center gap-2">
+            <Landmark size={16} />
+            Bank Feeds
+          </TabsTrigger>
           <TabsTrigger value="recent">Recent Imports</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="bank-feeds">
+          <BankFeedDashboard />
+        </TabsContent>
 
         <TabsContent value="recent">
           <ImportBatchList 

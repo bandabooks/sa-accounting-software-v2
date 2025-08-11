@@ -1,0 +1,60 @@
+Stitch Bank Feeds (Link + Accounts + Transactions Sync)
+Goal
+Integrate Stitch (SA) so users can link bank accounts and pull ongoing bank feeds (accounts + transactions) into our existing BankAccount / BankTransaction models, alongside the manual statement import. Use Stitch Link (frontend) + Stitch GraphQL API (backend) + webhooks for update events. 
+Stitch Money
++1
+
+Deliverables
+Frontend (Link flow)
+
+Button: “Link bank via Stitch” in /bank/capture and /bank/accounts.
+
+Open Stitch Link modal using a short-lived token from our backend; on success, persist the connection and show linked accounts for selection. (Use Stitch’s Link/GraphQL flow.) 
+Stitch Money
+
+Backend
+
+GraphQL client + service (Node/TS) for Stitch.
+
+Endpoints:
+
+POST /api/stitch/link-token → returns client token for Link.
+
+POST /api/stitch/exchange → finalize connection (payload from Link), create/attach provider accounts to our BankAccount.
+
+POST /api/stitch/webhook → receive Stitch events (account/transaction updates). Verify signature; enqueue sync job. 
+Stitch Money
+
+Sync jobs:
+
+Accounts sync: name, official_name, institution, currency.
+
+Transactions incremental sync (store per-account cursor; pull new/changed only).
+
+Data mapping
+
+Stitch Account → BankAccount (externalProvider='stitch', providerAccountId, institutionName, currency, lastSyncAt).
+
+Stitch Transaction → BankTransaction:
+
+postingDate (use datePosted), description (combine name+memo), reference, amount (signed), currency, externalId (e.g., FITID/txn id), source='feed', reconciled=false.
+
+Run your ±3 day dedupe against existing statements/feed items before insert.
+
+UI
+
+New tab on Bank Capture: “Linked Feeds”.
+
+Show linked accounts, last sync time, “Sync now”, and the latest feed imports (like import batches).
+
+Security & POPIA
+
+Enforce tenant guard (companyId) on every call.
+
+Never log raw descriptions or PII; log counts and ids only.
+
+Docs & Tests
+
+README_stitch.md (env, flow, webhooks, cursoring, failure modes).
+
+Unit tests for webhook verification + transaction upsert logic.

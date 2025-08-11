@@ -6874,6 +6874,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stitch Bank Feed Integration Routes
+  app.post("/api/stitch/link-token", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+      const userId = authReq.user?.id || 1;
+
+      const { stitchService } = await import('./stitch/service');
+      const linkToken = await stitchService.createLinkToken({ companyId, userId });
+
+      res.json({ linkToken });
+    } catch (error) {
+      console.error('Error creating Stitch link token:', error);
+      res.status(500).json({ error: 'Failed to create bank link session' });
+    }
+  });
+
+  app.post("/api/stitch/exchange", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+      const { userId, accounts } = req.body;
+
+      if (!userId || !accounts || !Array.isArray(accounts)) {
+        return res.status(400).json({ error: 'Missing required fields: userId, accounts' });
+      }
+
+      const { stitchService } = await import('./stitch/service');
+      const linkedAccounts = await stitchService.exchangeLinkSuccess({
+        userId,
+        accounts,
+        companyId
+      });
+
+      await logAudit(authReq.user?.id || 0, 'CREATE', 'bank_feed_link', 0, {
+        provider: 'stitch',
+        accountCount: linkedAccounts.length
+      });
+
+      res.json({ 
+        message: 'Bank accounts linked successfully',
+        accounts: linkedAccounts 
+      });
+    } catch (error) {
+      console.error('Error exchanging Stitch link:', error);
+      res.status(500).json({ error: 'Failed to link bank accounts' });
+    }
+  });
+
+  app.post("/api/stitch/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+      const signature = req.headers['x-stitch-signature'] as string;
+      const payload = req.body;
+
+      // TODO: Verify webhook signature with STITCH_WEBHOOK_SECRET
+      // For now, just accept all webhooks in development
+      
+      const webhookData = JSON.parse(payload.toString());
+      console.log('Received Stitch webhook:', webhookData);
+
+      // Handle different webhook events
+      switch (webhookData.type) {
+        case 'account.updated':
+          // Sync account metadata when account is updated
+          break;
+        case 'transaction.created':
+          // Trigger transaction sync when new transactions are available
+          break;
+        default:
+          console.log('Unhandled webhook type:', webhookData.type);
+      }
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error('Error processing Stitch webhook:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
+    }
+  });
+
+  app.post("/api/stitch/sync-accounts/:id", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+      const bankAccountId = parseInt(req.params.id);
+
+      const { stitchService } = await import('./stitch/service');
+      await stitchService.syncAccounts({ bankAccountId, companyId });
+
+      res.json({ message: 'Account metadata synced successfully' });
+    } catch (error) {
+      console.error('Error syncing Stitch account:', error);
+      res.status(500).json({ error: 'Failed to sync account information' });
+    }
+  });
+
+  app.post("/api/stitch/sync-transactions/:id", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+      const bankAccountId = parseInt(req.params.id);
+      const { forceFullSync } = req.body;
+
+      const { stitchService } = await import('./stitch/service');
+      const result = await stitchService.syncTransactions({ 
+        bankAccountId, 
+        companyId, 
+        forceFullSync 
+      });
+
+      await logAudit(authReq.user?.id || 0, 'UPDATE', 'bank_feed_sync', bankAccountId, {
+        provider: 'stitch',
+        newTransactions: result.newTransactions,
+        duplicatesSkipped: result.duplicatesSkipped
+      });
+
+      res.json({
+        message: 'Transactions synced successfully',
+        ...result
+      });
+    } catch (error) {
+      console.error('Error syncing Stitch transactions:', error);
+      res.status(500).json({ error: 'Failed to sync bank transactions' });
+    }
+  });
+
+  app.get("/api/stitch/linked-accounts", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+
+      const { stitchService } = await import('./stitch/service');
+      const linkedAccounts = await stitchService.getLinkedAccounts(companyId);
+
+      res.json(linkedAccounts);
+    } catch (error) {
+      console.error('Error fetching linked accounts:', error);
+      res.status(500).json({ error: 'Failed to fetch linked accounts' });
+    }
+  });
+
+  app.get("/api/stitch/sync-status", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+
+      const { stitchService } = await import('./stitch/service');
+      const syncStatus = await stitchService.getSyncStatus(companyId);
+
+      res.json(syncStatus);
+    } catch (error) {
+      console.error('Error fetching sync status:', error);
+      res.status(500).json({ error: 'Failed to fetch sync status' });
+    }
+  });
+
   // General Ledger Routes
   app.get("/api/general-ledger", authenticate, async (req, res) => {
     try {

@@ -90,6 +90,7 @@ import {
   bulkIncomeEntries,
   bankStatementUploads,
   bankStatementTransactions,
+  bankFeedCursors,
   productSerials,
   stockCounts,
   stockCountItems,
@@ -408,7 +409,7 @@ import {
   ProductWithPricing
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
+import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, isNotNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -6226,6 +6227,86 @@ export class DatabaseStorage implements IStorage {
   async deleteBankTransaction(id: number): Promise<boolean> {
     const result = await db.delete(bankTransactions).where(eq(bankTransactions.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Stitch Bank Feed Integration Methods
+  async getBankAccountByProvider(companyId: number, provider: string, providerAccountId: string): Promise<BankAccount | undefined> {
+    const [account] = await db.select().from(bankAccounts)
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.externalProvider, provider),
+        eq(bankAccounts.providerAccountId, providerAccountId)
+      ));
+    return account || undefined;
+  }
+
+  async getLinkedBankAccounts(companyId: number, provider: string): Promise<BankAccount[]> {
+    return await db.select().from(bankAccounts)
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.externalProvider, provider),
+        isNotNull(bankAccounts.providerAccountId)
+      ));
+  }
+
+  async getBankTransactionByExternalId(companyId: number, bankAccountId: number, externalId: string): Promise<BankTransaction | undefined> {
+    const [transaction] = await db.select().from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        eq(bankTransactions.externalId, externalId)
+      ));
+    return transaction || undefined;
+  }
+
+  async findDuplicateBankTransactions(
+    companyId: number,
+    bankAccountId: number,
+    fromDate: string,
+    toDate: string,
+    amount: string,
+    description: string
+  ): Promise<BankTransaction[]> {
+    return await db.select().from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        gte(bankTransactions.transactionDate, new Date(fromDate)),
+        lte(bankTransactions.transactionDate, new Date(toDate)),
+        eq(bankTransactions.amount, amount),
+        eq(bankTransactions.normalizedDescription, description)
+      ));
+  }
+
+  // Bank Feed Cursor Management
+  async getBankFeedCursor(
+    companyId: number,
+    bankAccountId: number,
+    provider: string,
+    externalAccountId: string
+  ): Promise<BankFeedCursor | undefined> {
+    const [cursor] = await db.select().from(bankFeedCursors)
+      .where(and(
+        eq(bankFeedCursors.companyId, companyId),
+        eq(bankFeedCursors.bankAccountId, bankAccountId),
+        eq(bankFeedCursors.provider, provider),
+        eq(bankFeedCursors.externalAccountId, externalAccountId)
+      ));
+    return cursor || undefined;
+  }
+
+  async createBankFeedCursor(cursor: InsertBankFeedCursor): Promise<BankFeedCursor> {
+    const [newCursor] = await db.insert(bankFeedCursors).values(cursor).returning();
+    return newCursor;
+  }
+
+  async updateBankFeedCursor(id: number, cursor: Partial<InsertBankFeedCursor>): Promise<BankFeedCursor | undefined> {
+    const [updated] = await db
+      .update(bankFeedCursors)
+      .set({ ...cursor, updatedAt: new Date() })
+      .where(eq(bankFeedCursors.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   // General Ledger Implementation
