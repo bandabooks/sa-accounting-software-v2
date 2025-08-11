@@ -54,6 +54,7 @@ import BudgetCreate from "@/pages/budget-create";
 import CashFlowForecasting from "@/pages/cash-flow-forecasting";
 import CashFlowForecastCreate from "@/pages/cash-flow-forecast-create";
 import BankReconciliation from "@/pages/bank-reconciliation";
+import BankCapture from "@/pages/BankCapture";
 
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import SuperAdminCompanyDetail from "@/pages/super-admin-company-detail";
@@ -596,6 +597,11 @@ function AuthenticatedApp() {
         <Route path="/banking">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
             <Banking />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/bank/capture">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <BankCapture />
           </ProtectedRoute>
         </Route>
         <Route path="/general-ledger">

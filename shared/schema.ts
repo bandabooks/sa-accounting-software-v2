@@ -3177,16 +3177,95 @@ export const bankTransactions = pgTable("bank_transactions", {
   companyId: integer("company_id").notNull(),
   bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
   transactionDate: timestamp("transaction_date").notNull(),
+  postingDate: date("posting_date").notNull(), // Date used for deduplication
   description: text("description").notNull(),
+  normalizedDescription: text("normalized_description"), // Cleaned description for deduplication
   reference: text("reference"),
+  externalId: text("external_id"), // Bank's unique ID for deduplication
   transactionType: text("transaction_type").notNull(), // debit, credit
   debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }).default("0.00"),
   creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(), // Signed amount: positive for credit, negative for debit
   balance: decimal("balance", { precision: 15, scale: 2 }),
   status: text("status").default("pending"), // pending, cleared, reconciled
+  importBatchId: integer("import_batch_id").references(() => importBatches.id), // Reference to import batch
+  isImported: boolean("is_imported").default(false), // Whether this was imported from statement
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("bank_transactions_company_idx").on(table.companyId),
+  bankAccountIdx: index("bank_transactions_bank_account_idx").on(table.bankAccountId),
+  postingDateIdx: index("bank_transactions_posting_date_idx").on(table.postingDate),
+  importBatchIdx: index("bank_transactions_import_batch_idx").on(table.importBatchId),
+  // Compound index for deduplication
+  dedupIdx: index("bank_transactions_dedup_idx").on(
+    table.companyId, 
+    table.bankAccountId, 
+    table.postingDate, 
+    table.amount, 
+    table.normalizedDescription
+  ),
+}));
+
+// Import Batches - Track statement upload sessions
+export const importBatches = pgTable("import_batches", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  batchNumber: text("batch_number").notNull(), // Auto-generated: IMP-2025-0001
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(), // File size in bytes
+  fileType: text("file_type").notNull(), // csv, ofx, mt940, qif
+  uploadedBy: integer("uploaded_by").notNull().references(() => users.id),
+  status: text("status").notNull().default("processing"), // processing, completed, failed, cancelled
+  totalRows: integer("total_rows").default(0),
+  newRows: integer("new_rows").default(0), // Successfully imported new transactions
+  duplicateRows: integer("duplicate_rows").default(0), // Skipped duplicates
+  invalidRows: integer("invalid_rows").default(0), // Failed validation
+  statementStartDate: date("statement_start_date"), // Date range from statement
+  statementEndDate: date("statement_end_date"),
+  processingNotes: text("processing_notes"), // Error details, warnings, etc.
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("import_batches_company_idx").on(table.companyId),
+  bankAccountIdx: index("import_batches_bank_account_idx").on(table.bankAccountId),
+  batchNumberIdx: index("import_batches_batch_number_idx").on(table.batchNumber),
+  statusIdx: index("import_batches_status_idx").on(table.status),
+  uploadedByIdx: index("import_batches_uploaded_by_idx").on(table.uploadedBy),
+}));
+
+// Import Queue - Temporary staging area for parsed statement data before committing
+export const importQueue = pgTable("import_queue", {
+  id: serial("id").primaryKey(),
+  importBatchId: integer("import_batch_id").notNull().references(() => importBatches.id),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  rowNumber: integer("row_number").notNull(), // Original row number in file
+  transactionDate: timestamp("transaction_date"),
+  postingDate: date("posting_date"),
+  description: text("description"),
+  normalizedDescription: text("normalized_description"),
+  reference: text("reference"),
+  externalId: text("external_id"),
+  debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }),
+  creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }),
+  amount: decimal("amount", { precision: 15, scale: 2 }), // Signed amount calculated from debit/credit
+  balance: decimal("balance", { precision: 15, scale: 2 }),
+  status: text("status").notNull(), // new, duplicate, invalid
+  validationErrors: jsonb("validation_errors").default([]), // Array of error messages
+  duplicateTransactionId: integer("duplicate_transaction_id"), // Reference to existing transaction if duplicate
+  willImport: boolean("will_import").default(true), // User decision to import this row
+  rawData: jsonb("raw_data"), // Original parsed data from CSV/OFX
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  importBatchIdx: index("import_queue_import_batch_idx").on(table.importBatchId),
+  companyIdx: index("import_queue_company_idx").on(table.companyId),
+  bankAccountIdx: index("import_queue_bank_account_idx").on(table.bankAccountId),
+  statusIdx: index("import_queue_status_idx").on(table.status),
+  rowNumberIdx: index("import_queue_row_number_idx").on(table.importBatchId, table.rowNumber),
+}));
 
 // General Ledger View (Real-time calculated from journal entries)
 export const generalLedger = pgTable("general_ledger", {
@@ -3244,11 +3323,27 @@ export const insertBankReconciliationSchema = createInsertSchema(bankReconciliat
   completedAt: true,
 });
 
+// Bank import schemas
+export const insertImportBatchSchema = createInsertSchema(importBatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertImportQueueSchema = createInsertSchema(importQueue).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Banking and GL types
 export type BankAccount = typeof bankAccounts.$inferSelect;
 export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
 export type BankTransaction = typeof bankTransactions.$inferSelect;
 export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
+export type ImportBatch = typeof importBatches.$inferSelect;
+export type InsertImportBatch = z.infer<typeof insertImportBatchSchema>;
+export type ImportQueue = typeof importQueue.$inferSelect;
+export type InsertImportQueue = z.infer<typeof insertImportQueueSchema>;
 export type GeneralLedger = typeof generalLedger.$inferSelect;
 export type BankReconciliation = typeof bankReconciliations.$inferSelect;
 export type InsertBankReconciliation = z.infer<typeof insertBankReconciliationSchema>;

@@ -36,6 +36,8 @@ import {
   bankTransactions,
   generalLedger,
   bankReconciliations,
+  importBatches,
+  importQueue,
   companies,
   industryTemplates,
   companyChartOfAccounts,
@@ -230,6 +232,10 @@ import {
   type InsertBankTransaction,
   type BankAccountWithTransactions,
   type GeneralLedgerEntry,
+  type ImportBatch,
+  type InsertImportBatch,
+  type ImportQueue,
+  type InsertImportQueue,
   type Company,
   type InsertCompany,
   type CompanyUser,
@@ -1030,6 +1036,19 @@ export interface IStorage {
   getStockMovementReport(companyId: number, productId?: number, startDate?: Date, endDate?: Date): Promise<any[]>;
   getExpiryReport(companyId: number, daysAhead: number): Promise<any[]>;
   getSerialNumberReport(companyId: number, status?: string): Promise<any[]>;
+
+  // Bank Import/Statement Upload Methods
+  getImportBatches(companyId: number, bankAccountId?: number): Promise<ImportBatch[]>;
+  getImportBatch(id: number): Promise<ImportBatch | undefined>;
+  createImportBatch(batch: InsertImportBatch): Promise<ImportBatch>;
+  updateImportBatch(id: number, batch: Partial<InsertImportBatch>): Promise<ImportBatch | undefined>;
+  getImportQueue(importBatchId: number): Promise<ImportQueue[]>;
+  createImportQueueItems(items: InsertImportQueue[]): Promise<ImportQueue[]>;
+  updateImportQueueItem(id: number, item: Partial<InsertImportQueue>): Promise<ImportQueue | undefined>;
+  findDuplicateTransactions(companyId: number, bankAccountId: number, transactions: any[]): Promise<any[]>;
+  commitImportBatch(importBatchId: number): Promise<{ imported: number; skipped: number; failed: number }>;
+  generateImportBatchNumber(companyId: number): Promise<string>;
+  normalizeDescription(description: string): string;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -13986,6 +14005,225 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(customerPriceLists)
       .where(and(eq(customerPriceLists.customerId, customerId), eq(customerPriceLists.isActive, true)));
+  }
+
+  // ============================================================================
+  // BANK IMPORT/STATEMENT UPLOAD METHODS
+  // ============================================================================
+
+  async getImportBatches(companyId: number, bankAccountId?: number): Promise<ImportBatch[]> {
+    const conditions = [eq(importBatches.companyId, companyId)];
+    if (bankAccountId) {
+      conditions.push(eq(importBatches.bankAccountId, bankAccountId));
+    }
+    
+    return await db
+      .select({
+        ...getTableColumns(importBatches),
+        bankAccountName: bankAccounts.accountName,
+        uploaderName: users.name,
+      })
+      .from(importBatches)
+      .leftJoin(bankAccounts, eq(importBatches.bankAccountId, bankAccounts.id))
+      .leftJoin(users, eq(importBatches.uploadedBy, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(importBatches.createdAt));
+  }
+
+  async getImportBatch(id: number): Promise<ImportBatch | undefined> {
+    const [batch] = await db
+      .select()
+      .from(importBatches)
+      .where(eq(importBatches.id, id));
+    return batch;
+  }
+
+  async createImportBatch(batch: InsertImportBatch): Promise<ImportBatch> {
+    const [newBatch] = await db
+      .insert(importBatches)
+      .values(batch)
+      .returning();
+    return newBatch;
+  }
+
+  async updateImportBatch(id: number, batch: Partial<InsertImportBatch>): Promise<ImportBatch | undefined> {
+    const [updatedBatch] = await db
+      .update(importBatches)
+      .set({ ...batch, updatedAt: new Date() })
+      .where(eq(importBatches.id, id))
+      .returning();
+    return updatedBatch;
+  }
+
+  async getImportQueue(importBatchId: number): Promise<ImportQueue[]> {
+    return await db
+      .select()
+      .from(importQueue)
+      .where(eq(importQueue.importBatchId, importBatchId))
+      .orderBy(asc(importQueue.rowNumber));
+  }
+
+  async createImportQueueItems(items: InsertImportQueue[]): Promise<ImportQueue[]> {
+    const newItems = await db
+      .insert(importQueue)
+      .values(items)
+      .returning();
+    return newItems;
+  }
+
+  async updateImportQueueItem(id: number, item: Partial<InsertImportQueue>): Promise<ImportQueue | undefined> {
+    const [updatedItem] = await db
+      .update(importQueue)
+      .set(item)
+      .where(eq(importQueue.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  async findDuplicateTransactions(companyId: number, bankAccountId: number, transactions: any[]): Promise<any[]> {
+    const duplicates: any[] = [];
+    
+    for (const transaction of transactions) {
+      const { postingDate, amount, normalizedDescription, reference, externalId } = transaction;
+      
+      // Check for duplicates within ±3 days
+      const startDate = new Date(postingDate);
+      startDate.setDate(startDate.getDate() - 3);
+      const endDate = new Date(postingDate);
+      endDate.setDate(endDate.getDate() + 3);
+      
+      const existingTransaction = await db
+        .select()
+        .from(bankTransactions)
+        .where(
+          and(
+            eq(bankTransactions.companyId, companyId),
+            eq(bankTransactions.bankAccountId, bankAccountId),
+            gte(bankTransactions.postingDate, startDate),
+            lte(bankTransactions.postingDate, endDate),
+            eq(bankTransactions.amount, amount),
+            or(
+              eq(bankTransactions.normalizedDescription, normalizedDescription),
+              and(
+                isNotNull(reference),
+                eq(bankTransactions.reference, reference)
+              ),
+              and(
+                isNotNull(externalId),
+                eq(bankTransactions.externalId, externalId)
+              )
+            )
+          )
+        )
+        .limit(1);
+      
+      if (existingTransaction.length > 0) {
+        duplicates.push({
+          ...transaction,
+          duplicateTransactionId: existingTransaction[0].id,
+          status: 'duplicate'
+        });
+      }
+    }
+    
+    return duplicates;
+  }
+
+  async commitImportBatch(importBatchId: number): Promise<{ imported: number; skipped: number; failed: number }> {
+    const queueItems = await db
+      .select()
+      .from(importQueue)
+      .where(
+        and(
+          eq(importQueue.importBatchId, importBatchId),
+          eq(importQueue.willImport, true),
+          eq(importQueue.status, 'validated')
+        )
+      );
+    
+    let imported = 0;
+    let skipped = 0;
+    let failed = 0;
+    
+    for (const item of queueItems) {
+      try {
+        if (item.duplicateTransactionId || !item.willImport) {
+          skipped++;
+          continue;
+        }
+        
+        // Create bank transaction
+        await db.insert(bankTransactions).values({
+          companyId: item.companyId,
+          bankAccountId: item.bankAccountId,
+          transactionDate: item.transactionDate,
+          postingDate: item.postingDate,
+          description: item.description,
+          normalizedDescription: item.normalizedDescription,
+          reference: item.reference,
+          externalId: item.externalId,
+          debitAmount: item.debitAmount,
+          creditAmount: item.creditAmount,
+          amount: item.amount,
+          balance: item.balance,
+          importBatchId: importBatchId,
+          isImported: true,
+          type: item.amount > 0 ? 'credit' : 'debit',
+          status: 'cleared',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        
+        imported++;
+      } catch (error) {
+        console.error(`Failed to import transaction ${item.id}:`, error);
+        failed++;
+      }
+    }
+    
+    // Update batch status
+    await db
+      .update(importBatches)
+      .set({
+        status: 'completed',
+        newRows: imported,
+        duplicate_rows: skipped,
+        invalid_rows: failed,
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(importBatches.id, importBatchId));
+    
+    return { imported, skipped, failed };
+  }
+
+  async generateImportBatchNumber(companyId: number): Promise<string> {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    // Count existing batches for today
+    const count = await db
+      .select({ count: sql`count(*)` })
+      .from(importBatches)
+      .where(
+        and(
+          eq(importBatches.companyId, companyId),
+          gte(importBatches.createdAt, new Date(year, today.getMonth(), today.getDate()))
+        )
+      );
+    
+    const batchNumber = Number(count[0].count) + 1;
+    return `IMP${year}${month}${day}-${String(batchNumber).padStart(3, '0')}`;
+  }
+
+  normalizeDescription(description: string): string {
+    return description
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/[^\w\s]/g, '')
+      .trim();
   }
 }
 

@@ -8817,6 +8817,298 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
     }
   });
 
+  // ===================================================================
+  // BANK CAPTURE: STATEMENT UPLOAD ROUTES
+  // ===================================================================
+
+  // Get all import batches for a company
+  app.get("/api/bank/import-batches", authenticate, requireAnyPermission(['bank_capture:view', 'admin']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const bankAccountId = req.query.bankAccountId ? parseInt(req.query.bankAccountId as string) : undefined;
+      const batches = await storage.getImportBatches(companyId, bankAccountId);
+      res.json(batches);
+    } catch (error) {
+      console.error("Error fetching import batches:", error);
+      res.status(500).json({ error: "Failed to fetch import batches" });
+    }
+  });
+
+  // Get specific import batch with queue items
+  app.get("/api/bank/import-batches/:id", authenticate, requireAnyPermission(['bank_capture:view', 'admin']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const batch = await storage.getImportBatch(id);
+      if (!batch) {
+        return res.status(404).json({ error: "Import batch not found" });
+      }
+      
+      const queueItems = await storage.getImportQueue(id);
+      res.json({ ...batch, queueItems });
+    } catch (error) {
+      console.error("Error fetching import batch:", error);
+      res.status(500).json({ error: "Failed to fetch import batch" });
+    }
+  });
+
+  // Create new import batch (file upload initiation)
+  app.post("/api/bank/import-batches", authenticate, requireAnyPermission(['bank_capture:create', 'admin']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+      const { bankAccountId, fileName, fileSize, fileType } = req.body;
+
+      // Validate bank account access
+      const bankAccount = await storage.getBankAccount(bankAccountId);
+      if (!bankAccount || bankAccount.companyId !== companyId) {
+        return res.status(403).json({ error: "Access denied to bank account" });
+      }
+
+      // Generate batch number
+      const batchNumber = await storage.generateImportBatchNumber(companyId);
+
+      const batch = await storage.createImportBatch({
+        companyId,
+        bankAccountId,
+        batchNumber,
+        fileName,
+        fileSize,
+        fileType: fileType.toLowerCase(),
+        uploadedBy: userId,
+        status: 'processing',
+        totalRows: 0
+      });
+
+      res.status(201).json(batch);
+    } catch (error) {
+      console.error("Error creating import batch:", error);
+      res.status(500).json({ error: "Failed to create import batch" });
+    }
+  });
+
+  // Process CSV/OFX file and populate import queue
+  app.post("/api/bank/import-batches/:id/process", authenticate, requireAnyPermission(['bank_capture:create', 'admin']), multer({ storage: multer.memoryStorage() }).single('file'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const batchId = parseInt(req.params.id);
+      const file = req.file;
+      const { columnMapping } = req.body;
+
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const batch = await storage.getImportBatch(batchId);
+      if (!batch || batch.companyId !== req.user.companyId) {
+        return res.status(404).json({ error: "Import batch not found" });
+      }
+
+      // Parse CSV content
+      const csvContent = file.buffer.toString('utf-8');
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const dataRows = lines.slice(1);
+
+      // Parse column mapping
+      const mapping = JSON.parse(columnMapping || '{}');
+      
+      const queueItems: any[] = [];
+      const errors: any[] = [];
+
+      for (let i = 0; i < dataRows.length; i++) {
+        try {
+          const row = dataRows[i].split(',').map(cell => cell.trim().replace(/"/g, ''));
+          const rowData: any = {};
+
+          // Map columns based on user selection
+          if (mapping.date !== undefined) rowData.date = row[mapping.date];
+          if (mapping.description !== undefined) rowData.description = row[mapping.description];
+          if (mapping.reference !== undefined) rowData.reference = row[mapping.reference];
+          if (mapping.debit !== undefined) rowData.debit = row[mapping.debit];
+          if (mapping.credit !== undefined) rowData.credit = row[mapping.credit];
+          if (mapping.balance !== undefined) rowData.balance = row[mapping.balance];
+
+          // Parse and validate data
+          const transactionDate = new Date(rowData.date);
+          const postingDate = new Date(rowData.date);
+          const description = rowData.description || '';
+          const normalizedDescription = storage.normalizeDescription(description);
+          const reference = rowData.reference || '';
+          const debitAmount = parseFloat(rowData.debit || '0') || 0;
+          const creditAmount = parseFloat(rowData.credit || '0') || 0;
+          const amount = creditAmount - debitAmount;
+          const balance = parseFloat(rowData.balance || '0') || null;
+
+          // Validation
+          const validationErrors: string[] = [];
+          if (isNaN(transactionDate.getTime())) validationErrors.push('Invalid date');
+          if (!description) validationErrors.push('Missing description');
+          if (debitAmount === 0 && creditAmount === 0) validationErrors.push('Invalid amount');
+
+          const queueItem = {
+            importBatchId: batchId,
+            companyId: batch.companyId,
+            bankAccountId: batch.bankAccountId,
+            rowNumber: i + 2, // +2 because we skip header and arrays are 0-indexed
+            transactionDate,
+            postingDate,
+            description,
+            normalizedDescription,
+            reference,
+            externalId: null,
+            debitAmount,
+            creditAmount,
+            amount,
+            balance,
+            status: validationErrors.length > 0 ? 'invalid' : 'parsed',
+            validationErrors: validationErrors,
+            duplicateTransactionId: null,
+            willImport: validationErrors.length === 0,
+            rawData: Object.fromEntries(headers.map((header, idx) => [header, row[idx] || '']))
+          };
+
+          queueItems.push(queueItem);
+        } catch (error) {
+          errors.push({ row: i + 2, error: error.message });
+        }
+      }
+
+      // Create queue items
+      const createdItems = await storage.createImportQueueItems(queueItems);
+      
+      // Update batch statistics
+      const totalRows = queueItems.length;
+      const invalidRows = queueItems.filter(item => item.status === 'invalid').length;
+      
+      await storage.updateImportBatch(batchId, {
+        totalRows,
+        invalidRows,
+        status: 'parsed'
+      });
+
+      res.json({ 
+        success: true, 
+        totalRows, 
+        invalidRows, 
+        validRows: totalRows - invalidRows,
+        errors 
+      });
+    } catch (error) {
+      console.error("Error processing import file:", error);
+      res.status(500).json({ error: "Failed to process import file" });
+    }
+  });
+
+  // Check for duplicates and validate import queue
+  app.post("/api/bank/import-batches/:id/validate", authenticate, requireAnyPermission(['bank_capture:create', 'admin']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const batchId = parseInt(req.params.id);
+      const batch = await storage.getImportBatch(batchId);
+      
+      if (!batch || batch.companyId !== req.user.companyId) {
+        return res.status(404).json({ error: "Import batch not found" });
+      }
+
+      const queueItems = await storage.getImportQueue(batchId);
+      const validItems = queueItems.filter(item => item.status === 'parsed');
+
+      // Check for duplicates
+      const duplicates = await storage.findDuplicateTransactions(
+        batch.companyId, 
+        batch.bankAccountId, 
+        validItems
+      );
+
+      // Update queue items with duplicate information
+      for (const duplicate of duplicates) {
+        const queueItem = queueItems.find(item => item.id === duplicate.id);
+        if (queueItem) {
+          await storage.updateImportQueueItem(queueItem.id, {
+            status: 'duplicate',
+            duplicateTransactionId: duplicate.duplicateTransactionId,
+            willImport: false
+          });
+        }
+      }
+
+      // Mark remaining valid items as validated
+      for (const item of validItems) {
+        if (!duplicates.find(d => d.id === item.id)) {
+          await storage.updateImportQueueItem(item.id, {
+            status: 'validated',
+            willImport: true
+          });
+        }
+      }
+
+      const duplicateRows = duplicates.length;
+      const newRows = validItems.length - duplicateRows;
+
+      // Update batch with validation results
+      await storage.updateImportBatch(batchId, {
+        duplicateRows,
+        newRows,
+        status: 'validated'
+      });
+
+      res.json({
+        success: true,
+        totalRows: queueItems.length,
+        newRows,
+        duplicateRows,
+        invalidRows: queueItems.filter(item => item.status === 'invalid').length
+      });
+    } catch (error) {
+      console.error("Error validating import batch:", error);
+      res.status(500).json({ error: "Failed to validate import batch" });
+    }
+  });
+
+  // Toggle import selection for queue items
+  app.patch("/api/bank/import-queue/:id", authenticate, requireAnyPermission(['bank_capture:create', 'admin']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { willImport } = req.body;
+
+      const updatedItem = await storage.updateImportQueueItem(id, { willImport });
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Queue item not found" });
+      }
+
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating queue item:", error);
+      res.status(500).json({ error: "Failed to update queue item" });
+    }
+  });
+
+  // Commit import batch - create actual bank transactions
+  app.post("/api/bank/import-batches/:id/commit", authenticate, requireAnyPermission(['bank_capture:create', 'admin']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const batchId = parseInt(req.params.id);
+      const batch = await storage.getImportBatch(batchId);
+      
+      if (!batch || batch.companyId !== req.user.companyId) {
+        return res.status(404).json({ error: "Import batch not found" });
+      }
+
+      if (batch.status !== 'validated') {
+        return res.status(400).json({ error: "Batch must be validated before committing" });
+      }
+
+      const result = await storage.commitImportBatch(batchId);
+
+      await logAudit(req.user.id, 'CREATE', 'bank_import_batch', batchId, `Committed import batch: ${result.imported} imported, ${result.skipped} skipped, ${result.failed} failed`);
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      console.error("Error committing import batch:", error);
+      res.status(500).json({ error: "Failed to commit import batch" });
+    }
+  });
+
   // Bank Reconciliation Routes
   app.get("/api/bank-reconciliations/:id/items", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
