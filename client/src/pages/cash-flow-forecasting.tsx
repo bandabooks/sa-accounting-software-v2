@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface CashFlowForecast {
   id: number;
@@ -61,6 +63,19 @@ export default function CashFlowForecasting() {
     queryKey: ["/api/cash-flow-projections", selectedMonths],
   });
 
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: forecastsLoading, message: 'Loading cash flow forecasts...' },
+      { isLoading: projectionsLoading, message: 'Loading financial projections...' },
+    ],
+    progressSteps: ['Fetching forecast data', 'Processing financial projections', 'Calculating trends'],
+  });
+
+  if (forecastsLoading || projectionsLoading) {
+    return <PageLoader message="Loading cash flow forecasting..." />;
+  }
+
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
       case "high": return "bg-green-100 text-green-800";
@@ -83,14 +98,6 @@ export default function CashFlowForecasting() {
   const activeForecasts = forecasts.filter(forecast => 
     new Date(forecast.endDate) > new Date()
   ).length;
-
-  if (forecastsLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
