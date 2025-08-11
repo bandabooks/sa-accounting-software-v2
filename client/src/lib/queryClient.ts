@@ -97,15 +97,20 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      // Optimized stale times for different types of data
+      staleTime: 5 * 60 * 1000, // 5 minutes default
+      gcTime: 10 * 60 * 1000, // 10 minutes garbage collection (was cacheTime)
+      // Enable background refetching for better UX
+      refetchIntervalInBackground: false,
       retry: (failureCount, error) => {
         // Don't retry on authentication errors
         if (error?.message?.includes('401') || error?.message?.includes('authentication')) {
           return false;
         }
-        // Retry other errors up to 2 times
+        // Retry other errors up to 2 times with exponential backoff
         return failureCount < 2;
       },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
       retry: (failureCount, error) => {
@@ -116,6 +121,31 @@ export const queryClient = new QueryClient({
         // Retry other errors once
         return failureCount < 1;
       },
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
   },
 });
+
+// Custom cache configuration for different data types
+export const getCacheConfig = (type: 'static' | 'semi-static' | 'dynamic' | 'real-time') => {
+  const configs = {
+    static: {
+      staleTime: 1000 * 60 * 60 * 24, // 24 hours - for settings, configurations
+      gcTime: 1000 * 60 * 60 * 48, // 48 hours
+    },
+    'semi-static': {
+      staleTime: 1000 * 60 * 15, // 15 minutes - for customers, products, suppliers
+      gcTime: 1000 * 60 * 30, // 30 minutes
+    },
+    dynamic: {
+      staleTime: 1000 * 60 * 5, // 5 minutes - for invoices, expenses
+      gcTime: 1000 * 60 * 10, // 10 minutes
+    },
+    'real-time': {
+      staleTime: 1000 * 30, // 30 seconds - for dashboard stats, recent activities
+      gcTime: 1000 * 60 * 2, // 2 minutes
+    },
+  };
+  
+  return configs[type];
+};

@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,153 +9,183 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
+
+// Critical path components - loaded immediately
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
-import Invoices from "@/pages/invoices";
-import InvoiceCreate from "@/pages/invoice-create";
-import InvoiceDetail from "@/pages/invoice-detail";
-import Customers from "@/pages/customers";
-import CustomerCreate from "@/pages/customer-create";
-import CustomerDetail from "@/pages/customer-detail";
-import CustomerPortal from "@/pages/customer-portal";
-import Estimates from "@/pages/estimates";
-import EstimateCreate from "@/pages/estimate-create";
-import EstimateDetail from "@/pages/estimate-detail";
-import Reports from "@/pages/reports";
-import FinancialReports from "@/pages/financial-reports";
-import BusinessReports from "@/pages/business-reports";
-import GeneralReports from "@/pages/general-reports";
-import ExpensesStandalone from "@/pages/expenses-standalone";
-import BillsManagement from "@/pages/bills-management";
-import BillCreate from "@/pages/bill-create";
-import RecurringExpenses from "@/pages/recurring-expenses";
-import RecurringExpenseCreate from "@/pages/recurring-expense-create";
-import ExpenseApprovals from "@/pages/expense-approvals";
-import Suppliers from "@/pages/suppliers";
-import PurchaseOrders from "@/pages/purchase-orders";
-import PurchaseOrderCreate from "@/pages/purchase-order-create";
-import Products from "@/pages/products";
-import ProductCreate from "@/pages/product-create";
-import ProductEdit from "@/pages/product-edit";
-import Categories from "@/pages/categories";
-import Settings from "@/pages/settings";
-import Inventory from "@/pages/inventory";
-import Companies from "@/pages/companies";
-import Profile from "@/pages/profile";
-import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
-import TrialSignup from "@/pages/trial-signup";
-import ChartOfAccounts from "@/pages/chart-of-accounts";
-import JournalEntries from "@/pages/journal-entries";
-import Banking from "@/pages/banking";
-import GeneralLedger from "@/pages/general-ledger";
-import FixedAssets from "@/pages/fixed-assets";
-import FixedAssetCreate from "@/pages/fixed-asset-create";
-import Budgeting from "@/pages/budgeting";
-import BudgetCreate from "@/pages/budget-create";
-import CashFlowForecasting from "@/pages/cash-flow-forecasting";
-import CashFlowForecastCreate from "@/pages/cash-flow-forecast-create";
-import BankReconciliation from "@/pages/bank-reconciliation";
-import BankCapture from "@/pages/BankCapture";
 
-import SuperAdminDashboard from "@/pages/super-admin-dashboard";
-import SuperAdminCompanyDetail from "@/pages/super-admin-company-detail";
-import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
-import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
-import SuperAdminAuditLogs from "@/pages/super-admin-audit-logs";
-import ProfessionalIdsManagement from "@/pages/admin/professional-ids";
-import Subscription from "@/pages/subscription";
-import SubscriptionSuccess from "@/pages/subscription-success";
-import SubscriptionCancel from "@/pages/subscription-cancel";
-import SubscriptionPayment from "@/pages/subscription-payment";
-import PaymentSuccess from "@/pages/payment-success";
-import PaymentCancel from "@/pages/payment-cancel";
-import Projects from "@/pages/projects";
-import Tasks from "@/pages/tasks";
-import TimeTracking from "@/pages/time-tracking";
-import VatManagement from "@/pages/vat-management";
-import VATSettings from "@/pages/vat-settings";
-import VATTypes from "@/pages/vat-types";
-import VATReturns from "@/pages/vat-returns";
-import VATReportsPage from "@/pages/vat-reports";
-import VATPreparation from "@/pages/vat-preparation";
-import VATHistory from "@/pages/vat-history";
+// Lazy load all other components to reduce initial bundle size
+const Invoices = lazy(() => import("@/pages/invoices"));
+const InvoiceCreate = lazy(() => import("@/pages/invoice-create"));
+const InvoiceDetail = lazy(() => import("@/pages/invoice-detail"));
+const Customers = lazy(() => import("@/pages/customers"));
+const CustomerCreate = lazy(() => import("@/pages/customer-create"));
+const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
+const CustomerPortal = lazy(() => import("@/pages/customer-portal"));
+const Estimates = lazy(() => import("@/pages/estimates"));
+const EstimateCreate = lazy(() => import("@/pages/estimate-create"));
+const EstimateDetail = lazy(() => import("@/pages/estimate-detail"));
+const Reports = lazy(() => import("@/pages/reports"));
+const FinancialReports = lazy(() => import("@/pages/financial-reports"));
+const BusinessReports = lazy(() => import("@/pages/business-reports"));
+const GeneralReports = lazy(() => import("@/pages/general-reports"));
+const ExpensesStandalone = lazy(() => import("@/pages/expenses-standalone"));
+const BillsManagement = lazy(() => import("@/pages/bills-management"));
+const BillCreate = lazy(() => import("@/pages/bill-create"));
+const RecurringExpenses = lazy(() => import("@/pages/recurring-expenses"));
+const RecurringExpenseCreate = lazy(() => import("@/pages/recurring-expense-create"));
+const ExpenseApprovals = lazy(() => import("@/pages/expense-approvals"));
+const Suppliers = lazy(() => import("@/pages/suppliers"));
+const PurchaseOrders = lazy(() => import("@/pages/purchase-orders"));
+const PurchaseOrderCreate = lazy(() => import("@/pages/purchase-order-create"));
+const Products = lazy(() => import("@/pages/products"));
+const ProductCreate = lazy(() => import("@/pages/product-create"));
+const ProductEdit = lazy(() => import("@/pages/product-edit"));
+const Categories = lazy(() => import("@/pages/categories"));
+const Settings = lazy(() => import("@/pages/settings"));
+const Inventory = lazy(() => import("@/pages/inventory"));
+const Companies = lazy(() => import("@/pages/companies"));
+const Profile = lazy(() => import("@/pages/profile"));
+const AdminPanel = lazy(() => import("@/pages/admin-panel"));
+const TrialSignup = lazy(() => import("@/pages/trial-signup"));
+const ChartOfAccounts = lazy(() => import("@/pages/chart-of-accounts"));
+const JournalEntries = lazy(() => import("@/pages/journal-entries"));
+const Banking = lazy(() => import("@/pages/banking"));
+const GeneralLedger = lazy(() => import("@/pages/general-ledger"));
+const FixedAssets = lazy(() => import("@/pages/fixed-assets"));
+const FixedAssetCreate = lazy(() => import("@/pages/fixed-asset-create"));
+const Budgeting = lazy(() => import("@/pages/budgeting"));
+const BudgetCreate = lazy(() => import("@/pages/budget-create"));
+const CashFlowForecasting = lazy(() => import("@/pages/cash-flow-forecasting"));
+const CashFlowForecastCreate = lazy(() => import("@/pages/cash-flow-forecast-create"));
+const BankReconciliation = lazy(() => import("@/pages/bank-reconciliation"));
+const BankCapture = lazy(() => import("@/pages/BankCapture"));
 
-import EnterpriseSettings from "@/pages/enterprise-settings";
-import Landing from "@/pages/landing";
-import Features from "@/pages/features";
-import AccountingFeatures from "@/pages/features/accounting";
-import Activities from "@/pages/activities";
-import ComplianceFeatures from "@/pages/features/compliance";
-import SmallBusiness from "@/pages/small-business";
-import RetailSolutions from "@/pages/small-business/retail";
-import RestaurantSolutions from "@/pages/small-business/restaurants";
-import ConsultantSolutions from "@/pages/small-business/consultants";
-import NGOSolutions from "@/pages/small-business/ngos";
-import Pricing from "@/pages/pricing";
-import Contact from "@/pages/contact";
-import Resources from "@/pages/resources";
-import Accountants from "@/pages/accountants";
-import TaxPractitioners from "@/pages/accountants/tax-practitioners";
-import Auditors from "@/pages/accountants/auditors";
-import Onboarding from "@/pages/onboarding";
-import SpendingWizard from "@/pages/spending-wizard";
-import ComplianceDashboard from "@/pages/compliance-dashboard";
-import ComplianceClients from "@/pages/compliance-clients";
-import CustomerLifecycle from "@/pages/customer-lifecycle";
-import CommunicationCenter from "@/pages/communication-center";
-import CustomerSegments from "@/pages/customer-segments";
-import CustomerInsights from "@/pages/customer-insights";
+// Admin and Super Admin modules - lazy loaded
+const SuperAdminDashboard = lazy(() => import("@/pages/super-admin-dashboard"));
+const SuperAdminCompanyDetail = lazy(() => import("@/pages/super-admin-company-detail"));
+const SuperAdminUserDetail = lazy(() => import("@/pages/super-admin-user-detail"));
+const SuperAdminPlanEdit = lazy(() => import("@/pages/super-admin-plan-edit"));
+const SuperAdminAuditLogs = lazy(() => import("@/pages/super-admin-audit-logs"));
+const ProfessionalIdsManagement = lazy(() => import("@/pages/admin/professional-ids"));
 
-import Integrations from "@/pages/integrations";
-import CIPCCompliance from "@/pages/cipc-compliance";
-import LabourCompliance from "@/pages/labour-compliance";
-import ComplianceTasks from "@/pages/compliance-tasks";
-import ComplianceCalendar from "@/pages/compliance-calendar";
-import ComplianceDocuments from "@/pages/compliance-documents";
-import ProfessionalUserManagement from "@/pages/ProfessionalUserManagement";
-import PaymentFlows from "@/pages/payment-flows";
-import ThreeWayMatching from "@/pages/three-way-matching";
-import ExceptionDashboard from "@/pages/exception-dashboard";
-import BulkCapture from "@/pages/bulk-capture-enhanced";
-import SalesDashboard from "@/pages/sales-dashboard";
-import SalesOrders from "@/pages/sales-orders";
-import SalesOrderCreate from "@/pages/sales-order-create";
-import CreditNotes from "@/pages/credit-notes";
-import CreditNoteCreate from "@/pages/credit-note-create";
-import CustomerPayments from "@/pages/customer-payments";
-import CustomerPaymentRecord from "@/pages/customer-payment-record";
-import Deliveries from "@/pages/deliveries";
-import Payments from "@/pages/payments";
-// import NewPayment from "@/pages/new-payment"; // Commented out - file doesn't exist
-import SalesReports from "@/pages/sales-reports";
-import PurchaseDashboard from "@/pages/purchase-dashboard";
-import PurchaseReports from "@/pages/purchase-reports";
-import GoodsReceipts from "@/pages/goods-receipts";
-import PurchaseRequisitions from "@/pages/purchase-requisitions";
+// Subscription and payment modules - lazy loaded
+const Subscription = lazy(() => import("@/pages/subscription"));
+const SubscriptionSuccess = lazy(() => import("@/pages/subscription-success"));
+const SubscriptionCancel = lazy(() => import("@/pages/subscription-cancel"));
+const SubscriptionPayment = lazy(() => import("@/pages/subscription-payment"));
+const PaymentSuccess = lazy(() => import("@/pages/payment-success"));
+const PaymentCancel = lazy(() => import("@/pages/payment-cancel"));
+
+// Project management modules - lazy loaded
+const Projects = lazy(() => import("@/pages/projects"));
+const Tasks = lazy(() => import("@/pages/tasks"));
+const TimeTracking = lazy(() => import("@/pages/time-tracking"));
+
+// VAT management modules - lazy loaded
+const VatManagement = lazy(() => import("@/pages/vat-management"));
+const VATSettings = lazy(() => import("@/pages/vat-settings"));
+const VATTypes = lazy(() => import("@/pages/vat-types"));
+const VATReturns = lazy(() => import("@/pages/vat-returns"));
+const VATReportsPage = lazy(() => import("@/pages/vat-reports"));
+const VATPreparation = lazy(() => import("@/pages/vat-preparation"));
+const VATHistory = lazy(() => import("@/pages/vat-history"));
+
+// Enterprise and settings modules - lazy loaded
+const EnterpriseSettings = lazy(() => import("@/pages/enterprise-settings"));
+const Landing = lazy(() => import("@/pages/landing"));
+const Features = lazy(() => import("@/pages/features"));
+const AccountingFeatures = lazy(() => import("@/pages/features/accounting"));
+const Activities = lazy(() => import("@/pages/activities"));
+const ComplianceFeatures = lazy(() => import("@/pages/features/compliance"));
+
+// Small business solutions - lazy loaded
+const SmallBusiness = lazy(() => import("@/pages/small-business"));
+const RetailSolutions = lazy(() => import("@/pages/small-business/retail"));
+const RestaurantSolutions = lazy(() => import("@/pages/small-business/restaurants"));
+const ConsultantSolutions = lazy(() => import("@/pages/small-business/consultants"));
+const NGOSolutions = lazy(() => import("@/pages/small-business/ngos"));
+
+// Marketing and public pages - lazy loaded
+const Pricing = lazy(() => import("@/pages/pricing"));
+const Contact = lazy(() => import("@/pages/contact"));
+const Resources = lazy(() => import("@/pages/resources"));
+
+// Professional services - lazy loaded
+const Accountants = lazy(() => import("@/pages/accountants"));
+const TaxPractitioners = lazy(() => import("@/pages/accountants/tax-practitioners"));
+const Auditors = lazy(() => import("@/pages/accountants/auditors"));
+
+// Onboarding and workflows - lazy loaded
+const Onboarding = lazy(() => import("@/pages/onboarding"));
+const SpendingWizard = lazy(() => import("@/pages/spending-wizard"));
+
+// Compliance modules - lazy loaded
+const ComplianceDashboard = lazy(() => import("@/pages/compliance-dashboard"));
+const ComplianceClients = lazy(() => import("@/pages/compliance-clients"));
+const CustomerLifecycle = lazy(() => import("@/pages/customer-lifecycle"));
+const CommunicationCenter = lazy(() => import("@/pages/communication-center"));
+const CustomerSegments = lazy(() => import("@/pages/customer-segments"));
+const CustomerInsights = lazy(() => import("@/pages/customer-insights"));
+
+// Integrations and compliance - lazy loaded
+const Integrations = lazy(() => import("@/pages/integrations"));
+const CIPCCompliance = lazy(() => import("@/pages/cipc-compliance"));
+const LabourCompliance = lazy(() => import("@/pages/labour-compliance"));
+const ComplianceTasks = lazy(() => import("@/pages/compliance-tasks"));
+const ComplianceCalendar = lazy(() => import("@/pages/compliance-calendar"));
+const ComplianceDocuments = lazy(() => import("@/pages/compliance-documents"));
+
+// User management - lazy loaded
+const ProfessionalUserManagement = lazy(() => import("@/pages/ProfessionalUserManagement"));
+
+// Advanced workflows - lazy loaded
+const PaymentFlows = lazy(() => import("@/pages/payment-flows"));
+const ThreeWayMatching = lazy(() => import("@/pages/three-way-matching"));
+const ExceptionDashboard = lazy(() => import("@/pages/exception-dashboard"));
+const BulkCapture = lazy(() => import("@/pages/bulk-capture-enhanced"));
+
+// Sales modules - lazy loaded
+const SalesDashboard = lazy(() => import("@/pages/sales-dashboard"));
+const SalesOrders = lazy(() => import("@/pages/sales-orders"));
+const SalesOrderCreate = lazy(() => import("@/pages/sales-order-create"));
+const CreditNotes = lazy(() => import("@/pages/credit-notes"));
+const CreditNoteCreate = lazy(() => import("@/pages/credit-note-create"));
+const CustomerPayments = lazy(() => import("@/pages/customer-payments"));
+const CustomerPaymentRecord = lazy(() => import("@/pages/customer-payment-record"));
+const Deliveries = lazy(() => import("@/pages/deliveries"));
+const Payments = lazy(() => import("@/pages/payments"));
+const SalesReports = lazy(() => import("@/pages/sales-reports"));
+
+// Purchase modules - lazy loaded
+const PurchaseDashboard = lazy(() => import("@/pages/purchase-dashboard"));
+const PurchaseReports = lazy(() => import("@/pages/purchase-reports"));
+const GoodsReceipts = lazy(() => import("@/pages/goods-receipts"));
+const PurchaseRequisitions = lazy(() => import("@/pages/purchase-requisitions"));
 
 
-import Warehouses from "@/pages/warehouses";
-import LotBatchTracking from "@/pages/lot-batch-tracking";
-import SerialNumbers from "@/pages/serial-numbers";
-import StockCounts from "@/pages/stock-counts";
-import ReorderRules from "@/pages/reorder-rules";
-import ProductBundles from "@/pages/product-bundles";
-import InventoryReports from "@/pages/inventory-reports";
-import ProductLots from "@/pages/product-lots";
-import ProductSerials from "@/pages/product-serials";
+// Inventory and warehouse management - lazy loaded
+const Warehouses = lazy(() => import("@/pages/warehouses"));
+const LotBatchTracking = lazy(() => import("@/pages/lot-batch-tracking"));
+const SerialNumbers = lazy(() => import("@/pages/serial-numbers"));
+const StockCounts = lazy(() => import("@/pages/stock-counts"));
+const ReorderRules = lazy(() => import("@/pages/reorder-rules"));
+const ProductBundles = lazy(() => import("@/pages/product-bundles"));
+const InventoryReports = lazy(() => import("@/pages/inventory-reports"));
+const ProductLots = lazy(() => import("@/pages/product-lots"));
+const ProductSerials = lazy(() => import("@/pages/product-serials"));
 
-// POS Module imports
-import POSDashboard from "@/pages/pos-dashboard";
-import POSTerminal from "@/pages/pos-terminal";
-import POSShifts from "@/pages/pos-shifts";
-import POSTerminals from "@/pages/pos-terminals";
-// Note: These components don't exist yet, commenting out to fix build
-// import POSCustomerLoyalty from "@/pages/pos-customer-loyalty";
-// import POSReports from "@/pages/pos-reports";
-// import PayFastPayments from "@/pages/payfast-payments";
-// import POSShiftManagement from "@/pages/pos-shift-management";
-import ProfessionalServices from "@/pages/professional-services";
+// POS Module - lazy loaded
+const POSDashboard = lazy(() => import("@/pages/pos-dashboard"));
+const POSTerminal = lazy(() => import("@/pages/pos-terminal"));
+const POSShifts = lazy(() => import("@/pages/pos-shifts"));
+const POSTerminals = lazy(() => import("@/pages/pos-terminals"));
+
+// Professional services - lazy loaded
+const ProfessionalServices = lazy(() => import("@/pages/professional-services"));
+
+// Layout component - critical path, loaded immediately
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -207,28 +238,32 @@ const PERMISSIONS = {
   EXCEPTIONS_MANAGE: 'exceptions:manage',
 } as const;
 
+// Import the optimized loader
+import { PageLoader } from "@/components/ui/page-loader";
+
 function AuthenticatedApp() {
   return (
     <AppLayout>
-      <Switch>
-        <Route path="/login">
-          <Dashboard />
-        </Route>
-        <Route path="/">
-          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/login">
             <Dashboard />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/dashboard">
-          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
-            <Dashboard />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/expenses">
-          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
-            <ExpensesStandalone />
-          </ProtectedRoute>
-        </Route>
+          </Route>
+          <Route path="/">
+            <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+              <Dashboard />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/dashboard">
+            <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+              <Dashboard />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/expenses">
+            <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+              <ExpensesStandalone />
+            </ProtectedRoute>
+          </Route>
         <Route path="/bills">
           <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
             <BillsManagement />
@@ -812,6 +847,7 @@ function AuthenticatedApp() {
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />
       </Switch>
+      </Suspense>
     </AppLayout>
   );
 }

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Plus, FileText, UserPlus, TrendingUp, Users, DollarSign, AlertTriangle,
   BarChart3, PieChart, Activity, Bell, Settings, ChevronRight, RefreshCw,
-  Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, ArrowDownRight,
-  Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download
+  Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, CreditCard,
+  Building, ShoppingCart, Wallet, Eye, Filter, Download
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -12,21 +12,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import EnhancedStatsGrid from "@/components/dashboard/enhanced-stats-grid";
-import ProfitLossChart from "@/components/dashboard/profit-loss-chart";
-import RecentActivities from "@/components/dashboard/recent-activities";
-import ComplianceAlerts from "@/components/dashboard/compliance-alerts";
-import ActionShortcuts from "@/components/dashboard/action-shortcuts";
-import BankComplianceCard from "@/components/dashboard/bank-compliance-card";
-import RecentInvoices from "@/components/dashboard/recent-invoices";
 import { dashboardApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { TooltipWizard } from "@/components/onboarding/TooltipWizard";
 import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
 import { PaymentFormModal } from "@/components/payments/PaymentFormModal";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
-import { PageLoader } from "@/components/ui/global-loader";
+import { PageLoader } from "@/components/ui/page-loader";
+import { getCacheConfig } from "@/lib/queryClient";
+
+// Lazy load heavy dashboard components
+const EnhancedStatsGrid = lazy(() => import("@/components/dashboard/enhanced-stats-grid"));
+const ProfitLossChart = lazy(() => import("@/components/dashboard/profit-loss-chart"));
+const RecentActivities = lazy(() => import("@/components/dashboard/recent-activities"));
+const ComplianceAlerts = lazy(() => import("@/components/dashboard/compliance-alerts"));
+const ActionShortcuts = lazy(() => import("@/components/dashboard/action-shortcuts"));
+const BankComplianceCard = lazy(() => import("@/components/dashboard/bank-compliance-card"));
+const RecentInvoices = lazy(() => import("@/components/dashboard/recent-invoices"));
 
 interface DashboardWidget {
   id: string;
@@ -49,6 +51,7 @@ export default function Dashboard() {
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     queryFn: dashboardApi.getStats,
+    ...getCacheConfig('real-time'), // Use optimized cache config for real-time data
     refetchInterval: 30000, // Real-time updates every 30 seconds
   });
 
@@ -78,7 +81,7 @@ export default function Dashboard() {
   }, [refetch]);
 
   if (isLoading) {
-    return <PageLoader message="Loading dashboard data..." />;
+    return <PageLoader />;
   }
 
   // Return basic dashboard even if stats is null/undefined to prevent loading loop
@@ -488,7 +491,9 @@ export default function Dashboard() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                      <Suspense fallback={<div className="h-64 flex items-center justify-center"><PageLoader /></div>}>
+                        <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                      </Suspense>
                     </CardContent>
                   </Card>
                   
@@ -587,7 +592,9 @@ export default function Dashboard() {
                     <CardDescription>Latest business updates</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <RecentActivities activities={dashboardStats.recentActivities || []} />
+                    <Suspense fallback={<div className="h-32 flex items-center justify-center"><PageLoader /></div>}>
+                      <RecentActivities activities={dashboardStats.recentActivities || []} />
+                    </Suspense>
                   </CardContent>
                 </Card>
               </div>
@@ -611,7 +618,9 @@ export default function Dashboard() {
                     <CardDescription>Latest billing activity</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <RecentInvoices invoices={dashboardStats.recentInvoices || []} />
+                    <Suspense fallback={<div className="h-32 flex items-center justify-center"><PageLoader /></div>}>
+                      <RecentInvoices invoices={dashboardStats.recentInvoices || []} />
+                    </Suspense>
                   </CardContent>
                 </Card>
 

@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seedData";
@@ -6,8 +7,37 @@ import { seedSystemRoles, createDefaultUserPermissions } from "./rbac-seeder";
 import { migrateIncorrectRoleAssignments, auditCurrentRoleAssignments } from "./rbac-migration";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Performance optimizations
+app.use(compression({
+  level: 6, // Balance between compression ratio and speed
+  threshold: 1024, // Only compress if response is >= 1KB
+}));
+
+// Optimize JSON parsing limits
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+
+// Security and performance headers
+app.use((req, res, next) => {
+  // Cache static assets for 1 year
+  if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  // Cache API responses for 5 minutes (GET requests only)
+  else if (req.method === 'GET' && req.path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'public, max-age=300');
+  }
+  // Enable ETAG for caching efficiency
+  res.setHeader('ETag', 'strong');
+  
+  // Performance headers
+  res.setHeader('X-DNS-Prefetch-Control', 'on');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
