@@ -6473,7 +6473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newActivationState = await storage.toggleAccountActivation(companyId, accountId, userId);
       
-      res.json({ isActivated: newActivationState });
+      res.json({ isActive: newActivationState });
     } catch (error) {
       console.error("Error toggling account activation:", error);
       res.status(500).json({ error: "Failed to toggle account activation" });

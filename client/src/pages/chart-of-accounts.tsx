@@ -209,7 +209,9 @@ export default function ChartOfAccounts() {
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       apiRequest(`/api/chart-of-accounts/${id}/toggle`, "PATCH", { isActive }),
     onSuccess: (_, { isActive }) => {
+      // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       setToggledAccountId(null);
       toast({
         title: "Success",
