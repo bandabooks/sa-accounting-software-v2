@@ -108,32 +108,44 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   ]
 };
 
-// Subscription Plan Module Access
+// Subscription Plan Module Access - Enhanced with trial permissions
 export const SUBSCRIPTION_PLAN_MODULES = {
+  trial: [
+    'dashboard', 'sales', 'purchases', 'products', 'customers',
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking',
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings'
+  ],
+  
   basic: [
     'dashboard', 'sales', 'purchases', 'products', 'customers', 
-    'basic_reports', 'basic_accounting'
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking',
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings', 'basic_reports', 'basic_accounting'
   ],
   
   standard: [
     'dashboard', 'sales', 'purchases', 'products', 'customers',
-    'accounting', 'banking', 'reports', 'inventory', 'vat',
-    'compliance_basic'
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking', 
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings', 'compliance_basic'
   ],
   
   professional: [
     'dashboard', 'sales', 'purchases', 'products', 'customers',
-    'accounting', 'banking', 'reports', 'inventory', 'vat',
-    'compliance', 'pos', 'advanced_reports', 'projects',
-    'payroll_basic'
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking', 
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings', 'compliance', 'pos', 'advanced_reports', 
+    'projects', 'payroll_basic'
   ],
   
   enterprise: [
     'dashboard', 'sales', 'purchases', 'products', 'customers',
-    'accounting', 'banking', 'reports', 'inventory', 'vat',
-    'compliance', 'pos', 'advanced_reports', 'projects',
-    'payroll', 'advanced_analytics', 'api_access', 'custom_fields',
-    'workflow_automation', 'multi_company'
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking', 
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings', 'compliance', 'pos', 'advanced_reports', 
+    'projects', 'payroll', 'advanced_analytics', 'api_access', 
+    'custom_fields', 'workflow_automation', 'multi_company'
   ]
 };
 
@@ -160,11 +172,10 @@ export function filterPermissionsByPlan(permissions: string[], plan: string): st
 
 // Function to create default user permissions for a new company
 export async function createDefaultUserPermissions(
-  storage: any,
   userId: number,
   companyId: number,
   role: string = 'company_admin',
-  subscriptionPlan: string = 'professional'
+  subscriptionPlan: string = 'trial'
 ): Promise<void> {
   try {
     // Get default permissions for role
@@ -182,6 +193,9 @@ export async function createDefaultUserPermissions(
     else if (role === 'cashier') systemRoleId = 8;
     else if (role === 'employee') systemRoleId = 11;
     else if (role === 'viewer') systemRoleId = 12;
+    
+    // Import storage for database operations
+    const { storage } = await import('./storage');
     
     // Create user permission record
     await storage.createUserPermission({

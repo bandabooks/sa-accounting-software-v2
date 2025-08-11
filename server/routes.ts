@@ -775,8 +775,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 'suppliers:view',
                 'suppliers:create',
                 'suppliers:update',
-                'settings:view',
-                ...getDefaultPermissionsForRole(user.role || 'employee')
+                'purchases:view',
+                'purchases:create', 
+                'purchases:update',
+                'sales:view',
+                'sales:create',
+                'sales:update',
+                'banking:view',
+                'accounting:view',
+                'vat:view',
+                'settings:view'
               ];
             }
           } catch (error) {
@@ -809,30 +817,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       } catch (permError) {
-        console.error("Error getting user permissions:", permError);
-        // Fallback to comprehensive permissions to ensure access
+        console.error("Error getting user permissions, providing comprehensive trial access:", permError);
+        // Fallback to comprehensive trial permissions - full accounting system access
         userPermissions = [
           'dashboard:view',
-          'customers:view',
-          'customers:create', 
-          'customers:update',
-          'invoices:view',
-          'invoices:create',
-          'invoices:update',
-          'estimates:view',
-          'estimates:create',
-          'estimates:update',
-          'products:view',
-          'products:create',
-          'products:update',
-          'reports:view',
-          'expenses:view',
-          'expenses:create',
-          'expenses:update',
-          'suppliers:view',
-          'suppliers:create',
-          'suppliers:update',
-          'settings:view'
+          'customers:view', 'customers:create', 'customers:update', 'customers:delete',
+          'invoices:view', 'invoices:create', 'invoices:update', 'invoices:delete', 'invoices:send',
+          'estimates:view', 'estimates:create', 'estimates:update', 'estimates:delete', 'estimates:convert',
+          'products:view', 'products:create', 'products:update', 'products:delete',
+          'suppliers:view', 'suppliers:create', 'suppliers:update', 'suppliers:delete',
+          'purchases:view', 'purchases:create', 'purchases:update', 'purchases:delete',
+          'sales:view', 'sales:create', 'sales:update', 'sales:delete',
+          'expenses:view', 'expenses:create', 'expenses:update', 'expenses:delete',
+          'payments:view', 'payments:create', 'payments:update',
+          'banking:view', 'banking:create', 'banking:update', 'banking:reconciliation',
+          'accounting:view', 'chart_of_accounts:view', 'chart_of_accounts:update',
+          'journal_entries:view', 'journal_entries:create', 'journal_entries:update',
+          'reports:view', 'reports:export',
+          'vat:view', 'vat:manage',
+          'inventory:view', 'inventory:manage', 'inventory:adjust',
+          'settings:view', 'settings:update'
         ];
       }
       
