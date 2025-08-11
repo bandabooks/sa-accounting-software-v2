@@ -14554,6 +14554,49 @@ export class DatabaseStorage implements IStorage {
       .replace(/[^\w\s]/g, '')
       .trim();
   }
+  // SARS eFiling Integration methods
+  async getSarsVendorConfig(): Promise<SarsVendorConfig | undefined> {
+    const [config] = await db.select().from(sarsVendorConfig);
+    return config;
+  }
+
+  async createOrUpdateSarsVendorConfig(configData: InsertSarsVendorConfig): Promise<SarsVendorConfig> {
+    const existingConfig = await this.getSarsVendorConfig();
+    
+    if (existingConfig) {
+      const [updated] = await db.update(sarsVendorConfig)
+        .set({ ...configData, updatedAt: new Date() })
+        .where(eq(sarsVendorConfig.id, existingConfig.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(sarsVendorConfig).values(configData).returning();
+      return created;
+    }
+  }
+
+  async getCompanySarsLink(companyId: number): Promise<CompanySarsLink | undefined> {
+    const [link] = await db.select().from(companySarsLink).where(eq(companySarsLink.companyId, companyId));
+    return link;
+  }
+
+  async createCompanySarsLink(linkData: InsertCompanySarsLink): Promise<CompanySarsLink> {
+    const [link] = await db.insert(companySarsLink).values(linkData).returning();
+    return link;
+  }
+
+  async updateCompanySarsLink(companyId: number, linkData: Partial<InsertCompanySarsLink>): Promise<CompanySarsLink | undefined> {
+    const [link] = await db.update(companySarsLink)
+      .set({ ...linkData, updatedAt: new Date() })
+      .where(eq(companySarsLink.companyId, companyId))
+      .returning();
+    return link;
+  }
+
+  async deleteSarsLink(companyId: number): Promise<boolean> {
+    const result = await db.delete(companySarsLink).where(eq(companySarsLink.companyId, companyId));
+    return result.rowCount > 0;
+  }
 }
 
 export const storage = new DatabaseStorage();

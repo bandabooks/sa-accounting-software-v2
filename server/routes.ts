@@ -62,6 +62,7 @@ import {
 import { registerCompanyRoutes } from "./companyRoutes";
 import { registerEnterpriseRoutes } from "./routes/enterpriseRoutes";
 import { registerOnboardingRoutes } from "./routes/onboardingRoutes";
+import { sarsService } from "./sarsService";
 import { 
   insertCustomerSchema, 
   insertInvoiceSchema, 
@@ -132,7 +133,11 @@ import {
   bulkIncomeEntries,
   type LoginRequest,
   type TrialSignupRequest,
-  type ChangePasswordRequest
+  type ChangePasswordRequest,
+  type SarsVendorConfig,
+  type InsertSarsVendorConfig,
+  type CompanySarsLink,
+  type InsertCompanySarsLink
 } from "@shared/schema";
 import { z } from "zod";
 import { createPayFastService } from "./payfast";
@@ -12958,5 +12963,179 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // SARS eFiling Integration Routes
+  // Super Admin only - Configure SARS vendor credentials
+  app.post("/api/sars/config", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+    try {
+      const configData = req.body as InsertSarsVendorConfig;
+      const config = await sarsService.configureVendor(configData);
+      
+      // Don't return sensitive data
+      const sanitizedConfig = {
+        id: config.id,
+        isvNumber: config.isvNumber,
+        apiUrl: config.apiUrl,
+        environment: config.environment,
+        createdAt: config.createdAt,
+        updatedAt: config.updatedAt,
+      };
+      
+      res.json(sanitizedConfig);
+    } catch (error) {
+      console.error("Error configuring SARS vendor:", error);
+      res.status(500).json({ error: "Failed to configure SARS vendor" });
+    }
+  });
+
+  // Company Admin only - Connect company to SARS
+  app.get("/api/sars/auth-url", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.activeCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/sars/callback`;
+      const authUrl = await sarsService.generateAuthUrl(companyId, redirectUri);
+      
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Error generating SARS auth URL:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to generate auth URL" });
+    }
+  });
+
+  // OAuth callback handler
+  app.get("/api/sars/callback", async (req, res) => {
+    try {
+      const { code, state, error } = req.query;
+      
+      if (error) {
+        return res.redirect(`${req.protocol}://${req.get('host')}/vat?sars=error&message=${encodeURIComponent(error as string)}`);
+      }
+      
+      if (!code || !state) {
+        return res.redirect(`${req.protocol}://${req.get('host')}/vat?sars=error&message=missing_parameters`);
+      }
+
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/sars/callback`;
+      const { companyId, tokens } = await sarsService.exchangeCodeForTokens(
+        code as string, 
+        state as string, 
+        redirectUri
+      );
+      
+      await sarsService.linkCompany(companyId, tokens);
+      
+      res.redirect(`${req.protocol}://${req.get('host')}/vat?sars=connected`);
+    } catch (error) {
+      console.error("Error in SARS OAuth callback:", error);
+      res.redirect(`${req.protocol}://${req.get('host')}/vat?sars=error&message=connection_failed`);
+    }
+  });
+
+  // Get company SARS connection status
+  app.get("/api/sars/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.activeCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const status = await sarsService.getCompanyStatus(companyId);
+      
+      if (!status) {
+        return res.json({ 
+          status: 'disconnected',
+          connected: false,
+          linkedAt: null,
+          lastSyncAt: null,
+        });
+      }
+
+      // Don't return encrypted tokens
+      const sanitizedStatus = {
+        status: status.status,
+        connected: status.status === 'connected',
+        linkedAt: status.linkedAt,
+        lastSyncAt: status.lastSyncAt,
+        error: status.error,
+      };
+      
+      res.json(sanitizedStatus);
+    } catch (error) {
+      console.error("Error getting SARS status:", error);
+      res.status(500).json({ error: "Failed to get SARS status" });
+    }
+  });
+
+  // Test SARS connection
+  app.post("/api/sars/test", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.activeCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const result = await sarsService.testConnection(companyId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error testing SARS connection:", error);
+      res.status(500).json({ error: "Failed to test SARS connection" });
+    }
+  });
+
+  // Disconnect from SARS
+  app.delete("/api/sars/disconnect", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.activeCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const success = await sarsService.disconnectCompany(companyId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Error disconnecting from SARS:", error);
+      res.status(500).json({ error: "Failed to disconnect from SARS" });
+    }
+  });
+
+  // Submit VAT201 to SARS
+  app.post("/api/sars/vat201/submit", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.activeCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const vatData = req.body;
+      const result = await sarsService.submitVat201(companyId, vatData);
+      res.json(result);
+    } catch (error) {
+      console.error("Error submitting VAT201:", error);
+      res.status(500).json({ error: "Failed to submit VAT201" });
+    }
+  });
+
+  // Get VAT return status from SARS
+  app.get("/api/sars/vat201/status/:referenceNumber", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.activeCompanyId;
+      const { referenceNumber } = req.params;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const result = await sarsService.getVatReturnStatus(companyId, referenceNumber);
+      res.json(result);
+    } catch (error) {
+      console.error("Error getting VAT return status:", error);
+      res.status(500).json({ error: "Failed to get VAT return status" });
+    }
+  });
+
+  console.log("All routes registered successfully, including SARS eFiling integration!");
   return httpServer;
 }

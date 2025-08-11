@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { VatStatusToggle } from '../components/vat-management/vat-status-toggle';
+import { SarsIntegration } from '../components/SarsIntegration';
 import { Loader2 } from 'lucide-react';
 
 const VATSettings: React.FC = () => {
@@ -36,19 +37,25 @@ const VATSettings: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400">Configure VAT registration and compliance settings</p>
       </div>
       
-      <VatStatusToggle 
-        companyId={companyId}
-        initialSettings={{
-          isVatRegistered: (vatSettings as any)?.isVatRegistered || false,
-          vatNumber: (vatSettings as any)?.vatNumber || "",
-          vatRegistrationDate: (vatSettings as any)?.vatRegistrationDate || "",
-          vatPeriodMonths: (vatSettings as any)?.vatPeriodMonths || 2,
-          vatCategory: (vatSettings as any)?.vatCategory || "A",
-          vatStartMonth: (vatSettings as any)?.vatStartMonth || 1,
-          vatSubmissionDay: (vatSettings as any)?.vatSubmissionDay || 25,
-          defaultVatCalculationMethod: (vatSettings as any)?.defaultVatCalculationMethod || "inclusive"
-        }}
-      />
+      <div className="space-y-8">
+        <VatStatusToggle 
+          companyId={companyId}
+          initialSettings={{
+            isVatRegistered: (vatSettings as any)?.isVatRegistered || false,
+            vatNumber: (vatSettings as any)?.vatNumber || "",
+            vatRegistrationDate: (vatSettings as any)?.vatRegistrationDate || "",
+            vatPeriodMonths: (vatSettings as any)?.vatPeriodMonths || 2,
+            vatCategory: (vatSettings as any)?.vatCategory || "A",
+            vatStartMonth: (vatSettings as any)?.vatStartMonth || 1,
+            vatSubmissionDay: (vatSettings as any)?.vatSubmissionDay || 25,
+            defaultVatCalculationMethod: (vatSettings as any)?.defaultVatCalculationMethod || "inclusive"
+          }}
+        />
+        
+        {(vatSettings as any)?.isVatRegistered && (
+          <SarsIntegration />
+        )}
+      </div>
     </div>
   );
 };

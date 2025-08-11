@@ -1771,6 +1771,40 @@ export type InsertReorderRule = z.infer<typeof insertReorderRuleSchema>;
 export type ProductBundle = typeof productBundles.$inferSelect;
 export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
 
+// SARS eFiling Integration Tables  
+export const sarsVendorConfig = pgTable("sars_vendor_config", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  isvNumber: varchar("isv_number", { length: 50 }).unique().notNull(),
+  clientId: varchar("client_id", { length: 255 }).notNull(),
+  clientSecret: varchar("client_secret", { length: 255 }).notNull(),
+  apiKey: varchar("api_key", { length: 255 }).notNull(),
+  apiUrl: varchar("api_url", { length: 255 }).notNull().default("https://secure.sarsefiling.co.za/api/v1"),
+  environment: varchar("environment", { length: 20 }).notNull().default("sandbox"), // sandbox | live
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const companySarsLink = pgTable("company_sars_link", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  isvNumber: varchar("isv_number", { length: 50 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("disconnected"), // connected | disconnected | error
+  accessToken: text("access_token"), // encrypted
+  refreshToken: text("refresh_token"), // encrypted
+  linkedAt: timestamp("linked_at"),
+  lastSyncAt: timestamp("last_sync_at"),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueCompany: unique().on(table.companyId),
+}));
+
+export type SarsVendorConfig = typeof sarsVendorConfig.$inferSelect;
+export type InsertSarsVendorConfig = typeof sarsVendorConfig.$inferInsert;
+export type CompanySarsLink = typeof companySarsLink.$inferSelect;
+export type InsertCompanySarsLink = typeof companySarsLink.$inferInsert;
+
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),

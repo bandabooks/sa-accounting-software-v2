@@ -44,7 +44,10 @@ export class PerformanceOptimizedStorage {
           c.customer_count::text as total_customers,
           b.total_balance::text as bank_balance,
           b.account_count::text
-        FROM invoice_stats i, expense_stats e, customer_stats c, bank_stats b
+        FROM invoice_stats i 
+        CROSS JOIN expense_stats e 
+        CROSS JOIN customer_stats c 
+        CROSS JOIN bank_stats b
       `);
 
       return statsQuery.rows[0] || {
@@ -70,7 +73,7 @@ export class PerformanceOptimizedStorage {
   async getFastRecentActivities(companyId: number): Promise<any[]> {
     try {
       const recentQuery = await db.execute(sql`
-        SELECT * FROM (
+        (
           SELECT 
             'invoice' as type,
             invoice_number as reference,
@@ -83,22 +86,22 @@ export class PerformanceOptimizedStorage {
           WHERE company_id = ${companyId}
           ORDER BY created_at DESC 
           LIMIT 3
-        ) t1
+        )
         UNION ALL
-        SELECT * FROM (
+        (
           SELECT 
             'expense' as type,
-            internal_expense_ref as reference,
+            COALESCE(internal_expense_ref, 'EXP-' || id::text) as reference,
             '-' || amount::text as amount,
             expense_date as date,
-            paid_status as status,
+            COALESCE(paid_status, 'unpaid') as status,
             description,
             created_at
           FROM expenses 
           WHERE company_id = ${companyId}
           ORDER BY created_at DESC 
           LIMIT 3
-        ) t2
+        )
         ORDER BY created_at DESC 
         LIMIT 6
       `);
@@ -120,18 +123,27 @@ export class PerformanceOptimizedStorage {
   // Fast bank account balances - essential data only
   async getFastBankBalances(companyId: number): Promise<any[]> {
     try {
-      const balances = await db
-        .select({
-          id: bankAccounts.id,
-          accountName: bankAccounts.accountName,
-          balance: bankAccounts.balance,
-          accountType: bankAccounts.accountType
-        })
-        .from(bankAccounts)
-        .where(eq(bankAccounts.companyId, companyId))
-        .limit(5);
+      if (!companyId) {
+        return [];
+      }
+      
+      const balances = await db.execute(sql`
+        SELECT 
+          id,
+          account_name,
+          balance,
+          account_type
+        FROM bank_accounts 
+        WHERE company_id = ${companyId}
+        LIMIT 5
+      `);
 
-      return balances;
+      return balances.rows.map(row => ({
+        id: row.id,
+        accountName: row.account_name,
+        balance: row.balance,
+        accountType: row.account_type
+      }));
     } catch (error) {
       console.error("Fast bank balances error:", error);
       return [];
