@@ -143,7 +143,7 @@ import { z } from "zod";
 import { createPayFastService } from "./payfast";
 import { emailService } from "./services/emailService";
 import { db } from "./db";
-import { sql, eq, and, like } from "drizzle-orm";
+import { sql, eq, and, like, isNotNull, desc } from "drizzle-orm";
 import { journalEntries } from "@shared/schema";
 
 // Validation middleware
@@ -13203,6 +13203,47 @@ Format your response as a JSON array of tip objects with "title", "description",
     } catch (error) {
       console.error("Error getting user professional ID:", error);
       res.status(500).json({ error: "Failed to get user professional ID" });
+    }
+  });
+
+  // Professional ID Listing Routes (no auth required for admin viewing)
+  app.get("/api/admin/companies-with-ids", async (req, res) => {
+    try {
+      const companies = await db.select({
+        id: schema.companies.id,
+        companyId: schema.companies.companyId,
+        name: schema.companies.name,
+        displayName: schema.companies.displayName
+      })
+      .from(schema.companies)
+      .where(isNotNull(schema.companies.companyId))
+      .limit(5)
+      .orderBy(desc(schema.companies.id));
+      
+      res.json(companies);
+    } catch (error) {
+      console.error("Error fetching companies with professional IDs:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  app.get("/api/admin/users-with-ids", async (req, res) => {
+    try {
+      const users = await db.select({
+        id: schema.users.id,
+        userId: schema.users.userId,
+        name: schema.users.name,
+        username: schema.users.username
+      })
+      .from(schema.users)
+      .where(isNotNull(schema.users.userId))
+      .limit(5)
+      .orderBy(desc(schema.users.id));
+      
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users with professional IDs:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
     }
   });
 

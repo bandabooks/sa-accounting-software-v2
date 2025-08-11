@@ -1,9 +1,9 @@
 import React from 'react';
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Database, Users, Building2, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Database, Users, Building2, PlayCircle, CheckCircle2, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import ProfessionalIdDisplay from '@/components/professional-ids/ProfessionalIdDisplay';
@@ -12,6 +12,16 @@ export default function ProfessionalIdsManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Query to get sample companies with their professional IDs
+  const { data: companies, isLoading: companiesLoading } = useQuery({
+    queryKey: ["/api/admin/companies-with-ids"],
+  });
+
+  // Query to get sample users with their professional IDs
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ["/api/admin/users-with-ids"],
+  });
 
   const migrationMutation = useMutation({
     mutationFn: async () => {
@@ -151,9 +161,92 @@ export default function ProfessionalIdsManagement() {
       </Card>
 
       {/* Current Professional IDs Display */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Current Professional IDs</h2>
-        <ProfessionalIdDisplay companyId={2} showUserInfo={true} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Company Professional IDs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Building2 className="h-5 w-5 mr-2 text-blue-600" />
+              Company Professional IDs
+            </CardTitle>
+            <CardDescription>Sample of companies with assigned professional IDs</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {companiesLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse bg-gray-200 h-16 rounded"></div>
+                ))}
+              </div>
+            ) : companies && companies.length > 0 ? (
+              <div className="space-y-3">
+                {companies.map((company: any) => (
+                  <div key={company.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div>
+                      <div className="font-semibold text-blue-900">{company.companyId || company.company_id}</div>
+                      <div className="text-sm text-blue-700">{company.name}</div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(company.companyId || company.company_id);
+                        toast({ title: "Copied!", description: "Company ID copied to clipboard" });
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No companies found</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* User Professional IDs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Users className="h-5 w-5 mr-2 text-green-600" />
+              User Professional IDs
+            </CardTitle>
+            <CardDescription>Sample of users with assigned professional IDs</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {usersLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse bg-gray-200 h-16 rounded"></div>
+                ))}
+              </div>
+            ) : users && users.length > 0 ? (
+              <div className="space-y-3">
+                {users.map((user: any) => (
+                  <div key={user.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div>
+                      <div className="font-semibold text-green-900">{user.userId || user.user_id}</div>
+                      <div className="text-sm text-green-700">{user.name}</div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(user.userId || user.user_id);
+                        toast({ title: "Copied!", description: "User ID copied to clipboard" });
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No users found</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* System Information */}
