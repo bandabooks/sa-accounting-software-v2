@@ -8,6 +8,7 @@ import {
   userSessions,
   userRoles,
   auditLogs,
+  idTracking,
   // RBAC imports
   systemRoles,
   companyRoles,
@@ -1131,6 +1132,64 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(users.id, id));
+  }
+
+  // Professional ID tracking methods
+  async getMaxUsedUserId(): Promise<number> {
+    try {
+      // Check the tracking table first
+      const [tracking] = await db
+        .select()
+        .from(idTracking)
+        .where(eq(idTracking.entityType, 'user'))
+        .limit(1);
+      
+      if (tracking) {
+        return tracking.maxUsedId;
+      }
+      
+      // Fallback: scan all existing users to find max ID
+      const allUsers = await db.select({ userId: users.userId }).from(users);
+      let maxId = 2; // Start from 2 so next ID is 3
+      
+      for (const user of allUsers) {
+        if (user.userId) {
+          const numericId = parseInt(user.userId);
+          if (!isNaN(numericId)) {
+            maxId = Math.max(maxId, numericId);
+          }
+        }
+      }
+      
+      // Initialize tracking table
+      await this.updateMaxUsedUserId(maxId);
+      return maxId;
+    } catch (error) {
+      console.error('Error getting max used user ID:', error);
+      return 2; // Safe fallback
+    }
+  }
+
+  async updateMaxUsedUserId(maxId: number): Promise<void> {
+    try {
+      // Upsert the tracking record
+      await db
+        .insert(idTracking)
+        .values({
+          entityType: 'user',
+          maxUsedId: maxId,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: idTracking.entityType,
+          set: {
+            maxUsedId: maxId,
+            updatedAt: new Date(),
+          },
+        });
+    } catch (error) {
+      console.error('Error updating max used user ID:', error);
+    }
   }
 
   // Authentication & Sessions
