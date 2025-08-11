@@ -192,23 +192,6 @@ export default function Estimates() {
     queryFn: () => apiRequest("/api/estimates/stats", "GET")
   });
 
-  // Use loading states for comprehensive loading feedback including mutations
-  useLoadingStates({
-    loadingStates: [
-      { isLoading, message: 'Loading estimates...' },
-      { isLoading: statsLoading, message: 'Loading estimate statistics...' },
-      { isLoading: sendEmailMutation.isPending, message: 'Sending email...' },
-      { isLoading: deleteMutation.isPending, message: 'Deleting estimate...' },
-      { isLoading: updateStatusMutation.isPending, message: 'Updating status...' },
-      { isLoading: sendEstimateMutation.isPending, message: 'Sending estimate...' },
-    ],
-    progressSteps: ['Fetching estimates', 'Processing pipeline', 'Loading templates'],
-  });
-
-  if (isLoading) {
-    return <PageLoader message="Loading estimates..." />;
-  }
-
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number; status: string; notes?: string }) => {
       return apiRequest(`/api/estimates/${id}/status`, "PUT", { status, notes });
@@ -250,6 +233,23 @@ export default function Estimates() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading estimates...' },
+      { isLoading: statsLoading, message: 'Loading estimate statistics...' },
+      { isLoading: sendEmailMutation.isPending, message: 'Sending email...' },
+      { isLoading: deleteMutation.isPending, message: 'Deleting estimate...' },
+      { isLoading: updateStatusMutation.isPending, message: 'Updating status...' },
+      { isLoading: sendEstimateMutation.isPending, message: 'Sending estimate...' },
+    ],
+    progressSteps: ['Fetching estimates', 'Processing pipeline', 'Loading templates'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading estimates..." />;
+  }
 
   const filteredEstimates = estimates.filter(estimate => {
     const matchesSearch = !searchTerm || 

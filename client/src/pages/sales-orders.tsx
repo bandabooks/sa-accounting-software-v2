@@ -91,6 +91,22 @@ export default function SalesOrdersPage() {
     },
   });
 
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading sales orders...' },
+      { isLoading: statsLoading, message: 'Loading sales statistics...' },
+      { isLoading: deleteMutation.isPending, message: 'Deleting sales order...' },
+      { isLoading: updateStatusMutation.isPending, message: 'Updating order status...' },
+      { isLoading: convertToInvoiceMutation.isPending, message: 'Converting to invoice...' },
+    ],
+    progressSteps: ['Fetching sales orders', 'Loading order statistics', 'Processing order data'],
+  });
+
+  if (isLoading || statsLoading) {
+    return <PageLoader message="Loading sales orders..." />;
+  }
+
   const filteredSalesOrders = salesOrders.filter((order: SalesOrder) => {
     const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.notes?.toLowerCase().includes(searchTerm.toLowerCase());
