@@ -17,6 +17,8 @@ import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, 
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader, InlineLoader } from "@/components/ui/global-loader";
 import { z } from "zod";
 
 const accountFormSchema = z.object({
@@ -239,6 +241,18 @@ export default function ChartOfAccounts() {
     });
   };
 
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading Chart of Accounts...' },
+      { isLoading: seedMutation.isPending, message: 'Setting up Chart of Accounts...' },
+      { isLoading: createMutation.isPending, message: 'Creating new account...' },
+      { isLoading: updateMutation.isPending, message: 'Updating account...' },
+      { isLoading: deleteMutation.isPending, message: 'Deleting account...' },
+      { isLoading: toggleActivationMutation.isPending, message: 'Updating account status...' },
+    ],
+  });
+
   const createForm = useForm<AccountFormData>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: {
@@ -313,18 +327,7 @@ export default function ChartOfAccounts() {
   };
 
   if (isLoading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="space-y-3">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading Chart of Accounts..." />;
   }
 
   return (

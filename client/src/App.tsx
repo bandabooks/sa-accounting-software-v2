@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { LoadingProvider } from "@/contexts/LoadingContext";
+import { GlobalLoader } from "@/components/ui/global-loader";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
@@ -858,10 +860,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <NotificationProvider>
-          <Toaster />
-          <Router />
-        </NotificationProvider>
+        <LoadingProvider>
+          <NotificationProvider>
+            <GlobalLoader />
+            <Toaster />
+            <Router />
+          </NotificationProvider>
+        </LoadingProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
