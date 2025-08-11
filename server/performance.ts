@@ -70,34 +70,36 @@ export class PerformanceOptimizedStorage {
   async getFastRecentActivities(companyId: number): Promise<any[]> {
     try {
       const recentQuery = await db.execute(sql`
-        (
+        SELECT * FROM (
           SELECT 
             'invoice' as type,
             invoice_number as reference,
             total::text as amount,
             issue_date as date,
             status,
-            'Invoice ' || invoice_number as description
+            'Invoice ' || invoice_number as description,
+            created_at
           FROM invoices 
           WHERE company_id = ${companyId}
           ORDER BY created_at DESC 
           LIMIT 3
-        )
+        ) t1
         UNION ALL
-        (
+        SELECT * FROM (
           SELECT 
             'expense' as type,
             internal_expense_ref as reference,
             '-' || amount::text as amount,
             expense_date as date,
             paid_status as status,
-            description
+            description,
+            created_at
           FROM expenses 
           WHERE company_id = ${companyId}
           ORDER BY created_at DESC 
           LIMIT 3
-        )
-        ORDER BY date DESC 
+        ) t2
+        ORDER BY created_at DESC 
         LIMIT 6
       `);
 
