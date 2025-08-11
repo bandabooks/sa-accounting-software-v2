@@ -6131,7 +6131,127 @@ export class DatabaseStorage implements IStorage {
     return balance.toFixed(2);
   }
 
-  // Banking Implementation
+  // Banking Implementation - Get bank accounts from Chart of Accounts
+  async getBankAccountsFromChartOfAccounts(companyId: number): Promise<any[]> {
+    try {
+      // Get bank accounts from Chart of Accounts (Asset type, codes 1110-1199)
+      const bankAccounts = await db.select()
+        .from(chartOfAccounts)
+        .where(
+          and(
+            eq(chartOfAccounts.companyId, companyId),
+            eq(chartOfAccounts.accountType, "Asset"),
+            gte(chartOfAccounts.accountCode, "1110"),
+            lte(chartOfAccounts.accountCode, "1199"),
+            eq(chartOfAccounts.isActive, true)
+          )
+        )
+        .orderBy(chartOfAccounts.accountCode);
+
+      return await Promise.all(bankAccounts.map(async (account) => {
+        // Calculate balance from journal entries
+        const balanceResult = await db.select({
+          debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), 0)`,
+          creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), 0)`
+        })
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+        .where(
+          and(
+            eq(journalEntryLines.accountId, account.id),
+            eq(journalEntries.isPosted, true),
+            eq(journalEntries.companyId, companyId)
+          )
+        );
+
+        const debitTotal = parseFloat(balanceResult[0]?.debitTotal || "0");
+        const creditTotal = parseFloat(balanceResult[0]?.creditTotal || "0");
+        const balance = (debitTotal - creditTotal).toFixed(2);
+        
+        // Get recent transactions for this account (from journal entries)
+        const recentTransactions = await db.select({
+          id: journalEntryLines.id,
+          date: journalEntries.transactionDate,
+          description: journalEntryLines.description,
+          reference: journalEntries.reference,
+          debitAmount: journalEntryLines.debitAmount,
+          creditAmount: journalEntryLines.creditAmount,
+        })
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+        .where(
+          and(
+            eq(journalEntryLines.accountId, account.id),
+            eq(journalEntries.isPosted, true),
+            eq(journalEntries.companyId, companyId)
+          )
+        )
+        .orderBy(desc(journalEntries.transactionDate))
+        .limit(10);
+
+        return {
+          id: account.id,
+          accountName: account.accountName,
+          accountCode: account.accountCode,
+          accountType: account.accountType,
+          balance: balance,
+          isActive: account.isActive,
+          bankName: account.accountName.includes('FNB') ? 'FNB' : 
+                   account.accountName.includes('ABSA') ? 'ABSA' :
+                   account.accountName.includes('Capitec') ? 'Capitec' :
+                   account.accountName.includes('Standard') ? 'Standard Bank' :
+                   account.accountName.includes('Nedbank') ? 'Nedbank' :
+                   account.accountName.includes('Discovery') ? 'Discovery Bank' :
+                   account.accountName.includes('GSD') ? 'GSD Standard Bank' : 'Bank',
+          currency: 'ZAR',
+          transactions: recentTransactions,
+          chartAccount: account
+        };
+      }));
+    } catch (error) {
+      console.error("Error fetching bank accounts from Chart of Accounts:", error);
+      throw error;
+    }
+  }
+
+  // Toggle Chart of Accounts account status
+  async toggleChartAccountStatus(accountId: number, companyId: number): Promise<any> {
+    try {
+      // Get current account status
+      const [account] = await db.select()
+        .from(chartOfAccounts)
+        .where(
+          and(
+            eq(chartOfAccounts.id, accountId),
+            eq(chartOfAccounts.companyId, companyId)
+          )
+        );
+
+      if (!account) {
+        throw new Error("Account not found");
+      }
+
+      // Toggle the isActive status
+      const newStatus = !account.isActive;
+      
+      const [updatedAccount] = await db.update(chartOfAccounts)
+        .set({ isActive: newStatus })
+        .where(
+          and(
+            eq(chartOfAccounts.id, accountId),
+            eq(chartOfAccounts.companyId, companyId)
+          )
+        )
+        .returning();
+
+      return updatedAccount;
+    } catch (error) {
+      console.error("Error toggling chart account status:", error);
+      throw error;
+    }
+  }
+
+  // Legacy banking implementation (kept for compatibility)
   async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
     const accounts = await db.select().from(bankAccounts)
       .where(and(eq(bankAccounts.companyId, companyId), eq(bankAccounts.isActive, true)))

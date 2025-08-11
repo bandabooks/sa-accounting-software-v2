@@ -6787,7 +6787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bank-accounts", authenticate, async (req, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const accounts = await storage.getAllBankAccounts(companyId);
+      const accounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching bank accounts:", error);
@@ -6846,6 +6846,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting bank account:", error);
       res.status(500).json({ error: "Failed to delete bank account" });
+    }
+  });
+
+  // Toggle bank account status (Chart of Accounts)
+  app.patch("/api/bank-accounts/:id/toggle", authenticate, async (req, res) => {
+    try {
+      const accountId = parseInt(req.params.id);
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      
+      // Toggle the isActive status in Chart of Accounts
+      const updatedAccount = await storage.toggleChartAccountStatus(accountId, companyId);
+      res.json(updatedAccount);
+    } catch (error) {
+      console.error("Error toggling bank account status:", error);
+      res.status(500).json({ error: "Failed to toggle bank account status" });
     }
   });
 

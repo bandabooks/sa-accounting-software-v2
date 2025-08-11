@@ -121,6 +121,20 @@ export default function Banking() {
     },
   });
 
+  const toggleAccountMutation = useMutation({
+    mutationFn: (accountId: number) => apiRequest(`/api/bank-accounts/${accountId}/toggle`, "PATCH"),
+    onSuccess: (updatedAccount) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      toast({ 
+        title: "Success", 
+        description: `Bank account ${updatedAccount.isActive ? 'activated' : 'deactivated'} successfully` 
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: "Failed to toggle bank account status", variant: "destructive" });
+    },
+  });
+
   const accountForm = useForm<BankAccountForm>({
     resolver: zodResolver(bankAccountSchema),
     defaultValues: {
@@ -192,9 +206,16 @@ export default function Banking() {
     setShowEditDialog(true);
   };
 
-  const totalBalance = bankAccounts.reduce((sum: number, account: BankAccountWithTransactions) => 
-    sum + parseFloat(account.currentBalance), 0
+  // Calculate metrics from Chart of Accounts bank data
+  const totalBalance = bankAccounts.reduce((sum: number, account: any) => 
+    sum + parseFloat(account.balance || "0"), 0
   );
+
+  const activeAccounts = bankAccounts.filter((account: any) => 
+    parseFloat(account.balance || "0") > 0
+  ).length;
+
+  const totalAccounts = bankAccounts.length;
 
   if (isLoading) {
     return (
@@ -432,9 +453,7 @@ export default function Banking() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 text-sm font-medium mb-1">Active Accounts</p>
-                  <p className="text-3xl font-bold text-white">
-                    {bankAccounts.filter((account: BankAccountWithTransactions) => account.isActive).length}
-                  </p>
+                  <p className="text-3xl font-bold text-white">{activeAccounts}</p>
                   <p className="text-purple-200 text-xs mt-1">With positive balance</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-full">
@@ -499,15 +518,15 @@ export default function Banking() {
             </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {bankAccounts.map((account: BankAccountWithTransactions) => (
+            {bankAccounts.map((account: any) => (
               <Card key={account.id} className="group relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-gray-100 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02]">
                 {/* Bank Card Style Header */}
                 <div className={`h-40 bg-gradient-to-br ${
-                  account.accountType === 'current' 
+                  account.accountName.toLowerCase().includes('current') 
                     ? 'from-blue-600 via-indigo-600 to-purple-700' 
-                    : account.accountType === 'savings'
+                    : account.accountName.toLowerCase().includes('savings')
                     ? 'from-green-600 via-emerald-600 to-teal-700'
-                    : account.accountType === 'credit'
+                    : account.accountName.toLowerCase().includes('credit')
                     ? 'from-red-600 via-pink-600 to-rose-700'
                     : 'from-gray-600 via-slate-600 to-zinc-700'
                 } relative overflow-hidden`}>
@@ -533,7 +552,7 @@ export default function Banking() {
                     <div className="text-white mt-4">
                       <p className="text-white/70 text-sm mb-2 font-medium">Available Balance</p>
                       <p className="text-3xl font-bold leading-none">
-                        R {parseFloat(account.currentBalance).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                        R {parseFloat(account.balance || "0").toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </CardContent>
@@ -545,26 +564,19 @@ export default function Banking() {
                   <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-100">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-gray-500 font-medium mb-1">Account Number</p>
-                        <div className="flex items-center space-x-2">
-                          <p className="font-mono text-sm text-gray-800">****{account.accountNumber.slice(-4)}</p>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-blue-100">
-                            <Eye className="h-3 w-3 text-gray-500" />
-                          </Button>
-                        </div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Account Code</p>
+                        <p className="font-mono text-sm text-gray-800">{account.accountCode}</p>
                       </div>
-                      {account.branchCode && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium mb-1">Branch Code</p>
-                          <p className="font-mono text-sm text-gray-800">{account.branchCode}</p>
-                        </div>
-                      )}
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Account Type</p>
+                        <p className="font-mono text-sm text-gray-800">{account.accountType}</p>
+                      </div>
                     </div>
                     
                     <div className="flex items-center space-x-3 mt-3">
                       <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-2 py-1">
                         <CreditCard className="h-3 w-3 mr-1" />
-                        {account.accountType}
+                        Bank Account
                       </Badge>
                       <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
                         {account.currency}
@@ -572,22 +584,23 @@ export default function Banking() {
                     </div>
                   </div>
 
-                  {/* Chart of Accounts Link */}
-                  {account.chartAccount && (
-                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
-                      <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-emerald-100 rounded-lg">
-                          <Shield className="h-4 w-4 text-emerald-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-emerald-700 mb-1">Linked to Chart of Accounts</p>
-                          <p className="text-xs text-emerald-600">
-                            {account.chartAccount.accountCode} - {account.chartAccount.accountName}
-                          </p>
-                        </div>
+                  {/* Chart of Accounts Info */}
+                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2 bg-emerald-100 rounded-lg">
+                        <Shield className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-700 mb-1">Chart of Accounts</p>
+                        <p className="text-xs text-emerald-600">
+                          {account.accountCode} - {account.accountName}
+                        </p>
+                        <p className="text-xs text-emerald-500 mt-1">
+                          {account.transactions?.length || 0} recent transactions
+                        </p>
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* Action Buttons */}
                   <div className="flex space-x-3 pt-2">
@@ -604,12 +617,18 @@ export default function Banking() {
                       Add Transaction
                     </Button>
                     <Button 
-                      variant="outline" 
+                      variant={account.isActive ? "outline" : "secondary"}
                       size="sm" 
-                      className="px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                      onClick={() => handleEditAccount(account)}
+                      className={`px-4 ${account.isActive 
+                        ? 'border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600' 
+                        : 'border-green-300 hover:bg-green-50 hover:border-green-400 text-green-600'
+                      }`}
+                      onClick={() => {
+                        // Toggle bank account status
+                        toggleAccountMutation.mutate(account.id);
+                      }}
                     >
-                      <Pencil className="h-4 w-4" />
+                      {account.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
                 </CardContent>

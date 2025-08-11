@@ -83,12 +83,12 @@ export async function seedDatabase() {
       console.log("✓ South African Chart of Accounts seeded");
     }
 
-    // Seed Default South African Banks for default company
-    const existingBanks = await storage.getAllBankAccounts(defaultCompany.id);
-    if (existingBanks.length === 0) {
-      await storage.seedDefaultSouthAfricanBanks(defaultCompany.id);
-      console.log("✓ Default South African banks seeded");
-    }
+    // Seed Default South African Banks for default company - Skip since we now use Chart of Accounts
+    // const existingBanks = await storage.getBankAccountsFromChartOfAccounts(defaultCompany.id);
+    // if (existingBanks.length === 0) {
+    //   await storage.seedDefaultSouthAfricanBanks(defaultCompany.id);
+    //   console.log("✓ Default South African banks seeded");
+    // }
 
     // Seed South African VAT Types (system-wide, not company-specific)
     try {
