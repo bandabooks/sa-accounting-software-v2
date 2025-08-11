@@ -38,20 +38,6 @@ export default function Products() {
     queryKey: ["/api/products/stats"],
   });
 
-  // Use loading states for comprehensive loading feedback including mutations
-  useLoadingStates({
-    loadingStates: [
-      { isLoading: productsLoading, message: 'Loading products...' },
-      { isLoading: statsLoading, message: 'Loading product statistics...' },
-      { isLoading: deleteProductMutation.isPending, message: 'Deleting product...' },
-    ],
-    progressSteps: ['Fetching products', 'Loading categories', 'Processing inventory'],
-  });
-
-  if (productsLoading) {
-    return <PageLoader message="Loading products..." />;
-  }
-
   const deleteProductMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest(`/api/products/${id}`, "DELETE");
@@ -71,6 +57,20 @@ export default function Products() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations - MUST be after ALL mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: productsLoading, message: 'Loading products...' },
+      { isLoading: statsLoading, message: 'Loading product statistics...' },
+      { isLoading: deleteProductMutation.isPending, message: 'Deleting product...' },
+    ],
+    progressSteps: ['Fetching products', 'Loading categories', 'Processing inventory'],
+  });
+
+  if (productsLoading) {
+    return <PageLoader message="Loading products..." />;
+  }
 
   const filteredProducts = (Array.isArray(products) ? products : []).filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

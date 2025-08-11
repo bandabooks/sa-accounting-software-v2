@@ -139,19 +139,6 @@ export default function ExpensesStandalone() {
     },
   });
 
-  // Use loading states for comprehensive loading feedback including mutations
-  useLoadingStates({
-    loadingStates: [
-      { isLoading, message: 'Loading expenses...' },
-      { isLoading: deleteExpenseMutation.isPending, message: 'Deleting expense...' },
-    ],
-    progressSteps: ['Fetching expenses', 'Loading suppliers', 'Processing filters'],
-  });
-
-  if (isLoading) {
-    return <PageLoader message="Loading expenses..." />;
-  }
-
   // Update expense mutation  
   const updateExpenseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
@@ -184,6 +171,20 @@ export default function ExpensesStandalone() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations - MUST be after ALL mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading expenses...' },
+      { isLoading: deleteExpenseMutation.isPending, message: 'Deleting expense...' },
+      { isLoading: updateExpenseMutation.isPending, message: 'Updating expense...' },
+    ],
+    progressSteps: ['Fetching expenses', 'Loading suppliers', 'Processing filters'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading expenses..." />;
+  }
 
   const handleDeleteExpense = (expense: Expense) => {
     setDeletingExpense(expense);

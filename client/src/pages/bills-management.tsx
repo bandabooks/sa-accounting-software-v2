@@ -153,19 +153,6 @@ export default function BillsManagement() {
     },
   });
 
-  // Use loading states for comprehensive loading feedback including mutations
-  useLoadingStates({
-    loadingStates: [
-      { isLoading, message: 'Loading bills and accounts payable...' },
-      { isLoading: approveBillMutation.isPending, message: 'Approving bill...' },
-    ],
-    progressSteps: ['Fetching bills data', 'Loading supplier information', 'Processing metrics'],
-  });
-
-  if (isLoading) {
-    return <PageLoader message="Loading bills management..." />;
-  }
-
   // Reject bill mutation
   const rejectBillMutation = useMutation({
     mutationFn: async ({ billId, reason }: { billId: number; reason: string }) => {
@@ -216,6 +203,21 @@ export default function BillsManagement() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations - MUST be after ALL mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading bills and accounts payable...' },
+      { isLoading: approveBillMutation.isPending, message: 'Approving bill...' },
+      { isLoading: rejectBillMutation.isPending, message: 'Rejecting bill...' },
+      { isLoading: convertToExpenseMutation.isPending, message: 'Converting to expense...' },
+    ],
+    progressSteps: ['Fetching bills data', 'Loading supplier information', 'Processing metrics'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading bills management..." />;
+  }
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
