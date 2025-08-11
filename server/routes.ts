@@ -747,10 +747,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             const permissions = await storage.getUserPermission(user.id, user.activeCompanyId || 1);
-            if (permissions && Array.isArray(permissions)) {
-              userPermissions = permissions;
-            } else if (permissions) {
-              userPermissions = [permissions.toString()];
+            if (permissions && permissions.customPermissions) {
+              // Extract permissions from JSONB array
+              userPermissions = Array.isArray(permissions.customPermissions) 
+                ? permissions.customPermissions 
+                : JSON.parse(permissions.customPermissions as string);
+              console.log(`→ Loaded ${userPermissions.length} permissions for ${user.username}:`, userPermissions.slice(0, 5));
             } else {
               console.log(`→ No permissions found, using defaults for ${user.username}`);
               // Fallback to default permissions based on user role with basic dashboard access
