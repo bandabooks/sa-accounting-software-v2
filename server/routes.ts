@@ -9509,23 +9509,34 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       const userId = req.user.id;
       const { companyId } = req.body;
       
+      console.log(`🔄 Company switch request: User ${userId} -> Company ${companyId}`);
+      
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
 
       // Verify user has access to this company
       const userCompanies = await storage.getUserCompanies(userId);
+      console.log(`👤 User companies:`, userCompanies.map(uc => `${uc.companyId}:${uc.company?.name || 'Unknown'}`));
+      
       const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
       
       if (!hasAccess) {
+        console.log(`❌ Access denied: User ${userId} cannot access company ${companyId}`);
         return res.status(403).json({ message: "Access denied to this company" });
       }
 
       // Update user's active company
+      console.log(`💾 Setting active company ${companyId} for user ${userId}`);
       await storage.setUserActiveCompany(userId, companyId);
+      
+      // Verify the update worked
+      const updatedActiveCompany = await storage.getUserActiveCompany(userId);
+      console.log(`✅ Active company after update:`, updatedActiveCompany?.name, `(ID: ${updatedActiveCompany?.id})`);
       
       // Get the switched company details
       const company = await storage.getCompany(companyId);
+      console.log(`📋 Company details:`, company?.name);
       
       res.json({ 
         success: true, 
@@ -9533,7 +9544,7 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
         message: "Company switched successfully" 
       });
     } catch (error) {
-      console.error("Error switching company:", error);
+      console.error("❌ Error switching company:", error);
       res.status(500).json({ message: "Failed to switch company" });
     }
   });
