@@ -30,32 +30,48 @@ interface CompanySubscription {
   plan?: SubscriptionPlan;
 }
 
-// Subscription Plan Module Access - matches server/default-permissions.ts
+// Subscription Plan Module Access - Enhanced with VAT, expense, and purchase modules
 const SUBSCRIPTION_PLAN_MODULES = {
+  trial: [
+    'dashboard', 'sales', 'purchases', 'products', 'customers',
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking',
+    'reports', 'inventory', 'vat', 'vat_management', 'chart_of_accounts', 
+    'journal_entries', 'payments', 'settings', 'suppliers', 'purchase_orders',
+    'expense_management', 'vat_returns', 'vat_reporting', 'basic_reports', 
+    'basic_accounting'
+  ],
+  
   basic: [
-    'dashboard', 'sales', 'purchases', 'products', 'customers', 
-    'basic_reports', 'basic_accounting'
+    'dashboard', 'sales', 'purchases', 'products', 'customers',
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking',
+    'reports', 'inventory', 'vat', 'vat_management', 'chart_of_accounts', 
+    'journal_entries', 'payments', 'settings', 'suppliers', 'purchase_orders',
+    'expense_management', 'vat_returns', 'vat_reporting', 'basic_reports', 
+    'basic_accounting'
   ],
   
   standard: [
     'dashboard', 'sales', 'purchases', 'products', 'customers',
-    'accounting', 'banking', 'reports', 'inventory', 'vat',
-    'compliance_basic'
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking', 
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings', 'compliance_basic'
   ],
   
   professional: [
     'dashboard', 'sales', 'purchases', 'products', 'customers',
-    'accounting', 'banking', 'reports', 'inventory', 'vat',
-    'compliance', 'pos', 'advanced_reports', 'projects',
-    'payroll_basic'
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking', 
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings', 'compliance', 'pos', 'advanced_reports', 
+    'projects', 'payroll_basic'
   ],
   
   enterprise: [
     'dashboard', 'sales', 'purchases', 'products', 'customers',
-    'accounting', 'banking', 'reports', 'inventory', 'vat',
-    'compliance', 'pos', 'advanced_reports', 'projects',
-    'payroll', 'advanced_analytics', 'api_access', 'custom_fields',
-    'workflow_automation', 'multi_company'
+    'expenses', 'invoices', 'estimates', 'accounting', 'banking', 
+    'reports', 'inventory', 'vat', 'chart_of_accounts', 'journal_entries',
+    'payments', 'settings', 'compliance', 'pos', 'advanced_reports', 
+    'projects', 'payroll', 'advanced_analytics', 'api_access', 
+    'custom_fields', 'workflow_automation', 'multi_company'
   ]
 };
 
@@ -86,17 +102,23 @@ export function useCompanySubscription() {
     }
 
     if (!subscription?.plan) {
-      // Default to basic plan if no subscription found
-      const basicModules = SUBSCRIPTION_PLAN_MODULES.basic;
-      return basicModules.includes(module);
+      // Default to trial access if no subscription found
+      const trialModules = SUBSCRIPTION_PLAN_MODULES.trial;
+      return trialModules.includes(module);
+    }
+
+    // For trial status, use trial modules regardless of plan
+    if (subscription.status === 'trial') {
+      const trialModules = SUBSCRIPTION_PLAN_MODULES.trial;
+      return trialModules.includes(module);
     }
 
     const planName = subscription.plan.name.toLowerCase();
     const planModules = SUBSCRIPTION_PLAN_MODULES[planName as keyof typeof SUBSCRIPTION_PLAN_MODULES];
     
     if (!planModules) {
-      // Fallback to basic if plan not found
-      return SUBSCRIPTION_PLAN_MODULES.basic.includes(module);
+      // Fallback to trial if plan not found
+      return SUBSCRIPTION_PLAN_MODULES.trial.includes(module);
     }
 
     return planModules.includes(module);
@@ -110,11 +132,16 @@ export function useCompanySubscription() {
     }
 
     if (!subscription?.plan) {
-      return SUBSCRIPTION_PLAN_MODULES.basic;
+      return SUBSCRIPTION_PLAN_MODULES.trial;
+    }
+
+    // For trial status, use trial modules
+    if (subscription.status === 'trial') {
+      return SUBSCRIPTION_PLAN_MODULES.trial;
     }
 
     const planName = subscription.plan.name.toLowerCase();
-    return SUBSCRIPTION_PLAN_MODULES[planName as keyof typeof SUBSCRIPTION_PLAN_MODULES] || SUBSCRIPTION_PLAN_MODULES.basic;
+    return SUBSCRIPTION_PLAN_MODULES[planName as keyof typeof SUBSCRIPTION_PLAN_MODULES] || SUBSCRIPTION_PLAN_MODULES.trial;
   };
 
   return {
@@ -124,7 +151,8 @@ export function useCompanySubscription() {
     isModuleAvailable,
     getAvailableModules,
     currentPlan: subscription?.plan,
-    planName: subscription?.plan?.name || 'basic',
+    planName: subscription?.plan?.name || 'trial',
+    planStatus: subscription?.status || 'trial',
     isSuperAdminOrOwner
   };
 }

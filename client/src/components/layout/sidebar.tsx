@@ -362,7 +362,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const { isModuleAvailable, currentPlan, planName, isSuperAdminOrOwner } = useCompanySubscription();
+  const { isModuleAvailable, currentPlan, subscription, planStatus, isSuperAdminOrOwner } = useCompanySubscription();
   const [expandedGroup, setExpandedGroup] = useState<string | null>("overview");
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
@@ -401,9 +401,9 @@ export default function Sidebar() {
                   <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full font-semibold shadow-lg border border-white/20">
                     ⚡ Super Admin
                   </span>
-                ) : currentPlan ? (
+                ) : subscription ? (
                   <span className="text-xs px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full border border-white/30 font-medium">
-                    {currentPlan.displayName}
+                    {planStatus === 'trial' ? `✨ ${currentPlan?.displayName || 'Basic'} Trial` : currentPlan?.displayName || 'Basic Plan'}
                   </span>
                 ) : (
                   <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-full font-semibold">
@@ -428,7 +428,7 @@ export default function Sidebar() {
           )}
           
           {/* Subscription Plan Information */}
-          {!currentPlan && !isSuperAdminOrOwner && (
+          {!subscription && !isSuperAdminOrOwner && (
             <div className="mt-4">
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
                 <div className="flex items-center gap-3">
