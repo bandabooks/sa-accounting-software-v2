@@ -214,8 +214,9 @@ export default function ChartOfAccounts() {
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       setToggledAccountId(null);
       toast({
-        title: "Success",
-        description: `Account ${isActive ? 'activated' : 'deactivated'} successfully`,
+        title: isActive ? "Account Activated" : "Account Deactivated", 
+        description: `Account has been ${isActive ? 'activated' : 'deactivated'} successfully`,
+        variant: isActive ? "success" : "default",
       });
     },
     onError: (error: any) => {
