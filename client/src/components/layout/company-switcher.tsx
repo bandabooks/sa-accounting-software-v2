@@ -129,6 +129,7 @@ export default function CompanySwitcher() {
       window.location.reload();
     },
     onError: (error: any) => {
+      console.error("Company switch error:", error);
       toast({
         title: "Failed to switch company",
         description: error.message || "Please try again",

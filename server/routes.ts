@@ -214,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/uploads', express.static('uploads'));
 
   // Register multi-company routes
-  registerCompanyRoutes(app);
+  // registerCompanyRoutes(app); // Temporarily disable to avoid conflicts
   // Register enterprise feature routes
   registerEnterpriseRoutes(app);
   registerOnboardingRoutes(app);
