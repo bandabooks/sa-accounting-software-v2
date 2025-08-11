@@ -171,12 +171,16 @@ export default function CompanySwitcher() {
   });
 
   const handleSwitchCompany = async (companyId: number) => {
-    if (companyId === activeCompany?.id) {
+    if (!companyId || companyId === activeCompany?.id) {
       setIsOpen(false);
       return;
     }
     
-    await switchCompanyMutation.mutateAsync(companyId);
+    try {
+      await switchCompanyMutation.mutateAsync(companyId);
+    } catch (error) {
+      console.error("Error switching company:", error);
+    }
   };
 
   // Form handling functions
@@ -419,7 +423,9 @@ export default function CompanySwitcher() {
             </div>
           ) : (
             filteredCompanies.map((userCompany) => {
-            const company = userCompany.company;
+            const company = userCompany?.company;
+            if (!company || !activeCompany) return null;
+            
             const isActive = company.id === activeCompany.id;
             
             return (
