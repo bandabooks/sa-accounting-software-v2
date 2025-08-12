@@ -427,7 +427,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
                     </div>
                     <Switch
                       id="context-sharing"
-                      checked={aiSettings.contextSharing}
+                      checked={contextSharingValue}
                       onCheckedChange={(checked) => handleSettingChange('contextSharing', checked)}
                       disabled={updateAISettingsMutation.isPending}
                     />
@@ -440,7 +440,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
                     </div>
                     <Switch
                       id="conversation-history"
-                      checked={aiSettings.conversationHistory}
+                      checked={conversationHistoryValue}
                       onCheckedChange={(checked) => handleSettingChange('conversationHistory', checked)}
                       disabled={updateAISettingsMutation.isPending}
                     />
@@ -453,7 +453,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
                     </div>
                     <Switch
                       id="ai-suggestions"
-                      checked={aiSettings.suggestions}
+                      checked={suggestionsValue}
                       onCheckedChange={(checked) => handleSettingChange('suggestions', checked)}
                       disabled={updateAISettingsMutation.isPending}
                     />
@@ -556,10 +556,10 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
               <p className="font-medium">Status & Provider:</p>
               <ul className="space-y-1 text-gray-600">
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${aiSettings.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  AI Assistant: {aiSettings.enabled ? 'Enabled' : 'Disabled'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${enabledValue ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  AI Assistant: {enabledValue ? 'Enabled' : 'Disabled'}
                 </li>
-                {aiSettings.enabled && (
+                {enabledValue && (
                   <li className="flex items-center">
                     <div className="w-2 h-2 rounded-full mr-2 bg-blue-500" />
                     Provider: {aiSettings.provider === 'anthropic' ? 'Anthropic Claude' : 
@@ -572,16 +572,16 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
               <p className="font-medium">Privacy Settings:</p>
               <ul className="space-y-1 text-gray-600">
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${aiSettings.contextSharing ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  Context Sharing: {aiSettings.contextSharing ? 'On' : 'Off'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${contextSharingValue ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  Context Sharing: {contextSharingValue ? 'On' : 'Off'}
                 </li>
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${aiSettings.conversationHistory ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  History: {aiSettings.conversationHistory ? 'On' : 'Off'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${conversationHistoryValue ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  History: {conversationHistoryValue ? 'On' : 'Off'}
                 </li>
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${aiSettings.suggestions ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  Suggestions: {aiSettings.suggestions ? 'On' : 'Off'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${suggestionsValue ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  Suggestions: {suggestionsValue ? 'On' : 'Off'}
                 </li>
               </ul>
             </div>
