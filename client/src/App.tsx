@@ -8,6 +8,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
+import { AIHealthBanner } from "@/components/AIHealthBanner";
+import { AIAssistant } from "@/components/AIAssistant";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
@@ -892,6 +894,8 @@ function App() {
         <LoadingProvider>
           <NotificationProvider>
             <GlobalLoader />
+            <AIHealthBanner />
+            <AIAssistant />
             <Toaster />
             <Router />
           </NotificationProvider>
