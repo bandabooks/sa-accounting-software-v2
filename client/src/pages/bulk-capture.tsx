@@ -816,12 +816,21 @@ const EnhancedBulkCapture = () => {
             // Debit bank account (use chart_account_id from bank_accounts table)
             {
               accountId: (() => {
-                const bankAccount = bankAccounts.find(ba => ba.id === parseInt(entry.bankAccountId?.toString() || '0'));
-                // If no bank account selected, use the first bank account or a default cash account
-                if (!bankAccount && bankAccounts.length > 0) {
+                const bankAccountId = parseInt(entry.bankAccountId?.toString() || '0');
+                const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
+                
+                // If we found the selected bank account, use its chart account ID
+                if (bankAccount && bankAccount.chartAccountId) {
+                  return bankAccount.chartAccountId;
+                }
+                
+                // If no bank account selected but we have bank accounts available
+                if (bankAccounts.length > 0 && bankAccounts[0].chartAccountId) {
                   return bankAccounts[0].chartAccountId;
                 }
-                return bankAccount ? bankAccount.chartAccountId : 110; // 110 is typically the Cash account
+                
+                // Default to Cash account (110) if no bank accounts exist
+                return 110;
               })(),
               description: entry.description,
               debitAmount: amount.toFixed(2),
@@ -856,7 +865,8 @@ const EnhancedBulkCapture = () => {
                   acc.accountName === 'VAT Output' &&
                   acc.accountType === 'Liability'
                 );
-                return vatAccount ? vatAccount.id : 98; // Default to known VAT Output account
+                // Always return a valid account ID - use VAT Output (98) as default
+                return vatAccount?.id || 98;
               })(),
               description: `VAT on ${entry.description}`,
               debitAmount: '0.00',
