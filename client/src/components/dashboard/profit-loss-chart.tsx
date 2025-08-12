@@ -17,7 +17,15 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
   const [period, setPeriod] = useState('6months');
 
-  const chartData = data || [];
+  // Process and format chart data
+  const chartData = (data || []).map((item, index) => ({
+    month: new Date(item.month).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+    revenue: Number(item.revenue) || 0,
+    expenses: Number(item.expenses) || 0,
+    profit: Number(item.profit) || 0
+  })).reverse(); // Reverse to show chronological order
+  
+  console.log('Chart Data:', chartData); // Debug log
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">

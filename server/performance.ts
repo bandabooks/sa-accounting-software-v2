@@ -113,16 +113,17 @@ export class PerformanceOptimizedStorage {
         return [];
       }
       
-      // Get monthly data for the last 6 months
+      // Get monthly data for the last 6 months - Fixed SQL query
       const profitLossData = await db.execute(sql`
         WITH monthly_data AS (
           SELECT 
-            DATE_TRUNC('month', COALESCE(i.issue_date, NOW()))::date as month,
+            DATE_TRUNC('month', i.issue_date)::date as month,
             COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total::numeric ELSE 0 END), 0) as revenue,
             0 as expenses
           FROM invoices i
           WHERE i.company_id = ${companyId}
             AND i.issue_date >= NOW() - INTERVAL '6 months'
+            AND i.issue_date IS NOT NULL
           GROUP BY DATE_TRUNC('month', i.issue_date)
           
           UNION ALL
@@ -134,6 +135,7 @@ export class PerformanceOptimizedStorage {
           FROM expenses e
           WHERE e.company_id = ${companyId}
             AND e.expense_date >= NOW() - INTERVAL '6 months'
+            AND e.expense_date IS NOT NULL
           GROUP BY DATE_TRUNC('month', e.expense_date)
         )
         SELECT 
