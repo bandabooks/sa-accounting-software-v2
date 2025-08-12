@@ -458,14 +458,14 @@ const EnhancedBulkCapture = () => {
       formData.append('bankAccountId', selectedBankAccount);
 
       // Parse bank statement to get transactions
-      const result = await apiRequest('/api/bank/parse-statement', 'POST', formData);
+      const response = await apiRequest('/api/bank/parse-statement', 'POST', formData);
       
-      if (result.transactions && result.transactions.length > 0) {
+      if (response.transactions && response.transactions.length > 0) {
         // Convert bank transactions to bulk capture entries
         const convertedExpenses: ExpenseEntry[] = [];
         const convertedIncome: IncomeEntry[] = [];
         
-        result.transactions.forEach((transaction: any) => {
+        response.transactions.forEach((transaction: any) => {
           const baseEntry = {
             transactionDate: transaction.date || quickDate,
             description: transaction.description || transaction.reference || '',
@@ -514,7 +514,7 @@ const EnhancedBulkCapture = () => {
         
         toast({
           title: "Bank Statement Imported Successfully",
-          description: `Imported ${result.transactions.length} transactions (${convertedExpenses.length} expenses, ${convertedIncome.length} income). Please review and categorize entries before saving.`,
+          description: `Imported ${response.transactions.length} transactions (${convertedExpenses.length} expenses, ${convertedIncome.length} income). Please review and categorize entries before saving.`,
           variant: "default",
         });
       }
@@ -792,6 +792,29 @@ const EnhancedBulkCapture = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to process bulk session",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Post single journal entry mutation
+  const postSingleEntryMutation = useMutation({
+    mutationFn: async (entryId: number) => {
+      return await apiRequest(`/api/journal-entries/${entryId}/post`, 'POST');
+    },
+    onSuccess: () => {
+      toast({
+        title: "Entry Posted",
+        description: "Journal entry has been posted successfully",
+        variant: "default",
+      });
+      // Refetch journal entries
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Post Entry",
+        description: error.message || "An error occurred while posting the entry",
         variant: "destructive",
       });
     },
