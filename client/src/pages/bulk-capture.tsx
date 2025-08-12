@@ -977,7 +977,7 @@ const EnhancedBulkCapture = () => {
       const response = await apiRequest('/api/ai/match-transactions', 'POST', {
         transactions: transactionsToMatch
       });
-      return response;
+      return response.matches || [];
     },
     onSuccess: (matches: any[], variables) => {
       const { entries, type } = variables;

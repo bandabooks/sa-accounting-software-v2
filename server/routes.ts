@@ -290,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const settings = {
-        enabled: req.body.enabled || false,
+        enabled: req.body.enabled === true,
         provider: req.body.provider || 'anthropic',
         contextSharing: req.body.contextSharing !== false,
         conversationHistory: req.body.conversationHistory !== false,

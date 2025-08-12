@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -66,6 +66,21 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
   const [conversationHistoryValue, setConversationHistoryValue] = useState(aiSettings?.conversationHistory || true);
   const [suggestionsValue, setSuggestionsValue] = useState(aiSettings?.suggestions || true);
   const queryClient = useQueryClient();
+
+  // Sync local state with props when aiSettings changes
+  useEffect(() => {
+    if (aiSettings) {
+      setEnabledValue(aiSettings.enabled);
+      setProviderValue(aiSettings.provider || 'anthropic');
+      setApiKeyValue(aiSettings.apiKey || '');
+      setModelValue(aiSettings.model || 'claude-3-5-sonnet-20241022');
+      setMaxTokensValue(aiSettings.maxTokens || 4096);
+      setTemperatureValue(aiSettings.temperature || 0.7);
+      setContextSharingValue(aiSettings.contextSharing !== undefined ? aiSettings.contextSharing : true);
+      setConversationHistoryValue(aiSettings.conversationHistory !== undefined ? aiSettings.conversationHistory : true);
+      setSuggestionsValue(aiSettings.suggestions !== undefined ? aiSettings.suggestions : true);
+    }
+  }, [aiSettings]);
 
   // Update AI settings mutation
   const updateAISettingsMutation = useMutation({

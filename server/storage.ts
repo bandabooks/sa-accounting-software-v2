@@ -14851,7 +14851,7 @@ export class DatabaseStorage implements IStorage {
         .insert(aiSettings)
         .values({
           companyId,
-          enabled: settings.enabled || false,
+          enabled: settings.enabled === true,
           provider: settings.provider || 'anthropic',
           model: settings.model || 'claude-3-5-sonnet-20241022',
           apiKey: settings.apiKey || '',
@@ -14865,7 +14865,7 @@ export class DatabaseStorage implements IStorage {
         .onConflictDoUpdate({
           target: aiSettings.companyId,
           set: {
-            enabled: settings.enabled || false,
+            enabled: settings.enabled === true,
             provider: settings.provider || 'anthropic',
             model: settings.model || 'claude-3-5-sonnet-20241022',
             apiKey: settings.apiKey || '',
