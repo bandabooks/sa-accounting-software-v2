@@ -676,7 +676,7 @@ const EnhancedBulkCapture = () => {
         entry.description && 
         parseFloat(entry.amount) > 0 && 
         entry.categoryId > 0 &&
-        entry.bankAccountId > 0  // Ensure bank account is selected
+        entry.bankAccountId && entry.bankAccountId > 0  // Ensure bank account is selected
       );
       
       if (validEntries.length === 0) {
@@ -1684,8 +1684,19 @@ const EnhancedBulkCapture = () => {
                                 subtext: account.accountCode
                               }))}
                             value={entry.incomeAccountId ? entry.incomeAccountId.toString() : ''}
-                            onValueChange={(value) => updateIncomeEntry(index, 'incomeAccountId', value ? parseInt(value) : '')}
-                            placeholder="Search income accounts..."
+                            onValueChange={(value) => {
+                              const accountId = value ? parseInt(value) : '';
+                              updateIncomeEntry(index, 'incomeAccountId', accountId);
+                              
+                              // Auto-populate description from chart of accounts
+                              if (accountId) {
+                                const selectedAccount = chartOfAccounts.find(acc => acc.id === accountId);
+                                if (selectedAccount && !entry.description) {
+                                  updateIncomeEntry(index, 'description', selectedAccount.accountName + ' revenue');
+                                }
+                              }
+                            }}
+                            placeholder="Select income account..."
                             clearable
                           />
                         </td>
@@ -1695,7 +1706,7 @@ const EnhancedBulkCapture = () => {
                               value={entry.description}
                               onChange={(e) => updateIncomeEntry(index, 'description', e.target.value)}
                               placeholder="Revenue description..."
-                              className="w-full min-h-[2.5rem] resize-y shadow-sm"
+                              className="w-full min-h-[2.5rem] resize-y shadow-sm bg-green-50 border-green-200 focus:bg-green-100 focus:border-green-300"
                               rows={1}
                             />
                             {autoMatchedEntries.has(index) && (
@@ -1931,7 +1942,18 @@ const EnhancedBulkCapture = () => {
                                 subtext: account.accountCode
                               }))}
                             value={entry.categoryId.toString()}
-                            onValueChange={(value) => updateExpenseEntry(index, 'categoryId', parseInt(value))}
+                            onValueChange={(value) => {
+                              const accountId = parseInt(value);
+                              updateExpenseEntry(index, 'categoryId', accountId);
+                              
+                              // Auto-populate description from chart of accounts
+                              if (accountId) {
+                                const selectedAccount = chartOfAccounts.find(acc => acc.id === accountId);
+                                if (selectedAccount && !entry.description) {
+                                  updateExpenseEntry(index, 'description', selectedAccount.accountName + ' expense');
+                                }
+                              }
+                            }}
                             placeholder="Select expense account..."
                           />
                         </td>
@@ -1941,7 +1963,7 @@ const EnhancedBulkCapture = () => {
                               value={entry.description}
                               onChange={(e) => updateExpenseEntry(index, 'description', e.target.value)}
                               placeholder="Expense description..."
-                              className="w-full min-h-[2.5rem] resize-y"
+                              className="w-full min-h-[2.5rem] resize-y bg-blue-50 border-blue-200 focus:bg-blue-100 focus:border-blue-300"
                               rows={1}
                             />
                             {autoMatchedEntries.has(index) && (

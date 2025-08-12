@@ -175,9 +175,9 @@ export function SearchableSelect({
                 key={option.value}
                 className={cn(
                   "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  index === highlightedIndex && "bg-accent text-accent-foreground",
-                  option.value === value && "bg-primary text-primary-foreground"
+                  "hover:bg-green-100 hover:text-green-900",
+                  index === highlightedIndex && "bg-green-200 text-green-900",
+                  option.value === value && "bg-green-600 text-white"
                 )}
                 onClick={() => selectOption(option)}
                 onMouseEnter={() => setHighlightedIndex(index)}
