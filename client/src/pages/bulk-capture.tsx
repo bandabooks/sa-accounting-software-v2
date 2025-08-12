@@ -168,65 +168,62 @@ const EnhancedBulkCapture = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Fetch recent bulk capture journal entries (today's entries only)
-  const { data: recentEntries = [] } = useQuery<any[]>({
-    queryKey: ['/api/journal-entries', 'bulk-capture-today'],
-    queryFn: async () => {
-      const response = await fetch('/api/journal-entries', {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch journal entries');
-      }
-      const entries = await response.json();
-      const today = new Date();
-      const todayString = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-      
-      console.log('Filtering entries for today:', todayString);
-      console.log('Total entries fetched:', entries?.length || 0);
-      console.log('Entries response type:', typeof entries);
-      console.log('Sample entry:', entries?.[0]);
-      
-      // Ensure entries is an array
-      if (!Array.isArray(entries)) {
-        console.log('Entries is not an array:', entries);
-        return [];
-      }
-      
-      // Filter only bulk capture entries from today
-      const filteredEntries = entries.filter((entry: any) => {
-        // Handle both date string and timestamp formats
-        let entryDate = entry.transactionDate;
-        if (entryDate) {
-          // Convert to date string for comparison
-          if (typeof entryDate === 'string' && entryDate.includes('T')) {
-            entryDate = entryDate.split('T')[0];
-          } else {
-            entryDate = new Date(entryDate).toISOString().split('T')[0];
-          }
-        }
-        
-        const isBulkCapture = entry.entryNumber && entry.entryNumber.startsWith('bulk-');
-        const isToday = entryDate === todayString;
-        
-        if (isBulkCapture && isToday) {
-          console.log('Found bulk capture entry for today:', entry.entryNumber, entryDate);
-        }
-        
-        return isBulkCapture && isToday;
-      });
-      
-      console.log('Filtered bulk capture entries:', filteredEntries.length);
-      
-      return filteredEntries
-        .sort((a, b) => new Date(b.createdAt || b.transactionDate).getTime() - new Date(a.createdAt || a.transactionDate).getTime())
-        .slice(0, 20); // Show last 20 entries from today
-    },
+  // Fetch all journal entries and filter for today
+  const { data: allEntries = [], refetch: refetchJournalEntries } = useQuery<any[]>({
+    queryKey: ['/api/journal-entries'],
     refetchInterval: 15000, // Refresh every 15 seconds
   });
+
+  // Filter for today's entries
+  const recentEntries = useMemo(() => {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
+    console.log('Filtering entries for today:', todayString);
+    console.log('Total entries fetched:', allEntries?.length || 0);
+    
+    // Ensure entries is an array
+    if (!Array.isArray(allEntries)) {
+      console.log('Entries is not an array:', allEntries);
+      return [];
+    }
+    
+    // Filter ALL entries from today
+    const filteredEntries = allEntries.filter((entry: any) => {
+      // Handle both date string and timestamp formats
+      let entryDate = entry.transactionDate;
+      if (entryDate) {
+        // Convert to date string for comparison
+        if (typeof entryDate === 'string') {
+          // Handle both ISO date and date-only strings
+          entryDate = entryDate.split('T')[0];
+        } else if (entryDate instanceof Date) {
+          entryDate = entryDate.toISOString().split('T')[0];
+        } else {
+          try {
+            entryDate = new Date(entryDate).toISOString().split('T')[0];
+          } catch (e) {
+            console.error('Failed to parse date:', entryDate);
+            return false;
+          }
+        }
+      }
+      
+      const isToday = entryDate === todayString;
+      
+      if (isToday) {
+        console.log('Found entry for today:', entry.entryNumber, entryDate);
+      }
+      
+      return isToday; // Show ALL today's entries
+    });
+    
+    console.log('Filtered today\'s entries:', filteredEntries.length);
+    
+    return filteredEntries
+      .sort((a, b) => new Date(b.createdAt || b.transactionDate).getTime() - new Date(a.createdAt || a.transactionDate).getTime())
+      .slice(0, 50); // Show up to 50 entries from today
+  }, [allEntries]);
 
   // Initialize 10 default expense entries
   const initializeExpenseEntries = useCallback(() => {
@@ -2184,12 +2181,23 @@ const EnhancedBulkCapture = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Badge variant="outline" className="text-gray-600">
-                {transactionCounts?.totalToday || 0} entries today
+                {recentEntries.length || 0} entries displayed
               </Badge>
+              <Badge variant="secondary" className="text-gray-600">
+                {transactionCounts?.totalToday || 0} total today
+              </Badge>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => refetchJournalEntries()}
+                className="h-7 px-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
           </CardTitle>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            All journal entries created today with bulk capture and direct posting capabilities
+            All journal entries created today - edit or delete draft entries directly from here
           </p>
         </CardHeader>
         <CardContent>
