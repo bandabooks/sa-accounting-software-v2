@@ -716,8 +716,14 @@ const EnhancedBulkCapture = () => {
   const saveExpensesMutation = useMutation({
     mutationFn: async () => {
       // Get the next bulk capture number
-      const numberResponse = await apiRequest('/api/bulk-capture/next-number/expense', 'GET');
-      const entryNumber = numberResponse.nextNumber;
+      const numberResponse = await fetch('/api/bulk-capture/next-number/expense', {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      const numberData = await numberResponse.json();
+      const entryNumber = numberData.nextNumber;
       
       // Find default Cost of Goods Sold account for entries without an expense account
       const expenseAccounts = chartOfAccounts.filter(account => 
@@ -762,8 +768,14 @@ const EnhancedBulkCapture = () => {
         // Get a new entry number for each entry if not the first one
         let currentEntryNumber = entryNumber;
         if (i > 0) {
-          const numberResponse = await apiRequest('/api/bulk-capture/next-number/expense', 'GET');
-          currentEntryNumber = numberResponse.nextNumber;
+          const nextNumResponse = await fetch('/api/bulk-capture/next-number/expense', {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+          });
+          const nextNumData = await nextNumResponse.json();
+          currentEntryNumber = nextNumData.nextNumber;
         }
         
         const response = await apiRequest('/api/journal-entries', 'POST', {
@@ -863,8 +875,14 @@ const EnhancedBulkCapture = () => {
   const saveIncomesMutation = useMutation({
     mutationFn: async () => {
       // Get the next bulk capture number for income
-      const numberResponse = await apiRequest('/api/bulk-capture/next-number/income', 'GET');
-      const entryNumber = numberResponse.nextNumber;
+      const numberResponse = await fetch('/api/bulk-capture/next-number/income', {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      const numberData = await numberResponse.json();
+      const entryNumber = numberData.nextNumber;
       
       // Find default Sales Revenue account for entries without an income account
       const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
@@ -904,8 +922,14 @@ const EnhancedBulkCapture = () => {
         // Get a new entry number for each entry if not the first one
         let currentEntryNumber = entryNumber;
         if (i > 0) {
-          const numberResponse = await apiRequest('/api/bulk-capture/next-number/income', 'GET');
-          currentEntryNumber = numberResponse.nextNumber;
+          const nextNumResponse = await fetch('/api/bulk-capture/next-number/income', {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+          });
+          const nextNumData = await nextNumResponse.json();
+          currentEntryNumber = nextNumData.nextNumber;
         }
         
         const response = await apiRequest('/api/journal-entries', 'POST', {
