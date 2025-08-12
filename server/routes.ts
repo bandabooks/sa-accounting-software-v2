@@ -7215,6 +7215,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/journal-entries/:id/post", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const entry = await storage.postJournalEntry(id);
+      if (!entry) {
+        return res.status(404).json({ error: "Journal entry not found" });
+      }
+      res.json(entry);
+    } catch (error) {
+      console.error("Error posting journal entry:", error);
+      res.status(500).json({ error: "Failed to post journal entry" });
+    }
+  });
+
+  // Also support PUT for backward compatibility
   app.put("/api/journal-entries/:id/post", authenticate, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
