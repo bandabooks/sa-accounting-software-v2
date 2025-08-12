@@ -140,7 +140,10 @@ export function BankFeedIntegration() {
     setLinkingInProgress(true);
     
     try {
-      // Simulate bank-specific connection flow in demo mode
+      // Get link token for the specific bank
+      const { linkToken } = await linkTokenMutation.mutateAsync();
+      
+      // Simulate bank-specific connection flow
       setTimeout(() => {
         // Create a mock account for the selected bank
         const mockAccount = {
