@@ -3,6 +3,46 @@
  * Handles authentication and GraphQL requests to Stitch API
  */
 
+// Type definitions for Stitch API
+export interface StitchAccount {
+  id: string;
+  name: string;
+  officialName: string;
+  accountType: string;
+  accountNumber: string;
+  currency: string;
+  balance: {
+    currency: string;
+    quantity: number;
+  };
+  institution: {
+    id: string;
+    name: string;
+    logo?: string;
+  };
+}
+
+export interface StitchTransaction {
+  id: string;
+  amount: {
+    currency: string;
+    quantity: number;
+  };
+  date: string;
+  description: string;
+  reference?: string;
+  runningBalance: {
+    currency: string;
+    quantity: number;
+  };
+  status: string;
+}
+
+export interface StitchLinkSuccess {
+  userId: string;
+  accounts: StitchAccount[];
+}
+
 interface StitchConfig {
   clientId: string;
   clientSecret: string;
@@ -22,24 +62,32 @@ export class StitchGraphQLClient {
   private config: StitchConfig;
   private accessToken: string | null = null;
   private tokenExpiresAt: number = 0;
+  private isDemoMode: boolean = false;
 
   constructor() {
     this.config = {
-      clientId: process.env.STITCH_CLIENT_ID || '',
-      clientSecret: process.env.STITCH_CLIENT_SECRET || '',
+      clientId: process.env.STITCH_CLIENT_ID || 'demo',
+      clientSecret: process.env.STITCH_CLIENT_SECRET || 'demo',
       baseUrl: process.env.STITCH_BASE_URL || 'https://api.stitch.money',
       environment: (process.env.STITCH_ENV as 'sandbox' | 'live') || 'sandbox',
     };
 
-    if (!this.config.clientId || !this.config.clientSecret) {
-      throw new Error('Stitch client credentials not configured. Please set STITCH_CLIENT_ID and STITCH_CLIENT_SECRET');
+    // Enable demo mode if no real credentials are provided
+    if (this.config.clientId === 'demo' || this.config.clientSecret === 'demo') {
+      this.isDemoMode = true;
+      console.log('Stitch running in DEMO mode - using simulated data');
     }
   }
 
   /**
    * Get access token for client credentials flow
    */
-  private async getAccessToken(): Promise<string> {
+  public async getAccessToken(): Promise<string> {
+    // In demo mode, return a fake token
+    if (this.isDemoMode) {
+      return 'demo_token_' + Date.now();
+    }
+
     // Check if current token is still valid (with 5 minute buffer)
     if (this.accessToken && Date.now() < this.tokenExpiresAt - 300000) {
       return this.accessToken;
@@ -72,6 +120,11 @@ export class StitchGraphQLClient {
    * Execute GraphQL query/mutation
    */
   async query<T = any>(query: string, variables?: Record<string, any>): Promise<T> {
+    // In demo mode, return mock data based on the query
+    if (this.isDemoMode) {
+      return this.getMockResponse(query, variables) as T;
+    }
+
     const token = await this.getAccessToken();
     const graphqlUrl = `${this.config.baseUrl}/graphql`;
 
@@ -264,7 +317,182 @@ export class StitchGraphQLClient {
     const result = await this.query<{ account: StitchAccount }>(query, { accountId });
     return result.account;
   }
+
+  /**
+   * Generate mock responses for demo mode
+   */
+  private getMockResponse(query: string, variables?: Record<string, any>): any {
+    // Mock responses for different queries
+    if (query.includes('CreateClientToken')) {
+      return {
+        createClientToken: {
+          clientToken: 'demo_client_token_' + Date.now()
+        }
+      };
+    }
+
+    if (query.includes('GetAccounts')) {
+      return {
+        user: {
+          accounts: this.getMockAccounts()
+        }
+      };
+    }
+
+    if (query.includes('GetTransactions')) {
+      return {
+        account: {
+          transactions: {
+            nodes: this.getMockTransactions(),
+            pageInfo: {
+              hasNextPage: false,
+              endCursor: null
+            }
+          }
+        }
+      };
+    }
+
+    if (query.includes('GetAccount')) {
+      return {
+        account: this.getMockAccounts()[0]
+      };
+    }
+
+    // Default mock response
+    return {};
+  }
+
+  /**
+   * Generate mock bank accounts
+   */
+  private getMockAccounts(): StitchAccount[] {
+    return [
+      {
+        id: 'demo_account_fnb_cheque',
+        name: 'FNB Cheque Account',
+        officialName: 'First National Bank Cheque Account',
+        accountType: 'cheque',
+        accountNumber: '****1234',
+        currency: 'ZAR',
+        balance: {
+          currency: 'ZAR',
+          quantity: 45678.90
+        },
+        institution: {
+          id: 'fnb',
+          name: 'First National Bank',
+          logo: 'https://cdn.stitch.money/institutions/fnb.png'
+        }
+      },
+      {
+        id: 'demo_account_standard_savings',
+        name: 'Standard Bank Savings',
+        officialName: 'Standard Bank Savings Account',
+        accountType: 'savings',
+        accountNumber: '****5678',
+        currency: 'ZAR',
+        balance: {
+          currency: 'ZAR',
+          quantity: 123456.78
+        },
+        institution: {
+          id: 'standard_bank',
+          name: 'Standard Bank',
+          logo: 'https://cdn.stitch.money/institutions/standard.png'
+        }
+      },
+      {
+        id: 'demo_account_absa_business',
+        name: 'ABSA Business Account',
+        officialName: 'ABSA Business Banking Account',
+        accountType: 'current',
+        accountNumber: '****9012',
+        currency: 'ZAR',
+        balance: {
+          currency: 'ZAR',
+          quantity: 987654.32
+        },
+        institution: {
+          id: 'absa',
+          name: 'ABSA Bank',
+          logo: 'https://cdn.stitch.money/institutions/absa.png'
+        }
+      }
+    ];
+  }
+
+  /**
+   * Generate mock transactions
+   */
+  private getMockTransactions(): StitchTransaction[] {
+    const today = new Date();
+    const transactions: StitchTransaction[] = [];
+
+    // Generate 20 demo transactions
+    for (let i = 0; i < 20; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      
+      const isCredit = Math.random() > 0.4;
+      const amount = Math.floor(Math.random() * 50000) + 100;
+      
+      transactions.push({
+        id: `demo_txn_${i}`,
+        amount: {
+          currency: 'ZAR',
+          quantity: isCredit ? amount : -amount
+        },
+        date: date.toISOString(),
+        description: this.getRandomDescription(isCredit),
+        reference: `REF${1000 + i}`,
+        runningBalance: {
+          currency: 'ZAR',
+          quantity: 50000 + (isCredit ? amount : -amount) * (20 - i)
+        },
+        status: 'completed'
+      });
+    }
+
+    return transactions;
+  }
+
+  /**
+   * Get random transaction description
+   */
+  private getRandomDescription(isCredit: boolean): string {
+    const creditDescriptions = [
+      'Payment received - Invoice #',
+      'Customer payment - ',
+      'Bank deposit',
+      'Interest received',
+      'Refund from supplier',
+      'Sales revenue',
+      'Commission received'
+    ];
+
+    const debitDescriptions = [
+      'Supplier payment - ',
+      'Salary payment',
+      'Office rent',
+      'Utilities - Electricity',
+      'Internet services',
+      'Bank charges',
+      'Tax payment - SARS',
+      'Insurance premium',
+      'Office supplies',
+      'Fuel expenses'
+    ];
+
+    const descriptions = isCredit ? creditDescriptions : debitDescriptions;
+    const desc = descriptions[Math.floor(Math.random() * descriptions.length)];
+    
+    return desc + Math.floor(Math.random() * 9000 + 1000);
+  }
 }
+
+// Export singleton instance
+export const stitchClient = new StitchGraphQLClient();
 
 // Stitch API Types
 export interface StitchAccount {
@@ -305,6 +533,3 @@ export interface StitchLinkSuccess {
   userId: string;
   accounts: StitchAccount[];
 }
-
-// Create singleton instance
-export const stitchClient = new StitchGraphQLClient();

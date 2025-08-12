@@ -18,7 +18,8 @@ import {
   Zap,
   Calendar,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,8 @@ import { apiRequest } from "@/lib/queryClient";
 import type { BankAccountWithTransactions, ChartOfAccount } from "@shared/schema";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BankFeedIntegration } from "@/components/BankFeedIntegration";
 
 const bankAccountSchema = z.object({
   accountName: z.string().min(1, "Account name is required"),
@@ -251,6 +254,22 @@ export default function Banking() {
               <p className="text-gray-600 mt-1 font-medium">Comprehensive financial account management</p>
             </div>
           </div>
+        </div>
+
+        {/* Tabs for Bank Accounts and Bank Feeds */}
+        <Tabs defaultValue="accounts" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="accounts" className="gap-2">
+              <Building className="h-4 w-4" />
+              Bank Accounts
+            </TabsTrigger>
+            <TabsTrigger value="feeds" className="gap-2">
+              <Link2 className="h-4 w-4" />
+              Bank Feeds
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="accounts" className="space-y-6">
           <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 shadow-lg px-6 py-3 text-sm font-semibold">
@@ -422,7 +441,6 @@ export default function Banking() {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
 
         {/* Advanced Overview Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -937,6 +955,12 @@ export default function Banking() {
             </Form>
           </DialogContent>
         </Dialog>
+          </TabsContent>
+
+          <TabsContent value="feeds" className="space-y-6">
+            <BankFeedIntegration />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
