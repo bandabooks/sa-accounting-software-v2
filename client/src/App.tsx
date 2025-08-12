@@ -155,6 +155,7 @@ import POSTerminals from "@/pages/pos-terminals";
 // import PayFastPayments from "@/pages/payfast-payments";
 // import POSShiftManagement from "@/pages/pos-shift-management";
 import ProfessionalServices from "@/pages/professional-services";
+import FinancialReportsPage from "@/pages/reports/financial";
 import AppLayout from "@/components/layout/app-layout";
 
 // Permission constants for route protection
@@ -446,6 +447,11 @@ function AuthenticatedApp() {
         <Route path="/financial-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <FinancialReports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/reports/financial">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <FinancialReportsPage />
           </ProtectedRoute>
         </Route>
 
