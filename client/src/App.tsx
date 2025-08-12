@@ -8,8 +8,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
-import { AIHealthBanner } from "@/components/AIHealthBanner";
-import { AIAssistant } from "@/components/AIAssistant";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
@@ -215,7 +213,6 @@ const PERMISSIONS = {
 function AuthenticatedApp() {
   return (
     <AppLayout>
-      <AIHealthBanner />
       <Switch>
         <Route path="/login">
           <Dashboard />
@@ -895,7 +892,6 @@ function App() {
         <LoadingProvider>
           <NotificationProvider>
             <GlobalLoader />
-            <AIAssistant />
             <Toaster />
             <Router />
           </NotificationProvider>
