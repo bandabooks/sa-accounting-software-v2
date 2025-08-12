@@ -458,13 +458,36 @@ const EnhancedBulkCapture = () => {
       formData.append('bankAccountId', selectedBankAccount);
 
       // Parse bank statement to get transactions
+      const token = localStorage.getItem('authToken');
+      const sessionToken = localStorage.getItem('sessionToken');
+      
+      const headers: HeadersInit = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      if (sessionToken) {
+        headers["X-Session-Token"] = sessionToken;
+      }
+
       const response = await fetch('/api/bank/parse-statement', {
         method: 'POST',
+        headers,
         body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (response.status === 401) {
+          // Clear authentication data
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('sessionToken');
+          localStorage.removeItem('userData');
+          throw new Error("Authentication failed. Please refresh the page and try again.");
+        }
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
       }
 
       const data = await response.json();
