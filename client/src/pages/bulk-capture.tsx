@@ -767,12 +767,28 @@ const EnhancedBulkCapture = () => {
   // Save income entries mutation - using journal entry logic
   const saveIncomesMutation = useMutation({
     mutationFn: async () => {
+      // Find default Sales Revenue account for entries without an income account
+      const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
+      const salesRevenueAccount = revenueAccounts.find(account => 
+        account.accountName.toLowerCase().includes('sales revenue') || 
+        account.accountName.toLowerCase() === 'sales revenue'
+      ) || revenueAccounts[0]; // Fallback to first revenue account
+      const defaultIncomeAccountId = salesRevenueAccount ? salesRevenueAccount.id : 114; // 114 is the standard Sales Revenue account ID
+      
       const validEntries = incomeEntries.filter(entry => 
         entry.description && 
-        parseFloat(entry.amount) > 0 && 
-        entry.incomeAccountId && 
-        (typeof entry.incomeAccountId === 'number' ? entry.incomeAccountId > 0 : entry.incomeAccountId !== '')
-      );
+        parseFloat(entry.amount) > 0
+      ).map(entry => {
+        // If no income account is selected, use the default Sales Revenue account
+        const incomeAccountId = (entry.incomeAccountId && entry.incomeAccountId !== 0 && entry.incomeAccountId !== '') 
+          ? entry.incomeAccountId 
+          : defaultIncomeAccountId;
+        
+        return {
+          ...entry,
+          incomeAccountId
+        };
+      });
       
       if (validEntries.length === 0) {
         throw new Error('No valid entries to save');
@@ -801,7 +817,11 @@ const EnhancedBulkCapture = () => {
             {
               accountId: (() => {
                 const bankAccount = bankAccounts.find(ba => ba.id === parseInt(entry.bankAccountId?.toString() || '0'));
-                return bankAccount ? bankAccount.chartAccountId : 0;
+                // If no bank account selected, use the first bank account or a default cash account
+                if (!bankAccount && bankAccounts.length > 0) {
+                  return bankAccounts[0].chartAccountId;
+                }
+                return bankAccount ? bankAccount.chartAccountId : 110; // 110 is typically the Cash account
               })(),
               description: entry.description,
               debitAmount: amount.toFixed(2),
@@ -810,7 +830,19 @@ const EnhancedBulkCapture = () => {
             },
             // Credit income account
             {
-              accountId: typeof entry.incomeAccountId === 'string' ? parseInt(entry.incomeAccountId) : entry.incomeAccountId,
+              accountId: (() => {
+                const id = entry.incomeAccountId;
+                // Ensure we have a valid account ID
+                if (!id || id === 0 || id === '') {
+                  // Use the default Sales Revenue account determined earlier
+                  return salesRevenueAccount ? salesRevenueAccount.id : 114;
+                }
+                if (typeof id === 'string') {
+                  const parsed = parseInt(id);
+                  return parsed > 0 ? parsed : (salesRevenueAccount ? salesRevenueAccount.id : 114);
+                }
+                return id;
+              })(),
               description: entry.description,
               debitAmount: '0.00',
               creditAmount: netAmount.toFixed(2),
