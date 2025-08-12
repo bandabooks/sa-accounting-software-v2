@@ -176,44 +176,15 @@ export class ScriptTransactionMatcher {
   ];
 
   private incomePatterns = [
-    // Sales Revenue
+    // Default Sales Revenue for ALL income transactions
+    // This allows users to manually review and change accounts or remove internal transfers
     {
-      patterns: ['sales', 'revenue', 'income', 'deposit', 'payment received', 'customer payment', 'invoice'],
+      patterns: ['payment', 'deposit', 'transfer', 'receipt', 'income', 'sale', 'revenue', 'cr', 'cash deposit', 'adt', 'mokopan', 'ikhokha', 'service', 'consulting', 'professional', 'fees', 'commission', 'interest', 'bank interest', 'investment', 'customer', 'invoice', 'received'],
       accountName: 'Sales Revenue',
       vatRate: 15,
       vatType: 'Standard Rate',
-      confidence: 0.90,
-      reasoning: 'Sales revenue subject to 15% VAT'
-    },
-    
-    // Service Income
-    {
-      patterns: ['service', 'consulting', 'professional', 'fees', 'commission'],
-      accountName: 'Service Income',
-      vatRate: 15,
-      vatType: 'Standard Rate',
       confidence: 0.85,
-      reasoning: 'Service income subject to 15% VAT'
-    },
-    
-    // Interest Income
-    {
-      patterns: ['interest', 'bank interest', 'investment'],
-      accountName: 'Interest Income',
-      vatRate: 0,
-      vatType: 'Exempt',
-      confidence: 0.95,
-      reasoning: 'Interest income is VAT exempt'
-    },
-    
-    // Generic income fallback
-    {
-      patterns: ['income', 'receipt', 'received'],
-      accountName: 'Other Income',
-      vatRate: 15,
-      vatType: 'Standard Rate',
-      confidence: 0.60,
-      reasoning: 'General income classification'
+      reasoning: 'All income defaults to Sales Revenue - user can review and adjust manually or remove if internal transfer'
     }
   ];
 
@@ -286,7 +257,22 @@ export class ScriptTransactionMatcher {
       return bestMatch;
     }
     
-    // Fallback to default accounts
+    // Fallback to default accounts with special handling for income
+    if (transaction.type === 'income') {
+      // ALL income transactions default to Sales Revenue for manual review
+      const salesRevenueAccount = this.findMatchingAccount('Sales Revenue', chartOfAccounts);
+      if (salesRevenueAccount) {
+        return {
+          accountId: salesRevenueAccount.id,
+          accountName: salesRevenueAccount.accountName,
+          vatRate: 15,
+          vatType: 'Standard Rate',
+          confidence: 0.75,
+          reasoning: 'All income defaults to Sales Revenue - user can review and adjust manually or remove if internal transfer'
+        };
+      }
+    }
+    
     const defaultAccount = this.getDefaultAccount(transaction.type, chartOfAccounts);
     if (defaultAccount) {
       return {
