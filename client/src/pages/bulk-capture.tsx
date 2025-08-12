@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -239,9 +240,14 @@ const EnhancedBulkCapture = () => {
 
   // Initialize 10 default income entries
   const initializeIncomeEntries = useCallback(() => {
-    // Find the first revenue account as default, or leave as empty string if none
+    // Find Sales Revenue account specifically, otherwise first revenue account
     const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
-    const defaultIncomeAccountId = revenueAccounts.length > 0 ? revenueAccounts[0].id : '';
+    const salesRevenueAccount = revenueAccounts.find(account => 
+      account.accountName.toLowerCase().includes('sales revenue') || 
+      account.accountName.toLowerCase().includes('revenue')
+    );
+    const defaultIncomeAccountId = salesRevenueAccount ? salesRevenueAccount.id : 
+                                  (revenueAccounts.length > 0 ? revenueAccounts[0].id : '');
     
     const defaultEntries: IncomeEntry[] = Array.from({ length: 10 }, () => ({
       transactionDate: quickDate,
@@ -411,6 +417,19 @@ const EnhancedBulkCapture = () => {
       
       (entry as any)[field] = value;
       
+      // Auto-select Sales Revenue for positive amounts
+      if (field === 'amount' && value && parseFloat(value.toString()) > 0) {
+        const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
+        const salesRevenueAccount = revenueAccounts.find(account => 
+          account.accountName.toLowerCase().includes('sales revenue') || 
+          account.accountName.toLowerCase().includes('revenue')
+        );
+        
+        if (salesRevenueAccount && (!entry.incomeAccountId || entry.incomeAccountId === '')) {
+          entry.incomeAccountId = salesRevenueAccount.id;
+        }
+      }
+      
       if (field === 'amount' || field === 'vatRate' || field === 'vatTypeId') {
         const calculations = calculateVAT(
           entry.amount.toString(),
@@ -424,7 +443,7 @@ const EnhancedBulkCapture = () => {
       updated[index] = entry;
       return updated;
     });
-  }, [calculateVAT]);
+  }, [calculateVAT, chartOfAccounts]);
 
   // Apply quick date to all entries
   const applyQuickDateToAll = useCallback(() => {
@@ -619,9 +638,14 @@ const EnhancedBulkCapture = () => {
       }));
       setExpenseEntries(prev => [...prev, ...newEntries]);
     } else {
-      // Find the first revenue account as default, or leave as empty string if none
+      // Find Sales Revenue account specifically, otherwise first revenue account
       const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
-      const defaultIncomeAccountId = revenueAccounts.length > 0 ? revenueAccounts[0].id : '';
+      const salesRevenueAccount = revenueAccounts.find(account => 
+        account.accountName.toLowerCase().includes('sales revenue') || 
+        account.accountName.toLowerCase().includes('revenue')
+      );
+      const defaultIncomeAccountId = salesRevenueAccount ? salesRevenueAccount.id : 
+                                    (revenueAccounts.length > 0 ? revenueAccounts[0].id : '');
       
       const newEntries: IncomeEntry[] = Array.from({ length: count }, () => ({
         transactionDate: quickDate,
@@ -1654,11 +1678,12 @@ const EnhancedBulkCapture = () => {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center space-x-2">
-                            <Input
+                            <Textarea
                               value={entry.description}
                               onChange={(e) => updateIncomeEntry(index, 'description', e.target.value)}
                               placeholder="Revenue description..."
-                              className="w-full"
+                              className="w-full min-h-[2.5rem] resize-y"
+                              rows={1}
                             />
                             {autoMatchedEntries.has(index) && (
                               <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300 text-xs">
@@ -1897,11 +1922,12 @@ const EnhancedBulkCapture = () => {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center space-x-2">
-                            <Input
+                            <Textarea
                               value={entry.description}
                               onChange={(e) => updateExpenseEntry(index, 'description', e.target.value)}
                               placeholder="Expense description..."
-                              className="w-full"
+                              className="w-full min-h-[2.5rem] resize-y"
+                              rows={1}
                             />
                             {autoMatchedEntries.has(index) && (
                               <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300 text-xs">
