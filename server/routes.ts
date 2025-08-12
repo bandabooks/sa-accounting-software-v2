@@ -7669,6 +7669,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Additional bank feed routes for the UI component
+  app.get("/api/bank-accounts/linked", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+
+      // In demo mode, return mock linked accounts
+      const mockAccounts = [
+        {
+          id: 'demo_fnb_account',
+          name: 'FNB Business Account',
+          institutionName: 'First National Bank',
+          accountNumber: '****1234',
+          currency: 'ZAR',
+          balance: 567890.50,
+          lastSyncAt: new Date(),
+          status: 'active'
+        },
+        {
+          id: 'demo_standard_account',
+          name: 'Standard Bank Savings',
+          institutionName: 'Standard Bank',
+          accountNumber: '****5678',
+          currency: 'ZAR',
+          balance: 234567.89,
+          lastSyncAt: new Date(),
+          status: 'active'
+        }
+      ];
+
+      res.json(mockAccounts);
+    } catch (error) {
+      console.error('Error fetching linked bank accounts:', error);
+      res.status(500).json({ error: 'Failed to fetch linked bank accounts' });
+    }
+  });
+
+  app.get("/api/bank-transactions/:accountId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const accountId = req.params.accountId;
+
+      // Generate mock transactions for demo
+      const transactions = [];
+      const today = new Date();
+      
+      for (let i = 0; i < 15; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const isCredit = Math.random() > 0.4;
+        const amount = Math.floor(Math.random() * 50000) + 100;
+        
+        transactions.push({
+          id: `txn_${i}`,
+          date: date.toISOString(),
+          description: isCredit ? 
+            `Payment received - Invoice #${1000 + i}` : 
+            `Supplier payment - ${['Office Rent', 'Utilities', 'Salaries', 'Equipment'][Math.floor(Math.random() * 4)]}`,
+          amount: isCredit ? amount : -amount,
+          balance: 50000 + (isCredit ? amount : -amount) * (15 - i),
+          reference: `REF${1000 + i}`,
+          matched: Math.random() > 0.7
+        });
+      }
+
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch transactions' });
+    }
+  });
+
+  app.post("/api/stitch/sync/:accountId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const accountId = req.params.accountId;
+
+      // Simulate sync success
+      setTimeout(() => {
+        res.json({
+          message: 'Transactions synced successfully',
+          newTransactions: 5,
+          duplicatesSkipped: 2
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('Error syncing account:', error);
+      res.status(500).json({ error: 'Failed to sync account' });
+    }
+  });
+
   // General Ledger Routes
   app.get("/api/general-ledger", authenticate, async (req, res) => {
     try {
