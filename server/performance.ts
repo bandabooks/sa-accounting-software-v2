@@ -7,38 +7,75 @@ export class PerformanceOptimizedStorage {
   // Single optimized query for all dashboard stats
   async getFastDashboardStats(companyId: number): Promise<any> {
     try {
-      const statsQuery = await db.execute(sql`
-        WITH cash_flow AS (
+      // Simplified query with separate CTEs for better performance
+      const [invoiceStats, expenseStats, customerStats, bankStats, cashFlowStats, estimateStats] = await Promise.all([
+        // Invoice statistics
+        db.execute(sql`
           SELECT 
-            COALESCE(SUM(CASE WHEN p.payment_date::date = CURRENT_DATE THEN p.amount::numeric ELSE 0 END), 0) as today_inflow,
-            COALESCE(SUM(CASE WHEN e.expense_date::date = CURRENT_DATE AND e.status = 'paid' THEN e.amount::numeric ELSE 0 END), 0) as today_outflow
-          FROM payments p
-          FULL OUTER JOIN expenses e ON e.company_id = p.company_id
-          WHERE p.company_id = ${companyId} OR e.company_id = ${companyId}
-        )
-        SELECT 
-          COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total::numeric ELSE 0 END), 0)::text as total_revenue,
-          COALESCE(SUM(CASE WHEN i.status != 'paid' THEN i.total::numeric ELSE 0 END), 0)::text as outstanding_invoices,
-          COUNT(CASE WHEN i.status != 'paid' THEN 1 END) as outstanding_invoice_count,
-          COUNT(CASE WHEN i.status = 'paid' THEN 1 END) as paid_invoice_count,
-          COUNT(i.id)::text as invoice_count,
-          COALESCE(SUM(e.amount::numeric), 0)::text as total_expenses,
-          COUNT(e.id)::text as expense_count,
-          COUNT(DISTINCT c.id)::text as total_customers,
-          COALESCE(SUM(b.current_balance::numeric), 0)::text as bank_balance,
-          COUNT(DISTINCT b.id)::text as account_count,
-          COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.vat_amount::numeric ELSE 0 END), 0)::text as vat_due,
-          (SELECT COUNT(*) FROM estimates WHERE company_id = ${companyId} AND status = 'pending')::text as pending_estimates,
-          cf.today_inflow::text as today_inflow,
-          cf.today_outflow::text as today_outflow
-        FROM invoices i
-        FULL OUTER JOIN expenses e ON e.company_id = i.company_id
-        FULL OUTER JOIN customers c ON c.company_id = i.company_id
-        FULL OUTER JOIN bank_accounts b ON b.company_id = i.company_id
-        CROSS JOIN cash_flow cf
-        WHERE i.company_id = ${companyId} OR e.company_id = ${companyId} OR c.company_id = ${companyId} OR b.company_id = ${companyId}
-        GROUP BY cf.today_inflow, cf.today_outflow
-      `);
+            COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0)::text as total_revenue,
+            COALESCE(SUM(CASE WHEN status != 'paid' THEN total::numeric ELSE 0 END), 0)::text as outstanding_invoices,
+            COUNT(CASE WHEN status != 'paid' THEN 1 END) as outstanding_invoice_count,
+            COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_invoice_count,
+            COALESCE(SUM(CASE WHEN status = 'paid' THEN vat_amount::numeric ELSE 0 END), 0)::text as vat_due
+          FROM invoices 
+          WHERE company_id = ${companyId}
+        `),
+        // Expense statistics
+        db.execute(sql`
+          SELECT 
+            COALESCE(SUM(amount::numeric), 0)::text as total_expenses,
+            COUNT(*)::text as expense_count
+          FROM expenses 
+          WHERE company_id = ${companyId}
+        `),
+        // Customer count
+        db.execute(sql`
+          SELECT COUNT(*)::text as total_customers
+          FROM customers 
+          WHERE company_id = ${companyId}
+        `),
+        // Bank balance
+        db.execute(sql`
+          SELECT COALESCE(SUM(current_balance::numeric), 0)::text as bank_balance
+          FROM bank_accounts 
+          WHERE company_id = ${companyId}
+        `),
+        // Today's cash flow
+        db.execute(sql`
+          SELECT 
+            COALESCE((
+              SELECT SUM(amount::numeric) 
+              FROM payments 
+              WHERE company_id = ${companyId} 
+              AND payment_date::date = CURRENT_DATE
+            ), 0)::text as today_inflow,
+            COALESCE((
+              SELECT SUM(amount::numeric) 
+              FROM expenses 
+              WHERE company_id = ${companyId} 
+              AND expense_date::date = CURRENT_DATE 
+              AND is_paid = true
+            ), 0)::text as today_outflow
+        `),
+        // Pending estimates count
+        db.execute(sql`
+          SELECT COUNT(*)::text as pending_estimates
+          FROM estimates 
+          WHERE company_id = ${companyId} 
+          AND status = 'pending'
+        `)
+      ]);
+
+      const statsQuery = {
+        rows: [{
+          ...invoiceStats.rows[0],
+          ...expenseStats.rows[0],
+          ...customerStats.rows[0],
+          ...bankStats.rows[0],
+          ...cashFlowStats.rows[0],
+          ...estimateStats.rows[0]
+        }]
+      };
 
       return statsQuery.rows[0] || {
         total_revenue: "0.00",
