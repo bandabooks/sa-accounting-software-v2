@@ -672,12 +672,33 @@ const EnhancedBulkCapture = () => {
   // Save expense entries mutation - using journal entry logic
   const saveExpensesMutation = useMutation({
     mutationFn: async () => {
+      // Find default Cost of Goods Sold account for entries without an expense account
+      const expenseAccounts = chartOfAccounts.filter(account => 
+        account.accountType === 'Expense'
+      );
+      const costOfGoodsSoldAccount = expenseAccounts.find(account => 
+        account.accountName === 'Cost of Goods Sold' || 
+        account.accountName.includes('Cost of Goods')
+      );
+      
       const validEntries = expenseEntries.filter(entry => 
         entry.description && 
-        parseFloat(entry.amount) > 0 && 
-        entry.categoryId > 0 &&
-        entry.bankAccountId && entry.bankAccountId > 0  // Ensure bank account is selected
-      );
+        parseFloat(entry.amount) > 0
+      ).map(entry => {
+        // If no expense account selected, use Cost of Goods Sold or first expense account
+        if (!entry.categoryId || entry.categoryId === 0) {
+          const defaultExpenseAccountId = costOfGoodsSoldAccount ? costOfGoodsSoldAccount.id : 
+                                          (expenseAccounts.length > 0 ? expenseAccounts[0].id : 116); // 116 is typically Cost of Goods Sold
+          entry.categoryId = defaultExpenseAccountId;
+        }
+        
+        // If no bank account selected, use first bank account or default cash account
+        if (!entry.bankAccountId || entry.bankAccountId === 0) {
+          entry.bankAccountId = bankAccounts.length > 0 ? bankAccounts[0].id : 110;
+        }
+        
+        return entry;
+      });
       
       if (validEntries.length === 0) {
         throw new Error('No valid entries to save');
@@ -704,7 +725,15 @@ const EnhancedBulkCapture = () => {
           lines: [
             // Debit expense category account
             {
-              accountId: parseInt(entry.categoryId.toString()),
+              accountId: (() => {
+                const categoryId = parseInt(entry.categoryId?.toString() || '0');
+                // Ensure we have a valid expense account ID
+                if (!categoryId || categoryId === 0) {
+                  // Use the default Cost of Goods Sold account determined earlier
+                  return costOfGoodsSoldAccount ? costOfGoodsSoldAccount.id : 116;
+                }
+                return categoryId;
+              })(),
               description: entry.description,
               debitAmount: netAmount.toFixed(2),
               creditAmount: '0.00',
@@ -718,7 +747,8 @@ const EnhancedBulkCapture = () => {
                   acc.accountName === 'VAT Input' &&
                   acc.accountType === 'Asset'
                 );
-                return vatAccount ? vatAccount.id : 70; // Default to known VAT Input account
+                // Always return a valid account ID - use VAT Input (70) as default
+                return vatAccount?.id || 70;
               })(),
               description: `VAT on ${entry.description}`,
               debitAmount: vatAmount.toFixed(2),
@@ -728,11 +758,21 @@ const EnhancedBulkCapture = () => {
             // Credit bank account (use chart_account_id from bank_accounts table)
             {
               accountId: (() => {
-                const bankAccount = bankAccounts.find(ba => ba.id === parseInt(entry.bankAccountId?.toString() || '0'));
-                if (!bankAccount || !bankAccount.chartAccountId) {
-                  throw new Error(`Bank account not found or missing chart account ID for entry: ${entry.description}`);
+                const bankAccountId = parseInt(entry.bankAccountId?.toString() || '0');
+                const bankAccount = bankAccounts.find(ba => ba.id === bankAccountId);
+                
+                // If we found the selected bank account, use its chart account ID
+                if (bankAccount && bankAccount.chartAccountId) {
+                  return bankAccount.chartAccountId;
                 }
-                return bankAccount.chartAccountId;
+                
+                // If no bank account selected but we have bank accounts available
+                if (bankAccounts.length > 0 && bankAccounts[0].chartAccountId) {
+                  return bankAccounts[0].chartAccountId;
+                }
+                
+                // Default to Cash account (110) if no bank accounts exist
+                return 110;
               })(),
               description: entry.description,
               debitAmount: '0.00',
