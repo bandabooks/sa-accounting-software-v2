@@ -215,6 +215,7 @@ const PERMISSIONS = {
 function AuthenticatedApp() {
   return (
     <AppLayout>
+      <AIHealthBanner />
       <Switch>
         <Route path="/login">
           <Dashboard />
@@ -894,7 +895,6 @@ function App() {
         <LoadingProvider>
           <NotificationProvider>
             <GlobalLoader />
-            <AIHealthBanner />
             <AIAssistant />
             <Toaster />
             <Router />
