@@ -1433,84 +1433,84 @@ const EnhancedBulkCapture = () => {
         {/* Income Tab */}
         <TabsContent value="income" className="space-y-6">
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Summary Cards - 60% smaller and VAT Breakdown as 4th card */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-green-700 flex items-center">
-                  <TrendingUp className="w-4 h-4 mr-2" />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-green-700 flex items-center">
+                  <TrendingUp className="w-3 h-3 mr-1" />
                   Total Income
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-900">
+              <CardContent className="pt-0">
+                <div className="text-lg font-bold text-green-900">
                   R {incomeCalculations.totalIncome}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
-                  <Calculator className="w-4 h-4 mr-2" />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-blue-700 flex items-center">
+                  <Calculator className="w-3 h-3 mr-1" />
                   VAT Amount
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-900">
+              <CardContent className="pt-0">
+                <div className="text-lg font-bold text-blue-900">
                   R {incomeCalculations.totalVAT}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
-                  <CreditCard className="w-4 h-4 mr-2" />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-gray-700 flex items-center">
+                  <CreditCard className="w-3 h-3 mr-1" />
                   Net Income
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">
+              <CardContent className="pt-0">
+                <div className="text-lg font-bold text-gray-900">
                   R {incomeCalculations.totalNet}
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* VAT Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-gray-700 flex items-center">
-                <Clock className="w-4 h-4 mr-2" />
-                VAT Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-5 gap-4 text-center">
-                <div>
-                  <div className="text-sm font-medium text-blue-600">VAT Inclusive</div>
-                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.vatInclusive.toFixed(2)}</div>
+            {/* VAT Breakdown as 4th card */}
+            <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-purple-700 flex items-center">
+                  <Clock className="w-3 h-3 mr-1" />
+                  VAT Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 gap-1 text-center">
+                  <div className="flex justify-between">
+                    <span className="text-xs text-blue-600">VAT Inc:</span>
+                    <span className="text-xs text-gray-600">R {incomeCalculations.vatBreakdown.vatInclusive.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-green-600">VAT Exc:</span>
+                    <span className="text-xs text-gray-600">R {incomeCalculations.vatBreakdown.vatExclusive.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-yellow-600">Zero:</span>
+                    <span className="text-xs text-gray-600">R {incomeCalculations.vatBreakdown.zeroRated.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-orange-600">Exempt:</span>
+                    <span className="text-xs text-gray-600">R {incomeCalculations.vatBreakdown.exempt.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-red-600">No VAT:</span>
+                    <span className="text-xs text-gray-600">R {incomeCalculations.vatBreakdown.noVAT.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-green-600">VAT Exclusive</div>
-                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.vatExclusive.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-yellow-600">Zero Rated</div>
-                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.zeroRated.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-orange-600">Exempt</div>
-                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.exempt.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-red-600">No VAT</div>
-                  <div className="text-sm text-gray-600">R {incomeCalculations.vatBreakdown.noVAT.toFixed(2)}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
 
 
