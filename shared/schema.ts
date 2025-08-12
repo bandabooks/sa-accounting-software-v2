@@ -3238,6 +3238,7 @@ export const bankAccounts = pgTable("bank_accounts", {
   currency: text("currency").notNull().default("ZAR"),
   openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0.00"),
   currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).default("0.00"),
+  isDuplicate: boolean("is_duplicate").default(false),
   reconcileBalance: decimal("reconcile_balance", { precision: 15, scale: 2 }).default("0.00"),
   lastReconciled: timestamp("last_reconciled"),
   chartAccountId: integer("chart_account_id").references(() => chartOfAccounts.id),

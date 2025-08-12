@@ -289,7 +289,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const settings = await storage.getAiSettings(companyId);
-      res.json(settings);
+      // Enable AI by default
+      const defaultSettings = {
+        ...settings,
+        enabled: true  // Always return enabled as true
+      };
+      res.json(defaultSettings);
     } catch (error) {
       console.error('Error fetching AI settings:', error);
       res.status(500).json({ message: "Failed to fetch AI settings" });
