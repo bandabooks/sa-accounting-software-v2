@@ -1719,77 +1719,62 @@ const EnhancedBulkCapture = () => {
 
         {/* Expense Tab */}
         <TabsContent value="expense" className="space-y-6">
-          {/* Summary Cards for Expenses */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-700">ACTIVE ENTRIES</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">
-                  {expenseCalculations.activeEntries}
+
+          {/* Expense Header with Summary Cards and Controls */}
+          <div className="bg-slate-700 dark:bg-slate-800 p-4 rounded-lg">
+            {/* Summary Cards in Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                {/* Sub Total Card */}
+                <div className="bg-green-600 px-4 py-2 rounded-lg">
+                  <div className="text-xs font-medium text-green-100">SUBTOTAL (EXCL VAT)</div>
+                  <div className="text-lg font-bold text-white">
+                    R {expenseCalculations.subtotalExclVAT}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-green-700">SUBTOTAL (EXCL VAT)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-900">
-                  R {expenseCalculations.subtotalExclVAT}
+                
+                {/* Total VAT Card */}
+                <div className="bg-orange-600 px-4 py-2 rounded-lg">
+                  <div className="text-xs font-medium text-orange-100">TOTAL VAT</div>
+                  <div className="text-lg font-bold text-white">
+                    R {expenseCalculations.totalVAT}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-orange-700">TOTAL VAT</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-900">
-                  R {expenseCalculations.totalVAT}
+                
+                {/* Grand Total Card */}
+                <div className="bg-red-600 px-4 py-2 rounded-lg">
+                  <div className="text-xs font-medium text-red-100">GRAND TOTAL</div>
+                  <div className="text-xl font-bold text-white">
+                    R {expenseCalculations.grandTotal}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="bg-gradient-to-br from-red-50 to-pink-50 border-red-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-red-700">GRAND TOTAL</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-900">
-                R {expenseCalculations.grandTotal}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Controls for Expenses */}
-          <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="quickDateExpense" className="text-sm font-medium">Date Range:</Label>
-                <Input
-                  id="quickDateExpense"
-                  type="date"
-                  value={quickDate}
-                  onChange={(e) => setQuickDate(e.target.value)}
-                  className="w-40"
-                />
-                <span className="text-sm text-gray-500">to</span>
-                <Input
-                  type="date"
-                  value={quickDate}
-                  className="w-40"
-                />
-                <Button variant="outline" size="sm" onClick={applyQuickDateToAll}>
-                  Apply to All
-                </Button>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            
+            {/* Quick Controls */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="quickDateExpense" className="text-sm font-medium text-slate-200">Date Range:</Label>
+                  <Input
+                    id="quickDateExpense"
+                    type="date"
+                    value={quickDate}
+                    onChange={(e) => setQuickDate(e.target.value)}
+                    className="w-40"
+                  />
+                  <span className="text-sm text-slate-400">to</span>
+                  <Input
+                    type="date"
+                    value={quickDate}
+                    className="w-40"
+                  />
+                  <Button variant="outline" size="sm" onClick={applyQuickDateToAll} className="border-slate-500 text-slate-200 hover:bg-slate-600">
+                    Apply to All
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
               {/* Script Auto-Match Button (Primary) */}
               <Button 
                 variant="outline" 
@@ -1843,6 +1828,7 @@ const EnhancedBulkCapture = () => {
                 <Save className="w-4 h-4 mr-2" />
                 {saveExpensesMutation.isPending ? 'Saving...' : 'Save All Expenses'}
               </Button>
+              </div>
             </div>
           </div>
 
