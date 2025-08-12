@@ -458,14 +458,23 @@ const EnhancedBulkCapture = () => {
       formData.append('bankAccountId', selectedBankAccount);
 
       // Parse bank statement to get transactions
-      const response = await apiRequest('/api/bank/parse-statement', 'POST', formData);
+      const response = await fetch('/api/bank/parse-statement', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
       
-      if (response.transactions && response.transactions.length > 0) {
+      if (data.transactions && data.transactions.length > 0) {
         // Convert bank transactions to bulk capture entries
         const convertedExpenses: ExpenseEntry[] = [];
         const convertedIncome: IncomeEntry[] = [];
         
-        response.transactions.forEach((transaction: any) => {
+        data.transactions.forEach((transaction: any) => {
           const baseEntry = {
             transactionDate: transaction.date || quickDate,
             description: transaction.description || transaction.reference || '',
@@ -514,8 +523,14 @@ const EnhancedBulkCapture = () => {
         
         toast({
           title: "Bank Statement Imported Successfully",
-          description: `Imported ${response.transactions.length} transactions (${convertedExpenses.length} expenses, ${convertedIncome.length} income). Please review and categorize entries before saving.`,
-          variant: "default",
+          description: `Imported ${data.transactions.length} transactions (${convertedExpenses.length} expenses, ${convertedIncome.length} income). Please review and categorize entries before saving.`,
+          variant: "success" as any,
+        });
+      } else {
+        toast({
+          title: "No Transactions Found",
+          description: "The bank statement does not contain any transactions to import.",
+          variant: "destructive",
         });
       }
 
@@ -783,6 +798,7 @@ const EnhancedBulkCapture = () => {
       toast({
         title: "Success",
         description: `Successfully processed ${data.processedCount} entries. ${data.errors?.length || 0} errors.`,
+        variant: "success" as any,
       });
       // Refetch sessions to update status
       queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
@@ -806,7 +822,7 @@ const EnhancedBulkCapture = () => {
       toast({
         title: "Entry Posted",
         description: "Journal entry has been posted successfully",
-        variant: "default",
+        variant: "success" as any,
       });
       // Refetch journal entries
       queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
