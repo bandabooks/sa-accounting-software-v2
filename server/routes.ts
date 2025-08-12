@@ -222,21 +222,22 @@ const bankStatementUpload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /csv|xlsx|xls|qif|ofx/;
+    const allowedTypes = /csv|xlsx|xls|qif|ofx|pdf/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const allowedMimes = [
       'text/csv',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/x-qif',
-      'application/x-ofx'
+      'application/x-ofx',
+      'application/pdf'
     ];
     const mimetype = allowedMimes.includes(file.mimetype) || file.mimetype.includes('text/plain');
     
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only CSV, Excel, QIF, and OFX files are allowed.'));
+      cb(new Error('Invalid file type. Only CSV, Excel, QIF, OFX, and PDF files are allowed.'));
     }
   }
 });
@@ -6543,6 +6544,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             }
           }
+        } else if (fileExtension === '.pdf') {
+          // For PDF files, create placeholder transactions that need manual review
+          transactions.push({
+            date: new Date().toISOString().split('T')[0],
+            description: 'PDF Statement Import - Requires Manual Review',
+            reference: fileName,
+            amount: 0,
+            balance: null,
+            type: 'credit',
+            requiresReview: true
+          });
         } else {
           // For other formats, create a basic structure for now
           transactions.push({

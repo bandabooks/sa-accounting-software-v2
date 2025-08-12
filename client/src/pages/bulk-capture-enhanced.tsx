@@ -893,12 +893,12 @@ const EnhancedBulkCapture = () => {
                       <Input
                         id="file-upload"
                         type="file"
-                        accept=".csv,.xlsx,.xls,.qif,.ofx"
+                        accept=".csv,.xlsx,.xls,.qif,.ofx,.pdf"
                         onChange={handleFileSelect}
                         className="cursor-pointer"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Supported formats: CSV, Excel (.xlsx, .xls), QIF, OFX
+                        Supported formats: CSV, Excel (.xlsx, .xls), QIF, OFX, PDF
                       </p>
                     </div>
                   </div>
