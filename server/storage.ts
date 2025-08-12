@@ -14613,6 +14613,185 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(companySarsLink).where(eq(companySarsLink.companyId, companyId));
     return result.rowCount > 0;
   }
+
+  // AI-powered transaction matching support methods
+  async getChartOfAccounts(companyId: number): Promise<Array<{
+    id: string;
+    name: string;
+    code: string;
+    type: string;
+    category: string;
+  }>> {
+    try {
+      const accounts = await db
+        .select({
+          id: chartOfAccounts.id,
+          name: chartOfAccounts.accountName,
+          code: chartOfAccounts.accountNumber,
+          type: chartOfAccounts.accountType,
+          category: chartOfAccounts.accountSubType
+        })
+        .from(chartOfAccounts)
+        .where(eq(chartOfAccounts.companyId, companyId))
+        .orderBy(chartOfAccounts.accountNumber);
+
+      return accounts.map(account => ({
+        id: account.id.toString(),
+        name: account.name,
+        code: account.code,
+        type: account.type,
+        category: account.category || account.type
+      }));
+    } catch (error) {
+      console.error('Error getting chart of accounts:', error);
+      return [];
+    }
+  }
+
+  async getRecentTransactionPatterns(companyId: number, limit: number = 100): Promise<Array<{
+    description: string;
+    accountId: string;
+    accountName: string;
+  }>> {
+    try {
+      // Get patterns from expenses
+      const expensePatterns = await db
+        .select({
+          description: expenses.description,
+          accountId: chartOfAccounts.id,
+          accountName: chartOfAccounts.accountName
+        })
+        .from(expenses)
+        .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id))
+        .where(eq(expenses.companyId, companyId))
+        .orderBy(desc(expenses.createdAt))
+        .limit(Math.floor(limit / 2));
+
+      // Get patterns from journal entries
+      const journalPatterns = await db
+        .select({
+          description: journalEntries.description,
+          accountId: chartOfAccounts.id,
+          accountName: chartOfAccounts.accountName
+        })
+        .from(journalEntries)
+        .leftJoin(journalEntryLines, eq(journalEntries.id, journalEntryLines.journalEntryId))
+        .leftJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .where(eq(journalEntries.companyId, companyId))
+        .orderBy(desc(journalEntries.entryDate))
+        .limit(Math.floor(limit / 2));
+
+      return [
+        ...expensePatterns.map(p => ({
+          description: p.description,
+          accountId: p.accountId?.toString() || '',
+          accountName: p.accountName || 'Unknown Account'
+        })),
+        ...journalPatterns.map(p => ({
+          description: p.description || 'Unknown',
+          accountId: p.accountId?.toString() || '',
+          accountName: p.accountName || 'Unknown Account'
+        }))
+      ].filter(p => p.description && p.accountId);
+    } catch (error) {
+      console.error('Error getting recent transaction patterns:', error);
+      return [];
+    }
+  }
+
+  async getBulkCaptureTransactions(companyId: number): Promise<Array<{
+    id: string;
+    description: string;
+    amount: number;
+    type: 'credit' | 'debit';
+    date: string;
+  }>> {
+    try {
+      // Get bulk capture entries from both income and expense tables with status 'draft'
+      const incomeEntries = await db
+        .select({
+          id: bulkIncomeCapture.id,
+          description: bulkIncomeCapture.description,
+          amount: bulkIncomeCapture.amount,
+          transactionDate: bulkIncomeCapture.transactionDate
+        })
+        .from(bulkIncomeCapture)
+        .where(and(
+          eq(bulkIncomeCapture.companyId, companyId),
+          eq(bulkIncomeCapture.status, 'draft')
+        ));
+
+      const expenseEntries = await db
+        .select({
+          id: bulkExpenseCapture.id,
+          description: bulkExpenseCapture.description,
+          amount: bulkExpenseCapture.amount,
+          transactionDate: bulkExpenseCapture.transactionDate
+        })
+        .from(bulkExpenseCapture)
+        .where(and(
+          eq(bulkExpenseCapture.companyId, companyId),
+          eq(bulkExpenseCapture.status, 'draft')
+        ));
+
+      return [
+        ...incomeEntries.map(entry => ({
+          id: `income_${entry.id}`,
+          description: entry.description,
+          amount: parseFloat(entry.amount),
+          type: 'credit' as const,
+          date: entry.transactionDate.toISOString().split('T')[0]
+        })),
+        ...expenseEntries.map(entry => ({
+          id: `expense_${entry.id}`,
+          description: entry.description,
+          amount: parseFloat(entry.amount),
+          type: 'debit' as const,
+          date: entry.transactionDate.toISOString().split('T')[0]
+        }))
+      ];
+    } catch (error) {
+      console.error('Error getting bulk capture transactions:', error);
+      return [];
+    }
+  }
+
+  async updateBulkCaptureTransaction(transactionId: string, updates: {
+    accountId?: string;
+    vatRate?: number;
+    vatType?: string;
+    category?: string;
+    autoMatched?: boolean;
+    matchConfidence?: number;
+  }): Promise<void> {
+    try {
+      const [type, id] = transactionId.split('_');
+      const numericId = parseInt(id);
+
+      if (type === 'income') {
+        await db
+          .update(bulkIncomeCapture)
+          .set({
+            incomeAccountId: updates.accountId ? parseInt(updates.accountId) : undefined,
+            vatRate: updates.vatRate?.toString(),
+            updatedAt: new Date()
+          })
+          .where(eq(bulkIncomeCapture.id, numericId));
+      } else if (type === 'expense') {
+        await db
+          .update(bulkExpenseCapture)
+          .set({
+            categoryId: updates.accountId ? parseInt(updates.accountId) : undefined,
+            vatRate: updates.vatRate?.toString(),
+            updatedAt: new Date()
+          })
+          .where(eq(bulkExpenseCapture.id, numericId));
+      }
+    } catch (error) {
+      console.error('Error updating bulk capture transaction:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

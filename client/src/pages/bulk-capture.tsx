@@ -25,7 +25,10 @@ import {
   FileSpreadsheet,
   Landmark,
   Download,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  Zap,
+  Bot
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -119,6 +122,11 @@ const EnhancedBulkCapture = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [bankImportBatches, setBankImportBatches] = useState<BankImportBatch[]>([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>('');
+  
+  // AI matching states
+  const [isAiMatching, setIsAiMatching] = useState(false);
+  const [aiMatchingProgress, setAiMatchingProgress] = useState(0);
+  const [autoMatchedEntries, setAutoMatchedEntries] = useState<Set<number>>(new Set());
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -859,6 +867,124 @@ const EnhancedBulkCapture = () => {
     },
   });
 
+  // AI Auto-Matching Mutation
+  const aiAutoMatchMutation = useMutation({
+    mutationFn: async ({ entries, type }: { entries: (ExpenseEntry | IncomeEntry)[], type: 'expense' | 'income' }) => {
+      const transactionsToMatch = entries.map((entry, index) => ({
+        id: index,
+        description: entry.description,
+        amount: parseFloat(entry.amount),
+        type: type === 'expense' ? 'debit' : 'credit',
+        date: entry.transactionDate
+      }));
+
+      return await apiRequest('/api/ai/match-transactions', 'POST', {
+        transactions: transactionsToMatch,
+        companyId: 1 // This should come from auth context
+      });
+    },
+    onSuccess: (matches: any[], variables) => {
+      const { entries, type } = variables;
+      setAiMatchingProgress(100);
+      
+      // Apply AI suggestions to entries
+      matches.forEach((match, index) => {
+        if (match.suggestion && match.confidence > 0.7) {
+          const updatedEntry = { ...entries[index] };
+          
+          if (type === 'expense') {
+            const expenseEntry = updatedEntry as ExpenseEntry;
+            if (match.suggestion.accountId) {
+              expenseEntry.categoryId = parseInt(match.suggestion.accountId);
+            }
+            if (match.suggestion.vatRate) {
+              expenseEntry.vatRate = match.suggestion.vatRate.toString();
+              expenseEntry.vatTypeId = match.suggestion.vatRate === 15 ? 1 : 
+                                       match.suggestion.vatRate === 0 ? 2 : 1;
+            }
+            
+            setExpenseEntries(prev => {
+              const newEntries = [...prev];
+              newEntries[index] = expenseEntry;
+              return newEntries;
+            });
+          } else {
+            const incomeEntry = updatedEntry as IncomeEntry;
+            if (match.suggestion.accountId) {
+              incomeEntry.incomeAccountId = parseInt(match.suggestion.accountId);
+            }
+            if (match.suggestion.vatRate) {
+              incomeEntry.vatRate = match.suggestion.vatRate.toString();
+              incomeEntry.vatTypeId = match.suggestion.vatRate === 15 ? 1 : 
+                                      match.suggestion.vatRate === 0 ? 2 : 1;
+            }
+            
+            setIncomeEntries(prev => {
+              const newEntries = [...prev];
+              newEntries[index] = incomeEntry;
+              return newEntries;
+            });
+          }
+          
+          setAutoMatchedEntries(prev => new Set([...prev, index]));
+        }
+      });
+
+      toast({
+        title: "AI Auto-Matching Complete",
+        description: `Matched ${matches.filter(m => m.confidence > 0.7).length} of ${matches.length} transactions`,
+        variant: "success" as any,
+      });
+      
+      setIsAiMatching(false);
+      setAiMatchingProgress(0);
+    },
+    onError: (error: any) => {
+      setIsAiMatching(false);
+      setAiMatchingProgress(0);
+      toast({
+        title: "AI Matching Failed",
+        description: error.message || "Failed to auto-match transactions",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Auto-match current entries
+  const handleAiAutoMatch = useCallback(async () => {
+    if (isAiMatching) return;
+    
+    const currentEntries = activeTab === 'expense' ? expenseEntries : incomeEntries;
+    
+    if (currentEntries.length === 0) {
+      toast({
+        title: "No Transactions",
+        description: "Add some transactions first to use AI auto-matching",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAiMatching(true);
+    setAiMatchingProgress(20);
+    
+    // Simulate progress updates
+    const progressInterval = setInterval(() => {
+      setAiMatchingProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 200);
+
+    aiAutoMatchMutation.mutate({ 
+      entries: currentEntries, 
+      type: activeTab 
+    });
+  }, [activeTab, expenseEntries, incomeEntries, isAiMatching, aiAutoMatchMutation, toast]);
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -1307,6 +1433,25 @@ const EnhancedBulkCapture = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAiAutoMatch}
+                disabled={isAiMatching || incomeEntries.length === 0}
+                className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600"
+              >
+                {isAiMatching ? (
+                  <>
+                    <Bot className="w-4 h-4 mr-2 animate-pulse" />
+                    AI Matching... {aiMatchingProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    AI Auto-Match
+                  </>
+                )}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => addMoreRows(5)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add 5 Rows
@@ -1343,7 +1488,9 @@ const EnhancedBulkCapture = () => {
                   </thead>
                   <tbody>
                     {incomeEntries.map((entry, index) => (
-                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <tr key={index} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        autoMatchedEntries.has(index) ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200' : ''
+                      }`}>
                         <td className="p-3">
                           <Input
                             type="date"
@@ -1377,12 +1524,20 @@ const EnhancedBulkCapture = () => {
                           </Select>
                         </td>
                         <td className="p-3">
-                          <Input
-                            value={entry.description}
-                            onChange={(e) => updateIncomeEntry(index, 'description', e.target.value)}
-                            placeholder="Revenue description..."
-                            className="w-full"
-                          />
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              value={entry.description}
+                              onChange={(e) => updateIncomeEntry(index, 'description', e.target.value)}
+                              placeholder="Revenue description..."
+                              className="w-full"
+                            />
+                            {autoMatchedEntries.has(index) && (
+                              <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300 text-xs">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                AI
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3">
                           <Input
@@ -1517,6 +1672,25 @@ const EnhancedBulkCapture = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAiAutoMatch}
+                disabled={isAiMatching || expenseEntries.length === 0}
+                className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600"
+              >
+                {isAiMatching ? (
+                  <>
+                    <Bot className="w-4 h-4 mr-2 animate-pulse" />
+                    AI Matching... {aiMatchingProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    AI Auto-Match
+                  </>
+                )}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => addMoreRows(5)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Rows
@@ -1553,7 +1727,9 @@ const EnhancedBulkCapture = () => {
                   </thead>
                   <tbody>
                     {expenseEntries.map((entry, index) => (
-                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <tr key={index} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        autoMatchedEntries.has(index) ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200' : ''
+                      }`}>
                         <td className="p-3">
                           <Input
                             type="date"
@@ -1582,12 +1758,20 @@ const EnhancedBulkCapture = () => {
                           </Select>
                         </td>
                         <td className="p-3">
-                          <Input
-                            value={entry.description}
-                            onChange={(e) => updateExpenseEntry(index, 'description', e.target.value)}
-                            placeholder="Expense description..."
-                            className="w-full"
-                          />
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              value={entry.description}
+                              onChange={(e) => updateExpenseEntry(index, 'description', e.target.value)}
+                              placeholder="Expense description..."
+                              className="w-full"
+                            />
+                            {autoMatchedEntries.has(index) && (
+                              <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300 text-xs">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                AI
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3">
                           <Input
