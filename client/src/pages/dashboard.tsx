@@ -6,7 +6,7 @@ import {
   Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, ArrowDownRight,
   Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useRouter } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [location, navigate] = useRouter();
   const [notifications, setNotifications] = useState([
     { id: 1, title: "New invoice payment received", type: "success", time: "2 min ago", priority: "high" },
     { id: 2, title: "Monthly VAT return due in 3 days", type: "warning", time: "1 hour ago", priority: "medium" },
@@ -314,9 +315,27 @@ export default function Dashboard() {
                           <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
                         </div>
                       </div>
-                      <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
-                        {notification.priority}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            // Navigate based on notification type
+                            if (notification.title.includes('invoice')) navigate('/invoices');
+                            else if (notification.title.includes('VAT')) navigate('/reports/vat');
+                            else if (notification.title.includes('customer')) navigate('/customers');
+                            else if (notification.title.includes('payment')) navigate('/payments');
+                            else navigate('/activities');
+                          }}
+                          className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+                          title="View details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                          {notification.priority}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                 </Card>
@@ -382,10 +401,15 @@ export default function Dashboard() {
                           <CardDescription>Monthly performance overview</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => navigate('/reports/financial')}
+                            title="View detailed revenue reports"
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" title="Download revenue report">
                             <Download className="h-4 w-4" />
                           </Button>
                         </div>

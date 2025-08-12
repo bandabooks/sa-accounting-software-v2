@@ -1212,10 +1212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`🚀 Loading fast dashboard for company ${companyId}`);
         
         // Use optimized queries for better performance
-        const [fastStats, recentActivities, bankBalances] = await Promise.all([
+        const [fastStats, recentActivities, bankBalances, profitLossData] = await Promise.all([
           fastStorage.getFastDashboardStats(companyId),
           fastStorage.getFastRecentActivities(companyId),
-          fastStorage.getFastBankBalances(companyId)
+          fastStorage.getFastBankBalances(companyId),
+          fastStorage.getFastProfitLossData(companyId)
         ]);
 
         return {
@@ -1233,7 +1234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             netCashFlow: "0.00"
           },
           bankBalances,
-          profitLossData: [],
+          profitLossData,
           recentActivities,
           complianceAlerts: []
         };

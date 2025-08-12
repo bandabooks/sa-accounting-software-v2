@@ -1,6 +1,8 @@
-import { FileText, CreditCard, Receipt, Clock, CheckCircle } from "lucide-react";
+import { FileText, CreditCard, Receipt, Clock, CheckCircle, Eye } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "wouter";
 
 interface Activity {
   id: number;
@@ -17,6 +19,7 @@ interface RecentActivitiesProps {
 }
 
 export default function RecentActivities({ activities }: RecentActivitiesProps) {
+  const [location, navigate] = useRouter();
   const getActivityIcon = (type: string, status: string) => {
     switch (type) {
       case 'invoice':
@@ -80,7 +83,7 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
           const iconColorClass = getActivityColor(activity.type, activity.status);
           
           return (
-            <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
               <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}>
                 <IconComponent size={16} />
               </div>
@@ -91,6 +94,21 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                     {activity.description}
                   </p>
                   <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        // Navigate based on activity type
+                        if (activity.type === 'invoice') navigate('/invoices');
+                        else if (activity.type === 'payment') navigate('/payments');
+                        else if (activity.type === 'expense') navigate('/expenses');
+                        else navigate('/activities');
+                      }}
+                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="View details"
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
                     {getStatusBadge(activity.status)}
                   </div>
                 </div>

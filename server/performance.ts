@@ -105,6 +105,59 @@ export class PerformanceOptimizedStorage {
       return [];
     }
   }
+
+  // Generate monthly profit & loss data
+  async getFastProfitLossData(companyId: number): Promise<any[]> {
+    try {
+      if (!companyId) {
+        return [];
+      }
+      
+      // Get monthly data for the last 6 months
+      const profitLossData = await db.execute(sql`
+        WITH monthly_data AS (
+          SELECT 
+            DATE_TRUNC('month', COALESCE(i.issue_date, NOW()))::date as month,
+            COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total::numeric ELSE 0 END), 0) as revenue,
+            0 as expenses
+          FROM invoices i
+          WHERE i.company_id = ${companyId}
+            AND i.issue_date >= NOW() - INTERVAL '6 months'
+          GROUP BY DATE_TRUNC('month', i.issue_date)
+          
+          UNION ALL
+          
+          SELECT 
+            DATE_TRUNC('month', e.expense_date)::date as month,
+            0 as revenue,
+            COALESCE(SUM(e.amount::numeric), 0) as expenses
+          FROM expenses e
+          WHERE e.company_id = ${companyId}
+            AND e.expense_date >= NOW() - INTERVAL '6 months'
+          GROUP BY DATE_TRUNC('month', e.expense_date)
+        )
+        SELECT 
+          month,
+          SUM(revenue) as revenue,
+          SUM(expenses) as expenses,
+          (SUM(revenue) - SUM(expenses)) as profit
+        FROM monthly_data
+        GROUP BY month
+        ORDER BY month DESC
+        LIMIT 6
+      `);
+      
+      return profitLossData.rows.map(row => ({
+        month: row.month,
+        revenue: parseFloat(row.revenue || '0'),
+        expenses: parseFloat(row.expenses || '0'),
+        profit: parseFloat(row.profit || '0')
+      }));
+    } catch (error) {
+      console.error("Fast profit loss data error:", error);
+      return [];
+    }
+  }
 }
 
 export const fastStorage = new PerformanceOptimizedStorage();
