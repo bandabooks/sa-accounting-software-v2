@@ -869,7 +869,7 @@ const EnhancedBulkCapture = () => {
 
   // AI Auto-Matching Mutation
   const aiAutoMatchMutation = useMutation({
-    mutationFn: async ({ entries, type }: { entries: (ExpenseEntry | IncomeEntry)[], type: 'expense' | 'income' }) => {
+    mutationFn: async ({ entries, type }: { entries: (ExpenseEntry | IncomeEntry)[], type: 'expense' | 'income' }): Promise<any[]> => {
       const transactionsToMatch = entries.map((entry, index) => ({
         id: index,
         description: entry.description,
@@ -878,10 +878,11 @@ const EnhancedBulkCapture = () => {
         date: entry.transactionDate
       }));
 
-      return await apiRequest('/api/ai/match-transactions', 'POST', {
+      const response = await apiRequest('/api/ai/match-transactions', 'POST', {
         transactions: transactionsToMatch,
         companyId: 1 // This should come from auth context
       });
+      return response.json ? await response.json() : response || [];
     },
     onSuccess: (matches: any[], variables) => {
       const { entries, type } = variables;
@@ -926,7 +927,7 @@ const EnhancedBulkCapture = () => {
             });
           }
           
-          setAutoMatchedEntries(prev => new Set([...prev, index]));
+          setAutoMatchedEntries(prev => new Set([...Array.from(prev), index]));
         }
       });
 
@@ -981,7 +982,7 @@ const EnhancedBulkCapture = () => {
 
     aiAutoMatchMutation.mutate({ 
       entries: currentEntries, 
-      type: activeTab 
+      type: activeTab as 'expense' | 'income'
     });
   }, [activeTab, expenseEntries, incomeEntries, isAiMatching, aiAutoMatchMutation, toast]);
 
