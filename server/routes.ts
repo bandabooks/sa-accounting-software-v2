@@ -1225,13 +1225,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalExpenses: fastStats.total_expenses || "0.00", 
           totalCustomers: fastStats.total_customers || "0",
           bankBalance: fastStats.bank_balance || "0.00",
+          vatDue: fastStats.vat_due || "0.00",
+          pendingEstimates: fastStats.pending_estimates || "0",
+          outstandingInvoiceCount: fastStats.outstanding_invoice_count || 0,
+          paidInvoiceCount: fastStats.paid_invoice_count || 0,
           receivablesAging: [],
           payablesAging: [],
           cashFlowSummary: {
             currentCashPosition: fastStats.bank_balance || "0.00",
-            todayInflow: "0.00",
-            todayOutflow: "0.00", 
-            netCashFlow: "0.00"
+            todayInflow: fastStats.today_inflow || "0.00",
+            todayOutflow: fastStats.today_outflow || "0.00", 
+            netCashFlow: (parseFloat(fastStats.today_inflow || "0") - parseFloat(fastStats.today_outflow || "0")).toFixed(2)
           },
           bankBalances,
           profitLossData,
