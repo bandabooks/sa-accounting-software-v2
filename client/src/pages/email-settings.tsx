@@ -92,10 +92,8 @@ export default function EmailSettings() {
   // Send test email mutation
   const sendTestEmail = useMutation({
     mutationFn: async (data: { to: string; testType: string; message?: string }) => {
-      return apiRequest("/api/email/test", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("/api/email/test", "POST", data);
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -118,9 +116,8 @@ export default function EmailSettings() {
   // Retry failed email mutation
   const retryEmail = useMutation({
     mutationFn: async (emailId: number) => {
-      return apiRequest(`/api/email/queue/${emailId}/retry`, {
-        method: "POST",
-      });
+      const response = await apiRequest(`/api/email/queue/${emailId}/retry`, "POST");
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -141,9 +138,8 @@ export default function EmailSettings() {
   // Clear failed emails mutation
   const clearFailedEmails = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/email/queue/clear?status=failed", {
-        method: "DELETE",
-      });
+      const response = await apiRequest("/api/email/queue/clear?status=failed", "DELETE");
+      return response.json();
     },
     onSuccess: () => {
       toast({
