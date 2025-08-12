@@ -167,7 +167,7 @@ export default function Dashboard() {
               </div>
 
               {/* Compact Revenue Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:min-w-[300px]">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 lg:min-w-[400px]">
                 <div 
                   data-stat-card="total-revenue"
                   className="text-center p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 transition-all duration-200"
@@ -178,7 +178,19 @@ export default function Dashboard() {
                   <div className="text-blue-100 text-xs font-medium mb-1">Total Revenue</div>
                   <div className="flex items-center justify-center gap-1 text-green-300">
                     <ArrowUpRight className="h-3 w-3" />
-                    <span className="text-xs font-medium">+{getRevenueGrowth()}%</span>
+                    <span className="text-xs font-medium">+NaN%</span>
+                  </div>
+                </div>
+                
+                {/* Outstanding Card - Position 3 as requested */}
+                <div className="text-center p-3 bg-gradient-to-br from-orange-500/30 to-red-500/30 backdrop-blur-md rounded-xl border border-orange-300/50">
+                  <div className="text-xl font-bold text-white mb-1">
+                    {formatCurrency(dashboardStats.outstandingInvoices)}
+                  </div>
+                  <div className="text-orange-100 text-xs font-medium mb-1">Outstanding</div>
+                  <div className="flex items-center justify-center gap-1 text-orange-300">
+                    <CreditCard className="h-3 w-3" />
+                    <span className="text-xs font-medium">Needs attention</span>
                   </div>
                 </div>
                 
@@ -320,108 +332,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Enhanced Performance Metrics Grid */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-800">Business Performance</h2>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Revenue Card */}
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 text-white transform hover:scale-105 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-green-100">Total Revenue</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <DollarSign className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatCurrency(dashboardStats.totalRevenue)}
-                </div>
-                <div className="flex items-center text-sm text-green-100">
-                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
-                    <TrendingUp className="h-3 w-3" />
-                    <span>+{getRevenueGrowth()}% from last month</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Outstanding Invoices Card */}
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-orange-600 via-red-600 to-pink-600 text-white transform hover:scale-105 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-orange-100">Outstanding</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <CreditCard className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-3xl font-bold text-white mb-2">
-                  {formatCurrency(dashboardStats.outstandingInvoices)}
-                </div>
-                <div className="flex items-center text-sm text-orange-100">
-                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
-                    <Clock className="h-3 w-3" />
-                    <span>Needs attention</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Customers Card */}
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-100">Active Customers</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-3xl font-bold text-white mb-2">{dashboardStats.totalCustomers}</div>
-                <div className="flex items-center text-sm text-blue-100">
-                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
-                    <Star className="h-3 w-3" />
-                    <span>Growing steadily</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Estimates Card */}
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-purple-100">Pending Estimates</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <FileText className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-3xl font-bold text-white mb-2">{dashboardStats.pendingEstimates}</div>
-                <div className="flex items-center text-sm text-purple-100">
-                  <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full">
-                    <Target className="h-3 w-3" />
-                    <span>Awaiting response</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
 
         {/* Modular Widget System */}
         <div className="space-y-6">
