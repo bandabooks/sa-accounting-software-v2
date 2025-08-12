@@ -1990,6 +1990,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyId: req.body.companyId || 2 // Default company ID
       };
       
+      // Validate bank account exists for the company
+      if (paymentData.bankAccountId) {
+        const bankAccount = await storage.getBankAccount(paymentData.bankAccountId);
+        if (!bankAccount || bankAccount.companyId !== paymentData.companyId) {
+          console.error(`Invalid bank account ID: ${paymentData.bankAccountId} for company: ${paymentData.companyId}`);
+          return res.status(400).json({ 
+            message: "Invalid bank account selected. Please select a valid bank account." 
+          });
+        }
+      }
+      
       const validatedData = insertPaymentSchema.parse(paymentData);
       console.log("Validated payment data:", validatedData);
       

@@ -108,6 +108,13 @@ export default function PaymentModal({
   const onSubmit = async (data: PaymentFormData) => {
     setIsSubmitting(true);
     try {
+      console.log("Submitting payment data:", {
+        ...data,
+        bankAccountId: parseInt(data.bankAccountId),
+        invoiceId,
+        status: "completed",
+      });
+      
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: {
@@ -122,7 +129,9 @@ export default function PaymentModal({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to record payment");
+        const errorData = await response.json();
+        console.error("Payment error response:", errorData);
+        throw new Error(errorData.message || "Failed to record payment");
       }
 
       // Reset form and notify parent with payment amount
