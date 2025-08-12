@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VATTypeSelect } from "@/components/ui/vat-type-select";
@@ -1637,28 +1638,19 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <Select
+                          <SearchableSelect
+                            options={chartOfAccounts
+                              .filter(account => account.accountType === 'Revenue')
+                              .map(account => ({
+                                value: account.id.toString(),
+                                label: account.accountName,
+                                subtext: account.accountCode
+                              }))}
                             value={entry.incomeAccountId ? entry.incomeAccountId.toString() : ''}
                             onValueChange={(value) => updateIncomeEntry(index, 'incomeAccountId', value ? parseInt(value) : '')}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose income account..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {chartOfAccounts
-                                .filter(account => account.accountType === 'Revenue')
-                                .map(account => (
-                                  <SelectItem key={account.id} value={account.id.toString()}>
-                                    {account.accountCode} - {account.accountName}
-                                  </SelectItem>
-                                ))}
-                              {chartOfAccounts.filter(account => account.accountType === 'Revenue').length === 0 && (
-                                <div className="p-2 text-sm text-red-500 text-center">
-                                  No Revenue accounts found. Please create Revenue accounts in Chart of Accounts.
-                                </div>
-                              )}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Search income accounts..."
+                            clearable
+                          />
                         </td>
                         <td className="p-3">
                           <div className="flex items-center space-x-2">
@@ -1687,21 +1679,17 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <Select
+                          <SearchableSelect
+                            options={customers.map(customer => ({
+                              value: customer.id.toString(),
+                              label: customer.name,
+                              subtext: customer.email || customer.phone || ''
+                            }))}
                             value={entry.clientId?.toString() || ''}
                             onValueChange={(value) => updateIncomeEntry(index, 'clientId', value ? parseInt(value) : 0)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {customers.map(customer => (
-                                <SelectItem key={customer.id} value={customer.id.toString()}>
-                                  {customer.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Search clients..."
+                            clearable
+                          />
                         </td>
                         <td className="p-3">
                           <VATTypeSelect
@@ -1711,21 +1699,17 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <Select
+                          <SearchableSelect
+                            options={bankAccounts.map(account => ({
+                              value: account.id.toString(),
+                              label: account.accountName,
+                              subtext: account.accountNumber || account.bankName || ''
+                            }))}
                             value={entry.bankAccountId?.toString() || ''}
                             onValueChange={(value) => updateIncomeEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose bank..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {bankAccounts.map(account => (
-                                <SelectItem key={account.id} value={account.id.toString()}>
-                                  {account.accountName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Search bank accounts..."
+                            clearable
+                          />
                         </td>
                       </tr>
                     ))}
@@ -1898,23 +1882,18 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <Select
+                          <SearchableSelect
+                            options={chartOfAccounts
+                              .filter(account => account.accountType === 'Expense' || account.accountType === 'Cost of Goods Sold')
+                              .map(account => ({
+                                value: account.id.toString(),
+                                label: account.accountName,
+                                subtext: account.accountCode
+                              }))}
                             value={entry.categoryId.toString()}
                             onValueChange={(value) => updateExpenseEntry(index, 'categoryId', parseInt(value))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose expense..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {chartOfAccounts
-                                .filter(account => account.accountType === 'Expense' || account.accountType === 'Cost of Goods Sold')
-                                .map(account => (
-                                  <SelectItem key={account.id} value={account.id.toString()}>
-                                    {account.accountCode} - {account.accountName}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Search expense accounts..."
+                          />
                         </td>
                         <td className="p-3">
                           <div className="flex items-center space-x-2">
@@ -1943,21 +1922,17 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <Select
+                          <SearchableSelect
+                            options={suppliers.map(supplier => ({
+                              value: supplier.id.toString(),
+                              label: supplier.name,
+                              subtext: supplier.email || supplier.phone || ''
+                            }))}
                             value={entry.supplierId?.toString() || ''}
                             onValueChange={(value) => updateExpenseEntry(index, 'supplierId', value ? parseInt(value) : 0)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {suppliers.map(supplier => (
-                                <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                  {supplier.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Search suppliers..."
+                            clearable
+                          />
                         </td>
                         <td className="p-3">
                           <VATTypeSelect
@@ -1967,21 +1942,17 @@ const EnhancedBulkCapture = () => {
                           />
                         </td>
                         <td className="p-3">
-                          <Select
+                          <SearchableSelect
+                            options={bankAccounts.map(account => ({
+                              value: account.id.toString(),
+                              label: account.accountName,
+                              subtext: account.accountNumber || account.bankName || ''
+                            }))}
                             value={entry.bankAccountId?.toString() || ''}
                             onValueChange={(value) => updateExpenseEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose bank..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {bankAccounts.map(account => (
-                                <SelectItem key={account.id} value={account.id.toString()}>
-                                  {account.accountName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Search bank accounts..."
+                            clearable
+                          />
                         </td>
                       </tr>
                     ))}
