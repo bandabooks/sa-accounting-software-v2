@@ -582,6 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create company
       const company = await storage.createCompany({
+        companyId: generateCompanyId(), // Add required companyId field
         name: signupData.companyName,
         displayName: signupData.companyName,
         slug: finalSlug,

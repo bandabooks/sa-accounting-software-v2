@@ -1221,10 +1221,13 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         id: auditLogs.id,
+        companyId: auditLogs.companyId,
         userId: auditLogs.userId,
         action: auditLogs.action,
         resource: auditLogs.resource,
         resourceId: auditLogs.resourceId,
+        oldValues: auditLogs.oldValues,
+        newValues: auditLogs.newValues,
         details: auditLogs.details,
         ipAddress: auditLogs.ipAddress,
         userAgent: auditLogs.userAgent,
@@ -1239,13 +1242,16 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
 
-    // Transform results to include user object with null safety
+    // Transform results to include user object with null safety and match AuditLog interface
     return results.map(result => ({
       id: result.id,
+      companyId: result.companyId || null, // Add companyId field
       userId: result.userId,
       action: result.action,
       resource: result.resource,
       resourceId: result.resourceId,
+      oldValues: result.oldValues || null, // Add oldValues field
+      newValues: result.newValues || null, // Add newValues field
       details: result.details,
       ipAddress: result.ipAddress,
       userAgent: result.userAgent,

@@ -111,7 +111,7 @@ export function AIHealthBanner() {
                     </span>
                   </div>
 
-                  {healthStatus.remainingQuota !== null && (
+                  {healthStatus.remainingQuota !== null && healthStatus.remainingQuota !== undefined && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Remaining Quota:</span>
                       <span>{healthStatus.remainingQuota.toLocaleString()} requests</span>
