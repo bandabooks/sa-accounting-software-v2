@@ -144,6 +144,16 @@ import {
   goodsReceiptItems,
   purchaseRequisitions,
   purchaseRequisitionItems,
+  // Enhanced Inventory schema imports
+  insertProductBrandSchema,
+  insertProductVariantSchema,
+  insertWarehouseSchema,
+  insertProductLotSchema,
+  insertProductSerialSchema,
+  insertStockCountSchema,
+  insertStockCountItemSchema,
+  insertReorderRuleSchema,
+  insertProductBundleSchema,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -1373,6 +1383,41 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     return updatedSequence;
+  }
+
+  // Add missing utility methods
+  async getNextSequence(companyId: number, documentType: string): Promise<NumberSequence> {
+    return this.getNextSequenceNumber(companyId, documentType);
+  }
+
+  async getNextSequenceNumber(companyId: number, documentType: string): Promise<NumberSequence> {
+    // Check if sequence exists for this company and document type
+    const [existingSequence] = await db
+      .select()
+      .from(numberSequences)
+      .where(
+        and(
+          eq(numberSequences.companyId, companyId),
+          eq(numberSequences.documentType, documentType)
+        )
+      );
+
+    if (existingSequence) {
+      // Increment and update the sequence
+      const nextNumber = existingSequence.nextNumber + 1;
+      const [updatedSequence] = await db
+        .update(numberSequences)
+        .set({ 
+          nextNumber, 
+          updatedAt: new Date() 
+        })
+        .where(eq(numberSequences.id, existingSequence.id))
+        .returning();
+      return updatedSequence;
+    } else {
+      // Create new sequence starting at 1
+      return await this.createNumberSequence(companyId, documentType, documentType.toUpperCase());
+    }
   }
 
   // Customers

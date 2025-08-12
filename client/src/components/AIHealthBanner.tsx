@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle, XCircle, Sparkles, Loader2 } from 'lucide-rea
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { queryClient } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AIHealthStatus {
   status: 'healthy' | 'degraded' | 'error';
@@ -18,11 +19,13 @@ interface AIHealthStatus {
 export function AIHealthBanner() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const { data: healthStatus, isLoading, error, refetch } = useQuery<AIHealthStatus>({
     queryKey: ['/api/ai/health'],
     refetchInterval: 60000, // Check every minute
     retry: 1,
+    enabled: isAuthenticated, // Only run query if user is authenticated
   });
 
   // Auto-expand if there's an error
@@ -33,8 +36,8 @@ export function AIHealthBanner() {
     }
   }, [healthStatus?.status]);
 
-  // Don't show if loading or dismissed
-  if (isLoading || isDismissed) return null;
+  // Don't show if loading, not authenticated, or dismissed
+  if (isLoading || authLoading || !isAuthenticated || isDismissed) return null;
 
   // Don't show banner if everything is healthy
   if (healthStatus?.status === 'healthy' && !isExpanded) return null;
