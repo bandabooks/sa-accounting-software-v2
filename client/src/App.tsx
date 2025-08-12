@@ -682,6 +682,11 @@ function AuthenticatedApp() {
             <VATReportsPage />
           </ProtectedRoute>
         </Route>
+        <Route path="/vat-reports">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <VATReportsPage />
+          </ProtectedRoute>
+        </Route>
         <Route path="/vat-preparation">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <VATPreparation />
