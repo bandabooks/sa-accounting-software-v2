@@ -884,7 +884,7 @@ const EnhancedBulkCapture = () => {
     },
     onSuccess: (response: any, variables) => {
       const { entries, type } = variables;
-      const { matches } = response;
+      const matches = response?.matches || [];
       
       if (!Array.isArray(matches)) {
         toast({
@@ -977,7 +977,7 @@ const EnhancedBulkCapture = () => {
       const response = await apiRequest('/api/ai/match-transactions', 'POST', {
         transactions: transactionsToMatch
       });
-      return response.matches || [];
+      return (response as any)?.matches || [];
     },
     onSuccess: (matches: any[], variables) => {
       const { entries, type } = variables;

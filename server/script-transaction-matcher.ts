@@ -84,14 +84,14 @@ export class ScriptTransactionMatcher {
       reasoning: 'Transport and fuel costs subject to 15% VAT'
     },
     
-    // Bank Charges
+    // Bank Charges - Enhanced patterns for FNB App transactions
     {
-      patterns: ['bank charges', 'bank fees', 'transaction fee', 'service fee', 'fnb', 'absa', 'standard bank', 'nedbank'],
+      patterns: ['bank charges', 'bank fees', 'transaction fee', 'service fee', 'fnb', 'absa', 'standard bank', 'nedbank', 'fnb app', 'app rct', 'receipt', 'rct pmt', 'pmt to'],
       accountName: 'Bank Charges',
       vatRate: 15,
       vatType: 'Standard Rate',
       confidence: 0.95,
-      reasoning: 'Bank charges subject to 15% VAT'
+      reasoning: 'Bank charges and app fees subject to 15% VAT'
     },
     
     // Insurance
@@ -245,16 +245,31 @@ export class ScriptTransactionMatcher {
     const description = transaction.description.toLowerCase();
     const patterns = transaction.type === 'expense' ? this.expensePatterns : this.incomePatterns;
     
-    // Find matching patterns
+    // Enhanced pattern matching with word-level search and flexible matching
+    let bestMatch: ScriptMatchResult | null = null;
+    let highestConfidence = 0;
+    
     for (const pattern of patterns) {
-      const matchFound = pattern.patterns.some(p => description.includes(p.toLowerCase()));
+      // Try exact substring match first
+      let matchFound = pattern.patterns.some(p => description.includes(p.toLowerCase()));
+      
+      // If no exact match, try word-by-word matching for more flexibility
+      if (!matchFound) {
+        const descWords = description.split(/\s+/).map(w => w.toLowerCase());
+        matchFound = pattern.patterns.some(p => {
+          const patternWords = p.toLowerCase().split(/\s+/);
+          return patternWords.some(pw => 
+            descWords.some(dw => dw.includes(pw) || pw.includes(dw))
+          );
+        });
+      }
       
       if (matchFound) {
         // Enhanced flexible account matching - try multiple approaches
         let account = this.findMatchingAccount(pattern.accountName, chartOfAccounts);
         
-        if (account) {
-          return {
+        if (account && pattern.confidence > highestConfidence) {
+          bestMatch = {
             accountId: account.id,
             accountName: account.accountName,
             vatRate: pattern.vatRate,
@@ -262,8 +277,13 @@ export class ScriptTransactionMatcher {
             confidence: pattern.confidence,
             reasoning: pattern.reasoning
           };
+          highestConfidence = pattern.confidence;
         }
       }
+    }
+    
+    if (bestMatch) {
+      return bestMatch;
     }
     
     // Fallback to default accounts
