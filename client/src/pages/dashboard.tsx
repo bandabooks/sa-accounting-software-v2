@@ -106,7 +106,8 @@ export default function Dashboard() {
   };
 
   const getRevenueGrowth = () => {
-    const currentRevenue = parseFloat(dashboardStats.totalRevenue);
+    const currentRevenue = parseFloat(dashboardStats.totalRevenue) || 0;
+    if (currentRevenue === 0) return "0.0";
     const lastMonthRevenue = currentRevenue * 0.85; // Simulated growth
     const growth = ((currentRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
     return growth.toFixed(1);
@@ -178,7 +179,7 @@ export default function Dashboard() {
                   <div className="text-blue-100 text-xs font-medium mb-1">Total Revenue</div>
                   <div className="flex items-center justify-center gap-1 text-green-300">
                     <ArrowUpRight className="h-3 w-3" />
-                    <span className="text-xs font-medium">+NaN%</span>
+                    <span className="text-xs font-medium">+{getRevenueGrowth()}%</span>
                   </div>
                 </div>
                 
