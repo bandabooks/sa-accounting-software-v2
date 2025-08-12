@@ -12743,22 +12743,6 @@ Format your response as a JSON array of tip objects with "title", "description",
   // =============================================
   // BULK CAPTURE SYSTEM API ROUTES
   // =============================================
-  
-  // Get next bulk capture entry number
-  app.get('/api/bulk-capture/next-number/:type', authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const type = req.params.type as 'income' | 'expense';
-      if (type !== 'income' && type !== 'expense') {
-        return res.status(400).json({ message: 'Invalid type. Must be income or expense' });
-      }
-      
-      const nextNumber = await storage.getNextBulkCaptureNumber(req.user.companyId, type);
-      res.json({ nextNumber });
-    } catch (error) {
-      console.error('Failed to get next bulk capture number:', error);
-      res.status(500).json({ message: 'Failed to generate entry number' });
-    }
-  });
 
   app.get("/api/bulk-capture/sessions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

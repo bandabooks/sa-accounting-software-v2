@@ -715,16 +715,6 @@ const EnhancedBulkCapture = () => {
   // Save expense entries mutation - using journal entry logic
   const saveExpensesMutation = useMutation({
     mutationFn: async () => {
-      // Get the next bulk capture number
-      const numberResponse = await fetch('/api/bulk-capture/next-number/expense', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-      const numberData = await numberResponse.json();
-      const entryNumber = numberData.nextNumber;
-      
       // Find default Cost of Goods Sold account for entries without an expense account
       const expenseAccounts = chartOfAccounts.filter(account => 
         account.accountType === 'Expense'
@@ -759,28 +749,14 @@ const EnhancedBulkCapture = () => {
 
       const responses = [];
       
-      for (let i = 0; i < validEntries.length; i++) {
-        const entry = validEntries[i];
+      for (const entry of validEntries) {
         const amount = parseFloat(entry.amount);
         const vatAmount = parseFloat(entry.vatAmount) || 0;
         const netAmount = amount - vatAmount;
         
-        // Get a new entry number for each entry if not the first one
-        let currentEntryNumber = entryNumber;
-        if (i > 0) {
-          const nextNumResponse = await fetch('/api/bulk-capture/next-number/expense', {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include'
-          });
-          const nextNumData = await nextNumResponse.json();
-          currentEntryNumber = nextNumData.nextNumber;
-        }
-        
         const response = await apiRequest('/api/journal-entries', 'POST', {
           entry: {
-            entryNumber: currentEntryNumber,
+            entryNumber: `bulk-exp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             transactionDate: entry.transactionDate,
             description: entry.description,
             reference: entry.reference || '',
@@ -874,16 +850,6 @@ const EnhancedBulkCapture = () => {
   // Save income entries mutation - using journal entry logic
   const saveIncomesMutation = useMutation({
     mutationFn: async () => {
-      // Get the next bulk capture number for income
-      const numberResponse = await fetch('/api/bulk-capture/next-number/income', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-      const numberData = await numberResponse.json();
-      const entryNumber = numberData.nextNumber;
-      
       // Find default Sales Revenue account for entries without an income account
       const revenueAccounts = chartOfAccounts.filter(account => account.accountType === 'Revenue');
       const salesRevenueAccount = revenueAccounts.find(account => 
@@ -913,28 +879,14 @@ const EnhancedBulkCapture = () => {
 
       const responses = [];
       
-      for (let i = 0; i < validEntries.length; i++) {
-        const entry = validEntries[i];
+      for (const entry of validEntries) {
         const amount = parseFloat(entry.amount);
         const vatAmount = parseFloat(entry.vatAmount) || 0;
         const netAmount = amount - vatAmount;
         
-        // Get a new entry number for each entry if not the first one
-        let currentEntryNumber = entryNumber;
-        if (i > 0) {
-          const nextNumResponse = await fetch('/api/bulk-capture/next-number/income', {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include'
-          });
-          const nextNumData = await nextNumResponse.json();
-          currentEntryNumber = nextNumData.nextNumber;
-        }
-        
         const response = await apiRequest('/api/journal-entries', 'POST', {
           entry: {
-            entryNumber: currentEntryNumber,
+            entryNumber: `bulk-inc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             transactionDate: entry.transactionDate,
             description: entry.description,
             reference: entry.reference || '',
