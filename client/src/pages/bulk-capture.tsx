@@ -1637,10 +1637,10 @@ const EnhancedBulkCapture = () => {
           </div>
 
           {/* Income Entry Table */}
-          <Card>
+          <Card className="shadow-lg">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full border-collapse">
                   <thead className="bg-green-700">
                     <tr>
                       <th className="text-left p-3 text-sm font-medium text-white">
@@ -1657,18 +1657,20 @@ const EnhancedBulkCapture = () => {
                   </thead>
                   <tbody>
                     {incomeEntries.map((entry, index) => (
-                      <tr key={index} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                        autoMatchedEntries.has(index) ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200' : ''
+                      <tr key={index} className={`border-b-2 border-gray-300 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors ${
+                        index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'
+                      } ${
+                        autoMatchedEntries.has(index) ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-300' : ''
                       }`}>
-                        <td className="p-3">
+                        <td className="p-4 border-r border-gray-200 dark:border-gray-600">
                           <Input
                             type="date"
                             value={entry.transactionDate}
                             onChange={(e) => updateIncomeEntry(index, 'transactionDate', e.target.value)}
-                            className="w-full"
+                            className="w-full shadow-sm"
                           />
                         </td>
-                        <td className="p-3">
+                        <td className="p-4 border-r border-gray-200 dark:border-gray-600">
                           <SearchableSelect
                             options={chartOfAccounts
                               .filter(account => account.accountType === 'Revenue')
@@ -1683,13 +1685,13 @@ const EnhancedBulkCapture = () => {
                             clearable
                           />
                         </td>
-                        <td className="p-3">
+                        <td className="p-4 border-r border-gray-200 dark:border-gray-600">
                           <div className="flex items-center space-x-2">
                             <Textarea
                               value={entry.description}
                               onChange={(e) => updateIncomeEntry(index, 'description', e.target.value)}
                               placeholder="Revenue description..."
-                              className="w-full min-h-[2.5rem] resize-y"
+                              className="w-full min-h-[2.5rem] resize-y shadow-sm"
                               rows={1}
                             />
                             {autoMatchedEntries.has(index) && (
@@ -1700,17 +1702,17 @@ const EnhancedBulkCapture = () => {
                             )}
                           </div>
                         </td>
-                        <td className="p-3">
+                        <td className="p-4 border-r border-gray-200 dark:border-gray-600">
                           <Input
                             type="number"
                             step="0.01"
                             value={entry.amount}
                             onChange={(e) => updateIncomeEntry(index, 'amount', e.target.value)}
                             placeholder="0.00"
-                            className="w-full"
+                            className="w-full shadow-sm"
                           />
                         </td>
-                        <td className="p-3">
+                        <td className="p-4 border-r border-gray-200 dark:border-gray-600">
                           <SearchableSelect
                             options={customers.map(customer => ({
                               value: customer.id.toString(),
@@ -1723,14 +1725,14 @@ const EnhancedBulkCapture = () => {
                             clearable
                           />
                         </td>
-                        <td className="p-3">
+                        <td className="p-4 border-r border-gray-200 dark:border-gray-600">
                           <VATTypeSelect
                             value={entry.vatTypeId.toString()}
                             onValueChange={(value) => updateIncomeEntry(index, 'vatTypeId', parseInt(value))}
                             placeholder="VAT..."
                           />
                         </td>
-                        <td className="p-3">
+                        <td className="p-4">
                           <SearchableSelect
                             options={bankAccounts.map(account => ({
                               value: account.id.toString(),
@@ -1882,10 +1884,10 @@ const EnhancedBulkCapture = () => {
           </div>
 
           {/* Expense Entry Table */}
-          <Card>
+          <Card className="shadow-lg">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full border-collapse">
                   <thead className="bg-slate-800">
                     <tr>
                       <th className="text-left p-3 text-sm font-medium text-white">
@@ -1902,8 +1904,10 @@ const EnhancedBulkCapture = () => {
                   </thead>
                   <tbody>
                     {expenseEntries.map((entry, index) => (
-                      <tr key={index} className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                        autoMatchedEntries.has(index) ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200' : ''
+                      <tr key={index} className={`border-b-2 border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors ${
+                        index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'
+                      } ${
+                        autoMatchedEntries.has(index) ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-300' : ''
                       }`}>
                         <td className="p-3">
                           <Input
