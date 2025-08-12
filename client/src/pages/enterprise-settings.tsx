@@ -40,7 +40,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import SecuritySettings from '@/components/enterprise/SecuritySettings';
 import NotificationSettings from '@/components/enterprise/NotificationSettings';
-import SMSSettings from '@/components/enterprise/SMSSettings';
 import OAuthSettings from '@/components/enterprise/OAuthSettings';
 import AISettings from '@/components/enterprise/AISettings';
 import PaymentSettings from '@/components/enterprise/PaymentSettings';
@@ -260,7 +259,7 @@ export default function EnterpriseSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="security" className="flex items-center space-x-2">
             <Shield className="h-4 w-4" />
             <span>Security</span>
@@ -268,10 +267,6 @@ export default function EnterpriseSettings() {
           <TabsTrigger value="notifications" className="flex items-center space-x-2">
             <Bell className="h-4 w-4" />
             <span>Notifications</span>
-          </TabsTrigger>
-          <TabsTrigger value="sms" className="flex items-center space-x-2">
-            <MessageSquare className="h-4 w-4" />
-            <span>SMS</span>
           </TabsTrigger>
           <TabsTrigger value="oauth" className="flex items-center space-x-2">
             <Globe className="h-4 w-4" />
@@ -283,7 +278,7 @@ export default function EnterpriseSettings() {
           </TabsTrigger>
           <TabsTrigger value="payment" className="flex items-center space-x-2">
             <Key className="h-4 w-4" />
-            <span>Payment</span>
+            <span>Payment Settings</span>
           </TabsTrigger>
           <TabsTrigger value="audit" className="flex items-center space-x-2">
             <Activity className="h-4 w-4" />
@@ -305,11 +300,6 @@ export default function EnterpriseSettings() {
             notificationSettings={notificationSettings}
             systemConfig={systemConfig}
           />
-        </TabsContent>
-
-        {/* SMS Tab */}
-        <TabsContent value="sms">
-          <SMSSettings />
         </TabsContent>
 
         {/* OAuth Tab */}

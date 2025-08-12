@@ -2300,8 +2300,6 @@ export const companySettings = pgTable("company_settings", {
   vatRegistered: boolean("vat_registered").default(false),
   vatPeriod: varchar("vat_period", { length: 20 }).default("monthly"), // monthly, bi-monthly
   vatSubmissionDate: integer("vat_submission_date").default(25), // Day of month
-  // Payment Settings
-  liveMode: boolean("live_mode").default(false), // Toggle for live payment processing
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -3238,7 +3236,6 @@ export const bankAccounts = pgTable("bank_accounts", {
   currency: text("currency").notNull().default("ZAR"),
   openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0.00"),
   currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).default("0.00"),
-  isDuplicate: boolean("is_duplicate").default(false),
   reconcileBalance: decimal("reconcile_balance", { precision: 15, scale: 2 }).default("0.00"),
   lastReconciled: timestamp("last_reconciled"),
   chartAccountId: integer("chart_account_id").references(() => chartOfAccounts.id),

@@ -144,16 +144,6 @@ import {
   goodsReceiptItems,
   purchaseRequisitions,
   purchaseRequisitionItems,
-  // Enhanced Inventory schema imports
-  insertProductBrandSchema,
-  insertProductVariantSchema,
-  insertWarehouseSchema,
-  insertProductLotSchema,
-  insertProductSerialSchema,
-  insertStockCountSchema,
-  insertStockCountItemSchema,
-  insertReorderRuleSchema,
-  insertProductBundleSchema,
   type Customer, 
   type InsertCustomer,
   type Invoice,
@@ -1231,13 +1221,10 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         id: auditLogs.id,
-        companyId: auditLogs.companyId,
         userId: auditLogs.userId,
         action: auditLogs.action,
         resource: auditLogs.resource,
         resourceId: auditLogs.resourceId,
-        oldValues: auditLogs.oldValues,
-        newValues: auditLogs.newValues,
         details: auditLogs.details,
         ipAddress: auditLogs.ipAddress,
         userAgent: auditLogs.userAgent,
@@ -1252,16 +1239,13 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
 
-    // Transform results to include user object with null safety and match AuditLog interface
+    // Transform results to include user object with null safety
     return results.map(result => ({
       id: result.id,
-      companyId: result.companyId || null, // Add companyId field
       userId: result.userId,
       action: result.action,
       resource: result.resource,
       resourceId: result.resourceId,
-      oldValues: result.oldValues || null, // Add oldValues field
-      newValues: result.newValues || null, // Add newValues field
       details: result.details,
       ipAddress: result.ipAddress,
       userAgent: result.userAgent,
@@ -1383,41 +1367,6 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     return updatedSequence;
-  }
-
-  // Add missing utility methods
-  async getNextSequence(companyId: number, documentType: string): Promise<NumberSequence> {
-    return this.getNextSequenceNumber(companyId, documentType);
-  }
-
-  async getNextSequenceNumber(companyId: number, documentType: string): Promise<NumberSequence> {
-    // Check if sequence exists for this company and document type
-    const [existingSequence] = await db
-      .select()
-      .from(numberSequences)
-      .where(
-        and(
-          eq(numberSequences.companyId, companyId),
-          eq(numberSequences.documentType, documentType)
-        )
-      );
-
-    if (existingSequence) {
-      // Increment and update the sequence
-      const nextNumber = existingSequence.nextNumber + 1;
-      const [updatedSequence] = await db
-        .update(numberSequences)
-        .set({ 
-          nextNumber, 
-          updatedAt: new Date() 
-        })
-        .where(eq(numberSequences.id, existingSequence.id))
-        .returning();
-      return updatedSequence;
-    } else {
-      // Create new sequence starting at 1
-      return await this.createNumberSequence(companyId, documentType, documentType.toUpperCase());
-    }
   }
 
   // Customers

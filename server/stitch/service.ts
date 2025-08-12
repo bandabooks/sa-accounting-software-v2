@@ -85,16 +85,16 @@ export class StitchService {
         // Create new bank account
         const bankAccountData: InsertBankAccount = {
           companyId: options.companyId,
-          accountName: stitchAccount.name || stitchAccount.officialName || 'Business Account',
-          bankName: stitchAccount.institution?.name || stitchAccount.institutionName || 'Bank',
-          accountNumber: this.maskAccountNumber(stitchAccount.accountNumber || '1234567890'),
+          accountName: stitchAccount.name || stitchAccount.officialName,
+          bankName: stitchAccount.institution.name,
+          accountNumber: this.maskAccountNumber(stitchAccount.accountNumber),
           branchCode: null,
-          accountType: this.mapAccountType(stitchAccount.accountType || stitchAccount.type || 'business'),
-          currency: stitchAccount.currency || 'ZAR',
-          currentBalance: stitchAccount.balance?.quantity || stitchAccount.balance || 0,
+          accountType: this.mapAccountType(stitchAccount.accountType),
+          currency: stitchAccount.currency,
+          currentBalance: stitchAccount.balance.quantity,
           externalProvider: 'stitch',
           providerAccountId: stitchAccount.id,
-          institutionName: stitchAccount.institution?.name || stitchAccount.institutionName || 'Bank',
+          institutionName: stitchAccount.institution.name,
           lastSyncAt: new Date(),
         };
 

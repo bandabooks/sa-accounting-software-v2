@@ -92,11 +92,8 @@ export default function PaymentModal({
   // Update amount when remaining amount changes
   useEffect(() => {
     if (isOpen) {
-      // Set first valid bank account as default
-      console.log("Available bank accounts:", bankAccounts);
-      const validBankAccounts = bankAccounts.filter(account => account && account.id);
-      const defaultBankAccount = validBankAccounts.length > 0 ? validBankAccounts[0].id.toString() : "";
-      console.log("Setting default bank account:", defaultBankAccount, "from accounts:", validBankAccounts);
+      // Set first bank account as default
+      const defaultBankAccount = bankAccounts.length > 0 ? bankAccounts[0]?.id?.toString() || "" : "";
       
       form.reset({
         amount: remainingAmount,
@@ -111,13 +108,6 @@ export default function PaymentModal({
   const onSubmit = async (data: PaymentFormData) => {
     setIsSubmitting(true);
     try {
-      console.log("Submitting payment data:", {
-        ...data,
-        bankAccountId: parseInt(data.bankAccountId),
-        invoiceId,
-        status: "completed",
-      });
-      
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: {
@@ -132,9 +122,7 @@ export default function PaymentModal({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Payment error response:", errorData);
-        throw new Error(errorData.message || "Failed to record payment");
+        throw new Error("Failed to record payment");
       }
 
       // Reset form and notify parent with payment amount
