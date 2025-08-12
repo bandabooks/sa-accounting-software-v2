@@ -14857,9 +14857,9 @@ export class DatabaseStorage implements IStorage {
           apiKey: settings.apiKey || '',
           maxTokens: settings.maxTokens || 4096,
           temperature: settings.temperature?.toString() || '0.70',
-          contextSharing: settings.contextSharing !== false,
-          conversationHistory: settings.conversationHistory !== false,
-          suggestions: settings.suggestions !== false,
+          contextSharing: settings.contextSharing === true,
+          conversationHistory: settings.conversationHistory === true,
+          suggestions: settings.suggestions === true,
           updatedAt: new Date()
         })
         .onConflictDoUpdate({
@@ -14871,9 +14871,9 @@ export class DatabaseStorage implements IStorage {
             apiKey: settings.apiKey || '',
             maxTokens: settings.maxTokens || 4096,
             temperature: settings.temperature?.toString() || '0.70',
-            contextSharing: settings.contextSharing !== false,
-            conversationHistory: settings.conversationHistory !== false,
-            suggestions: settings.suggestions !== false,
+            contextSharing: settings.contextSharing === true,
+            conversationHistory: settings.conversationHistory === true,
+            suggestions: settings.suggestions === true,
             updatedAt: new Date()
           }
         });

@@ -289,16 +289,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Company ID required" });
       }
 
+      // Get current settings first
+      const currentSettings = await storage.getAiSettings(companyId);
+      
+      // Only update the fields that are explicitly provided
       const settings = {
-        enabled: req.body.enabled === true,
-        provider: req.body.provider || 'anthropic',
-        contextSharing: req.body.contextSharing !== false,
-        conversationHistory: req.body.conversationHistory !== false,
-        suggestions: req.body.suggestions !== false,
-        apiKey: req.body.apiKey || '',
-        model: req.body.model || 'claude-3-5-sonnet-20241022',
-        maxTokens: req.body.maxTokens || 4096,
-        temperature: req.body.temperature || 0.7
+        enabled: req.body.enabled !== undefined ? req.body.enabled === true : currentSettings.enabled,
+        provider: req.body.provider !== undefined ? req.body.provider : currentSettings.provider,
+        contextSharing: req.body.contextSharing !== undefined ? req.body.contextSharing === true : currentSettings.contextSharing,
+        conversationHistory: req.body.conversationHistory !== undefined ? req.body.conversationHistory === true : currentSettings.conversationHistory,
+        suggestions: req.body.suggestions !== undefined ? req.body.suggestions === true : currentSettings.suggestions,
+        apiKey: req.body.apiKey !== undefined ? req.body.apiKey : currentSettings.apiKey,
+        model: req.body.model !== undefined ? req.body.model : currentSettings.model,
+        maxTokens: req.body.maxTokens !== undefined ? req.body.maxTokens : currentSettings.maxTokens,
+        temperature: req.body.temperature !== undefined ? req.body.temperature : currentSettings.temperature
       };
 
       await storage.saveAiSettings(companyId, settings);
