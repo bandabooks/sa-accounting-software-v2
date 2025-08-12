@@ -88,7 +88,8 @@ CRITICAL RULES:
 
       const content = response.content[0];
       if (content.type === 'text') {
-        return this.parseAIResponse(content.text, request.transactions);
+        const matches = this.parseAIResponse(content.text, request.transactions);
+        return Array.isArray(matches) ? matches : [];
       }
       throw new Error('Unexpected response format from AI');
     } catch (error) {

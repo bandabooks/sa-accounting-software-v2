@@ -13704,6 +13704,70 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // Script-based Auto-Match endpoint for bulk capture transactions
+  app.post('/api/script/match-transactions', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: 'Company ID is required' });
+      }
+
+      const { transactions } = req.body;
+      if (!Array.isArray(transactions) || transactions.length === 0) {
+        return res.status(400).json({ error: 'Transactions array is required' });
+      }
+
+      // Get chart of accounts
+      const chartOfAccounts = await storage.getChartOfAccounts(companyId);
+
+      // Script-based matching
+      const { ScriptTransactionMatcher } = await import('./script-transaction-matcher.js');
+      const matcher = new ScriptTransactionMatcher();
+      
+      const transactionsForMatching = transactions.map(t => ({
+        id: t.id,
+        description: t.description,
+        amount: t.amount,
+        type: t.type
+      }));
+
+      const results = await matcher.matchTransactions(
+        transactionsForMatching,
+        chartOfAccounts.map(acc => ({
+          id: acc.id,
+          accountName: acc.accountName,
+          accountType: acc.accountType
+        }))
+      );
+
+      const matches = results
+        .filter(result => result.match !== null)
+        .map(result => ({
+          transactionId: result.transaction.id,
+          description: result.transaction.description,
+          suggestedAccount: result.match!.accountName,
+          accountId: result.match!.accountId,
+          vatRate: result.match!.vatRate,
+          vatType: result.match!.vatType,
+          confidence: result.match!.confidence,
+          reasoning: result.match!.reasoning
+        }));
+
+      res.json({
+        success: true,
+        matches: matches,
+        matchedCount: matches.length,
+        totalCount: transactions.length
+      });
+    } catch (error) {
+      console.error('Script matching error:', error);
+      res.status(500).json({ 
+        error: 'Failed to match transactions', 
+        details: error.message 
+      });
+    }
+  });
+
   // Auto-detect VAT Rate
   app.post('/api/ai/detect-vat', authenticate, async (req: AuthenticatedRequest, res) => {
     try {

@@ -867,22 +867,117 @@ const EnhancedBulkCapture = () => {
     },
   });
 
-  // AI Auto-Matching Mutation
+  // Script-based Auto-Matching Mutation (Primary Solution)
+  const scriptAutoMatchMutation = useMutation({
+    mutationFn: async ({ entries, type }: { entries: (ExpenseEntry | IncomeEntry)[], type: 'expense' | 'income' }): Promise<any> => {
+      const transactionsToMatch = entries.map((entry, index) => ({
+        id: index,
+        description: entry.description,
+        amount: parseFloat(entry.amount),
+        type: type
+      }));
+
+      const response = await apiRequest('/api/script/match-transactions', 'POST', {
+        transactions: transactionsToMatch
+      });
+      return response;
+    },
+    onSuccess: (response: any, variables) => {
+      const { entries, type } = variables;
+      const { matches } = response;
+      
+      if (!Array.isArray(matches)) {
+        toast({
+          title: "Script Auto-Match Failed", 
+          description: "Invalid response format from script matcher",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Apply script-based suggestions to entries
+      matches.forEach((match: any) => {
+        const index = match.transactionId;
+        if (index >= 0 && index < entries.length && match.confidence > 0.6) {
+          const updatedEntry = { ...entries[index] };
+          
+          if (type === 'expense') {
+            const expenseEntry = updatedEntry as ExpenseEntry;
+            if (match.accountId) {
+              expenseEntry.categoryId = match.accountId;
+            }
+            if (match.vatRate !== undefined) {
+              expenseEntry.vatRate = match.vatRate.toString();
+              expenseEntry.vatTypeId = match.vatRate === 15 ? 1 : 
+                                       match.vatRate === 0 ? 2 : 1;
+              // Recalculate VAT amounts
+              const amount = parseFloat(expenseEntry.amount);
+              const vatAmount = calculateVATAmount(amount, match.vatRate, true);
+              const netAmount = calculateNetAmount(amount, match.vatRate, true);
+              expenseEntry.vatAmount = vatAmount.toFixed(2);
+              expenseEntry.netAmount = netAmount.toFixed(2);
+            }
+            
+            setExpenseEntries(prev => {
+              const newEntries = [...prev];
+              newEntries[index] = expenseEntry;
+              return newEntries;
+            });
+          } else {
+            const incomeEntry = updatedEntry as IncomeEntry;
+            if (match.accountId) {
+              incomeEntry.incomeAccountId = match.accountId;
+            }
+            if (match.vatRate !== undefined) {
+              incomeEntry.vatRate = match.vatRate.toString();
+              incomeEntry.vatTypeId = match.vatRate === 15 ? 1 : 
+                                      match.vatRate === 0 ? 2 : 1;
+              // Recalculate VAT amounts
+              const amount = parseFloat(incomeEntry.amount);
+              const vatAmount = calculateVATAmount(amount, match.vatRate, true);
+              const netAmount = calculateNetAmount(amount, match.vatRate, true);
+              incomeEntry.vatAmount = vatAmount.toFixed(2);
+              incomeEntry.netAmount = netAmount.toFixed(2);
+            }
+            
+            setIncomeEntries(prev => {
+              const newEntries = [...prev];
+              newEntries[index] = incomeEntry;
+              return newEntries;
+            });
+          }
+        }
+      });
+
+      toast({
+        title: "Script Auto-Match Complete",
+        description: `Successfully matched ${matches.length} out of ${entries.length} transactions`,
+        variant: "success" as any,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Script Auto-Match Failed",
+        description: error.message || "Failed to auto-match transactions",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // AI Auto-Matching Mutation (Secondary Option)
   const aiAutoMatchMutation = useMutation({
     mutationFn: async ({ entries, type }: { entries: (ExpenseEntry | IncomeEntry)[], type: 'expense' | 'income' }): Promise<any[]> => {
       const transactionsToMatch = entries.map((entry, index) => ({
         id: index,
         description: entry.description,
         amount: parseFloat(entry.amount),
-        type: type === 'expense' ? 'debit' : 'credit',
-        date: entry.transactionDate
+        type: type
       }));
 
       const response = await apiRequest('/api/ai/match-transactions', 'POST', {
-        transactions: transactionsToMatch,
-        companyId: 1 // This should come from auth context
+        transactions: transactionsToMatch
       });
-      return response.json ? await response.json() : response || [];
+      return response.matches || [];
     },
     onSuccess: (matches: any[], variables) => {
       const { entries, type } = variables;
@@ -951,7 +1046,26 @@ const EnhancedBulkCapture = () => {
     },
   });
 
-  // Auto-match current entries
+  // Script-based auto-match handler (Primary)
+  const handleScriptAutoMatch = useCallback(async () => {
+    const currentEntries = activeTab === 'expense' ? expenseEntries : incomeEntries;
+    
+    if (currentEntries.length === 0) {
+      toast({
+        title: "No Transactions",
+        description: "Add some transactions first to use auto-matching",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    scriptAutoMatchMutation.mutate({ 
+      entries: currentEntries, 
+      type: activeTab as 'expense' | 'income'
+    });
+  }, [activeTab, expenseEntries, incomeEntries, scriptAutoMatchMutation, toast]);
+
+  // AI-based auto-match handler (Secondary)
   const handleAiAutoMatch = useCallback(async () => {
     if (isAiMatching) return;
     
@@ -1434,6 +1548,28 @@ const EnhancedBulkCapture = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Script Auto-Match Button (Primary) */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleScriptAutoMatch}
+                disabled={scriptAutoMatchMutation.isPending || incomeEntries.length === 0}
+                className="bg-gradient-to-r from-green-500 to-teal-500 text-white border-0 hover:from-green-600 hover:to-teal-600"
+              >
+                {scriptAutoMatchMutation.isPending ? (
+                  <>
+                    <Zap className="w-4 h-4 mr-2 animate-pulse" />
+                    Matching...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Script Auto-Match
+                  </>
+                )}
+              </Button>
+
+              {/* AI Auto-Match Button (Secondary) */}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -1673,6 +1809,28 @@ const EnhancedBulkCapture = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Script Auto-Match Button (Primary) */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleScriptAutoMatch}
+                disabled={scriptAutoMatchMutation.isPending || expenseEntries.length === 0}
+                className="bg-gradient-to-r from-green-500 to-teal-500 text-white border-0 hover:from-green-600 hover:to-teal-600"
+              >
+                {scriptAutoMatchMutation.isPending ? (
+                  <>
+                    <Zap className="w-4 h-4 mr-2 animate-pulse" />
+                    Matching...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Script Auto-Match
+                  </>
+                )}
+              </Button>
+
+              {/* AI Auto-Match Button (Secondary) */}
               <Button 
                 variant="outline" 
                 size="sm" 
