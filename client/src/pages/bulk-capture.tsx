@@ -1432,58 +1432,6 @@ const EnhancedBulkCapture = () => {
 
         {/* Income Tab */}
         <TabsContent value="income" className="space-y-6">
-          {/* Transaction Matrix Card */}
-          <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-indigo-900 flex items-center">
-                <Calculator className="w-5 h-5 mr-2" />
-                Live Transaction Matrix
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-6 text-center">
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-green-600">{transactionCounts.totalToday}</div>
-                  <div className="text-sm text-gray-600">Total Today</div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 rounded-full transition-all duration-300"
-                      style={{ width: `${transactionCounts.totalToday > 0 ? 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-blue-600">{transactionCounts.finalizedToday}</div>
-                  <div className="text-sm text-gray-600">Saved Entries</div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${transactionCounts.totalToday > 0 ? (transactionCounts.finalizedToday / transactionCounts.totalToday) * 100 : 0}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-orange-600">{transactionCounts.draftToday}</div>
-                  <div className="text-sm text-gray-600">Draft Entries</div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-orange-500 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${transactionCounts.totalToday > 0 ? (transactionCounts.draftToday / transactionCounts.totalToday) * 100 : 0}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 text-center">
-                <Badge variant="outline" className="text-indigo-700 border-indigo-300">
-                  Auto-refreshes every 30 seconds
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
