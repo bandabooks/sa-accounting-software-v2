@@ -31,13 +31,13 @@ Preferred communication style: Simple, everyday language.
 - ✅ **Invoice Editing Database Persistence Fix (Aug 2025)**: Completely resolved critical issue where invoice item modifications (quantity, price, descriptions) were only updating UI calculations but not persisting to database. Enhanced backend API to handle both invoice header and items updates, implemented smart product matching for edit mode, and ensured all item changes now properly save to database. Invoice editing now maintains full data integrity across sessions.
 - ✅ **Expense Metrics Display Fix (Aug 2025)**: Resolved critical issue where expense metrics cards were showing R 0.00 instead of actual financial data. Identified and fixed dual expense page architecture (expenses.tsx vs expenses-standalone.tsx) where routing was using ExpensesStandalone component. Updated correct component to display proper values: Total Expenses (R 12,000.00), This Month (R 1,200.00), Unpaid Expenses (R 0.00), and Average Expense (R 4,000.00).
 
-**Current Status**: ✅ **Comprehensive Code Deduplication Audit (Aug 12, 2025)** - Successfully completed major code deduplication initiative:
-- ✅ Created centralized `utils.ts` with enhanced formatCurrency, formatDate, formatPercentage, formatNumber, getStatusColor, and getStatusDisplayName functions
-- ✅ Refactored `utils-invoice.ts` to re-export from canonical utils.ts, eliminating function duplication
-- ✅ Fixed aging-reports.tsx page creation and added proper /reports/aging route
-- ✅ Created AIServiceBase class to consolidate duplicate AI service methods (generateBusinessInsights, generateComplianceGuidance, generateFinancialAnalysis, generateTaxOptimization)
-- ✅ Identified and started refactoring duplicate dashboard stats retrieval logic across multiple modules
-- 🔄 Next targets: Complete AI service refactoring, consolidate dashboard stats methods, deduplicate permission/role data
+**Current Status**: ✅ **Reference Field Management Enhancement (Jan 16, 2025)** - Successfully implemented reference field tracking for supplier invoices:
+- ✅ Added reference field columns to both expense and income tables in Bulk Capture UI
+- ✅ Implemented real-time duplicate reference detection with visual highlighting (red border)
+- ✅ Added validation logic: uppercase, alphanumeric with dash/dot/slash, max 64 chars
+- ✅ Automatic duplicate checking per supplier with toast notifications
+- ✅ Reference field properly persists through journal entry creation
+- ✅ Both expense and income entries now support reference tracking
 
 **Next Phase**: CRM Professional Practice Management Transformation (Priority #1) - Transform CRM into central hub for customer communication and practice management targeting South African tax practitioners, accountants, auditors, and CAs. Implement document request workflows, engagement letter automation, contract module integration, and professional workflow simplification similar to Karbonhq.com platform standards.
 

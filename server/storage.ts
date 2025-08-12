@@ -2979,6 +2979,23 @@ export class DatabaseStorage implements IStorage {
       ));
     return expense;
   }
+  
+  // Check for duplicate reference per supplier
+  async getExpenseBySupplierReference(companyId: number, supplierId: number, reference: string): Promise<Expense | undefined> {
+    if (!reference || reference.trim() === '') {
+      return undefined;
+    }
+    
+    const [expense] = await db
+      .select()
+      .from(expenses)
+      .where(and(
+        eq(expenses.companyId, companyId),
+        eq(expenses.supplierId, supplierId),
+        eq(expenses.reference, reference)
+      ));
+    return expense;
+  }
 
   // Generate internal expense reference number
   async generateExpenseReference(companyId: number): Promise<string> {

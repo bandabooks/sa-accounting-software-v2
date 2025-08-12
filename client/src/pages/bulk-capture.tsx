@@ -135,6 +135,9 @@ const EnhancedBulkCapture = () => {
   // Edit/Delete states
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  
+  // Track duplicate references
+  const [duplicateReferences, setDuplicateReferences] = useState<Set<string>>(new Set());
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -224,6 +227,25 @@ const EnhancedBulkCapture = () => {
       .sort((a, b) => new Date(b.createdAt || b.transactionDate).getTime() - new Date(a.createdAt || a.transactionDate).getTime())
       .slice(0, 50); // Show up to 50 entries from today
   }, [allEntries]);
+  
+  // Check for duplicate references when expense entries change
+  useEffect(() => {
+    const referenceMap = new Map<string, number>();
+    const duplicates = new Set<string>();
+    
+    expenseEntries.forEach((entry, index) => {
+      if (entry.reference && entry.supplierId) {
+        const key = `${entry.supplierId}-${entry.reference}`;
+        if (referenceMap.has(key)) {
+          duplicates.add(key);
+        } else {
+          referenceMap.set(key, index);
+        }
+      }
+    });
+    
+    setDuplicateReferences(duplicates);
+  }, [expenseEntries]);
 
   // Initialize 10 default expense entries
   const initializeExpenseEntries = useCallback(() => {
@@ -414,10 +436,28 @@ const EnhancedBulkCapture = () => {
         entry.netAmount = calculations.netAmount;
       }
       
+      // Check for duplicate reference when reference or supplier changes
+      if ((field === 'reference' || field === 'supplierId') && entry.reference && entry.supplierId) {
+        const isDuplicate = updated.some((e, i) => 
+          i !== index && 
+          e.supplierId === entry.supplierId && 
+          e.reference === entry.reference &&
+          e.reference !== ''
+        );
+        
+        if (isDuplicate) {
+          toast({
+            title: "Duplicate Reference",
+            description: "This reference number already exists for this supplier. Please enter a unique reference.",
+            variant: "destructive",
+          });
+        }
+      }
+      
       updated[index] = entry;
       return updated;
     });
-  }, [calculateVAT]);
+  }, [calculateVAT, toast]);
 
   // Update income entry field
   const updateIncomeEntry = useCallback((index: number, field: keyof IncomeEntry, value: string | number) => {
@@ -1745,6 +1785,7 @@ const EnhancedBulkCapture = () => {
                       </th>
                       <th className="text-left p-3 text-sm font-medium text-white">Income Account</th>
                       <th className="text-left p-3 text-sm font-medium text-white">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Reference</th>
                       <th className="text-left p-3 text-sm font-medium text-white">Amount (R)</th>
                       <th className="text-left p-3 text-sm font-medium text-white">Client</th>
                       <th className="text-left p-3 text-sm font-medium text-white">VAT Treatment</th>
@@ -1808,6 +1849,14 @@ const EnhancedBulkCapture = () => {
                               </Badge>
                             )}
                           </div>
+                        </td>
+                        <td className="p-4 border-r border-gray-200 dark:border-gray-600">
+                          <Input
+                            value={entry.reference || ''}
+                            onChange={(e) => updateIncomeEntry(index, 'reference', e.target.value)}
+                            placeholder="Invoice/Ref #"
+                            className="w-full shadow-sm"
+                          />
                         </td>
                         <td className="p-4 border-r border-gray-200 dark:border-gray-600">
                           <Input
@@ -1989,6 +2038,7 @@ const EnhancedBulkCapture = () => {
                       </th>
                       <th className="text-left p-3 text-sm font-medium text-white">Expense Account</th>
                       <th className="text-left p-3 text-sm font-medium text-white">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-white">Reference</th>
                       <th className="text-left p-3 text-sm font-medium text-white">Amount (R)</th>
                       <th className="text-left p-3 text-sm font-medium text-white">Supplier/Vendor</th>
                       <th className="text-left p-3 text-sm font-medium text-white">VAT Treatment</th>
@@ -2051,6 +2101,18 @@ const EnhancedBulkCapture = () => {
                               </Badge>
                             )}
                           </div>
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            value={entry.reference || ''}
+                            onChange={(e) => {
+                              const value = e.target.value.toUpperCase().replace(/[^A-Z0-9\-\/\.\s]/g, '');
+                              updateExpenseEntry(index, 'reference', value.substring(0, 64));
+                            }}
+                            placeholder="Invoice/Ref..."
+                            className={`w-full ${entry.reference && duplicateReferences.has(`${entry.supplierId}-${entry.reference}`) ? 'border-red-500 bg-red-50' : ''}`}
+                            maxLength={64}
+                          />
                         </td>
                         <td className="p-3">
                           <Input

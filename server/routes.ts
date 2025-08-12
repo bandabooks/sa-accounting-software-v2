@@ -2377,7 +2377,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      // Check for duplicate supplier invoice number if provided and not empty
+      // Normalize reference field if provided
+      let normalizedReference = null;
+      if (req.body.reference && req.body.reference.trim() !== "") {
+        // Normalize: trim, uppercase, collapse multiple spaces
+        normalizedReference = req.body.reference
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, ' ')
+          .substring(0, 64); // Ensure max length
+        
+        // Validate reference format (A-Z, 0-9, -, /, ., space)
+        if (!/^[A-Z0-9\-\/\.\s]+$/.test(normalizedReference)) {
+          return res.status(400).json({
+            message: "Invalid reference format",
+            details: "Reference can only contain letters, numbers, hyphens, forward slashes, periods, and spaces",
+            field: "reference"
+          });
+        }
+        
+        // Check for duplicate reference per supplier
+        if (req.body.supplierId) {
+          const existingWithRef = await storage.getExpenseBySupplierReference(
+            req.user.companyId,
+            req.body.supplierId,
+            normalizedReference
+          );
+          if (existingWithRef) {
+            return res.status(409).json({
+              message: "Reference already used for this supplier",
+              details: `Reference "${normalizedReference}" is already used for this supplier`,
+              field: "reference"
+            });
+          }
+        }
+      }
+      
+      // Check for duplicate supplier invoice number if provided and not empty (legacy field)
       if (req.body.supplierInvoiceNumber && req.body.supplierInvoiceNumber.trim() !== "") {
         const existingExpense = await storage.getExpenseBySupplierInvoiceNumber(
           req.user.companyId, 
@@ -2410,6 +2446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user.id,
         internalExpenseRef,
         category: categoryName, // Ensure category field is populated
+        reference: normalizedReference, // Add normalized reference
       });
       
       console.log("Creating expense with validated data:", validatedData);

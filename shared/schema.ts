@@ -204,12 +204,16 @@ export const invoices = pgTable("invoices", {
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  reference: text("reference"), // Customer reference number (normalized for uniqueness)
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   companyInvoiceUnique: unique().on(table.companyId, table.invoiceNumber),
+  // Optional unique constraint for reference per customer per company
+  companyCustomerReferenceUnique: unique("uniq_inc_ref_per_customer").on(table.companyId, table.customerId, table.reference),
   companyIdx: index("invoices_company_idx").on(table.companyId),
   customerIdx: index("invoices_customer_idx").on(table.customerId),
+  referenceIdx: index("invoices_reference_idx").on(table.reference),
 }));
 
 export const invoiceItems = pgTable("invoice_items", {
@@ -851,7 +855,8 @@ export const expenses = pgTable("expenses", {
   paidStatus: text("paid_status").notNull().default("Unpaid"), // 'Paid', 'Unpaid', 'Partially Paid'
   attachmentUrl: text("attachment_url"), // File upload URL
   // Professional Expense Management Fields
-  supplierInvoiceNumber: text("supplier_invoice_number"), // Supplier's invoice/reference number with duplicate prevention
+  reference: text("reference"), // Supplier invoice/reference number (normalized for uniqueness)
+  supplierInvoiceNumber: text("supplier_invoice_number"), // Legacy field - kept for backwards compatibility
   internalExpenseRef: text("internal_expense_ref").notNull(), // Auto-generated internal reference (EXP-2025-0001)
   // billId: integer("bill_id"), // Reference to formal bill/accounts payable - TEMPORARILY DISABLED
   purchaseOrderId: integer("purchase_order_id"), // Reference to originating purchase order
@@ -884,7 +889,10 @@ export const expenses = pgTable("expenses", {
   typeIdx: index("expenses_type_idx").on(table.expenseType),
   // Unique constraint for supplier invoice number per company to prevent duplicates
   companySupplierInvoiceUnique: unique().on(table.companyId, table.supplierInvoiceNumber),
+  // Unique constraint for reference per supplier per company
+  companySupplierReferenceUnique: unique("uniq_exp_ref_per_supplier").on(table.companyId, table.supplierId, table.reference),
   internalRefIdx: index("expenses_internal_ref_idx").on(table.internalExpenseRef),
+  referenceIdx: index("expenses_reference_idx").on(table.reference),
 }));
 
 // Bills/Accounts Payable - Formal supplier invoices requiring approval
