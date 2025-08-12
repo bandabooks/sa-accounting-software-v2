@@ -1209,27 +1209,27 @@ const EnhancedBulkCapture = () => {
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense' | 'bank-import')}>
-        <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
           <TabsTrigger 
             value="bank-import" 
-            className="flex items-center space-x-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex items-center space-x-2 rounded-lg px-4 py-3 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-blue-500"
           >
             <Upload className="w-4 h-4" />
-            <span>Bank Import</span>
+            <span className="font-medium">Bank Import</span>
           </TabsTrigger>
           <TabsTrigger 
             value="expense" 
-            className="flex items-center space-x-2 data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex items-center space-x-2 rounded-lg px-4 py-3 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-red-500"
           >
             <TrendingDown className="w-4 h-4" />
-            <span>Bulk Expenses</span>
+            <span className="font-medium">Bulk Expenses</span>
           </TabsTrigger>
           <TabsTrigger 
             value="income" 
-            className="flex items-center space-x-2 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex items-center space-x-2 rounded-lg px-4 py-3 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-green-500"
           >
             <TrendingUp className="w-4 h-4" />
-            <span>Bulk Income</span>
+            <span className="font-medium">Bulk Income</span>
           </TabsTrigger>
         </TabsList>
 
