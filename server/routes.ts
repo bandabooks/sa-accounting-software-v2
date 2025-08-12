@@ -7782,6 +7782,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Stitch connection status
+  app.get("/api/stitch/status", authenticate, async (req, res) => {
+    try {
+      const { testStitchConnection } = await import('./stitch/test-connection.js');
+      const result = await testStitchConnection();
+      res.json(result);
+    } catch (error) {
+      console.error('Error testing Stitch connection:', error);
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Failed to test connection' 
+      });
+    }
+  });
+
   // General Ledger Routes
   app.get("/api/general-ledger", authenticate, async (req, res) => {
     try {

@@ -82,7 +82,7 @@ export class StitchGraphQLClient {
   /**
    * Get access token for client credentials flow
    */
-  private async getAccessToken(): Promise<string> {
+  public async getAccessToken(): Promise<string> {
     // In demo mode, return a fake token
     if (this.isDemoMode) {
       return 'demo_token_' + Date.now();
@@ -533,6 +533,3 @@ export interface StitchLinkSuccess {
   userId: string;
   accounts: StitchAccount[];
 }
-
-// Create singleton instance
-export const stitchClient = new StitchGraphQLClient();
