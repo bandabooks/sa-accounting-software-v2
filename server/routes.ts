@@ -7760,6 +7760,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stitch OAuth callback handler
+  app.get("/api/stitch/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code) {
+        return res.status(400).send('Authorization code missing');
+      }
+
+      // In production, you would:
+      // 1. Exchange the code for an access token with Stitch
+      // 2. Store the token securely
+      // 3. Redirect user back to the banking page
+      
+      // For now, redirect back to the banking page with success message
+      res.redirect('/banking?stitch_connected=true');
+    } catch (error) {
+      console.error('Error handling Stitch callback:', error);
+      res.redirect('/banking?stitch_error=true');
+    }
+  });
+
   // General Ledger Routes
   app.get("/api/general-ledger", authenticate, async (req, res) => {
     try {
