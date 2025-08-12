@@ -123,7 +123,7 @@ export function SearchableSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <div className="flex items-center flex-1 gap-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
+          {isOpen && <Search className="h-4 w-4 text-muted-foreground" />}
           {isOpen ? (
             <input
               ref={inputRef}
