@@ -270,7 +270,14 @@ const EnhancedBulkCapture = () => {
     } else if (activeTab === 'income' && incomeEntries.length === 0) {
       initializeIncomeEntries();
     }
-  }, [activeTab, initializeExpenseEntries, initializeIncomeEntries, expenseEntries.length, incomeEntries.length]);
+    // Re-initialize income entries when chart of accounts loads to ensure Sales Revenue is pre-selected
+    else if (activeTab === 'income' && chartOfAccounts.length > 0 && incomeEntries.length > 0) {
+      const needsUpdate = incomeEntries.some(entry => !entry.incomeAccountId);
+      if (needsUpdate) {
+        initializeIncomeEntries();
+      }
+    }
+  }, [activeTab, initializeExpenseEntries, initializeIncomeEntries, expenseEntries.length, incomeEntries.length, chartOfAccounts]);
 
   // VAT calculation function using database VAT types
   const calculateVAT = useCallback((amount: string, vatRate: string, vatTypeId: number) => {
