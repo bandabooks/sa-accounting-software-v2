@@ -7243,6 +7243,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update journal entry
+  app.put("/api/journal-entries/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
+      const updateData = req.body;
+      
+      // Ensure companyId matches for security
+      updateData.companyId = companyId;
+      
+      const updatedEntry = await storage.updateJournalEntry(id, updateData);
+      if (!updatedEntry) {
+        return res.status(404).json({ error: "Journal entry not found" });
+      }
+      res.json(updatedEntry);
+    } catch (error) {
+      console.error("Error updating journal entry:", error);
+      res.status(500).json({ error: "Failed to update journal entry" });
+    }
+  });
+
+  // Delete journal entry
+  app.delete("/api/journal-entries/:id", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteJournalEntry(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Journal entry not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting journal entry:", error);
+      res.status(500).json({ error: "Failed to delete journal entry" });
+    }
+  });
+
   // Account Balance Reports
   app.get("/api/reports/trial-balance", authenticate, async (req, res) => {
     try {

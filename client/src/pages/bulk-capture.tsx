@@ -35,6 +35,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "@shared/vat-constants";
+import { JournalHistory } from '@/components/bulk/journal-history/JournalHistory';
 
 interface ExpenseEntry {
   id?: number;
@@ -2235,6 +2236,9 @@ const EnhancedBulkCapture = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Journal Entry History Section */}
+      <JournalHistory />
     </div>
   );
 };
