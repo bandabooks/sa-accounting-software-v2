@@ -92,8 +92,11 @@ export default function PaymentModal({
   // Update amount when remaining amount changes
   useEffect(() => {
     if (isOpen) {
-      // Set first bank account as default
-      const defaultBankAccount = bankAccounts.length > 0 ? bankAccounts[0]?.id?.toString() || "" : "";
+      // Set first valid bank account as default
+      console.log("Available bank accounts:", bankAccounts);
+      const validBankAccounts = bankAccounts.filter(account => account && account.id);
+      const defaultBankAccount = validBankAccounts.length > 0 ? validBankAccounts[0].id.toString() : "";
+      console.log("Setting default bank account:", defaultBankAccount, "from accounts:", validBankAccounts);
       
       form.reset({
         amount: remainingAmount,

@@ -7434,7 +7434,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bank-accounts", authenticate, async (req, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const accounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
+      // Use the proper bank accounts method that returns actual bank account records
+      const accounts = await storage.getAllBankAccounts(companyId);
+      console.log("Bank accounts for payment form:", accounts.map(acc => ({ id: acc.id, name: acc.accountName })));
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching bank accounts:", error);
