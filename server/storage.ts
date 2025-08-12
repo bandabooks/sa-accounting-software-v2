@@ -1243,9 +1243,12 @@ export class DatabaseStorage implements IStorage {
     return results.map(result => ({
       id: result.id,
       userId: result.userId,
+      companyId: null, // Default value for compatibility
       action: result.action,
       resource: result.resource,
       resourceId: result.resourceId,
+      oldValues: {}, // Default empty object for compatibility
+      newValues: {}, // Default empty object for compatibility
       details: result.details,
       ipAddress: result.ipAddress,
       userAgent: result.userAgent,
