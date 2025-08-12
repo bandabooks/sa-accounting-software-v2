@@ -44,6 +44,37 @@ export class StitchService {
   }
 
   /**
+   * Find or create a chart account for bank account
+   */
+  private async findOrCreateBankChartAccount(companyId: number, accountName: string): Promise<ChartOfAccount> {
+    // Try to find existing bank account in chart of accounts
+    const accounts = await this.storage.getAllChartOfAccounts(companyId);
+    const bankAccount = accounts.find(acc => 
+      acc.accountCode.startsWith('1.1') || 
+      acc.accountName.toLowerCase().includes('bank') ||
+      acc.accountName.toLowerCase().includes('cash')
+    );
+
+    if (bankAccount) {
+      return bankAccount;
+    }
+
+    // Create a new bank chart account
+    const newChartAccount: InsertChartOfAccount = {
+      companyId,
+      accountCode: '1.1.999',
+      accountName: `Bank - ${accountName}`,
+      accountType: 'Asset',
+      category: 'Current Assets',
+      isActive: true,
+      normalBalance: 'debit',
+      description: `Bank account linked via Stitch: ${accountName}`,
+    };
+
+    return await this.storage.createChartOfAccount(newChartAccount);
+  }
+
+  /**
    * Create a client token for Stitch Link
    */
   async createLinkToken(options: CreateLinkTokenOptions): Promise<string> {
@@ -94,9 +125,31 @@ export class StitchService {
           continue;
         }
 
+        // Find or create a bank chart account (skip for demo mode)
+        let chartAccountId = null;
+        try {
+          const chartAccount = await this.findOrCreateBankChartAccount(
+            options.companyId,
+            stitchAccount.name || stitchAccount.officialName || 'Business Account'
+          );
+          chartAccountId = chartAccount.id;
+        } catch (error) {
+          console.log('[Stitch Demo] Skipping chart account creation for demo:', error.message);
+          // For demo mode, try to find any existing chart account
+          const accounts = await this.storage.getAllChartOfAccounts(options.companyId);
+          if (accounts.length > 0) {
+            chartAccountId = accounts[0].id;
+          } else {
+            // Use the pre-created chart account for company 2 
+            console.log('[Stitch Demo] Using default chart account ID 1538 for demo');
+            chartAccountId = 1538;
+          }
+        }
+
         // Create new bank account
         const bankAccountData: InsertBankAccount = {
           companyId: options.companyId,
+          chartAccountId,
           accountName: stitchAccount.name || stitchAccount.officialName || 'Business Account',
           bankName: stitchAccount.institution?.name || stitchAccount.institutionName || 'Bank',
           accountNumber: this.maskAccountNumber(stitchAccount.accountNumber || '1234567890'),
