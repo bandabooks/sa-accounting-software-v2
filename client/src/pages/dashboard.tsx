@@ -666,7 +666,7 @@ export default function Dashboard() {
                         </div>
                       )}
                       <Button asChild variant="outline" size="sm" className="w-full">
-                        <Link href="/bank-accounts">
+                        <Link href="/banking">
                           <Eye className="h-3 w-3 mr-2" />
                           View All Accounts
                         </Link>

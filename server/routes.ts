@@ -1201,7 +1201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Dashboard - protected route with company isolation and caching
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId;
+      const companyId = req.user?.activeCompanyId || req.user?.companyId;
       
       // Set cache headers for 5 minutes to improve performance
       res.set('Cache-Control', 'private, max-age=300');

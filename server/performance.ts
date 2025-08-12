@@ -8,46 +8,20 @@ export class PerformanceOptimizedStorage {
   async getFastDashboardStats(companyId: number): Promise<any> {
     try {
       const statsQuery = await db.execute(sql`
-        WITH invoice_stats AS (
-          SELECT 
-            COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as revenue,
-            COALESCE(SUM(CASE WHEN status != 'paid' THEN total::numeric ELSE 0 END), 0) as outstanding,
-            COUNT(*) as invoice_count
-          FROM invoices 
-          WHERE company_id = ${companyId}
-        ),
-        expense_stats AS (
-          SELECT 
-            COALESCE(SUM(amount::numeric), 0) as total_expenses,
-            COUNT(*) as expense_count
-          FROM expenses 
-          WHERE company_id = ${companyId}
-        ),
-        customer_stats AS (
-          SELECT COUNT(*) as customer_count
-          FROM customers 
-          WHERE company_id = ${companyId}
-        ),
-        bank_stats AS (
-          SELECT 
-            COALESCE(SUM(balance::numeric), 0) as total_balance,
-            COUNT(*) as account_count
-          FROM bank_accounts 
-          WHERE company_id = ${companyId}
-        )
         SELECT 
-          i.revenue::text as total_revenue,
-          i.outstanding::text as outstanding_invoices,
-          i.invoice_count::text,
-          e.total_expenses::text,
-          e.expense_count::text,
-          c.customer_count::text as total_customers,
-          b.total_balance::text as bank_balance,
-          b.account_count::text
-        FROM invoice_stats i 
-        CROSS JOIN expense_stats e 
-        CROSS JOIN customer_stats c 
-        CROSS JOIN bank_stats b
+          COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total::numeric ELSE 0 END), 0)::text as total_revenue,
+          COALESCE(SUM(CASE WHEN i.status != 'paid' THEN i.total::numeric ELSE 0 END), 0)::text as outstanding_invoices,
+          COUNT(i.id)::text as invoice_count,
+          COALESCE(SUM(e.amount::numeric), 0)::text as total_expenses,
+          COUNT(e.id)::text as expense_count,
+          COUNT(DISTINCT c.id)::text as total_customers,
+          COALESCE(SUM(b.balance::numeric), 0)::text as bank_balance,
+          COUNT(DISTINCT b.id)::text as account_count
+        FROM invoices i
+        FULL OUTER JOIN expenses e ON e.company_id = i.company_id
+        FULL OUTER JOIN customers c ON c.company_id = i.company_id
+        FULL OUTER JOIN bank_accounts b ON b.company_id = i.company_id
+        WHERE i.company_id = ${companyId} OR e.company_id = ${companyId} OR c.company_id = ${companyId} OR b.company_id = ${companyId}
       `);
 
       return statsQuery.rows[0] || {
@@ -73,35 +47,16 @@ export class PerformanceOptimizedStorage {
   async getFastRecentActivities(companyId: number): Promise<any[]> {
     try {
       const recentQuery = await db.execute(sql`
-        (
-          SELECT 
-            'invoice' as type,
-            invoice_number as reference,
-            total::text as amount,
-            issue_date as date,
-            status,
-            'Invoice ' || invoice_number as description,
-            created_at
-          FROM invoices 
-          WHERE company_id = ${companyId}
-          ORDER BY created_at DESC 
-          LIMIT 3
-        )
-        UNION ALL
-        (
-          SELECT 
-            'expense' as type,
-            COALESCE(internal_expense_ref, 'EXP-' || id::text) as reference,
-            '-' || amount::text as amount,
-            expense_date as date,
-            COALESCE(paid_status, 'unpaid') as status,
-            description,
-            created_at
-          FROM expenses 
-          WHERE company_id = ${companyId}
-          ORDER BY created_at DESC 
-          LIMIT 3
-        )
+        SELECT 
+          'invoice'::text as type,
+          invoice_number as reference,
+          total::text as amount,
+          issue_date as date,
+          status,
+          ('Invoice ' || invoice_number) as description,
+          created_at
+        FROM invoices 
+        WHERE company_id = ${companyId}
         ORDER BY created_at DESC 
         LIMIT 6
       `);
@@ -135,6 +90,7 @@ export class PerformanceOptimizedStorage {
           account_type
         FROM bank_accounts 
         WHERE company_id = ${companyId}
+        ORDER BY balance DESC
         LIMIT 5
       `);
 
