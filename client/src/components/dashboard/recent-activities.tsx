@@ -2,7 +2,7 @@ import { FileText, CreditCard, Receipt, Clock, CheckCircle, Eye } from "lucide-r
 import { formatCurrency } from "@/lib/utils-invoice";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "wouter";
+import { useLocation } from "wouter";
 
 interface Activity {
   id: number;
@@ -19,7 +19,7 @@ interface RecentActivitiesProps {
 }
 
 export default function RecentActivities({ activities }: RecentActivitiesProps) {
-  const [location, navigate] = useRouter();
+  const [location, setLocation] = useLocation();
   const getActivityIcon = (type: string, status: string) => {
     switch (type) {
       case 'invoice':
@@ -99,10 +99,10 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                       size="sm"
                       onClick={() => {
                         // Navigate based on activity type
-                        if (activity.type === 'invoice') navigate('/invoices');
-                        else if (activity.type === 'payment') navigate('/payments');
-                        else if (activity.type === 'expense') navigate('/expenses');
-                        else navigate('/activities');
+                        if (activity.type === 'invoice') setLocation('/invoices');
+                        else if (activity.type === 'payment') setLocation('/payments');
+                        else if (activity.type === 'expense') setLocation('/expenses');
+                        else setLocation('/activities');
                       }}
                       className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       title="View details"

@@ -6,7 +6,7 @@ import {
   Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, ArrowDownRight,
   Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download
 } from "lucide-react";
-import { Link, useRouter } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [location, navigate] = useRouter();
+  const [location, setLocation] = useLocation();
   const [notifications, setNotifications] = useState([
     { id: 1, title: "New invoice payment received", type: "success", time: "2 min ago", priority: "high" },
     { id: 2, title: "Monthly VAT return due in 3 days", type: "warning", time: "1 hour ago", priority: "medium" },
@@ -321,11 +321,11 @@ export default function Dashboard() {
                           size="sm"
                           onClick={() => {
                             // Navigate based on notification type
-                            if (notification.title.includes('invoice')) navigate('/invoices');
-                            else if (notification.title.includes('VAT')) navigate('/reports/vat');
-                            else if (notification.title.includes('customer')) navigate('/customers');
-                            else if (notification.title.includes('payment')) navigate('/payments');
-                            else navigate('/activities');
+                            if (notification.title.includes('invoice')) setLocation('/invoices');
+                            else if (notification.title.includes('VAT')) setLocation('/reports/vat');
+                            else if (notification.title.includes('customer')) setLocation('/customers');
+                            else if (notification.title.includes('payment')) setLocation('/payments');
+                            else setLocation('/activities');
                           }}
                           className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
                           title="View details"
@@ -404,7 +404,7 @@ export default function Dashboard() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => navigate('/reports/financial')}
+                            onClick={() => setLocation('/reports/financial')}
                             title="View detailed revenue reports"
                           >
                             <Eye className="h-4 w-4" />
