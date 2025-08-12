@@ -6651,6 +6651,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bank Statement Parse (for bulk capture)
+  app.post('/api/bank/parse-statement', authenticate, bankStatementUpload.single('file'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User authentication required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No bank statement file uploaded" });
+      }
+
+      const { bankName, bankAccountId } = req.body;
+      
+      if (!bankAccountId) {
+        return res.status(400).json({ message: "Bank account selection required" });
+      }
+
+      // Read and parse the uploaded file
+      const filePath = req.file.path;
+      const fileName = req.file.originalname;
+      const fileExtension = path.extname(fileName).toLowerCase();
+      
+      let transactions: any[] = [];
+      
+      try {
+        if (fileExtension === '.csv') {
+          // Parse CSV file
+          const fileContent = fs.readFileSync(filePath, 'utf-8');
+          const lines = fileContent.split('\n').filter(line => line.trim());
+          
+          // Skip header row and parse transaction lines
+          for (let i = 1; i < lines.length; i++) {
+            const columns = lines[i].split(',').map(col => col.trim().replace(/"/g, ''));
+            if (columns.length >= 4) {
+              transactions.push({
+                date: columns[0],
+                description: columns[1] || 'Bank Transaction',
+                reference: columns[2] || '',
+                amount: parseFloat(columns[3]) || 0,
+                balance: columns[4] ? parseFloat(columns[4]) : null,
+                type: parseFloat(columns[3]) >= 0 ? 'credit' : 'debit'
+              });
+            }
+          }
+        } else if (fileExtension === '.pdf') {
+          // For PDF files, create placeholder transactions that need manual review
+          transactions.push({
+            date: new Date().toISOString().split('T')[0],
+            description: 'PDF Statement Import - Requires Manual Review',
+            reference: fileName,
+            amount: 0,
+            balance: null,
+            type: 'credit',
+            requiresReview: true
+          });
+        } else {
+          // For other formats, create a basic structure for now
+          transactions.push({
+            date: new Date().toISOString().split('T')[0],
+            description: 'Imported Transaction',
+            reference: fileName,
+            amount: 0,
+            balance: null,
+            type: 'credit'
+          });
+        }
+
+        // Filter out invalid transactions
+        transactions = transactions.filter(t => t.amount !== 0 && t.date && t.description);
+
+        // Clean up uploaded file
+        fs.unlinkSync(filePath);
+        
+        // Log the action
+        await logAudit(userId, 'CREATE', 'bank_parse', companyId, `Parsed ${transactions.length} transactions from ${fileName}`);
+        
+        res.json({ 
+          success: true, 
+          message: 'Bank statement parsed successfully',
+          transactions: transactions,
+          fileName: fileName,
+          bankName: bankName,
+          bankAccountId: bankAccountId
+        });
+        
+      } catch (parseError) {
+        // Clean up uploaded file on error
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        throw parseError;
+      }
+      
+    } catch (error) {
+      console.error('Error parsing bank statement:', error);
+      res.status(500).json({ 
+        message: 'Failed to parse bank statement',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Company Logo Upload
   app.post('/api/settings/company/logo', authenticate, logoUpload.single('logo'), async (req: AuthenticatedRequest, res) => {
     try {

@@ -457,14 +457,67 @@ const EnhancedBulkCapture = () => {
       formData.append('bankName', selectedBank);
       formData.append('bankAccountId', selectedBankAccount);
 
-      // Use apiRequest instead of fetch to ensure proper authentication
-      const result = await apiRequest('/api/bank/import-statement', 'POST', formData);
+      // Parse bank statement to get transactions
+      const result = await apiRequest('/api/bank/parse-statement', 'POST', formData);
       
-      toast({
-        title: "Bank Import Successful",
-        description: `Successfully imported ${result.transactionCount || 0} transactions from ${result.fileName || selectedFile.name}. ${result.journalEntriesCreated || 0} journal entries created.`,
-        variant: "default",
-      });
+      if (result.transactions && result.transactions.length > 0) {
+        // Convert bank transactions to bulk capture entries
+        const convertedExpenses: ExpenseEntry[] = [];
+        const convertedIncome: IncomeEntry[] = [];
+        
+        result.transactions.forEach((transaction: any) => {
+          const baseEntry = {
+            transactionDate: transaction.date || quickDate,
+            description: transaction.description || transaction.reference || '',
+            amount: Math.abs(transaction.amount).toFixed(2),
+            vatTypeId: 1, // Default Standard Rate VAT
+            vatRate: '15.00',
+            vatAmount: '0.00',
+            netAmount: '0.00',
+            bankAccountId: parseInt(selectedBankAccount),
+            reference: transaction.reference || '',
+            notes: `Imported from ${selectedBank} bank statement`,
+            status: 'draft' as const,
+          };
+          
+          if (transaction.type === 'debit' || transaction.amount < 0) {
+            // Debit transactions become expenses
+            convertedExpenses.push({
+              ...baseEntry,
+              categoryId: 0, // Default expense category - user will need to select
+              supplierId: undefined,
+            } as ExpenseEntry);
+          } else {
+            // Credit transactions become income
+            convertedIncome.push({
+              ...baseEntry,
+              incomeAccountId: 0, // Default income account - user will need to select
+              clientId: undefined,
+            } as IncomeEntry);
+          }
+        });
+        
+        // Add converted entries to existing entries
+        if (convertedExpenses.length > 0) {
+          setExpenseEntries(prev => [...convertedExpenses, ...prev]);
+        }
+        if (convertedIncome.length > 0) {
+          setIncomeEntries(prev => [...convertedIncome, ...prev]);
+        }
+        
+        // Switch to appropriate tab based on majority of transactions
+        if (convertedExpenses.length > convertedIncome.length) {
+          setActiveTab('expense');
+        } else if (convertedIncome.length > 0) {
+          setActiveTab('income');
+        }
+        
+        toast({
+          title: "Bank Statement Imported Successfully",
+          description: `Imported ${result.transactions.length} transactions (${convertedExpenses.length} expenses, ${convertedIncome.length} income). Please review and categorize entries before saving.`,
+          variant: "default",
+        });
+      }
 
       // Reset form
       setSelectedFile(null);
@@ -476,21 +529,16 @@ const EnhancedBulkCapture = () => {
         fileInput.value = '';
       }
       
-      // Refresh relevant data
-      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/transaction-counts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
-      
     } catch (error: any) {
       console.error('Bank import error:', error);
       
-      let errorMessage = "Failed to upload bank statement";
+      let errorMessage = "Failed to parse bank statement";
       
       if (error.message) {
         if (error.message.includes('401') || error.message.includes('Unauthorized')) {
           errorMessage = "Authentication failed. Please refresh the page and try again.";
         } else if (error.message.includes('400')) {
-          errorMessage = "Invalid file or missing information. Please check your selections.";
+          errorMessage = "Invalid file format or missing information. Please check your file and selections.";
         } else if (error.message.includes('413')) {
           errorMessage = "File is too large. Please use a smaller file.";
         } else {
@@ -506,7 +554,7 @@ const EnhancedBulkCapture = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, selectedBank, selectedBankAccount, toast, queryClient]);
+  }, [selectedFile, selectedBank, selectedBankAccount, toast, queryClient, quickDate, setActiveTab, setExpenseEntries, setIncomeEntries]);
 
   // Add more rows
   const addMoreRows = useCallback((count: number = 5) => {
@@ -960,12 +1008,12 @@ const EnhancedBulkCapture = () => {
                     {isUploading ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Importing to Journal Entries...
+                        Parsing Bank Statement...
                       </>
                     ) : (
                       <>
                         <Upload className="w-4 h-4 mr-2" />
-                        Import to Journal Entries
+                        Import to Bulk Capture
                       </>
                     )}
                   </Button>
@@ -977,7 +1025,7 @@ const EnhancedBulkCapture = () => {
                         <span className="text-sm font-medium">Ready to Import</span>
                       </div>
                       <p className="text-xs text-green-600 mt-1">
-                        Bank statement will be processed and automatically posted to journal entries like manual entries
+                        Bank statement will be converted to bulk capture entries with VAT handling for review and categorization
                       </p>
                     </div>
                   )}
