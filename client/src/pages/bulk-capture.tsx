@@ -2041,7 +2041,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-blue-600 font-medium">VAT Inclusive</div>
                   <div className="text-lg font-bold text-blue-900">
                     R {expenseEntries
-                      .filter(e => parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTypeId === 1 && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -2051,7 +2051,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-green-600 font-medium">Out of Scope</div>
                   <div className="text-lg font-bold text-green-900">
                     R {expenseEntries
-                      .filter(e => parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTypeId === 5 && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -2061,7 +2061,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-yellow-600 font-medium">Zero Rated</div>
                   <div className="text-lg font-bold text-yellow-900">
                     R {expenseEntries
-                      .filter(e => parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTypeId === 2 && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -2071,7 +2071,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-purple-600 font-medium">Exempt</div>
                   <div className="text-lg font-bold text-purple-900">
                     R {expenseEntries
-                      .filter(e => parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTypeId === 3 && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
@@ -2081,7 +2081,7 @@ const EnhancedBulkCapture = () => {
                   <div className="text-xs text-gray-600 font-medium">No VAT</div>
                   <div className="text-lg font-bold text-gray-900">
                     R {expenseEntries
-                      .filter(e => parseFloat(e.amount) > 0)
+                      .filter(e => e.vatTypeId === 4 && parseFloat(e.amount) > 0)
                       .reduce((sum, e) => sum + parseFloat(e.amount), 0)
                       .toFixed(2)
                     }
