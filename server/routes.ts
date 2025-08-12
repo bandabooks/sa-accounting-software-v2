@@ -267,19 +267,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const authReq = req as AuthenticatedRequest;
       const companyId = authReq.user?.companyId;
-      // For now, return default settings since we may not have AI settings in database yet
-      const defaultSettings = {
-        enabled: false,
-        provider: 'anthropic',
-        contextSharing: true,
-        conversationHistory: true,
-        suggestions: true,
-        apiKey: '', // This would be encrypted in real implementation
-        model: 'claude-3-5-sonnet-20241022',
-        maxTokens: 4096,
-        temperature: 0.7
-      };
-      res.json(defaultSettings);
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      const settings = await storage.getAiSettings(companyId);
+      res.json(settings);
     } catch (error) {
       console.error('Error fetching AI settings:', error);
       res.status(500).json({ message: "Failed to fetch AI settings" });
@@ -289,8 +283,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/ai/settings", authenticate, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const settings = req.body;
-      // TODO: Store AI settings in database (encrypted API key)
+      const companyId = authReq.user?.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const settings = {
+        enabled: req.body.enabled || false,
+        provider: req.body.provider || 'anthropic',
+        contextSharing: req.body.contextSharing !== false,
+        conversationHistory: req.body.conversationHistory !== false,
+        suggestions: req.body.suggestions !== false,
+        apiKey: req.body.apiKey || '',
+        model: req.body.model || 'claude-3-5-sonnet-20241022',
+        maxTokens: req.body.maxTokens || 4096,
+        temperature: req.body.temperature || 0.7
+      };
+
+      await storage.saveAiSettings(companyId, settings);
+      
       console.log('AI settings update:', { ...settings, apiKey: settings.apiKey ? '[REDACTED]' : '' });
       
       await logAudit(authReq.user?.id || 0, 'UPDATE', 'ai_settings', 0, {

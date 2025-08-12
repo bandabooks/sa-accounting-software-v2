@@ -28,6 +28,7 @@ import {
   inventoryTransactions,
   emailReminders,
   currencyRates,
+  aiSettings,
   chartOfAccounts,
   journalEntries,
   journalEntryLines,
@@ -14789,6 +14790,95 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (error) {
       console.error('Error updating bulk capture transaction:', error);
+      throw error;
+    }
+  }
+
+  // AI Settings methods
+  async getAiSettings(companyId: number): Promise<any> {
+    try {
+      const [settings] = await db
+        .select()
+        .from(aiSettings)
+        .where(eq(aiSettings.companyId, companyId));
+
+      if (settings) {
+        return {
+          enabled: settings.enabled,
+          provider: settings.provider,
+          model: settings.model,
+          maxTokens: settings.maxTokens,
+          temperature: parseFloat(settings.temperature || '0.7'),
+          contextSharing: settings.contextSharing,
+          conversationHistory: settings.conversationHistory,
+          suggestions: settings.suggestions,
+          apiKey: settings.apiKey || ''
+        };
+      }
+
+      // Return default settings if none exist
+      return {
+        enabled: false,
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        maxTokens: 4096,
+        temperature: 0.7,
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: ''
+      };
+    } catch (error) {
+      console.error('Error getting AI settings:', error);
+      // Return default settings on error
+      return {
+        enabled: false,
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        maxTokens: 4096,
+        temperature: 0.7,
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: ''
+      };
+    }
+  }
+
+  async saveAiSettings(companyId: number, settings: any): Promise<void> {
+    try {
+      await db
+        .insert(aiSettings)
+        .values({
+          companyId,
+          enabled: settings.enabled || false,
+          provider: settings.provider || 'anthropic',
+          model: settings.model || 'claude-3-5-sonnet-20241022',
+          apiKey: settings.apiKey || '',
+          maxTokens: settings.maxTokens || 4096,
+          temperature: settings.temperature?.toString() || '0.7',
+          contextSharing: settings.contextSharing !== false,
+          conversationHistory: settings.conversationHistory !== false,
+          suggestions: settings.suggestions !== false,
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: aiSettings.companyId,
+          set: {
+            enabled: settings.enabled || false,
+            provider: settings.provider || 'anthropic',
+            model: settings.model || 'claude-3-5-sonnet-20241022',
+            apiKey: settings.apiKey || '',
+            maxTokens: settings.maxTokens || 4096,
+            temperature: settings.temperature?.toString() || '0.7',
+            contextSharing: settings.contextSharing !== false,
+            conversationHistory: settings.conversationHistory !== false,
+            suggestions: settings.suggestions !== false,
+            updatedAt: new Date()
+          }
+        });
+    } catch (error) {
+      console.error('Error saving AI settings:', error);
       throw error;
     }
   }

@@ -2537,6 +2537,27 @@ export const currencyRates = pgTable("currency_rates", {
   companyIdx: index("currency_rates_company_idx").on(table.companyId),
 }));
 
+// AI Assistant Settings table
+export const aiSettings = pgTable("ai_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  enabled: boolean("enabled").default(false),
+  provider: varchar("provider", { length: 20 }).default("anthropic"), // 'anthropic', 'openai'
+  model: varchar("model", { length: 50 }).default("claude-3-5-sonnet-20241022"),
+  apiKey: text("api_key"), // Encrypted API key
+  maxTokens: integer("max_tokens").default(4096),
+  temperature: decimal("temperature", { precision: 3, scale: 2 }).default("0.70"),
+  contextSharing: boolean("context_sharing").default(true),
+  conversationHistory: boolean("conversation_history").default(true),
+  suggestions: boolean("suggestions").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyUnique: unique().on(table.companyId),
+  companyIdx: index("ai_settings_company_idx").on(table.companyId),
+}));
+
 // Schema exports
 export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({
   id: true,
@@ -2562,6 +2583,12 @@ export const insertCurrencyRateSchema = createInsertSchema(currencyRates).omit({
   updatedAt: true,
 });
 
+export const insertAiSettingsSchema = createInsertSchema(aiSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
 export type CompanySettings = typeof companySettings.$inferSelect;
 
@@ -2573,6 +2600,9 @@ export type EmailReminder = typeof emailReminders.$inferSelect;
 
 export type InsertCurrencyRate = z.infer<typeof insertCurrencyRateSchema>;
 export type CurrencyRate = typeof currencyRates.$inferSelect;
+
+export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
+export type AiSettings = typeof aiSettings.$inferSelect;
 
 // VAT Types - South African Standard VAT Categories
 export const vatTypes = pgTable("vat_types", {
