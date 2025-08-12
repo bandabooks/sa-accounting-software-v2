@@ -912,8 +912,8 @@ const EnhancedBulkCapture = () => {
                                        match.vatRate === 0 ? 2 : 1;
               // Recalculate VAT amounts
               const amount = parseFloat(expenseEntry.amount);
-              const vatAmount = calculateVATAmount(amount, match.vatRate, true);
-              const netAmount = calculateNetAmount(amount, match.vatRate, true);
+              const vatAmount = calculateVATAmount(amount, match.vatRate);
+              const netAmount = calculateNetAmount(amount, match.vatRate);
               expenseEntry.vatAmount = vatAmount.toFixed(2);
               expenseEntry.netAmount = netAmount.toFixed(2);
             }
@@ -934,8 +934,8 @@ const EnhancedBulkCapture = () => {
                                       match.vatRate === 0 ? 2 : 1;
               // Recalculate VAT amounts
               const amount = parseFloat(incomeEntry.amount);
-              const vatAmount = calculateVATAmount(amount, match.vatRate, true);
-              const netAmount = calculateNetAmount(amount, match.vatRate, true);
+              const vatAmount = calculateVATAmount(amount, match.vatRate);
+              const netAmount = calculateNetAmount(amount, match.vatRate);
               incomeEntry.vatAmount = vatAmount.toFixed(2);
               incomeEntry.netAmount = netAmount.toFixed(2);
             }
@@ -977,7 +977,7 @@ const EnhancedBulkCapture = () => {
       const response = await apiRequest('/api/ai/match-transactions', 'POST', {
         transactions: transactionsToMatch
       });
-      return response.matches || [];
+      return response;
     },
     onSuccess: (matches: any[], variables) => {
       const { entries, type } = variables;
