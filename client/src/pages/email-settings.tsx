@@ -93,6 +93,12 @@ export default function EmailSettings() {
   const sendTestEmail = useMutation({
     mutationFn: async (data: { to: string; testType: string; message?: string }) => {
       const response = await apiRequest("/api/email/test", "POST", data);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -105,9 +111,19 @@ export default function EmailSettings() {
       queryClient.invalidateQueries({ queryKey: ["/api/email/queue"] });
     },
     onError: (error: any) => {
+      // Enhanced error handling with provider details
+      let description = error.message || "Please check your email configuration";
+      
+      if (error.hint) {
+        description = error.hint;
+      } else if (error.error) {
+        // Show provider error (limited to 300 chars)
+        description = error.error;
+      }
+      
       toast({
-        title: "Failed to send test email",
-        description: error.message || "Please check your email configuration",
+        title: error.message || "Failed to send test email",
+        description: description,
         variant: "destructive",
       });
     },
@@ -266,26 +282,98 @@ export default function EmailSettings() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-orange-700 mb-4">
-                  Email service is not configured. Please set up either SendGrid or SMTP credentials.
+                  Email service is not configured. Contact your system administrator to configure environment variables.
                 </p>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <strong>Option 1: SendGrid</strong>
-                    <ul className="ml-4 mt-1 list-disc text-muted-foreground">
-                      <li>Set SENDGRID_API_KEY environment variable</li>
-                      <li>Set SENDGRID_FROM_EMAIL (optional)</li>
-                      <li>Set SENDGRID_FROM_NAME (optional)</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <strong>Option 2: SMTP</strong>
-                    <ul className="ml-4 mt-1 list-disc text-muted-foreground">
-                      <li>Set SMTP_USER and SMTP_PASS</li>
-                      <li>Set SMTP_HOST (optional, defaults to Gmail)</li>
-                      <li>Set SMTP_PORT (optional, defaults to 587)</li>
-                    </ul>
-                  </div>
-                </div>
+                <Tabs defaultValue="sendgrid" className="mt-4">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="sendgrid">SendGrid (Recommended)</TabsTrigger>
+                    <TabsTrigger value="smtp">SMTP</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="sendgrid" className="space-y-4 mt-4">
+                    <div className="space-y-4 p-4 bg-white rounded-lg border">
+                      <h4 className="font-medium">SendGrid Configuration</h4>
+                      <div className="space-y-2">
+                        <Label htmlFor="sendgrid-api">API Key</Label>
+                        <Input 
+                          id="sendgrid-api"
+                          type="password"
+                          placeholder="SG.xxxxxxxxxxxxxxxxxxxxxxxxxx"
+                          disabled
+                        />
+                        <p className="text-xs text-muted-foreground">Set SENDGRID_API_KEY environment variable</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sendgrid-from">From Email</Label>
+                        <Input 
+                          id="sendgrid-from"
+                          type="email"
+                          placeholder="noreply@yourdomain.com"
+                          disabled
+                        />
+                        <p className="text-xs text-muted-foreground">Set SENDGRID_FROM_EMAIL (must be verified in SendGrid)</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sendgrid-name">From Name</Label>
+                        <Input 
+                          id="sendgrid-name"
+                          type="text"
+                          placeholder="Your Company Name"
+                          disabled
+                        />
+                        <p className="text-xs text-muted-foreground">Set SENDGRID_FROM_NAME environment variable</p>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="smtp" className="space-y-4 mt-4">
+                    <div className="space-y-4 p-4 bg-white rounded-lg border">
+                      <h4 className="font-medium">SMTP Configuration</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp-host">Host</Label>
+                          <Input 
+                            id="smtp-host"
+                            type="text"
+                            placeholder="smtp.gmail.com"
+                            disabled
+                          />
+                          <p className="text-xs text-muted-foreground">Set SMTP_HOST</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp-port">Port</Label>
+                          <Input 
+                            id="smtp-port"
+                            type="number"
+                            placeholder="587"
+                            disabled
+                          />
+                          <p className="text-xs text-muted-foreground">Set SMTP_PORT</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp-user">Username</Label>
+                        <Input 
+                          id="smtp-user"
+                          type="email"
+                          placeholder="your-email@gmail.com"
+                          disabled
+                        />
+                        <p className="text-xs text-muted-foreground">Set SMTP_USER environment variable</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp-pass">Password</Label>
+                        <Input 
+                          id="smtp-pass"
+                          type="password"
+                          placeholder="••••••••••••"
+                          disabled
+                        />
+                        <p className="text-xs text-muted-foreground">Set SMTP_PASS (use App Password for Gmail)</p>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           )}

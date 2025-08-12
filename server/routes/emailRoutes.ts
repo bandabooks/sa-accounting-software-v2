@@ -62,6 +62,30 @@ router.get("/status", authenticate, async (req: AuthenticatedRequest, res: Respo
   }
 });
 
+// Health check endpoint - performs dry-run validation
+router.get("/health", authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const health = await emailService.checkHealth();
+    
+    res.json({
+      ok: health.ok,
+      driver: health.provider,
+      hasKey: health.hasKey,
+      hasFrom: health.hasFrom,
+      provider: health.provider,
+      verifiedSender: health.verifiedSender,
+      details: health.details
+    });
+  } catch (error) {
+    console.error("Failed to check email health:", error);
+    res.status(500).json({ 
+      ok: false,
+      message: "Failed to check email health",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Send test email - available for super admin and company admins
 router.post("/test", authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -189,7 +213,7 @@ router.post("/test", authenticate, async (req: AuthenticatedRequest, res: Respon
         timestamp: new Date().toISOString(),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to send test email:", error);
     
     if (error instanceof z.ZodError) {
@@ -199,14 +223,18 @@ router.post("/test", authenticate, async (req: AuthenticatedRequest, res: Respon
       });
     }
     
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // Handle structured email errors
+    const statusCode = error.code || 500;
+    const errorMessage = error.message || "Failed to send test email";
+    const providerError = error.providerError;
+    const hint = error.hint;
     
-    res.status(500).json({ 
-      message: "Failed to send test email",
-      error: errorMessage,
-      hint: errorMessage.includes("not configured") 
+    res.status(statusCode).json({ 
+      message: errorMessage,
+      error: providerError ? providerError.substring(0, 300) : undefined,
+      hint: hint || (errorMessage.includes("not configured") 
         ? "Please configure email service with SENDGRID_API_KEY or SMTP credentials"
-        : undefined
+        : undefined)
     });
   }
 });

@@ -22,9 +22,30 @@ export interface EmailConfig {
   };
 }
 
+export interface EmailHealthStatus {
+  ok: boolean;
+  provider: 'sendgrid' | 'smtp' | 'none';
+  hasKey: boolean;
+  hasFrom: boolean;
+  verifiedSender: boolean;
+  details?: {
+    fromEmail?: string;
+    provider?: string;
+    errorHint?: string;
+  };
+}
+
+export interface EmailError {
+  code: number;
+  message: string;
+  providerError?: string;
+  hint?: string;
+}
+
 export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private config: EmailConfig | null = null;
+  private verifiedSenders: Set<string> = new Set();
 
   constructor() {
     this.initializeService();
@@ -42,6 +63,11 @@ export class EmailService {
           fromName: process.env.SENDGRID_FROM_NAME || 'Taxnify',
         },
       };
+      // Add verified sender
+      if (process.env.SENDGRID_FROM_EMAIL) {
+        this.verifiedSenders.add(process.env.SENDGRID_FROM_EMAIL);
+      }
+      this.verifiedSenders.add('noreply@taxnify.co.za'); // Always verified
     } 
     // Fallback to SMTP if SendGrid not configured
     else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -59,8 +85,65 @@ export class EmailService {
         provider: 'smtp',
         smtp: smtpConfig,
       };
-      this.transporter = nodemailer.createTransporter(smtpConfig);
+      this.transporter = nodemailer.createTransport(smtpConfig);
+      // SMTP sender is usually the auth user
+      if (process.env.SMTP_USER) {
+        this.verifiedSenders.add(process.env.SMTP_USER);
+      }
     }
+  }
+
+  private parseProviderError(error: any): EmailError {
+    let code = 500;
+    let message = 'Failed to send email';
+    let providerError = '';
+    let hint = '';
+
+    if (error.code === 403 || error.response?.status === 403) {
+      code = 403;
+      message = 'Email service authorization failed';
+      
+      if (this.config?.provider === 'sendgrid') {
+        // Extract SendGrid specific error
+        const errorBody = error.response?.body;
+        if (errorBody?.errors?.[0]) {
+          providerError = errorBody.errors[0].message || '';
+          // Limit to 300 chars as requested
+          if (providerError.length > 300) {
+            providerError = providerError.substring(0, 297) + '...';
+          }
+        }
+        
+        if (providerError.includes('The from address does not match a verified Sender Identity')) {
+          hint = 'Please verify your sender email address in SendGrid. Current sender: ' + 
+                 (this.config.sendgrid?.fromEmail || 'not configured');
+        } else if (providerError.includes('Invalid API key')) {
+          hint = 'SendGrid API key is invalid. Please check your SENDGRID_API_KEY environment variable.';
+        } else {
+          hint = 'Check SendGrid API key permissions and sender verification.';
+        }
+      }
+    } else if (error.code === 401 || error.response?.status === 401) {
+      code = 401;
+      message = 'Email service authentication failed';
+      hint = 'Check your API key or SMTP credentials.';
+    } else if (error.code === 'EAUTH') {
+      code = 401;
+      message = 'SMTP authentication failed';
+      hint = 'Check your SMTP username and password.';
+    } else if (error.code === 'ECONNREFUSED') {
+      code = 503;
+      message = 'Could not connect to email server';
+      hint = 'Check SMTP host and port settings.';
+    } else {
+      // Generic error
+      if (error.message) {
+        providerError = error.message.substring(0, 300);
+      }
+      hint = 'Check email service configuration and try again.';
+    }
+
+    return { code, message, providerError, hint };
   }
 
   async sendEmail(emailData: {
@@ -74,20 +157,46 @@ export class EmailService {
     userId?: number;
     templateId?: number;
     priority?: number;
+    fromEmail?: string; // Allow override but validate
   }) {
     if (!this.config) {
       throw new Error('Email service not configured. Please set SENDGRID_API_KEY or SMTP environment variables.');
     }
 
+    // Validate sender
+    let fromEmail = emailData.fromEmail;
+    if (this.config.provider === 'sendgrid') {
+      fromEmail = fromEmail || this.config.sendgrid?.fromEmail || 'noreply@taxnify.co.za';
+      
+      // Check if sender is verified
+      if (!this.verifiedSenders.has(fromEmail)) {
+        const error: EmailError = {
+          code: 400,
+          message: 'Unverified sender email',
+          hint: `The sender email "${fromEmail}" is not verified. Please use a verified sender or configure SENDGRID_FROM_EMAIL.`
+        };
+        throw error;
+      }
+    }
+
     try {
       if (this.config.provider === 'sendgrid' && this.config.sendgrid) {
+        // Ensure API key is set
+        if (!process.env.SENDGRID_API_KEY) {
+          throw {
+            code: 500,
+            message: 'SendGrid API key not configured',
+            hint: 'Set SENDGRID_API_KEY environment variable'
+          };
+        }
+
         // Use SendGrid
         const msg = {
           to: emailData.to,
           cc: emailData.cc,
           bcc: emailData.bcc,
           from: {
-            email: this.config.sendgrid.fromEmail,
+            email: fromEmail || this.config.sendgrid.fromEmail,
             name: this.config.sendgrid.fromName,
           },
           subject: emailData.subject,
@@ -102,7 +211,7 @@ export class EmailService {
       else if (this.config.provider === 'smtp' && this.transporter) {
         // Use SMTP
         const info = await this.transporter.sendMail({
-          from: this.config.smtp?.auth.user,
+          from: fromEmail || this.config.smtp?.auth.user,
           to: emailData.to,
           cc: emailData.cc,
           bcc: emailData.bcc,
@@ -116,10 +225,72 @@ export class EmailService {
       } else {
         throw new Error('Email service configuration error');
       }
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      throw error;
+    } catch (error: any) {
+      // Parse and enhance error
+      const emailError = this.parseProviderError(error);
+      console.error('Email send error:', {
+        code: emailError.code,
+        message: emailError.message,
+        hint: emailError.hint,
+        // Don't log sensitive details in production
+        ...(process.env.NODE_ENV === 'development' && { providerError: emailError.providerError })
+      });
+      
+      // Throw structured error
+      const enhancedError: any = new Error(emailError.message);
+      enhancedError.code = emailError.code;
+      enhancedError.providerError = emailError.providerError;
+      enhancedError.hint = emailError.hint;
+      throw enhancedError;
     }
+  }
+
+  async checkHealth(): Promise<EmailHealthStatus> {
+    const status: EmailHealthStatus = {
+      ok: false,
+      provider: 'none',
+      hasKey: false,
+      hasFrom: false,
+      verifiedSender: false,
+      details: {}
+    };
+
+    if (!this.config) {
+      status.details!.errorHint = 'No email service configured. Set SENDGRID_API_KEY or SMTP credentials.';
+      return status;
+    }
+
+    status.provider = this.config.provider;
+
+    if (this.config.provider === 'sendgrid' && this.config.sendgrid) {
+      status.hasKey = !!process.env.SENDGRID_API_KEY;
+      status.hasFrom = !!this.config.sendgrid.fromEmail;
+      status.verifiedSender = this.verifiedSenders.has(this.config.sendgrid.fromEmail);
+      status.details!.fromEmail = this.config.sendgrid.fromEmail;
+      status.details!.provider = 'SendGrid';
+
+      if (!status.hasKey) {
+        status.details!.errorHint = 'Missing SENDGRID_API_KEY environment variable';
+      } else if (!status.verifiedSender) {
+        status.details!.errorHint = `Sender "${this.config.sendgrid.fromEmail}" needs verification in SendGrid`;
+      } else {
+        status.ok = true;
+      }
+    } else if (this.config.provider === 'smtp') {
+      status.hasKey = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+      status.hasFrom = !!process.env.SMTP_USER;
+      status.verifiedSender = true; // SMTP doesn't require sender verification
+      status.details!.fromEmail = process.env.SMTP_USER;
+      status.details!.provider = 'SMTP';
+
+      if (!status.hasKey) {
+        status.details!.errorHint = 'Missing SMTP_USER or SMTP_PASS environment variables';
+      } else {
+        status.ok = true;
+      }
+    }
+
+    return status;
   }
 
   async queueEmail(emailData: {
@@ -189,7 +360,7 @@ export class EmailService {
           .where(eq(emailQueue.id, email.id));
 
       } catch (error) {
-        const attempts = email.attempts + 1;
+        const attempts = (email.attempts || 0) + 1;
         const maxAttempts = 3;
         
         if (attempts >= maxAttempts) {
