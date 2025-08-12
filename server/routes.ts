@@ -73,15 +73,6 @@ import {
   insertEstimateItemSchema, 
   insertPaymentSchema,
   insertExpenseSchema,
-  insertProductBrandSchema,
-  insertProductVariantSchema, 
-  insertWarehouseSchema,
-  insertProductLotSchema,
-  insertProductSerialSchema,
-  insertStockCountSchema,
-  insertStockCountItemSchema,
-  insertReorderRuleSchema,
-  insertProductBundleSchema,
   insertVatReturnSchema,
   customerPortalLoginSchema,
   insertSupplierSchema,
@@ -589,7 +580,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create company
       const company = await storage.createCompany({
-        companyId: `${Date.now()}${Math.floor(Math.random() * 1000)}`, // Generate unique company ID
         name: signupData.companyName,
         displayName: signupData.companyName,
         slug: finalSlug,
@@ -612,7 +602,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create user - First user of company gets company admin role (NOT super admin)
       const user = await storage.createUser({
-        userId: `${Date.now()}${Math.floor(Math.random() * 1000)}`, // Generate unique user ID
         username,
         name: `${signupData.firstName} ${signupData.lastName}`,
         email: signupData.email,
