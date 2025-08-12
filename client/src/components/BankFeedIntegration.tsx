@@ -135,7 +135,40 @@ export function BankFeedIntegration() {
     }
   });
 
-  // Handle demo link flow
+  // Handle connecting to a specific bank
+  const handleConnectBank = async (bankName: string) => {
+    setLinkingInProgress(true);
+    
+    try {
+      // Get link token for the specific bank
+      const { linkToken } = await linkTokenMutation.mutateAsync();
+      
+      // Simulate bank-specific connection flow
+      setTimeout(() => {
+        // Create a mock account for the selected bank
+        const mockAccount = {
+          id: `demo_${bankName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+          name: `${bankName} Business Account`,
+          institutionName: bankName,
+          accountNumber: `****${Math.floor(1000 + Math.random() * 9000)}`,
+          currency: 'ZAR',
+          balance: Math.floor(100000 + Math.random() * 500000),
+          type: 'business'
+        };
+
+        exchangeLinkMutation.mutate([mockAccount]);
+      }, 2000);
+    } catch (error) {
+      setLinkingInProgress(false);
+      toast({
+        title: 'Connection Failed',
+        description: 'Unable to connect to the selected bank. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Handle demo link flow (kept for backward compatibility)
   const handleDemoLinkFlow = (token: string) => {
     setLinkingInProgress(true);
     
@@ -381,13 +414,24 @@ export function BankFeedIntegration() {
           ) : (
             <div className="space-y-4">
               <div className="space-y-3">
-                <h4 className="text-sm font-medium">Supported Banks</h4>
+                <h4 className="text-sm font-medium">Choose Your Bank</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {['FNB', 'Standard Bank', 'ABSA', 'Nedbank', 'Capitec', 'Investec'].map((bank) => (
-                    <div key={bank} className="flex items-center gap-2 p-2 rounded-lg bg-accent/50">
-                      <span>{getBankLogo(bank)}</span>
-                      <span className="text-sm">{bank}</span>
-                    </div>
+                  {[
+                    { name: 'FNB', fullName: 'First National Bank' },
+                    { name: 'Standard Bank', fullName: 'Standard Bank' },
+                    { name: 'ABSA', fullName: 'ABSA Bank' },
+                    { name: 'Nedbank', fullName: 'Nedbank' },
+                    { name: 'Capitec', fullName: 'Capitec Bank' },
+                    { name: 'Investec', fullName: 'Investec' }
+                  ].map((bank) => (
+                    <button
+                      key={bank.name}
+                      onClick={() => handleConnectBank(bank.fullName)}
+                      className="flex items-center gap-2 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors border-2 border-transparent hover:border-primary"
+                    >
+                      <span className="text-lg">{getBankLogo(bank.fullName)}</span>
+                      <span className="text-sm font-medium">{bank.name}</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -423,27 +467,12 @@ export function BankFeedIntegration() {
                 </AlertDescription>
               </Alert>
 
-              <div className="flex gap-3">
+              <div className="flex justify-center">
                 <Button
                   variant="outline"
                   onClick={() => setShowLinkDialog(false)}
-                  className="flex-1"
                 >
                   Cancel
-                </Button>
-                <Button
-                  onClick={() => createLinkMutation.mutate()}
-                  disabled={createLinkMutation.isPending}
-                  className="flex-1"
-                >
-                  {createLinkMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Connect Bank
-                    </>
-                  )}
                 </Button>
               </div>
             </div>
