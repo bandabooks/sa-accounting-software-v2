@@ -1390,7 +1390,7 @@ export class DatabaseStorage implements IStorage {
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
     const [customer] = await db
       .insert(customers)
-      .values(insertCustomer)
+      .values([insertCustomer])
       .returning();
     return customer;
   }
@@ -1666,7 +1666,14 @@ export class DatabaseStorage implements IStorage {
 
       // Insert all journal entry lines
       console.log(`Creating ${journalLines.length} journal lines for invoice ${invoice.invoiceNumber}:`, journalLines);
-      const insertedLines = await db.insert(journalEntryLines).values(journalLines).returning();
+      const formattedJournalLines = journalLines.map(line => ({
+        ...line,
+        debitAmount: line.debitAmount.toString(),
+        creditAmount: line.creditAmount.toString(),
+        vatRate: line.vatRate.toString(),
+        vatAmount: line.vatAmount.toString()
+      }));
+      const insertedLines = await db.insert(journalEntryLines).values(formattedJournalLines).returning();
       console.log(`Successfully inserted ${insertedLines.length} journal lines`);
 
       // Update account balances
@@ -1762,7 +1769,14 @@ export class DatabaseStorage implements IStorage {
       ];
 
       console.log(`Creating ${paymentLines.length} payment journal lines for invoice ${invoice.invoiceNumber}:`, paymentLines);
-      const insertedPaymentLines = await db.insert(journalEntryLines).values(paymentLines).returning();
+      const formattedPaymentLines = paymentLines.map(line => ({
+        ...line,
+        debitAmount: line.debitAmount.toString(),
+        creditAmount: line.creditAmount.toString(),
+        vatRate: line.vatRate.toString(),
+        vatAmount: line.vatAmount.toString()
+      }));
+      const insertedPaymentLines = await db.insert(journalEntryLines).values(formattedPaymentLines).returning();
       console.log(`Successfully inserted ${insertedPaymentLines.length} payment journal lines`);
 
       // Update account balances
