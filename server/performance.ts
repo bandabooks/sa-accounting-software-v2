@@ -15,7 +15,7 @@ export class PerformanceOptimizedStorage {
           COALESCE(SUM(e.amount::numeric), 0)::text as total_expenses,
           COUNT(e.id)::text as expense_count,
           COUNT(DISTINCT c.id)::text as total_customers,
-          COALESCE(SUM(b.balance::numeric), 0)::text as bank_balance,
+          COALESCE(SUM(b.current_balance::numeric), 0)::text as bank_balance,
           COUNT(DISTINCT b.id)::text as account_count
         FROM invoices i
         FULL OUTER JOIN expenses e ON e.company_id = i.company_id
@@ -86,11 +86,11 @@ export class PerformanceOptimizedStorage {
         SELECT 
           id,
           account_name,
-          balance,
+          current_balance as balance,
           account_type
         FROM bank_accounts 
         WHERE company_id = ${companyId}
-        ORDER BY balance DESC
+        ORDER BY current_balance DESC
         LIMIT 5
       `);
 

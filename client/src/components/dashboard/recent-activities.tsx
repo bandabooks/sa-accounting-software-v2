@@ -75,12 +75,12 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
       </div>
       
       <div className="space-y-4">
-        {activities.map((activity) => {
+        {activities.map((activity, index) => {
           const IconComponent = getActivityIcon(activity.type, activity.status);
           const iconColorClass = getActivityColor(activity.type, activity.status);
           
           return (
-            <div key={`${activity.type}-${activity.id}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
               <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}>
                 <IconComponent size={16} />
               </div>
