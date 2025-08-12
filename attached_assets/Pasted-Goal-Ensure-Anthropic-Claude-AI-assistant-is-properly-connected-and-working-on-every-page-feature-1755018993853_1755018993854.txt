@@ -1,0 +1,105 @@
+Goal: Ensure Anthropic (Claude) AI assistant is properly connected and working on every page/feature that uses AI. Add a unified client, health checks, UI warnings, and monitoring. Stack: Next.js (TS, App Router) + React Query + Prisma/Postgres.
+
+1) Standardize the Anthropic client
+
+Create src/server/ai/anthropicClient.ts exporting a singleton:
+
+Reads ANTHROPIC_API_KEY, ANTHROPIC_MODEL (default claude-3-5-sonnet-latest), ANTHROPIC_TIMEOUT_MS (default 25_000).
+
+Exposes callClaude({ system, user, jsonSchema?, maxTokens? }) with: timeout, retries (2, exp backoff), and JSON-only mode if jsonSchema provided.
+
+Redact keys in logs; NEVER expose in client.
+
+Create src/server/ai/index.ts that re-exports callClaude and any AI helpers used by pages.
+
+2) Audit and rewire all AI call sites
+
+Find every AI usage under /app, /src, /server (e.g., receipt extraction, categorization, task drafting, message generation).
+
+Replace direct SDK/fetch calls with callClaude(...).
+
+Ensure server-only execution (no client-side key usage). If a page needs AI, route through API handlers in app/api/*.
+
+Confirm each handler enforces tenant guard and role permissions; strip PII before sending to AI (minimize payload).
+
+3) Environment & feature flag
+
+Verify .env has ANTHROPIC_API_KEY, ANTHROPIC_MODEL. Add .env.example with comments.
+
+Add feature flag: AI_PROVIDER=anthropic|openai|none. If not anthropic, all Claude calls should gracefully fallback (use existing OpenAI helper if present; else return a structured “disabled” response).
+
+4) Health checks & notifications
+
+New endpoint GET /api/ai/health (server-only):
+
+Validates env presence; runs a 1-token noop test call (or dry-run) with short timeout; returns { ok:boolean, provider:'anthropic', model, latencyMs }.
+
+On boot and then hourly, run health check server-side; if it fails:
+
+Log a structured error (level=ERROR, code=AI_HEALTH_FAIL).
+
+Set a volatile flag in memory/kv for 60m.
+
+Add a global banner component that shows (to super_admin only):
+
+“AI assistant unavailable (Anthropic). Some features are degraded.” with a “Retry” button calling /api/ai/health.
+
+5) UI wiring & UX safeguards
+
+For every page using AI (receipt extraction, auto-categorize, content generators, etc.):
+
+Show a loading state while awaiting AI.
+
+On timeout/error → show non-blocking toast and graceful fallback (manual form fields, cached suggestions, or “Try again”).
+
+Add a small “Powered by Claude” caption where appropriate (no keys or debug info).
+
+Rate-limit user-triggered AI calls (e.g., 10/min per user) and add debounce on text inputs.
+
+6) Security & POPIA
+
+Before sending data to AI: remove account numbers, ID numbers, emails, or address lines unless strictly required.
+
+Log only request IDs, companyId, token counts, and status—no raw prompts or outputs.
+
+Centralize redaction helper in src/server/ai/redact.ts and use it on all payloads.
+
+7) Observability & costs
+
+Add minimal telemetry: record tokens in/out, latency, and error codes per route (write to server logs).
+
+Hard budget guard: if estimated tokens > configured AI_MAX_TOKENS_PER_CALL (env), truncate context and warn user.
+
+8) Tests & verification
+
+Unit tests for anthropicClient (timeout, retries, jsonSchema mode).
+
+Route tests: endpoints using AI return 200 on success; degrade gracefully on provider failure.
+
+Health check test: ok with key; fails without key.
+
+E2E smoke: for 2–3 AI pages, verify loading→result→fallback paths.
+
+9) Acceptance criteria
+
+All AI pages/components call one centralized callClaude.
+
+Health check endpoint exists; banner appears only when health fails (super_admin).
+
+No API keys in client bundles; no PII in logs.
+
+Timeouts/retries in place; graceful fallback works.
+
+Report generated at reports/ai_wiring.md listing pages updated, endpoints touched, and health check results.
+
+Deliverables
+
+New files: src/server/ai/anthropicClient.ts, src/server/ai/index.ts, src/server/ai/redact.ts, app/api/ai/health/route.ts.
+
+Updated AI call sites to use callClaude.
+
+Global banner for super_admin on failures.
+
+.env.example updates and reports/ai_wiring.md.
+
+Commit: chore(ai): centralize Anthropic client, health checks, wiring & safeguards.

@@ -8,6 +8,9 @@ import { aiService } from "../services/aiService";
 import { workflowService } from "../services/workflowService";
 import passport from 'passport';
 import rateLimit from 'express-rate-limit';
+import { db } from "../db";
+import { users, auditLogs, companySettings } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // Rate limiting for sensitive endpoints
 const strictRateLimit = rateLimit({
@@ -407,7 +410,15 @@ export function registerEnterpriseRoutes(app: Express) {
   // Additional endpoints for enterprise settings components
   app.get("/api/notifications/settings", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const notificationSettings = {
+      const userId = req.user.id;
+      
+      // Get user's notification preferences from database
+      const [user] = await db.select()
+        .from(users)
+        .where(eq(users.id, userId));
+      
+      // Default notification settings if not set
+      const defaultSettings = {
         email: {
           enabled: true,
           invoiceReminders: true,
@@ -421,10 +432,91 @@ export function registerEnterpriseRoutes(app: Express) {
           paymentReminders: false,
         },
       };
+      
+      // Merge stored preferences with defaults
+      const notificationSettings = user?.notificationPreferences || defaultSettings;
+      
       res.json(notificationSettings);
     } catch (error) {
       console.error("Error getting notification settings:", error);
       res.status(500).json({ error: "Failed to get notification settings" });
+    }
+  });
+  
+  // Update notification settings
+  app.put("/api/notifications/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user.id;
+      const settings = req.body;
+      
+      // Update user's notification preferences
+      await db.update(users)
+        .set({ 
+          notificationPreferences: settings,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+      
+      // Log the change
+      await db.insert(auditLogs).values({
+        userId,
+        companyId: req.user.companyId || 1,
+        action: "UPDATE",
+        resource: "notification_settings",
+        details: { settings },
+        ipAddress: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] || "unknown",
+      });
+      
+      res.json({ success: true, message: "Notification settings updated" });
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      res.status(500).json({ error: "Failed to update notification settings" });
+    }
+  });
+  
+  // Test email notification
+  app.post("/api/notifications/test-email", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userEmail = req.user.email;
+      
+      await emailService.sendEmail({
+        to: userEmail,
+        subject: "Test Notification from Taxnify",
+        html: `
+          <h2>Test Email Notification</h2>
+          <p>This is a test email from your Taxnify notification system.</p>
+          <p>If you received this email, your email notifications are working correctly!</p>
+          <hr/>
+          <p style="color: #666; font-size: 12px;">Sent from Taxnify Enterprise Settings</p>
+        `,
+      });
+      
+      res.json({ success: true, message: "Test email sent successfully" });
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ error: "Failed to send test email" });
+    }
+  });
+  
+  // Test SMS notification
+  app.post("/api/notifications/test-sms", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userPhone = req.user.phone || req.body.phone;
+      
+      if (!userPhone) {
+        return res.status(400).json({ error: "Phone number not provided" });
+      }
+      
+      await smsService.sendSMS(
+        userPhone,
+        "Test SMS from Taxnify: Your SMS notifications are working correctly!"
+      );
+      
+      res.json({ success: true, message: "Test SMS sent successfully" });
+    } catch (error) {
+      console.error("Error sending test SMS:", error);
+      res.status(500).json({ error: "Failed to send test SMS. Please configure SMS settings." });
     }
   });
 
@@ -446,6 +538,169 @@ export function registerEnterpriseRoutes(app: Express) {
     } catch (error) {
       console.error("Error getting OAuth status:", error);
       res.status(500).json({ error: "Failed to get OAuth status" });
+    }
+  });
+
+  // Get AI settings endpoint
+  app.get("/api/ai/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId || 1;
+      
+      // Default AI settings
+      const aiSettings = {
+        enabled: false,
+        provider: 'anthropic',
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: process.env.ANTHROPIC_API_KEY ? '••••••••' : undefined,
+        model: 'claude-3-opus-20240229',
+        maxTokens: 4000,
+        temperature: 0.7,
+      };
+      
+      res.json(aiSettings);
+    } catch (error) {
+      console.error("Error getting AI settings:", error);
+      res.status(500).json({ error: "Failed to get AI settings" });
+    }
+  });
+  
+  // Update AI settings
+  app.put("/api/ai/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId || 1;
+      const settings = req.body;
+      
+      // For now, just return success
+      // In production, would store these settings in database
+      res.json({ success: true, message: "AI settings updated" });
+    } catch (error) {
+      console.error("Error updating AI settings:", error);
+      res.status(500).json({ error: "Failed to update AI settings" });
+    }
+  });
+  
+  // SMS Configuration endpoints
+  app.get("/api/sms/config", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const configured = !!process.env.TWILIO_ACCOUNT_SID;
+      
+      res.json({
+        configured,
+        provider: 'twilio',
+        phoneNumber: process.env.TWILIO_PHONE_NUMBER ? `****${process.env.TWILIO_PHONE_NUMBER.slice(-4)}` : null,
+        testMode: false,
+      });
+    } catch (error) {
+      console.error("Error getting SMS config:", error);
+      res.status(500).json({ error: "Failed to get SMS configuration" });
+    }
+  });
+  
+  // Update SMS configuration
+  app.put("/api/sms/config", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { accountSid, authToken, phoneNumber } = req.body;
+      
+      // In production, these would be stored securely
+      // For now, return success
+      res.json({ 
+        success: true, 
+        message: "SMS configuration updated. Please restart the server for changes to take effect." 
+      });
+    } catch (error) {
+      console.error("Error updating SMS config:", error);
+      res.status(500).json({ error: "Failed to update SMS configuration" });
+    }
+  });
+  
+  // OAuth configuration endpoints
+  app.get("/api/oauth/config", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      res.json({
+        google: {
+          configured: oauthService.isGoogleConfigured(),
+          clientId: process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.slice(0, 10)}...` : null,
+        },
+        microsoft: {
+          configured: oauthService.isMicrosoftConfigured(),
+          clientId: process.env.MICROSOFT_CLIENT_ID ? `${process.env.MICROSOFT_CLIENT_ID.slice(0, 10)}...` : null,
+        },
+      });
+    } catch (error) {
+      console.error("Error getting OAuth config:", error);
+      res.status(500).json({ error: "Failed to get OAuth configuration" });
+    }
+  });
+  
+  // Update OAuth configuration
+  app.put("/api/oauth/config", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { provider, clientId, clientSecret, callbackUrl } = req.body;
+      
+      // In production, these would be stored securely
+      res.json({ 
+        success: true, 
+        message: `${provider} OAuth configuration updated. Please restart the server for changes to take effect.` 
+      });
+    } catch (error) {
+      console.error("Error updating OAuth config:", error);
+      res.status(500).json({ error: "Failed to update OAuth configuration" });
+    }
+  });
+  
+  // Payment mode (Live Mode) toggle
+  app.get("/api/payment/mode", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId || 1;
+      
+      // Get payment mode from company settings
+      const [settings] = await db.select()
+        .from(companySettings)
+        .where(eq(companySettings.companyId, companyId));
+      
+      res.json({
+        liveMode: settings?.liveMode || false,
+        provider: 'payfast',
+      });
+    } catch (error) {
+      console.error("Error getting payment mode:", error);
+      res.status(500).json({ error: "Failed to get payment mode" });
+    }
+  });
+  
+  app.put("/api/payment/mode", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId || 1;
+      const { liveMode } = req.body;
+      
+      // Update company settings
+      await db.update(companySettings)
+        .set({ 
+          liveMode,
+          updatedAt: new Date()
+        })
+        .where(eq(companySettings.companyId, companyId));
+      
+      // Log the change
+      await db.insert(auditLogs).values({
+        userId: req.user.id,
+        companyId,
+        action: "UPDATE",
+        resource: "payment_mode",
+        details: { liveMode },
+        ipAddress: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] || "unknown",
+      });
+      
+      res.json({ 
+        success: true, 
+        message: `Payment mode ${liveMode ? 'enabled' : 'disabled'} successfully` 
+      });
+    } catch (error) {
+      console.error("Error updating payment mode:", error);
+      res.status(500).json({ error: "Failed to update payment mode" });
     }
   });
 

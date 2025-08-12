@@ -2300,6 +2300,8 @@ export const companySettings = pgTable("company_settings", {
   vatRegistered: boolean("vat_registered").default(false),
   vatPeriod: varchar("vat_period", { length: 20 }).default("monthly"), // monthly, bi-monthly
   vatSubmissionDate: integer("vat_submission_date").default(25), // Day of month
+  // Payment Settings
+  liveMode: boolean("live_mode").default(false), // Toggle for live payment processing
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
