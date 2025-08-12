@@ -105,6 +105,7 @@ import CustomerLifecycle from "@/pages/customer-lifecycle";
 import CommunicationCenter from "@/pages/communication-center";
 import CustomerSegments from "@/pages/customer-segments";
 import CustomerInsights from "@/pages/customer-insights";
+import AgingReports from "@/pages/aging-reports";
 
 import Integrations from "@/pages/integrations";
 import CIPCCompliance from "@/pages/cipc-compliance";
@@ -452,6 +453,11 @@ function AuthenticatedApp() {
         <Route path="/reports/financial">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <FinancialReportsPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/reports/aging">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <AgingReports />
           </ProtectedRoute>
         </Route>
 
