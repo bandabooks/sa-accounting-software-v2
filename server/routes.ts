@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
+import { aiMatcher } from "./ai-transaction-matcher";
 import { withCache } from "./cache";
 import { fastStorage } from "./performance";
 import { 
@@ -13616,6 +13617,181 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  console.log("All routes registered successfully, including SARS eFiling integration and Professional ID system!");
+  // AI-Powered Transaction Matching
+  app.post('/api/ai/match-transactions', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company context required" });
+      }
+
+      const { transactions } = req.body;
+      if (!transactions || !Array.isArray(transactions)) {
+        return res.status(400).json({ message: "Transactions array required" });
+      }
+
+      // Get chart of accounts for the company
+      const chartOfAccounts = await storage.getChartOfAccounts(companyId);
+      
+      // Get existing transaction patterns for learning
+      const existingTransactions = await storage.getRecentTransactionPatterns(companyId, 100);
+
+      // Perform AI matching
+      const matches = await aiMatcher.matchTransactionsBulk({
+        transactions,
+        chartOfAccounts,
+        existingTransactions
+      });
+
+      res.json({
+        success: true,
+        matches,
+        message: `AI matched ${matches.length} transactions with smart categorization`
+      });
+
+    } catch (error) {
+      console.error('AI matching error:', error);
+      res.status(500).json({ 
+        message: 'AI matching failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Find Similar Transactions
+  app.post('/api/ai/find-similar', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company context required" });
+      }
+
+      const { description } = req.body;
+      if (!description) {
+        return res.status(400).json({ message: "Transaction description required" });
+      }
+
+      // Get existing transaction patterns
+      const existingTransactions = await storage.getRecentTransactionPatterns(companyId, 200);
+
+      // Find similar patterns using AI
+      const similarTransactions = await aiMatcher.findSimilarTransactions(description, existingTransactions);
+
+      res.json({
+        success: true,
+        similarTransactions,
+        message: `Found ${similarTransactions.length} similar transaction patterns`
+      });
+
+    } catch (error) {
+      console.error('Similar transaction search error:', error);
+      res.status(500).json({ 
+        message: 'Similar transaction search failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Auto-detect VAT Rate
+  app.post('/api/ai/detect-vat', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { description, amount, transactionType } = req.body;
+      
+      if (!description) {
+        return res.status(400).json({ message: "Transaction description required" });
+      }
+
+      // AI-powered VAT detection
+      const vatInfo = await aiMatcher.detectVATRate(description, amount || 0, transactionType || 'expense');
+
+      res.json({
+        success: true,
+        vatInfo,
+        message: `VAT rate detected: ${vatInfo.rate}% (${vatInfo.type})`
+      });
+
+    } catch (error) {
+      console.error('VAT detection error:', error);
+      res.status(500).json({ 
+        message: 'VAT detection failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Bulk Auto-match and Apply
+  app.post('/api/ai/auto-match-apply', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User authentication required" });
+      }
+
+      const { transactionIds, confidenceThreshold = 0.8 } = req.body;
+      
+      if (!transactionIds || !Array.isArray(transactionIds)) {
+        return res.status(400).json({ message: "Transaction IDs array required" });
+      }
+
+      // Get pending bulk capture transactions
+      const pendingTransactions = await storage.getBulkCaptureTransactions(companyId);
+      const targetTransactions = pendingTransactions.filter(t => transactionIds.includes(t.id));
+
+      if (targetTransactions.length === 0) {
+        return res.status(404).json({ message: "No matching transactions found" });
+      }
+
+      // Get chart of accounts and existing patterns
+      const chartOfAccounts = await storage.getChartOfAccounts(companyId);
+      const existingTransactions = await storage.getRecentTransactionPatterns(companyId, 100);
+
+      // Perform AI matching
+      const matches = await aiMatcher.matchTransactionsBulk({
+        transactions: targetTransactions,
+        chartOfAccounts,
+        existingTransactions
+      });
+
+      // Auto-apply high-confidence matches
+      let appliedCount = 0;
+      let suggestions = [];
+
+      for (const match of matches) {
+        if (match.suggestedAccount.confidence >= confidenceThreshold) {
+          // Auto-apply the match
+          await storage.updateBulkCaptureTransaction(match.transactionId, {
+            accountId: match.suggestedAccount.id,
+            vatRate: match.vatRate,
+            vatType: match.vatType,
+            category: match.category,
+            autoMatched: true,
+            matchConfidence: match.suggestedAccount.confidence
+          });
+          appliedCount++;
+        } else {
+          // Add to suggestions for manual review
+          suggestions.push(match);
+        }
+      }
+
+      res.json({
+        success: true,
+        appliedCount,
+        suggestionsCount: suggestions.length,
+        suggestions,
+        message: `Auto-applied ${appliedCount} high-confidence matches, ${suggestions.length} suggestions for review`
+      });
+
+    } catch (error) {
+      console.error('Auto-match and apply error:', error);
+      res.status(500).json({ 
+        message: 'Auto-match and apply failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, and AI Transaction Matching!");
   return httpServer;
 }
