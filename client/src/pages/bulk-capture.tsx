@@ -1725,7 +1725,7 @@ const EnhancedBulkCapture = () => {
                             }))}
                             value={entry.clientId?.toString() || ''}
                             onValueChange={(value) => updateIncomeEntry(index, 'clientId', value ? parseInt(value) : 0)}
-                            placeholder="Search clients..."
+                            placeholder="Select client..."
                             clearable
                           />
                         </td>
@@ -1745,7 +1745,7 @@ const EnhancedBulkCapture = () => {
                             }))}
                             value={entry.bankAccountId?.toString() || ''}
                             onValueChange={(value) => updateIncomeEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
-                            placeholder="Search bank accounts..."
+                            placeholder="Select bank account..."
                             clearable
                           />
                         </td>
@@ -1932,7 +1932,7 @@ const EnhancedBulkCapture = () => {
                               }))}
                             value={entry.categoryId.toString()}
                             onValueChange={(value) => updateExpenseEntry(index, 'categoryId', parseInt(value))}
-                            placeholder="Search expense accounts..."
+                            placeholder="Select expense account..."
                           />
                         </td>
                         <td className="p-3">
@@ -1971,7 +1971,7 @@ const EnhancedBulkCapture = () => {
                             }))}
                             value={entry.supplierId?.toString() || ''}
                             onValueChange={(value) => updateExpenseEntry(index, 'supplierId', value ? parseInt(value) : 0)}
-                            placeholder="Search suppliers..."
+                            placeholder="Select supplier..."
                             clearable
                           />
                         </td>
@@ -1991,7 +1991,7 @@ const EnhancedBulkCapture = () => {
                             }))}
                             value={entry.bankAccountId?.toString() || ''}
                             onValueChange={(value) => updateExpenseEntry(index, 'bankAccountId', value ? parseInt(value) : 0)}
-                            placeholder="Search bank accounts..."
+                            placeholder="Select bank account..."
                             clearable
                           />
                         </td>
