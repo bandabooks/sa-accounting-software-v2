@@ -675,7 +675,8 @@ const EnhancedBulkCapture = () => {
       const validEntries = expenseEntries.filter(entry => 
         entry.description && 
         parseFloat(entry.amount) > 0 && 
-        entry.categoryId > 0
+        entry.categoryId > 0 &&
+        entry.bankAccountId > 0  // Ensure bank account is selected
       );
       
       if (validEntries.length === 0) {
@@ -728,7 +729,10 @@ const EnhancedBulkCapture = () => {
             {
               accountId: (() => {
                 const bankAccount = bankAccounts.find(ba => ba.id === parseInt(entry.bankAccountId?.toString() || '0'));
-                return bankAccount ? bankAccount.chartAccountId : 0;
+                if (!bankAccount || !bankAccount.chartAccountId) {
+                  throw new Error(`Bank account not found or missing chart account ID for entry: ${entry.description}`);
+                }
+                return bankAccount.chartAccountId;
               })(),
               description: entry.description,
               debitAmount: '0.00',
