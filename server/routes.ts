@@ -63,6 +63,7 @@ import {
 import { registerCompanyRoutes } from "./companyRoutes";
 import { registerEnterpriseRoutes } from "./routes/enterpriseRoutes";
 import { registerOnboardingRoutes } from "./routes/onboardingRoutes";
+import emailRoutes from "./routes/emailRoutes";
 import { sarsService } from "./sarsService";
 import { 
   insertCustomerSchema, 
@@ -261,6 +262,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register enterprise feature routes
   registerEnterpriseRoutes(app);
   registerOnboardingRoutes(app);
+  
+  // Register email routes
+  app.use("/api/email", emailRoutes);
 
   // AI Assistant Routes
   app.get("/api/ai/settings", authenticate, async (req, res) => {

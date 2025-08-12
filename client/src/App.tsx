@@ -38,6 +38,7 @@ import ProductCreate from "@/pages/product-create";
 import ProductEdit from "@/pages/product-edit";
 import Categories from "@/pages/categories";
 import Settings from "@/pages/settings";
+import EmailSettings from "@/pages/email-settings";
 import Inventory from "@/pages/inventory";
 import Companies from "@/pages/companies";
 import Profile from "@/pages/profile";
@@ -495,6 +496,11 @@ function AuthenticatedApp() {
         <Route path="/settings">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <Settings />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/email-settings">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <EmailSettings />
           </ProtectedRoute>
         </Route>
         <Route path="/inventory">
