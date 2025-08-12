@@ -30,12 +30,13 @@ import {
   RefreshCw,
   Sparkles,
   Zap,
-  Bot
+  Bot,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "@shared/vat-constants";
-import { JournalHistory } from '@/components/bulk/journal-history/JournalHistory';
 
 interface ExpenseEntry {
   id?: number;
@@ -130,6 +131,10 @@ const EnhancedBulkCapture = () => {
   const [isAiMatching, setIsAiMatching] = useState(false);
   const [aiMatchingProgress, setAiMatchingProgress] = useState(0);
   const [autoMatchedEntries, setAutoMatchedEntries] = useState<Set<number>>(new Set());
+  
+  // Edit/Delete states
+  const [editingEntry, setEditingEntry] = useState<any>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -985,6 +990,79 @@ const EnhancedBulkCapture = () => {
       });
     },
   });
+
+  // Delete journal entry mutation
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId: number) => {
+      return await apiRequest(`/api/journal-entries/${entryId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      toast({
+        title: "Entry Deleted",
+        description: "Journal entry has been deleted successfully",
+        variant: "success" as any,
+      });
+      // Refetch journal entries
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Delete Entry",
+        description: error.message || "An error occurred while deleting the entry",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update journal entry mutation
+  const updateEntryMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      return await apiRequest(`/api/journal-entries/${id}`, 'PUT', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Entry Updated",
+        description: "Journal entry has been updated successfully",
+        variant: "success" as any,
+      });
+      setShowEditDialog(false);
+      setEditingEntry(null);
+      // Refetch journal entries
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Update Entry",
+        description: error.message || "An error occurred while updating the entry",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler functions for edit and delete
+  const handleEditEntry = (entry: any) => {
+    setEditingEntry(entry);
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteEntry = async (entryId: number) => {
+    if (confirm('Are you sure you want to delete this journal entry?')) {
+      deleteEntryMutation.mutate(entryId);
+    }
+  };
+
+  const handleUpdateEntry = () => {
+    if (editingEntry) {
+      updateEntryMutation.mutate({
+        id: editingEntry.id,
+        data: {
+          description: editingEntry.description,
+          reference: editingEntry.reference,
+          transactionDate: editingEntry.transactionDate,
+        }
+      });
+    }
+  };
 
   // Script-based Auto-Matching Mutation (Primary Solution)
   const scriptAutoMatchMutation = useMutation({
@@ -2171,21 +2249,43 @@ const EnhancedBulkCapture = () => {
                           R {parseFloat(entry.totalCredit).toFixed(2)}
                         </td>
                         <td className="py-3">
-                          {!entry.isPosted ? (
-                            <Button
-                              onClick={() => postSingleEntryMutation.mutate(entry.id)}
-                              disabled={postSingleEntryMutation.isPending}
-                              size="sm"
-                              variant="outline"
-                              className="text-xs border-green-300 text-green-700 hover:bg-green-50"
-                            >
-                              {postSingleEntryMutation.isPending ? 'Posting...' : 'Post'}
-                            </Button>
-                          ) : (
-                            <Badge variant="outline" className="text-xs text-gray-500">
-                              Locked
-                            </Badge>
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {!entry.isPosted ? (
+                              <>
+                                <Button
+                                  onClick={() => postSingleEntryMutation.mutate(entry.id)}
+                                  disabled={postSingleEntryMutation.isPending}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs border-green-300 text-green-700 hover:bg-green-50"
+                                >
+                                  {postSingleEntryMutation.isPending ? 'Posting...' : 'Post'}
+                                </Button>
+                                <Button
+                                  onClick={() => handleEditEntry(entry)}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="p-1"
+                                  title="Edit entry"
+                                >
+                                  <Edit2 className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteEntry(entry.id)}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="p-1"
+                                  title="Delete entry"
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-gray-500">
+                                Locked
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2237,8 +2337,70 @@ const EnhancedBulkCapture = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Journal Entry History Section */}
-      <JournalHistory />
+      {/* Edit Journal Entry Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Journal Entry</DialogTitle>
+          </DialogHeader>
+          {editingEntry && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-date">Date</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editingEntry.transactionDate?.split('T')[0] || ''}
+                  onChange={(e) => setEditingEntry({
+                    ...editingEntry,
+                    transactionDate: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  value={editingEntry.description || ''}
+                  onChange={(e) => setEditingEntry({
+                    ...editingEntry,
+                    description: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-reference">Reference</Label>
+                <Input
+                  id="edit-reference"
+                  value={editingEntry.reference || ''}
+                  onChange={(e) => setEditingEntry({
+                    ...editingEntry,
+                    reference: e.target.value
+                  })}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowEditDialog(false);
+                    setEditingEntry(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateEntry}
+                  disabled={updateEntryMutation.isPending}
+                >
+                  {updateEntryMutation.isPending ? 'Updating...' : 'Update'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
