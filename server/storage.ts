@@ -1784,6 +1784,39 @@ export class DatabaseStorage implements IStorage {
     const nextNumber = latestEntry.length > 0 ? (latestEntry[0].id || 0) + 1 : 1;
     return `JE-${year}-${nextNumber.toString().padStart(4, '0')}`;
   }
+  
+  async getNextBulkCaptureNumber(companyId: number, type: 'income' | 'expense'): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = type === 'income' ? 'BCI' : 'BCE'; // Bulk Capture Income / Bulk Capture Expense
+    
+    // Get count of bulk capture entries for this company today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const bulkEntries = await db.select()
+      .from(journalEntries)
+      .where(and(
+        eq(journalEntries.companyId, companyId),
+        like(journalEntries.entryNumber, `${prefix}-${year}-%`),
+        gte(journalEntries.createdAt, today)
+      ))
+      .orderBy(desc(journalEntries.id));
+    
+    // Extract the highest number from existing entries
+    let maxNumber = 0;
+    for (const entry of bulkEntries) {
+      const match = entry.entryNumber.match(new RegExp(`${prefix}-${year}-(\\d+)`));
+      if (match && match[1]) {
+        const num = parseInt(match[1]);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    }
+    
+    const nextNumber = maxNumber + 1;
+    return `${prefix}-${year}-${nextNumber.toString().padStart(4, '0')}`;
+  }
 
   async updateAccountBalances(companyId: number): Promise<void> {
     try {
