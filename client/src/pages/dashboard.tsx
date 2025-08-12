@@ -570,97 +570,189 @@ export default function Dashboard() {
 
             <TabsContent value="finance" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-teal-50 hover:shadow-2xl transition-all duration-300">
+                {/* Enhanced Cash Flow Summary Widget */}
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-2xl transition-all duration-300">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-semibold text-gray-800">Cash Flow</CardTitle>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/financial-reports">
-                          <TrendingUp className="h-4 w-4 mr-2" />
-                          Details
-                        </Link>
-                      </Button>
-                    </div>
-                    <CardDescription>Money in vs money out</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm text-gray-600">Incoming</span>
-                        <span className="font-medium text-green-600">+R24,150</span>
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-gradient-to-r from-purple-500 to-violet-600 rounded-lg">
+                          <Activity className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-semibold text-gray-800">Cash Flow Summary</CardTitle>
+                          <CardDescription className="text-xs text-gray-600">Real-time financial activity</CardDescription>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm text-gray-600">Outgoing</span>
-                        <span className="font-medium text-red-600">-R15,800</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                        <span className="text-sm font-medium text-gray-900">Net Cash Flow</span>
-                        <span className="font-bold text-green-600">+R8,350</span>
-                      </div>
+                      <Badge variant="outline" className="text-xs text-purple-700 bg-purple-50 border-purple-200">
+                        Live
+                      </Badge>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-orange-50 to-red-50 hover:shadow-2xl transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-semibold text-gray-800">Expenses Breakdown</CardTitle>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/expenses">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View All
-                        </Link>
-                      </Button>
-                    </div>
-                    <CardDescription>Top spending categories</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm text-gray-600">Operating Costs</span>
-                        <span className="font-medium text-gray-900">R8,200</span>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="text-lg font-bold text-green-700">{formatCurrency(dashboardStats.cashFlowSummary?.todayInflow || "0.00")}</div>
+                          <div className="text-xs text-green-600 flex items-center justify-center gap-1">
+                            <ArrowUpRight className="h-3 w-3" />
+                            Inflow Today
+                          </div>
+                        </div>
+                        <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div className="text-lg font-bold text-red-700">{formatCurrency(dashboardStats.cashFlowSummary?.todayOutflow || "0.00")}</div>
+                          <div className="text-xs text-red-600 flex items-center justify-center gap-1">
+                            <ArrowDownRight className="h-3 w-3" />
+                            Outflow Today
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm text-gray-600">Marketing</span>
-                        <span className="font-medium text-gray-900">R3,500</span>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-gray-800">{formatCurrency(dashboardStats.cashFlowSummary?.currentCashPosition || "0.00")}</div>
+                          <div className="text-xs text-gray-600">Current Cash Position</div>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm text-gray-600">Office Supplies</span>
-                        <span className="font-medium text-gray-900">R2,100</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm text-gray-600">Other</span>
-                        <span className="font-medium text-gray-900">R2,000</span>
+                      <div className="text-center">
+                        <div className={`text-sm font-semibold ${parseFloat(dashboardStats.cashFlowSummary?.netCashFlow || "0") >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          Net: {formatCurrency(dashboardStats.cashFlowSummary?.netCashFlow || "0.00")}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-2xl transition-all duration-300">
+                {/* Enhanced Bank Account Balances Widget */}
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-2xl transition-all duration-300">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-semibold text-gray-800">Budget Overview</CardTitle>
-                    <CardDescription>Current month progress</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                          <Wallet className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-semibold text-gray-800">Bank Balances</CardTitle>
+                          <CardDescription className="text-xs text-gray-600">Current account positions</CardDescription>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs text-green-700 bg-green-50 border-green-200">
+                        Real-time
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {dashboardStats.bankBalances && dashboardStats.bankBalances.length > 0 ? (
+                        dashboardStats.bankBalances.slice(0, 3).map((account: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 bg-green-100 rounded-lg">
+                                <Building className="h-3 w-3 text-green-600" />
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-800">{account.accountName || 'Bank Account'}</h4>
+                                <p className="text-xs text-gray-600">{account.accountNumber || 'Current Account'}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-gray-800">{formatCurrency(account.balance || "0.00")}</div>
+                              <div className="text-xs text-gray-500">Available</div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          <Building className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                          <p className="text-sm">No bank accounts configured</p>
+                        </div>
+                      )}
+                      <Button asChild variant="outline" size="sm" className="w-full">
+                        <Link href="/bank-accounts">
+                          <Eye className="h-3 w-3 mr-2" />
+                          View All Accounts
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Enhanced Aged Receivables/Payables Widget */}
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-orange-50 to-amber-50 hover:shadow-2xl transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-gradient-to-r from-orange-500 to-amber-600 rounded-lg">
+                          <Clock className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-semibold text-gray-800">Aged Analysis</CardTitle>
+                          <CardDescription className="text-xs text-gray-600">Receivables & payables aging</CardDescription>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs text-orange-700 bg-orange-50 border-orange-200">
+                        Credit Mgmt
+                      </Badge>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
+                      {/* Receivables Section */}
                       <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-medium">Monthly Budget</span>
-                          <span className="text-sm text-gray-600">R45,000</span>
+                        <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1">
+                          <ArrowUpRight className="h-3 w-3 text-green-600" />
+                          Receivables
+                        </h4>
+                        <div className="grid grid-cols-4 gap-1 text-xs">
+                          <div className="text-center p-2 bg-green-50 rounded border border-green-200">
+                            <div className="font-bold text-green-700">R 0</div>
+                            <div className="text-green-600">0-30</div>
+                          </div>
+                          <div className="text-center p-2 bg-yellow-50 rounded border border-yellow-200">
+                            <div className="font-bold text-yellow-700">R 0</div>
+                            <div className="text-yellow-600">31-60</div>
+                          </div>
+                          <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
+                            <div className="font-bold text-orange-700">R 0</div>
+                            <div className="text-orange-600">61-90</div>
+                          </div>
+                          <div className="text-center p-2 bg-red-50 rounded border border-red-200">
+                            <div className="font-bold text-red-700">R 0</div>
+                            <div className="text-red-600">90+</div>
+                          </div>
                         </div>
-                        <Progress value={65} className="h-2 bg-blue-100" />
-                        <p className="text-xs text-gray-500 mt-1">65% utilized</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 bg-white rounded-lg text-center">
-                          <p className="text-xs text-gray-600">Remaining</p>
-                          <p className="font-semibold text-blue-600">R15,750</p>
-                        </div>
-                        <div className="p-3 bg-white rounded-lg text-center">
-                          <p className="text-xs text-gray-600">Days Left</p>
-                          <p className="font-semibold text-orange-600">12</p>
+                      
+                      {/* Payables Section */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1">
+                          <ArrowDownRight className="h-3 w-3 text-red-600" />
+                          Payables
+                        </h4>
+                        <div className="grid grid-cols-4 gap-1 text-xs">
+                          <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
+                            <div className="font-bold text-blue-700">R 0</div>
+                            <div className="text-blue-600">0-30</div>
+                          </div>
+                          <div className="text-center p-2 bg-yellow-50 rounded border border-yellow-200">
+                            <div className="font-bold text-yellow-700">R 0</div>
+                            <div className="text-yellow-600">31-60</div>
+                          </div>
+                          <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
+                            <div className="font-bold text-orange-700">R 0</div>
+                            <div className="text-orange-600">61-90</div>
+                          </div>
+                          <div className="text-center p-2 bg-red-50 rounded border border-red-200">
+                            <div className="font-bold text-red-700">R 0</div>
+                            <div className="text-red-600">90+</div>
+                          </div>
                         </div>
                       </div>
+                      
+                      <Button asChild variant="outline" size="sm" className="w-full">
+                        <Link href="/reports/aging">
+                          <Eye className="h-3 w-3 mr-2" />
+                          Detailed Aging Report
+                        </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
