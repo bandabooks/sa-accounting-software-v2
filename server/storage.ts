@@ -1222,7 +1222,6 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: auditLogs.id,
         userId: auditLogs.userId,
-        companyId: auditLogs.companyId,
         action: auditLogs.action,
         resource: auditLogs.resource,
         resourceId: auditLogs.resourceId,
@@ -1230,8 +1229,6 @@ export class DatabaseStorage implements IStorage {
         ipAddress: auditLogs.ipAddress,
         userAgent: auditLogs.userAgent,
         timestamp: auditLogs.timestamp,
-        oldValues: auditLogs.oldValues,
-        newValues: auditLogs.newValues,
         userName: users.username,
         userEmail: users.email,
         userFullName: users.name,
@@ -1246,7 +1243,6 @@ export class DatabaseStorage implements IStorage {
     return results.map(result => ({
       id: result.id,
       userId: result.userId,
-      companyId: result.companyId,
       action: result.action,
       resource: result.resource,
       resourceId: result.resourceId,
@@ -1254,8 +1250,6 @@ export class DatabaseStorage implements IStorage {
       ipAddress: result.ipAddress,
       userAgent: result.userAgent,
       timestamp: result.timestamp,
-      oldValues: result.oldValues,
-      newValues: result.newValues,
       user: result.userId ? {
         id: result.userId,
         username: result.userName || 'Unknown',
@@ -1437,7 +1431,6 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select({
         id: invoices.id,
-        companyId: invoices.companyId,
         invoiceNumber: invoices.invoiceNumber,
         customerId: invoices.customerId,
         issueDate: invoices.issueDate,
@@ -1446,7 +1439,6 @@ export class DatabaseStorage implements IStorage {
         subtotal: invoices.subtotal,
         vatAmount: invoices.vatAmount,
         total: invoices.total,
-        reference: invoices.reference,
         notes: invoices.notes,
         createdAt: invoices.createdAt,
         customer: {
@@ -1479,21 +1471,11 @@ export class DatabaseStorage implements IStorage {
   async getAllInvoices(companyId?: number): Promise<InvoiceWithCustomer[]> {
     let query = db
       .select({
-        id: invoices.id,
-        companyId: invoices.companyId,
-        invoiceNumber: invoices.invoiceNumber,
-        customerId: invoices.customerId,
-        issueDate: invoices.issueDate,
-        dueDate: invoices.dueDate,
-        status: invoices.status,
-        subtotal: invoices.subtotal,
-        vatAmount: invoices.vatAmount,
-        total: invoices.total,
-        reference: invoices.reference,
-        notes: invoices.notes,
-        createdAt: invoices.createdAt,
-        customer: customers,
-        paidAmount: sql<string>`COALESCE(SUM(${payments.amount}), 0)`.as('paid_amount')
+        invoice: {
+          ...invoices,
+          paidAmount: sql<string>`COALESCE(SUM(${payments.amount}), 0)`.as('paid_amount')
+        },
+        customer: customers
       })
       .from(invoices)
       .leftJoin(customers, eq(invoices.customerId, customers.id))
@@ -1512,20 +1494,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(invoices.id));
     
     return result.map(row => ({
-      id: row.id,
-      companyId: row.companyId,
-      invoiceNumber: row.invoiceNumber,
-      customerId: row.customerId,
-      issueDate: row.issueDate,
-      dueDate: row.dueDate,
-      status: row.status,
-      subtotal: row.subtotal,
-      vatAmount: row.vatAmount,
-      total: row.total,
-      reference: row.reference,
-      notes: row.notes,
-      createdAt: row.createdAt,
-      customer: row.customer!
+      ...row.invoice,
+      customer: row.customer!,
+      paidAmount: row.invoice.paidAmount
     }));
   }
 
@@ -1660,10 +1631,10 @@ export class DatabaseStorage implements IStorage {
         journalEntryId: journalEntry.id,
         accountId: debtorsAccount.id,
         description: `Invoice ${invoice.invoiceNumber} - Customer: ${invoice.customerId}`,
-        debitAmount: invoice.total.toString(),
-        creditAmount: "0.00",
-        vatRate: "0.00",
-        vatAmount: "0.00",
+        debitAmount: parseFloat(invoice.total.toString()),
+        creditAmount: 0,
+        vatRate: 0,
+        vatAmount: 0,
         reference: invoice.invoiceNumber
       });
 
@@ -1672,10 +1643,10 @@ export class DatabaseStorage implements IStorage {
         journalEntryId: journalEntry.id,
         accountId: salesRevenueAccount.id,
         description: `Sales Revenue - Invoice ${invoice.invoiceNumber}`,
-        debitAmount: "0.00",
-        creditAmount: invoice.subtotal.toString(),
-        vatRate: "15.00",
-        vatAmount: "0.00",
+        debitAmount: 0,
+        creditAmount: parseFloat(invoice.subtotal.toString()),
+        vatRate: 15,
+        vatAmount: 0,
         reference: invoice.invoiceNumber
       });
 
@@ -1685,10 +1656,10 @@ export class DatabaseStorage implements IStorage {
           journalEntryId: journalEntry.id,
           accountId: vatOutputAccount.id,
           description: `VAT Output - Invoice ${invoice.invoiceNumber}`,
-          debitAmount: "0.00",
-          creditAmount: invoice.vatAmount.toString(),
-          vatRate: "15.00",
-          vatAmount: invoice.vatAmount.toString(),
+          debitAmount: 0,
+          creditAmount: parseFloat(invoice.vatAmount.toString()),
+          vatRate: 15,
+          vatAmount: parseFloat(invoice.vatAmount.toString()),
           reference: invoice.invoiceNumber
         });
       }
@@ -1772,20 +1743,20 @@ export class DatabaseStorage implements IStorage {
           journalEntryId: journalEntry.id,
           accountId: bankAccount.id,
           description: `Payment received - Invoice ${invoice.invoiceNumber}`,
-          debitAmount: invoice.total.toString(),
-          creditAmount: "0.00",
-          vatRate: "0.00",
-          vatAmount: "0.00",
+          debitAmount: parseFloat(invoice.total.toString()),
+          creditAmount: 0,
+          vatRate: 0,
+          vatAmount: 0,
           reference: `PAY-${invoice.invoiceNumber}`
         },
         {
           journalEntryId: journalEntry.id,
           accountId: debtorsAccount.id,
           description: `Payment applied - Invoice ${invoice.invoiceNumber}`,
-          debitAmount: "0.00",
-          creditAmount: invoice.total.toString(),
-          vatRate: "0.00",
-          vatAmount: "0.00",
+          debitAmount: 0,
+          creditAmount: parseFloat(invoice.total.toString()),
+          vatRate: 0,
+          vatAmount: 0,
           reference: `PAY-${invoice.invoiceNumber}`
         }
       ];
@@ -3093,8 +3064,8 @@ export class DatabaseStorage implements IStorage {
         journalEntryId: journalEntry.id,
         accountId: expenseAccountId,
         description: expense.description,
-        debitAmount: expense.amount.toString(),
-        creditAmount: "0.00"
+        debitAmount: parseFloat(expense.amount),
+        creditAmount: 0
       });
 
       // Credit: Accounts Payable or Bank Account
@@ -3106,8 +3077,8 @@ export class DatabaseStorage implements IStorage {
             journalEntryId: journalEntry.id,
             accountId: payableAccount.id,
             description: `Payable - ${expense.description}`,
-            debitAmount: "0.00",
-            creditAmount: expense.amount.toString()
+            debitAmount: 0,
+            creditAmount: parseFloat(expense.amount)
           });
         }
       } else {
@@ -3118,8 +3089,8 @@ export class DatabaseStorage implements IStorage {
             journalEntryId: journalEntry.id,
             accountId: bankAccount.id,
             description: `Cash payment - ${expense.description}`,
-            debitAmount: "0.00",
-            creditAmount: expense.amount.toString()
+            debitAmount: 0,
+            creditAmount: parseFloat(expense.amount)
           });
         }
       }
