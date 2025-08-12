@@ -134,6 +134,36 @@ export class ScriptTransactionMatcher {
       reasoning: 'Equipment purchases subject to 15% VAT'
     },
 
+    // Repairs and Maintenance
+    {
+      patterns: ['repairs', 'maintenance', 'repair', 'service', 'fix', 'servicing'],
+      accountName: 'Repairs & Maintenance',
+      vatRate: 15,
+      vatType: 'Standard Rate',
+      confidence: 0.90,
+      reasoning: 'Repairs and maintenance subject to 15% VAT'
+    },
+
+    // General Fees
+    {
+      patterns: ['fees', 'fee', 'charge', 'charges', 'service fee', 'admin fee', 'processing fee'],
+      accountName: 'Professional Fees',
+      vatRate: 15,
+      vatType: 'Standard Rate',
+      confidence: 0.80,
+      reasoning: 'General fees subject to 15% VAT'
+    },
+
+    // App/Software related
+    {
+      patterns: ['app', 'software', 'subscription', 'license', 'saas', 'technology'],
+      accountName: 'Software & Technology',
+      vatRate: 15,
+      vatType: 'Standard Rate',
+      confidence: 0.85,
+      reasoning: 'Software and technology costs subject to 15% VAT'
+    },
+
     // Generic expense fallback
     {
       patterns: ['expense', 'cost', 'payment', 'purchase'],
@@ -220,11 +250,8 @@ export class ScriptTransactionMatcher {
       const matchFound = pattern.patterns.some(p => description.includes(p.toLowerCase()));
       
       if (matchFound) {
-        // Find corresponding account in chart of accounts
-        const account = chartOfAccounts.find(acc => 
-          acc.accountName.toLowerCase().includes(pattern.accountName.toLowerCase()) ||
-          pattern.accountName.toLowerCase().includes(acc.accountName.toLowerCase())
-        );
+        // Enhanced flexible account matching - try multiple approaches
+        let account = this.findMatchingAccount(pattern.accountName, chartOfAccounts);
         
         if (account) {
           return {
@@ -256,24 +283,92 @@ export class ScriptTransactionMatcher {
   }
 
   /**
-   * Get default account for transaction type
+   * Enhanced flexible account matching with multiple fallback strategies
+   */
+  private findMatchingAccount(
+    patternAccountName: string,
+    chartOfAccounts: Array<{id: number; accountName: string; accountType: string}>
+  ) {
+    const pattern = patternAccountName.toLowerCase();
+    
+    // Strategy 1: Exact partial match (either direction)
+    let account = chartOfAccounts.find(acc => 
+      acc.accountName.toLowerCase().includes(pattern) ||
+      pattern.includes(acc.accountName.toLowerCase())
+    );
+    if (account) return account;
+    
+    // Strategy 2: Word-by-word matching
+    const patternWords = pattern.split(' ').filter(w => w.length > 2);
+    account = chartOfAccounts.find(acc => {
+      const accWords = acc.accountName.toLowerCase().split(' ');
+      return patternWords.some(pw => accWords.some(aw => aw.includes(pw) || pw.includes(aw)));
+    });
+    if (account) return account;
+    
+    // Strategy 3: Common synonyms and variations
+    const synonymMap: {[key: string]: string[]} = {
+      'employee costs': ['salaries', 'wages', 'payroll', 'staff', 'employee', 'salary'],
+      'office supplies': ['stationery', 'supplies', 'office'],
+      'rent expense': ['rent', 'rental', 'lease'],
+      'utilities': ['electricity', 'water', 'gas', 'municipal'],
+      'telephone': ['phone', 'communication', 'internet'],
+      'transport': ['travel', 'fuel', 'vehicle'],
+      'bank charges': ['bank', 'fees', 'charges', 'fee'],
+      'insurance': ['insurance', 'premium'],
+      'professional fees': ['professional', 'consulting', 'legal', 'fees', 'fee'],
+      'marketing': ['advertising', 'promotion'],
+      'equipment': ['furniture', 'computer', 'assets'],
+      'repairs': ['maintenance', 'repairs', 'repair'],
+      'software': ['app', 'technology', 'subscription', 'software'],
+      'sales revenue': ['sales', 'revenue', 'income'],
+      'service income': ['service', 'fees', 'fee'],
+      'interest income': ['interest', 'investment'],
+      'general expenses': ['expense', 'cost', 'payment'],
+      'other income': ['income', 'receipt', 'received']
+    };
+    
+    for (const [canonical, synonyms] of Object.entries(synonymMap)) {
+      if (synonyms.some(syn => pattern.includes(syn))) {
+        account = chartOfAccounts.find(acc => 
+          synonyms.some(syn => acc.accountName.toLowerCase().includes(syn)) ||
+          acc.accountName.toLowerCase().includes(canonical)
+        );
+        if (account) return account;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Get default account for transaction type with enhanced fallback
    */
   private getDefaultAccount(
     type: 'income' | 'expense',
     chartOfAccounts: Array<{id: number; accountName: string; accountType: string}>
   ) {
     if (type === 'expense') {
-      return chartOfAccounts.find(acc => 
-        acc.accountName.toLowerCase().includes('general expense') ||
-        acc.accountName.toLowerCase().includes('other expense') ||
-        acc.accountType.toLowerCase() === 'expense'
-      );
+      // Try multiple expense account variations
+      return chartOfAccounts.find(acc => {
+        const name = acc.accountName.toLowerCase();
+        return name.includes('general expense') ||
+               name.includes('other expense') ||
+               name.includes('miscellaneous') ||
+               name.includes('expense') ||
+               acc.accountType.toLowerCase().includes('expense');
+      });
     } else {
-      return chartOfAccounts.find(acc => 
-        acc.accountName.toLowerCase().includes('sales') ||
-        acc.accountName.toLowerCase().includes('revenue') ||
-        acc.accountName.toLowerCase().includes('income')
-      );
+      // Try multiple income account variations
+      return chartOfAccounts.find(acc => {
+        const name = acc.accountName.toLowerCase();
+        return name.includes('sales') ||
+               name.includes('revenue') ||
+               name.includes('income') ||
+               name.includes('other income') ||
+               acc.accountType.toLowerCase().includes('income') ||
+               acc.accountType.toLowerCase().includes('revenue');
+      });
     }
   }
 
