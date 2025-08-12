@@ -457,34 +457,50 @@ const EnhancedBulkCapture = () => {
       formData.append('bankName', selectedBank);
       formData.append('bankAccountId', selectedBankAccount);
 
-      const response = await fetch('/api/bank/import-statement', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload bank statement');
-      }
-
-      const result = await response.json();
+      // Use apiRequest instead of fetch to ensure proper authentication
+      const result = await apiRequest('/api/bank/import-statement', 'POST', formData);
       
       toast({
-        title: "Success",
-        description: `Bank statement uploaded successfully. ${result.transactionCount} transactions imported.`,
+        title: "Bank Import Successful",
+        description: `Successfully imported ${result.transactionCount || 0} transactions from ${result.fileName || selectedFile.name}. ${result.journalEntriesCreated || 0} journal entries created.`,
+        variant: "default",
       });
 
       // Reset form
       setSelectedFile(null);
       setSelectedBankAccount('');
       
-      // Refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/bank/import-batches'] });
+      // Clear file input
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      
+      // Refresh relevant data
+      queryClient.invalidateQueries({ queryKey: ['/api/journal-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/transaction-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bulk-capture/sessions'] });
       
     } catch (error: any) {
+      console.error('Bank import error:', error);
+      
+      let errorMessage = "Failed to upload bank statement";
+      
+      if (error.message) {
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = "Authentication failed. Please refresh the page and try again.";
+        } else if (error.message.includes('400')) {
+          errorMessage = "Invalid file or missing information. Please check your selections.";
+        } else if (error.message.includes('413')) {
+          errorMessage = "File is too large. Please use a smaller file.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to upload bank statement",
+        title: "Bank Import Failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -913,13 +929,21 @@ const EnhancedBulkCapture = () => {
                         <div className="flex items-center space-x-2">
                           <FileSpreadsheet className="w-4 h-4 text-blue-600" />
                           <span className="text-sm font-medium">{selectedFile.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            Ready
+                          </Badge>
                         </div>
                         <div className="text-xs text-gray-500">
                           Size: {(selectedFile.size / 1024).toFixed(1)} KB
                         </div>
                         <div className="text-xs text-gray-500">
-                          Type: {selectedFile.type || 'Unknown'}
+                          Type: {selectedFile.type || selectedFile.name.split('.').pop()?.toUpperCase() || 'Unknown'}
                         </div>
+                        {selectedBankAccount && (
+                          <div className="text-xs text-green-600 font-medium">
+                            ✓ Bank account selected
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-sm text-gray-500">
@@ -931,20 +955,32 @@ const EnhancedBulkCapture = () => {
                   <Button 
                     onClick={handleBankUpload}
                     disabled={!selectedFile || !selectedBankAccount || isUploading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
                   >
                     {isUploading ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
+                        Importing to Journal Entries...
                       </>
                     ) : (
                       <>
                         <Upload className="w-4 h-4 mr-2" />
-                        Import Transactions
+                        Import to Journal Entries
                       </>
                     )}
                   </Button>
+                  
+                  {(selectedFile && selectedBankAccount && !isUploading) && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-2 text-green-700">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">Ready to Import</span>
+                      </div>
+                      <p className="text-xs text-green-600 mt-1">
+                        Bank statement will be processed and automatically posted to journal entries like manual entries
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
