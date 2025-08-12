@@ -1478,7 +1478,7 @@ const EnhancedBulkCapture = () => {
                     <div className="text-xs text-gray-800 font-semibold">R {incomeCalculations.vatBreakdown.vatInclusive.toFixed(0)}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-green-600 font-medium">VAT Exc</div>
+                    <div className="text-xs text-green-600 font-medium">Out of Scope</div>
                     <div className="text-xs text-gray-800 font-semibold">R {incomeCalculations.vatBreakdown.vatExclusive.toFixed(0)}</div>
                   </div>
                   <div>
@@ -1966,7 +1966,7 @@ const EnhancedBulkCapture = () => {
                   </div>
                 </div>
                 <div className="bg-green-50 p-3 rounded-lg">
-                  <div className="text-xs text-green-600 font-medium">VAT Exclusive</div>
+                  <div className="text-xs text-green-600 font-medium">Out of Scope</div>
                   <div className="text-lg font-bold text-green-900">
                     R {expenseEntries
                       .filter(e => parseFloat(e.amount) > 0)
