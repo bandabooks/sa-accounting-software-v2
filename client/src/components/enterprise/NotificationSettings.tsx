@@ -146,7 +146,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
       },
     };
     
-    console.log('Frontend sending settings:', updatedSettings);
+    console.log(`Toggle independence check - Only changing ${key} to ${value}:`, updatedSettings);
     updateNotificationsMutation.mutate(updatedSettings);
   };
 
