@@ -6,8 +6,8 @@ import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
 import { aiMatcher } from "./ai-transaction-matcher";
-import { withCache } from "./cache";
-import { fastStorage } from "./performance";
+import { withCache, invalidateEntityCache, CacheKeys } from "./cache";
+import { fastStorage } from "./fast-storage";
 import { 
   validateAdminCreation,
   auditDuplicateAdmins,
@@ -1207,15 +1207,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const companyId = req.user?.activeCompanyId || req.user?.companyId;
       
-      // Set cache headers for 5 minutes to improve performance
-      res.set('Cache-Control', 'private, max-age=300');
+      // Set cache headers for 3 minutes to improve performance
+      res.set('Cache-Control', 'private, max-age=180');
       
       // Use fast optimized dashboard queries with caching
       const cacheKey = `fast-dashboard-${companyId}`;
       const dashboardData = await withCache(cacheKey, async () => {
-        console.log(`🚀 Loading fast dashboard for company ${companyId}`);
-        
-        // Use optimized queries for better performance
+        // Use optimized queries for better performance with Promise.all
         const [fastStats, recentActivities, bankBalances, profitLossData] = await Promise.all([
           fastStorage.getFastDashboardStats(companyId),
           fastStorage.getFastRecentActivities(companyId),
@@ -1248,11 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }, 180000); // Cache for 3 minutes
       
-      console.log(`✅ Fast dashboard loaded for company ${companyId} in cache`);
-      
-      const enhancedStats = dashboardData;
-
-      res.json(enhancedStats);
+      res.json(dashboardData);
     } catch (error) {
       console.error("Error fetching enhanced dashboard stats:", error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
@@ -1922,10 +1916,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/invoices/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const stats = await storage.getInvoiceStats(companyId);
+      const companyId = req.user?.activeCompanyId || req.user?.companyId;
+      
+      // Set cache headers for performance
+      res.set('Cache-Control', 'private, max-age=300');
+      
+      const stats = await withCache(
+        CacheKeys.invoices(companyId) + '-stats',
+        () => fastStorage.getFastInvoiceStats(companyId),
+        300000 // 5 minutes
+      );
+      
       res.json(stats);
     } catch (error) {
+      console.error("Error fetching invoice stats:", error);
       res.status(500).json({ message: "Failed to fetch invoice stats" });
     }
   });
@@ -7425,11 +7429,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Banking Routes
+  // Banking Routes - Optimized with caching
   app.get("/api/bank-accounts", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
-      const accounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
+      const companyId = (req as AuthenticatedRequest).user?.activeCompanyId || (req as AuthenticatedRequest).user?.companyId || 2;
+      
+      // Set cache headers for performance
+      res.set('Cache-Control', 'private, max-age=120');
+      
+      const accounts = await withCache(
+        CacheKeys.bankAccounts(companyId),
+        () => storage.getBankAccountsFromChartOfAccounts(companyId),
+        120000 // 2 minutes cache
+      );
+      
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching bank accounts:", error);
