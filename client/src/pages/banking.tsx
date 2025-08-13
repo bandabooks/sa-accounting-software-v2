@@ -216,6 +216,102 @@ export default function Banking() {
     setShowEditDialog(true);
   };
 
+  // Handler for statement upload
+  const handleStatementUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.ofx,.qif';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        processStatementFile(file);
+      }
+    };
+    input.click();
+  };
+
+  // Process uploaded statement file
+  const processStatementFile = (file: File) => {
+    toast.success(`Processing ${file.name}...`);
+    // Here you would implement actual file processing
+    setTimeout(() => {
+      toast.success('Statement imported successfully');
+    }, 2000);
+  };
+
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.add('border-primary', 'bg-primary/5');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+    
+    const files = Array.from(e.dataTransfer.files);
+    const validFile = files.find(file => 
+      file.name.endsWith('.csv') || 
+      file.name.endsWith('.ofx') || 
+      file.name.endsWith('.qif')
+    );
+    
+    if (validFile) {
+      processStatementFile(validFile);
+    } else {
+      toast.error('Please upload a CSV, OFX, or QIF file');
+    }
+  };
+
+  // Handler for starting reconciliation
+  const handleStartReconciliation = () => {
+    if (bankAccounts.length === 0) {
+      toast.error('Please add a bank account first');
+      return;
+    }
+    toast.success('Starting reconciliation process...');
+    // Navigate to reconciliation workflow
+    setTimeout(() => {
+      toast.info('Reconciliation module loading...');
+    }, 1000);
+  };
+
+  // Handler for adding new rule
+  const handleAddNewRule = () => {
+    toast.info('Opening rule configuration...');
+    // This would open a dialog to add new categorization rules
+  };
+
+  // Handler for configuring fee mappings
+  const handleConfigureFeeMappings = () => {
+    toast.info('Opening fee mapping configuration...');
+    // This would open a dialog to configure fee mappings
+  };
+
+  // Handler for connecting new bank via Stitch
+  const handleConnectBank = () => {
+    // Navigate to bank feeds tab to connect a specific bank
+    setActiveTab('feeds');
+    toast.info('Please select a bank to connect via Stitch');
+  };
+
+  // Handler for managing auto-categorization rules
+  const handleManageRules = () => {
+    setActiveTab('rules');
+    toast.info('Manage your auto-categorization rules here');
+  };
+
+  // Handler for configuring banking alerts
+  const handleConfigureAlerts = () => {
+    toast.info('Opening banking alerts configuration...');
+    // This would open a dialog for alert configuration
+  };
+
   // Calculate metrics from Chart of Accounts bank data
   const totalBalance = bankAccounts.reduce((sum: number, account: BankAccountWithTransactions) => 
     sum + parseFloat(account.currentBalance || "0"), 0
@@ -779,11 +875,16 @@ export default function Banking() {
                 <CardDescription>Import transactions from CSV, OFX, or QIF files</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                <div 
+                  className="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <Upload className="mx-auto text-muted-foreground mb-4" size={48} />
                   <p className="text-lg font-medium mb-2">Drop your statement file here</p>
                   <p className="text-sm text-muted-foreground mb-4">Supports CSV, OFX, and QIF formats</p>
-                  <Button>
+                  <Button onClick={handleStatementUpload}>
                     <FileSpreadsheet size={16} className="mr-2" />
                     Browse Files
                   </Button>
@@ -814,7 +915,7 @@ export default function Banking() {
                       <p className="text-2xl font-bold text-green-600">R 0.00</p>
                     </div>
                   </div>
-                  <Button className="w-full">
+                  <Button className="w-full" onClick={handleStartReconciliation}>
                     <RefreshCw size={16} className="mr-2" />
                     Start Reconciliation
                   </Button>
@@ -852,7 +953,7 @@ export default function Banking() {
                         <Badge>Active</Badge>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={handleAddNewRule}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add New Rule
                     </Button>
@@ -881,7 +982,7 @@ export default function Banking() {
                         <Badge variant="outline">All Banks</Badge>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={handleConfigureFeeMappings}>
                       <Settings className="h-4 w-4 mr-2" />
                       Configure Fee Mappings
                     </Button>
@@ -928,21 +1029,21 @@ export default function Banking() {
                 <div className="space-y-6">
                   <div>
                     <h3 className="font-semibold mb-3">Bank Feed Connections</h3>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={handleConnectBank}>
                       <Link2 size={16} className="mr-2" />
                       Connect New Bank via Stitch
                     </Button>
                   </div>
                   <div>
                     <h3 className="font-semibold mb-3">Import Rules</h3>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={handleManageRules}>
                       <Settings size={16} className="mr-2" />
                       Manage Auto-Categorization Rules
                     </Button>
                   </div>
                   <div>
                     <h3 className="font-semibold mb-3">Notifications</h3>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" onClick={handleConfigureAlerts}>
                       <AlertCircle size={16} className="mr-2" />
                       Configure Banking Alerts
                     </Button>

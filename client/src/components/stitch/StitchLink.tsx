@@ -126,7 +126,8 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
       ];
 
       setAvailableAccounts(mockAccounts);
-      setSelectedAccounts(new Set(mockAccounts.map(acc => acc.id))); // Pre-select all accounts
+      // Don't pre-select accounts - let user choose which bank to link
+      setSelectedAccounts(new Set());
       setLinkStep('selecting');
     }, 2000);
   };
@@ -235,9 +236,9 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
         return (
           <div className="space-y-4">
             <div className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Select Accounts to Link</h3>
+              <h3 className="text-lg font-semibold mb-2">Select Bank Account to Link</h3>
               <p className="text-sm text-muted-foreground">
-                Choose which accounts you'd like to automatically sync with your accounting system.
+                Choose which bank account you'd like to connect. You can link additional accounts later.
               </p>
             </div>
             
