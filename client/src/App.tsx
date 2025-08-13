@@ -159,6 +159,8 @@ import POSTerminals from "@/pages/pos-terminals";
 import ProfessionalServices from "@/pages/professional-services";
 import FinancialReportsPage from "@/pages/reports/financial";
 import AppLayout from "@/components/layout/app-layout";
+import { AIHealthBanner } from "@/components/ai-assistant/AIHealthBanner";
+import AIMonitorPage from "@/pages/ai-monitor";
 
 // Permission constants for route protection
 const PERMISSIONS = {
@@ -213,6 +215,7 @@ const PERMISSIONS = {
 function AuthenticatedApp() {
   return (
     <AppLayout>
+      <AIHealthBanner />
       <Switch>
         <Route path="/login">
           <Dashboard />
@@ -830,6 +833,11 @@ function AuthenticatedApp() {
         <Route path="/compliance/documents">
           <ProtectedRoute>
             <ComplianceDocuments />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/ai-monitor">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <AIMonitorPage />
           </ProtectedRoute>
         </Route>
         <Route path="/portal" component={CustomerPortal} />

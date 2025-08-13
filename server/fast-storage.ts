@@ -27,15 +27,15 @@ export class FastStorage {
       const result = await db.execute(sql.raw(`
         WITH revenue_stats AS (
           SELECT 
-            COALESCE(SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END), 0) as total_revenue,
-            COALESCE(SUM(CASE WHEN status = 'sent' OR status = 'overdue' THEN total_amount ELSE 0 END), 0) as outstanding_invoices,
+            COALESCE(SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END), 0) as total_revenue,
+            COALESCE(SUM(CASE WHEN status = 'sent' OR status = 'overdue' THEN total ELSE 0 END), 0) as outstanding_invoices,
             COUNT(CASE WHEN status = 'sent' OR status = 'overdue' THEN 1 END) as outstanding_invoice_count,
             COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_invoice_count
           FROM invoices 
           WHERE company_id = ${companyId}
         ),
         expense_stats AS (
-          SELECT COALESCE(SUM(total_amount), 0) as total_expenses
+          SELECT COALESCE(SUM(amount), 0) as total_expenses
           FROM expenses 
           WHERE company_id = ${companyId}
         ),
@@ -66,7 +66,7 @@ export class FastStorage {
         cash_flow_stats AS (
           SELECT 
             COALESCE(SUM(CASE WHEN p.payment_date = CURRENT_DATE THEN p.amount ELSE 0 END), 0) as today_inflow,
-            COALESCE(SUM(CASE WHEN e.expense_date = CURRENT_DATE THEN e.total_amount ELSE 0 END), 0) as today_outflow
+            COALESCE(SUM(CASE WHEN e.expense_date = CURRENT_DATE THEN e.amount ELSE 0 END), 0) as today_outflow
           FROM payments p
           FULL OUTER JOIN expenses e ON e.company_id = p.company_id
           WHERE COALESCE(p.company_id, e.company_id) = ${companyId}
@@ -132,7 +132,7 @@ export class FastStorage {
           'invoice' as type,
           'Invoice ' || invoice_number || ' created' as description,
           created_at as date,
-          total_amount as amount
+          total as amount
         FROM invoices 
         WHERE company_id = ${companyId}
         ORDER BY created_at DESC
@@ -156,7 +156,7 @@ export class FastStorage {
           'expense' as type,
           'Expense: ' || COALESCE(description, 'No description') as description,
           expense_date as date,
-          total_amount as amount
+          amount as amount
         FROM expenses 
         WHERE company_id = ${companyId}
         ORDER BY expense_date DESC
@@ -214,20 +214,20 @@ export class FastStorage {
       const result = await db.execute(sql.raw(`
         WITH monthly_data AS (
           SELECT 
-            DATE_TRUNC('month', i.invoice_date) as month,
-            COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total_amount ELSE 0 END), 0) as revenue,
+            DATE_TRUNC('month', i.issue_date) as month,
+            COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total ELSE 0 END), 0) as revenue,
             0 as expenses
           FROM invoices i
           WHERE i.company_id = ${companyId}
-            AND i.invoice_date >= CURRENT_DATE - INTERVAL '12 months'
-          GROUP BY DATE_TRUNC('month', i.invoice_date)
+            AND i.issue_date >= CURRENT_DATE - INTERVAL '12 months'
+          GROUP BY DATE_TRUNC('month', i.issue_date)
           
           UNION ALL
           
           SELECT 
             DATE_TRUNC('month', e.expense_date) as month,
             0 as revenue,
-            COALESCE(SUM(e.total_amount), 0) as expenses
+            COALESCE(SUM(e.amount), 0) as expenses
           FROM expenses e
           WHERE e.company_id = ${companyId}
             AND e.expense_date >= CURRENT_DATE - INTERVAL '12 months'
@@ -260,10 +260,10 @@ export class FastStorage {
           COUNT(*) as total_invoices,
           COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_invoices,
           COUNT(CASE WHEN status = 'sent' OR status = 'overdue' THEN 1 END) as outstanding_invoices,
-          COALESCE(SUM(total_amount), 0) as total_value,
-          COALESCE(SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END), 0) as paid_value,
-          COALESCE(SUM(CASE WHEN status = 'sent' OR status = 'overdue' THEN total_amount ELSE 0 END), 0) as outstanding_value,
-          COALESCE(AVG(total_amount), 0) as average_invoice_value
+          COALESCE(SUM(total), 0) as total_value,
+          COALESCE(SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END), 0) as paid_value,
+          COALESCE(SUM(CASE WHEN status = 'sent' OR status = 'overdue' THEN total ELSE 0 END), 0) as outstanding_value,
+          COALESCE(AVG(total), 0) as average_invoice_value
         FROM invoices 
         WHERE company_id = ${companyId}
       `));
@@ -302,7 +302,7 @@ export class FastStorage {
           c.name,
           c.email,
           c.phone,
-          COALESCE(SUM(CASE WHEN i.status = 'sent' OR i.status = 'overdue' THEN i.total_amount ELSE 0 END), 0) as outstanding_balance
+          COALESCE(SUM(CASE WHEN i.status = 'sent' OR i.status = 'overdue' THEN i.total ELSE 0 END), 0) as outstanding_balance
         FROM customers c
         LEFT JOIN invoices i ON i.customer_id = c.id AND i.company_id = c.company_id
         WHERE c.company_id = ${companyId}

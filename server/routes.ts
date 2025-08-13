@@ -265,8 +265,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register email routes
   app.use("/api/email", emailRoutes);
+  
+  // Register AI routes
+  const aiRoutes = await import("./routes/aiRoutes");
+  app.use("/api/ai", aiRoutes.default);
 
-  // AI Assistant Routes
+  // Legacy AI Assistant Routes (keeping for backwards compatibility)
   app.get("/api/ai/settings", authenticate, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
