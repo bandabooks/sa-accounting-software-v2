@@ -4236,6 +4236,7 @@ export class DatabaseStorage implements IStorage {
       smsEnabled: settings.sms.enabled,
       criticalAlerts: settings.sms.criticalAlerts,
       paymentReminders: settings.sms.paymentReminders,
+      isActive: true,
       updatedAt: new Date()
     };
     
