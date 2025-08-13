@@ -74,15 +74,19 @@ export default function NotificationSettings({ notificationSettings, systemConfi
     mutationFn: async (settings: NotificationSettings) => {
       return await apiRequest('/api/notifications/settings', 'PUT', settings);
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      console.log('Update successful, response data:', data);
+      // Small delay to ensure database write completes
+      await new Promise(resolve => setTimeout(resolve, 100));
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/settings'] });
       successModal.showSuccess({
-        title: "Settings Updated Successfully",
+        title: "Settings Updated Successfully", 
         description: "Your notification preferences have been saved and are now active.",
         confirmText: "Continue"
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Update failed:', error);
       toast({
         title: "Update Failed",
         description: "Failed to update notification settings",

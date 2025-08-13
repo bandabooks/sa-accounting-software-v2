@@ -4231,6 +4231,8 @@ export class DatabaseStorage implements IStorage {
       .from(notificationSettings)
       .where(eq(notificationSettings.companyId, companyId));
     
+    console.log('Saving notification settings for company', companyId, ':', settings);
+    
     const dbSettings = {
       companyId,
       emailEnabled: settings.email.enabled,
@@ -4245,8 +4247,11 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date()
     };
     
+    console.log('Database values being saved:', dbSettings);
+    
     if (existing.length === 0) {
       const [newSettings] = await db.insert(notificationSettings).values(dbSettings).returning();
+      console.log('Inserted new settings:', newSettings);
       return newSettings;
     } else {
       const [updated] = await db
@@ -4254,6 +4259,7 @@ export class DatabaseStorage implements IStorage {
         .set(dbSettings)
         .where(eq(notificationSettings.companyId, companyId))
         .returning();
+      console.log('Updated settings result:', updated);
       return updated;
     }
   }
