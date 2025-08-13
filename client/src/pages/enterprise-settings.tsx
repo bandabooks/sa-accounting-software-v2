@@ -1,24 +1,30 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { toast } from '@/hooks/use-toast';
-import { 
-  Shield, 
-  Smartphone, 
-  Brain, 
-  Bell, 
-  Mail, 
-  MessageSquare, 
-  Settings, 
-  Lock, 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/hooks/use-toast";
+import {
+  Shield,
+  Smartphone,
+  Brain,
+  Bell,
+  Mail,
+  MessageSquare,
+  Settings,
+  Lock,
   Unlock,
   Download,
   Copy,
@@ -34,16 +40,16 @@ import {
   Zap,
   Globe,
   UserCheck,
-  Activity
-} from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import SecuritySettings from '@/components/enterprise/SecuritySettings';
-import NotificationSettings from '@/components/enterprise/NotificationSettings';
-import OAuthSettings from '@/components/enterprise/OAuthSettings';
-import AISettings from '@/components/enterprise/AISettings';
-import PaymentSettings from '@/components/enterprise/PaymentSettings';
-import AuditLogs from '@/components/enterprise/AuditLogs';
+  Activity,
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import SecuritySettings from "@/components/enterprise/SecuritySettings";
+import NotificationSettings from "@/components/enterprise/NotificationSettings";
+import OAuthSettings from "@/components/enterprise/OAuthSettings";
+import AISettings from "@/components/enterprise/AISettings";
+import PaymentSettings from "@/components/enterprise/PaymentSettings";
+import AuditLogs from "@/components/enterprise/AuditLogs";
 
 interface TwoFactorStatus {
   enabled: boolean;
@@ -115,219 +121,111 @@ interface AuditLogEntry {
   details?: any;
 }
 
-export default function EnterpriseSettings() {
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [verificationToken, setVerificationToken] = useState('');
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [showBackupCodes, setShowBackupCodes] = useState(false);
-  const [activeTab, setActiveTab] = useState('security');
-  const [setupStep, setSetupStep] = useState(0);
-  const [copiedBackupCode, setCopiedBackupCode] = useState<string>('');
-  const [testEmailSent, setTestEmailSent] = useState(false);
-  const [showSecrets, setShowSecrets] = useState(false);
-  const queryClient = useQueryClient();
+// NotificationSettings.tsx
+import { useEffect, useId, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
+import { apiRequest } from "@/lib/api";
 
-  // Fetch 2FA status
-  const { data: twoFactorStatus, isLoading: is2FALoading } = useQuery<TwoFactorStatus>({
-    queryKey: ['/api/2fa/status'],
+type Props = {
+  notificationSettings?:
+    | {
+        systemUpdates: boolean; // <- give each toggle its own key
+        emailAlerts: boolean;
+        smsAlerts: boolean;
+        pushNotifications: boolean;
+      }
+    | undefined;
+  systemConfig?: any;
+};
+
+export default function NotificationSettings({ notificationSettings }: Props) {
+  const q = useQueryClient();
+  // local copy so one toggle doesn't rewrite the others
+  const [local, setLocal] = useState({
+    systemUpdates: false,
+    emailAlerts: false,
+    smsAlerts: false,
+    pushNotifications: false,
   });
 
-  // Fetch system configuration
-  const { data: systemConfig } = useQuery<SystemConfiguration>({
-    queryKey: ['/api/system/configuration'],
-  });
+  useEffect(() => {
+    if (notificationSettings)
+      setLocal((p) => ({ ...p, ...notificationSettings }));
+  }, [notificationSettings]);
 
-  // Additional query hooks for component props
-  const { data: notificationSettings } = useQuery<NotificationSettings>({
-    queryKey: ['/api/notifications/settings'],
-  });
-
-  const { data: oauthStatus } = useQuery<OAuthStatus>({
-    queryKey: ['/api/oauth/status'],
-  });
-
-  const { data: auditLogs } = useQuery<AuditLogEntry[]>({
-    queryKey: ['/api/audit-logs/enterprise'],
-  });
-
-  // Fetch AI settings
-  const { data: aiSettings } = useQuery<AISettings>({
-    queryKey: ['/api/ai/settings'],
-  });
-
-  // Setup 2FA mutation
-  const setup2FAMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('/api/2fa/setup', 'POST');
-      return response;
-    },
-    onSuccess: (data: any) => {
-      setQrCodeUrl(data.qrCodeUrl);
-      toast({
-        title: "2FA Setup Ready",
-        description: "Scan the QR code with your authenticator app",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Setup Failed",
-        description: "Failed to setup 2FA. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Enable 2FA mutation
-  const enable2FAMutation = useMutation({
-    mutationFn: async (token: string) => {
-      return await apiRequest('/api/2fa/enable', 'POST', { token });
-    },
-    onSuccess: (data: any) => {
-      setBackupCodes(data.backupCodes);
-      setShowBackupCodes(true);
-      setQrCodeUrl('');
-      queryClient.invalidateQueries({ queryKey: ['/api/2fa/status'] });
-      toast({
-        title: "2FA Enabled",
-        description: "Two-factor authentication has been enabled successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Verification Failed",
-        description: "Invalid verification token. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Disable 2FA mutation
-  const disable2FAMutation = useMutation({
-    mutationFn: async (token: string) => {
-      return await apiRequest('/api/2fa/disable', 'POST', { token });
-    },
+  const saveMutation = useMutation({
+    mutationFn: (patch: Partial<typeof local>) =>
+      apiRequest("/api/notifications/settings", "PUT", patch),
     onSuccess: () => {
-      setQrCodeUrl('');
-      setBackupCodes([]);
-      setShowBackupCodes(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/2fa/status'] });
-      toast({
-        title: "2FA Disabled",
-        description: "Two-factor authentication has been disabled",
-      });
+      q.invalidateQueries({ queryKey: ["/api/notifications/settings"] });
+      toast({ title: "Saved", description: "Notification settings updated." });
     },
     onError: () => {
       toast({
-        title: "Disable Failed",
-        description: "Failed to disable 2FA. Check your verification token.",
+        title: "Failed",
+        description: "Could not save settings.",
         variant: "destructive",
       });
     },
   });
 
-  const handleEnable2FA = () => {
-    if (verificationToken.length === 6) {
-      enable2FAMutation.mutate(verificationToken);
-    } else {
-      toast({
-        title: "Invalid Token",
-        description: "Please enter a 6-digit verification code",
-        variant: "destructive",
-      });
-    }
+  // one handler that flips a single key
+  const toggle = (key: keyof typeof local) => (checked: boolean) => {
+    setLocal((prev) => {
+      const next = { ...prev, [key]: checked };
+      // save only the changed key so we don't clobber others
+      saveMutation.mutate({ [key]: checked });
+      return next;
+    });
   };
 
-  const handleDisable2FA = () => {
-    if (verificationToken.length === 6) {
-      disable2FAMutation.mutate(verificationToken);
-    } else {
-      toast({
-        title: "Invalid Token",
-        description: "Please enter a 6-digit verification code",
-        variant: "destructive",
-      });
-    }
-  };
+  // unique ids (avoid duplicate htmlFor/ids)
+  const idSys = useId();
+  const idEmail = useId();
+  const idSms = useId();
+  const idPush = useId();
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Enterprise Settings</h1>
-        <p className="text-gray-600 mt-2">
-          Configure advanced security, notifications, AI, and audit features for your organization
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={idSys}>System updates</Label>
+        <Switch
+          id={idSys}
+          checked={local.systemUpdates}
+          onCheckedChange={toggle("systemUpdates")}
+        />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="security" className="flex items-center space-x-2">
-            <Shield className="h-4 w-4" />
-            <span>Security</span>
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center space-x-2">
-            <Bell className="h-4 w-4" />
-            <span>Notifications</span>
-          </TabsTrigger>
-          <TabsTrigger value="oauth" className="flex items-center space-x-2">
-            <Globe className="h-4 w-4" />
-            <span>OAuth</span>
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="flex items-center space-x-2">
-            <Brain className="h-4 w-4" />
-            <span>AI Assistant</span>
-          </TabsTrigger>
-          <TabsTrigger value="payment" className="flex items-center space-x-2">
-            <Key className="h-4 w-4" />
-            <span>Payment Settings</span>
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="flex items-center space-x-2">
-            <Activity className="h-4 w-4" />
-            <span>Audit Logs</span>
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={idEmail}>Email alerts</Label>
+        <Switch
+          id={idEmail}
+          checked={local.emailAlerts}
+          onCheckedChange={toggle("emailAlerts")}
+        />
+      </div>
 
-        {/* Security Tab */}
-        <TabsContent value="security">
-          <SecuritySettings 
-            twoFactorStatus={twoFactorStatus}
-            is2FALoading={is2FALoading}
-          />
-        </TabsContent>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={idSms}>SMS alerts</Label>
+        <Switch
+          id={idSms}
+          checked={local.smsAlerts}
+          onCheckedChange={toggle("smsAlerts")}
+        />
+      </div>
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
-          <NotificationSettings
-            notificationSettings={notificationSettings}
-            systemConfig={systemConfig}
-          />
-        </TabsContent>
-
-        {/* OAuth Tab */}
-        <TabsContent value="oauth">
-          <OAuthSettings
-            oauthStatus={oauthStatus}
-            systemConfig={systemConfig}
-          />
-        </TabsContent>
-
-        {/* AI Assistant Tab */}
-        <TabsContent value="ai">
-          <AISettings
-            systemConfig={systemConfig}
-            aiSettings={aiSettings}
-          />
-        </TabsContent>
-
-        {/* Payment Settings Tab */}
-        <TabsContent value="payment">
-          <PaymentSettings />
-        </TabsContent>
-
-        {/* Audit Logs Tab */}
-        <TabsContent value="audit">
-          <AuditLogs auditLogs={auditLogs} />
-        </TabsContent>
-      </Tabs>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={idPush}>Push notifications</Label>
+        <Switch
+          id={idPush}
+          checked={local.pushNotifications}
+          onCheckedChange={toggle("pushNotifications")}
+        />
+      </div>
     </div>
   );
 }
+
