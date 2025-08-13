@@ -1,0 +1,85 @@
+(refactor into one Banking area)
+
+Goal: Consolidate Bank Capture into the main Banking page. One route, account-scoped tabs:
+Banking (/bank) → Accounts list → Bank account (/bank/[accountId]) with tabs:
+
+Overview (balances, recent txns)
+
+Feeds (Stitch link/sync + status)
+
+Statement Upload (existing Capture wizard for CSV/OFX/QIF)
+
+Reconcile (unreconciled queue & match UI)
+
+Rules & Fees (bank fees auto-categorisation rules)
+
+Settings (account nick, permissions)
+
+Routing & UI
+
+Create app/bank/page.tsx (accounts list) and app/bank/[accountId]/page.tsx with tabbed layout (shadcn Tabs).
+
+Move Capture wizard components under src/components/bank/statement-upload/*.
+
+Embed Capture wizard in Statement Upload tab; default to selected accountId.
+
+Add Feeds tab for Stitch (Link button, accounts, “Sync now”, last sync).
+
+Add breadcrumbs: Banking → {Account} → {Tab}. Persist active tab via ?tab=... and deep linkable.
+
+Deprecate old route (safe redirects)
+
+If /bank/capture?accountId=... is hit, 301 to /bank/{accountId}?tab=statement-upload.
+
+Keep all existing query parms (e.g., importId) and surface as toasts where applicable.
+
+State & permissions
+
+Scope every query/mutation by companyId and accountId.
+
+Roles: company_admin/staff can upload & reconcile; reader read-only (disable buttons).
+
+Ensure React Query keys include { companyId, accountId, tab } to prevent cross-tab cache bleed.
+
+APIs (reuse, no duplication)
+
+Reuse existing endpoints:
+
+/api/bank-imports/* (statement upload/parse/commit/preview)
+
+/api/bank-feeds/* (Stitch link token, exchange, sync, status)
+
+/api/reconcile/* (unreconciled, match, commit)
+
+Add lightweight account header endpoint /api/bank/accounts/:id/summary (name, currency, balances, lastSync).
+
+UX polish
+
+When switching accounts or tabs, keep skeletons; no full page reload.
+
+After successful upload/commit, show toast and auto-filter new lines in Reconcile tab.
+
+In Rules & Fees, surface existing fee rules and let users add/enable/disable.
+
+Cleanup
+
+Remove now-unused /bank/capture page; leave redirect only.
+
+Update sidebar: “Banking” (single item) → opens accounts list; remove “Bank Capture” item.
+
+Tests / Acceptance
+
+Visiting /bank/{accountId}?tab=statement-upload shows Capture with that account pre-selected.
+
+Upload + commit creates transactions and they appear under Reconcile without navigation.
+
+Feeds tab: Stitch link + “Sync now” works; last sync time updates.
+
+Redirect from old capture route preserves params.
+
+Reader role cannot upload or reconcile; buttons disabled.
+
+No console errors; typecheck/lint pass.
+
+Commit: feat(banking): unify capture into Banking tabs (accounts, feeds, statement upload, reconcile, rules)
+Docs: Update README_banking.md with new routes, tabs, and deep-link scheme.

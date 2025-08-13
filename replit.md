@@ -31,13 +31,13 @@ Preferred communication style: Simple, everyday language.
 - ✅ **Invoice Editing Database Persistence Fix (Aug 2025)**: Completely resolved critical issue where invoice item modifications (quantity, price, descriptions) were only updating UI calculations but not persisting to database. Enhanced backend API to handle both invoice header and items updates, implemented smart product matching for edit mode, and ensured all item changes now properly save to database. Invoice editing now maintains full data integrity across sessions.
 - ✅ **Expense Metrics Display Fix (Aug 2025)**: Resolved critical issue where expense metrics cards were showing R 0.00 instead of actual financial data. Identified and fixed dual expense page architecture (expenses.tsx vs expenses-standalone.tsx) where routing was using ExpensesStandalone component. Updated correct component to display proper values: Total Expenses (R 12,000.00), This Month (R 1,200.00), Unpaid Expenses (R 0.00), and Average Expense (R 4,000.00).
 
-**Current Status**: ✅ **AI Health Monitor & Bank Feeds Integration COMPLETE (Aug 13, 2025)**
-- ✅ **AI Health Monitor Integration**: Successfully integrated AI health monitoring with real-time status checks, showing "AI Online" indicator on dashboard with detailed tooltips displaying model info (claude-sonnet-4-20250514), response times, and feature availability
-- ✅ **Bank Feeds (Stitch) Menu Item**: Added Bank Feeds (Stitch) to the Accounting section of the sidebar navigation
-- ✅ **AI Health Monitor Menu Item**: Added AI Health Monitor to the Company section of the sidebar navigation  
-- ✅ **Bank Capture Page Fixed**: Resolved white screen issues by creating BankCaptureFixed component with proper error handling for API responses, mock data for demonstration, and integration with Chart of Accounts
-- ✅ **Dashboard AI Indicator**: AI health status now properly displays on the dashboard header with real-time updates every 60 seconds
-- ✅ **Routing Fixed**: Both /bank-capture and /bank/capture routes now work correctly without causing authentication issues or blank screens
+**Current Status**: ✅ **Banking Module Consolidation COMPLETE (Aug 13, 2025)**
+- ✅ **Unified Banking Interface**: Consolidated all banking features into a single, account-scoped tabbed interface at /banking and /banking/:accountId
+- ✅ **Tabbed Navigation**: Banking page now includes 6 comprehensive tabs: Overview, Feeds (Stitch integration), Statement Upload (formerly Bank Capture), Reconcile, Rules & Fees, and Settings
+- ✅ **Smart Routing**: Implemented deep-linkable tabs with URL parameters (?tab=feeds) for direct access to specific features
+- ✅ **Backward Compatibility**: Old routes (/bank-capture, /bank/capture, /bank-reconciliation) now redirect to unified banking page
+- ✅ **AI Health Monitor**: Successfully integrated with "AI Online" indicator on dashboard showing real-time health status
+- ✅ **Simplified Navigation**: Removed duplicate "Bank Feeds (Stitch)" menu item - all banking features now accessible through single "Banking" menu item
 
 **Previous Achievement**: ✅ **Performance Optimization Phase 1 COMPLETE (Aug 13, 2025)** - 40-50% Performance Improvement:
 - Database queries 75% faster, lists load 65% faster, memory usage down 20-30%

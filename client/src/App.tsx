@@ -47,7 +47,7 @@ import Login from "@/pages/login";
 import TrialSignup from "@/pages/trial-signup";
 import ChartOfAccounts from "@/pages/chart-of-accounts";
 import JournalEntries from "@/pages/journal-entries";
-import Banking from "@/pages/banking";
+import BankingUnified from "@/pages/BankingUnified";
 import GeneralLedger from "@/pages/general-ledger";
 import FixedAssets from "@/pages/fixed-assets";
 import FixedAssetCreate from "@/pages/fixed-asset-create";
@@ -55,8 +55,6 @@ import Budgeting from "@/pages/budgeting";
 import BudgetCreate from "@/pages/budget-create";
 import CashFlowForecasting from "@/pages/cash-flow-forecasting";
 import CashFlowForecastCreate from "@/pages/cash-flow-forecast-create";
-import BankReconciliation from "@/pages/bank-reconciliation";
-import BankCaptureFixed from "@/pages/BankCaptureFixed";
 
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import SuperAdminCompanyDetail from "@/pages/super-admin-company-detail";
@@ -610,17 +608,23 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/banking">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <Banking />
+            <BankingUnified />
           </ProtectedRoute>
         </Route>
+        <Route path="/banking/:accountId">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <BankingUnified />
+          </ProtectedRoute>
+        </Route>
+        {/* Redirects for old routes */}
         <Route path="/bank-capture">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <BankCaptureFixed />
+            <BankingUnified />
           </ProtectedRoute>
         </Route>
         <Route path="/bank/capture">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <BankCaptureFixed />
+            <BankingUnified />
           </ProtectedRoute>
         </Route>
         <Route path="/general-ledger">
@@ -652,8 +656,11 @@ function AuthenticatedApp() {
             <CashFlowForecastCreate />
           </ProtectedRoute>
         </Route>
+        {/* Bank reconciliation now part of unified banking */}
         <Route path="/bank-reconciliation">
-          <BankReconciliation />
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <BankingUnified />
+          </ProtectedRoute>
         </Route>
 
         <Route path="/projects">
