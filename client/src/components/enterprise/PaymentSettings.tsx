@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -29,27 +29,36 @@ export default function PaymentSettings() {
     queryKey: ['/api/admin/payfast-config'],
   });
 
-  const [localConfig, setLocalConfig] = useState<PayFastConfig>({
+  // Default configuration
+  const defaultConfig: PayFastConfig = {
     merchantId: '18432458',
     merchantKey: 'm5vlzssivllny',
     passphrase: '••••••••••••••••',
     testMode: false, // Currently in LIVE mode
     isActive: true,
-  });
+  };
+
+  // Use local state to manage configuration independently
+  const [localConfig, setLocalConfig] = useState<PayFastConfig>(
+    payFastConfig || defaultConfig
+  );
+
+  // Update local config when server data changes
+  useEffect(() => {
+    if (payFastConfig) {
+      setLocalConfig(payFastConfig);
+    }
+  }, [payFastConfig]);
 
   const updatePayFastConfigMutation = useMutation({
     mutationFn: async (config: Partial<PayFastConfig>) => {
-      return await apiRequest('/api/admin/payfast-config', {
-        method: 'PUT',
-        body: JSON.stringify(config),
-      });
+      return await apiRequest('/api/admin/payfast-config', 'PUT', config);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/payfast-config'] });
-      successModal.showSuccess({
-        title: 'PayFast Configuration Updated',
-        description: 'Payment gateway settings have been successfully updated.',
-        confirmText: 'Continue',
+      // Don't invalidate queries to prevent resetting local state
+      toast({
+        title: "Settings Updated",
+        description: "PayFast configuration has been saved.",
       });
     },
     onError: () => {
@@ -62,26 +71,33 @@ export default function PaymentSettings() {
   });
 
   const handleToggleTestMode = (testMode: boolean) => {
-    setLocalConfig(prev => ({ ...prev, testMode }));
+    // Update local state immediately for responsive UI
+    const updatedConfig = { ...localConfig, testMode };
+    setLocalConfig(updatedConfig);
+    
+    // Then sync with backend
     updatePayFastConfigMutation.mutate({ testMode });
   };
 
   const handleToggleActive = (isActive: boolean) => {
-    setLocalConfig(prev => ({ ...prev, isActive }));
+    // Update local state immediately for responsive UI
+    const updatedConfig = { ...localConfig, isActive };
+    setLocalConfig(updatedConfig);
+    
+    // Then sync with backend
     updatePayFastConfigMutation.mutate({ isActive });
   };
 
-  // Use server config if available, otherwise use local config
-  const currentConfig = payFastConfig || localConfig;
-
-  // Ensure currentConfig has all required properties
+  // Always use localConfig for UI to maintain independent state
   const safeConfig = {
-    merchantId: currentConfig?.merchantId || '18432458',
-    merchantKey: currentConfig?.merchantKey || 'm5vlzssivllny',
-    passphrase: currentConfig?.passphrase || '••••••••••••••••',
-    testMode: currentConfig?.testMode ?? false,
-    isActive: currentConfig?.isActive ?? true,
-    gatewayUrl: currentConfig?.gatewayUrl || 'https://www.payfast.co.za/eng/process'
+    merchantId: localConfig.merchantId || '18432458',
+    merchantKey: localConfig.merchantKey || 'm5vlzssivllny',
+    passphrase: localConfig.passphrase || '••••••••••••••••',
+    testMode: localConfig.testMode ?? false,
+    isActive: localConfig.isActive ?? true,
+    gatewayUrl: localConfig.testMode 
+      ? 'https://sandbox.payfast.co.za/eng/process'
+      : 'https://www.payfast.co.za/eng/process'
   };
 
   // Loading state
@@ -112,8 +128,8 @@ export default function PaymentSettings() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-lg ${payFastConfig.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
-                <CreditCard className={`h-5 w-5 ${payFastConfig.isActive ? 'text-green-600' : 'text-gray-400'}`} />
+              <div className={`p-2 rounded-lg ${safeConfig.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
+                <CreditCard className={`h-5 w-5 ${safeConfig.isActive ? 'text-green-600' : 'text-gray-400'}`} />
               </div>
               <div>
                 <CardTitle className="text-lg">PayFast Payment Gateway</CardTitle>
