@@ -122,53 +122,226 @@ interface AuditLogEntry {
 }
 
 export default function EnterpriseSettings() {
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+  const [verificationToken, setVerificationToken] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [showBackupCodes, setShowBackupCodes] = useState(false);
+  const [activeTab, setActiveTab] = useState("security");
+  const [setupStep, setSetupStep] = useState(0);
+  const [copiedBackupCode, setCopiedBackupCode] = useState<string>("");
+  const [testEmailSent, setTestEmailSent] = useState(false);
+  const [showSecrets, setShowSecrets] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Fetch 2FA status
+  const { data: twoFactorStatus, isLoading: is2FALoading } =
+    useQuery<TwoFactorStatus>({
+      queryKey: ["/api/2fa/status"],
+    });
+
+  // Fetch system configuration
+  const { data: systemConfig } = useQuery<SystemConfiguration>({
+    queryKey: ["/api/system/configuration"],
+  });
+
+  // Additional query hooks for component props
+  const { data: notificationSettings } = useQuery<NotificationSettings>({
+    queryKey: ["/api/notifications/settings"],
+  });
+
+  const { data: oauthStatus } = useQuery<OAuthStatus>({
+    queryKey: ["/api/oauth/status"],
+  });
+
+  const { data: auditLogs } = useQuery<AuditLogEntry[]>({
+    queryKey: ["/api/audit-logs/enterprise"],
+  });
+
+  // Fetch AI settings
+  const { data: aiSettings } = useQuery<AISettings>({
+    queryKey: ["/api/ai/settings"],
+  });
+
+  // Setup 2FA mutation
+  const setup2FAMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("/api/2fa/setup", "POST");
+      return response;
+    },
+    onSuccess: (data: any) => {
+      setQrCodeUrl(data.qrCodeUrl);
+      toast({
+        title: "2FA Setup Ready",
+        description: "Scan the QR code with your authenticator app",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Setup Failed",
+        description: "Failed to setup 2FA. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Enable 2FA mutation
+  const enable2FAMutation = useMutation({
+    mutationFn: async (token: string) => {
+      return await apiRequest("/api/2fa/enable", "POST", { token });
+    },
+    onSuccess: (data: any) => {
+      setBackupCodes(data.backupCodes);
+      setShowBackupCodes(true);
+      setQrCodeUrl("");
+      queryClient.invalidateQueries({ queryKey: ["/api/2fa/status"] });
+      toast({
+        title: "2FA Enabled",
+        description: "Two-factor authentication has been enabled successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Verification Failed",
+        description: "Invalid verification token. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Disable 2FA mutation
+  const disable2FAMutation = useMutation({
+    mutationFn: async (token: string) => {
+      return await apiRequest("/api/2fa/disable", "POST", { token });
+    },
+    onSuccess: () => {
+      setQrCodeUrl("");
+      setBackupCodes([]);
+      setShowBackupCodes(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/2fa/status"] });
+      toast({
+        title: "2FA Disabled",
+        description: "Two-factor authentication has been disabled",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Disable Failed",
+        description: "Failed to disable 2FA. Check your verification token.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEnable2FA = () => {
+    if (verificationToken.length === 6) {
+      enable2FAMutation.mutate(verificationToken);
+    } else {
+      toast({
+        title: "Invalid Token",
+        description: "Please enter a 6-digit verification code",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisable2FA = () => {
+    if (verificationToken.length === 6) {
+      disable2FAMutation.mutate(verificationToken);
+    } else {
+      toast({
+        title: "Invalid Token",
+        description: "Please enter a 6-digit verification code",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Enterprise Settings
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Configure advanced security, notifications, and enterprise features
-          </p>
-        </div>
-
-        <Tabs defaultValue="security" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="oauth">OAuth</TabsTrigger>
-            <TabsTrigger value="ai">AI Settings</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="audit">Audit Logs</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="security">
-            <SecuritySettings />
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <NotificationSettings />
-          </TabsContent>
-
-          <TabsContent value="oauth">
-            <OAuthSettings />
-          </TabsContent>
-
-          <TabsContent value="ai">
-            <AISettings />
-          </TabsContent>
-
-          <TabsContent value="payments">
-            <PaymentSettings />
-          </TabsContent>
-
-          <TabsContent value="audit">
-            <AuditLogs />
-          </TabsContent>
-        </Tabs>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Enterprise Settings
+        </h1>
+        <p className="text-gray-600 mt-2">
+          Configure advanced security, notifications, AI, and audit features for
+          your organization
+        </p>
       </div>
+
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="security" className="flex items-center space-x-2">
+            <Shield className="h-4 w-4" />
+            <span>Security</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="notifications"
+            className="flex items-center space-x-2"
+          >
+            <Bell className="h-4 w-4" />
+            <span>Notifications</span>
+          </TabsTrigger>
+          <TabsTrigger value="oauth" className="flex items-center space-x-2">
+            <Globe className="h-4 w-4" />
+            <span>OAuth</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="flex items-center space-x-2">
+            <Brain className="h-4 w-4" />
+            <span>AI Assistant</span>
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="flex items-center space-x-2">
+            <Key className="h-4 w-4" />
+            <span>Payment Settings</span>
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="flex items-center space-x-2">
+            <Activity className="h-4 w-4" />
+            <span>Audit Logs</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Security Tab */}
+        <TabsContent value="security">
+          <SecuritySettings
+            twoFactorStatus={twoFactorStatus}
+            is2FALoading={is2FALoading}
+          />
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications">
+          <NotificationSettings
+            notificationSettings={notificationSettings}
+            systemConfig={systemConfig}
+          />
+        </TabsContent>
+
+        {/* OAuth Tab */}
+        <TabsContent value="oauth">
+          <OAuthSettings
+            oauthStatus={oauthStatus}
+            systemConfig={systemConfig}
+          />
+        </TabsContent>
+
+        {/* AI Assistant Tab */}
+        <TabsContent value="ai">
+          <AISettings systemConfig={systemConfig} aiSettings={aiSettings} />
+        </TabsContent>
+
+        {/* Payment Settings Tab */}
+        <TabsContent value="payment">
+          <PaymentSettings />
+        </TabsContent>
+
+        {/* Audit Logs Tab */}
+        <TabsContent value="audit">
+          <AuditLogs auditLogs={auditLogs} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

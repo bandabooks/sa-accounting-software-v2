@@ -413,7 +413,7 @@ export function registerEnterpriseRoutes(app: Express) {
           invoiceReminders: true,
           paymentAlerts: true,
           securityAlerts: true,
-          systemUpdates: false,
+          systemUpdates: true,  // Changed to true for default active state
         },
         sms: {
           enabled: false,
@@ -425,6 +425,18 @@ export function registerEnterpriseRoutes(app: Express) {
     } catch (error) {
       console.error("Error getting notification settings:", error);
       res.status(500).json({ error: "Failed to get notification settings" });
+    }
+  });
+
+  app.put("/api/notifications/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      // For now, just acknowledge the update
+      // In production, this would save to database
+      console.log("Updating notification settings:", req.body);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      res.status(500).json({ error: "Failed to update notification settings" });
     }
   });
 
