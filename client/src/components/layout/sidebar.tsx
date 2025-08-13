@@ -99,6 +99,15 @@ const navigationGroups = [
     ]
   },
   {
+    id: "banking",
+    label: "Banking",
+    icon: Landmark,
+    module: "banking",
+    items: [
+      { path: "/banking", label: "Banking Center", icon: Landmark, permission: "BANKING_VIEW", module: "banking" }
+    ]
+  },
+  {
     id: "accounting",
     label: "Accounting",
     icon: Calculator,
@@ -106,12 +115,10 @@ const navigationGroups = [
     items: [
       { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW", module: "accounting" },
       { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
-      { path: "/banking", label: "Banking", icon: Landmark, permission: "BANKING_VIEW", module: "banking" },
       { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
       { path: "/fixed-assets", label: "Fixed Assets", icon: Building2, permission: "FIXED_ASSETS_VIEW", module: "accounting" },
       { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW", module: "advanced_reports" },
-      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW", module: "advanced_reports" },
-      { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANK_RECONCILIATION_VIEW", module: "banking" }
+      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW", module: "advanced_reports" }
     ]
   },
   {

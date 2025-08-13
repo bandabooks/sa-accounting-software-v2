@@ -80,9 +80,9 @@ export default function Banking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: bankAccounts = [], isLoading, error } = useQuery({
+  const { data: bankAccounts = [], isLoading, error } = useQuery<BankAccountWithTransactions[]>({
     queryKey: ["/api/bank-accounts"],
-    retry: (failureCount, error) => {
+    retry: (failureCount, error: any) => {
       // Don't retry on authentication errors
       if (error?.message?.includes('401')) return false;
       return failureCount < 2;
@@ -133,7 +133,7 @@ export default function Banking() {
 
   const toggleAccountMutation = useMutation({
     mutationFn: (accountId: number) => apiRequest(`/api/bank-accounts/${accountId}/toggle`, "PATCH"),
-    onSuccess: (updatedAccount) => {
+    onSuccess: (updatedAccount: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       toast({ 
         title: "Success", 
@@ -206,23 +206,23 @@ export default function Banking() {
       accountName: account.accountName,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
-      branchCode: account.branchCode || "",
+      branchCode: account.branchCode ?? "",
       accountType: account.accountType,
       currency: account.currency,
       openingBalance: account.openingBalance,
-      notes: account.notes || "",
-      chartAccountId: account.chartAccountId || undefined,
+      notes: account.notes ?? "",
+      chartAccountId: account.chartAccountId ?? undefined,
     });
     setShowEditDialog(true);
   };
 
   // Calculate metrics from Chart of Accounts bank data
-  const totalBalance = bankAccounts.reduce((sum: number, account: any) => 
-    sum + parseFloat(account.balance || "0"), 0
+  const totalBalance = bankAccounts.reduce((sum: number, account: BankAccountWithTransactions) => 
+    sum + parseFloat(account.currentBalance || "0"), 0
   );
 
-  const activeAccounts = bankAccounts.filter((account: any) => 
-    parseFloat(account.balance || "0") > 0
+  const activeAccounts = bankAccounts.filter((account: BankAccountWithTransactions) => 
+    parseFloat(account.currentBalance || "0") > 0
   ).length;
 
   const totalAccounts = bankAccounts.length;
@@ -498,14 +498,117 @@ export default function Banking() {
         </div>
 
         {/* Tabbed Interface */}
-        <Tabs defaultValue="accounts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
             <TabsTrigger value="feeds">Bank Feeds (Stitch)</TabsTrigger>
             <TabsTrigger value="upload">Statement Upload</TabsTrigger>
             <TabsTrigger value="reconcile">Reconciliation</TabsTrigger>
+            <TabsTrigger value="rules">Rules & Fees</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Recent Transactions Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Transactions</CardTitle>
+                  <CardDescription>Latest activity across all accounts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {bankAccounts.slice(0, 2).map((account) => (
+                      <div key={account.id} className="border-b pb-3 last:border-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">{account.accountName}</p>
+                            <p className="text-sm text-muted-foreground">{account.bankName}</p>
+                          </div>
+                          <Badge variant={parseFloat(account.currentBalance || "0") >= 0 ? "default" : "destructive"}>
+                            R {parseFloat(account.currentBalance || "0").toFixed(2)}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                    {bankAccounts.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Unreconciled Items Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Unreconciled Items</CardTitle>
+                  <CardDescription>Transactions pending reconciliation</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600" />
+                        <div>
+                          <p className="font-medium">Pending Items</p>
+                          <p className="text-sm text-muted-foreground">Requires attention</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700">
+                        0
+                      </Badge>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Start Reconciliation
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Bank Account Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Summary</CardTitle>
+                <CardDescription>Quick overview of all bank accounts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {bankAccounts.map((account) => (
+                    <div key={account.id} className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${account.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
+                          <Landmark className={`h-4 w-4 ${account.isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                        </div>
+                        <div>
+                          <p className="font-medium">{account.accountName}</p>
+                          <p className="text-sm text-muted-foreground">{account.bankName} • {account.accountNumber}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">R {parseFloat(account.currentBalance || "0").toFixed(2)}</p>
+                        <Badge variant={account.isActive ? "default" : "secondary"} className="mt-1">
+                          {account.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {bankAccounts.length === 0 && (
+                    <div className="text-center py-8">
+                      <Landmark className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No bank accounts added yet</p>
+                      <Button className="mt-4" onClick={() => setShowAccountDialog(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Account
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="accounts" className="space-y-8">
             <div className="flex items-center justify-between">
@@ -715,6 +818,101 @@ export default function Banking() {
                     <RefreshCw size={16} className="mr-2" />
                     Start Reconciliation
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="rules">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rules & Fees Management</CardTitle>
+                <CardDescription>Configure auto-categorization rules and bank fee mappings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Auto-Categorization Rules */}
+                <div>
+                  <h3 className="font-semibold mb-4">Auto-Categorization Rules</h3>
+                  <div className="space-y-4">
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Salary Deposits</p>
+                          <p className="text-sm text-muted-foreground">Transactions containing "SALARY" → Income Category</p>
+                        </div>
+                        <Badge>Active</Badge>
+                      </div>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Utility Payments</p>
+                          <p className="text-sm text-muted-foreground">Transactions to utility providers → Utilities Category</p>
+                        </div>
+                        <Badge>Active</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add New Rule
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bank Fee Mappings */}
+                <div>
+                  <h3 className="font-semibold mb-4">Bank Fee Mappings</h3>
+                  <div className="space-y-4">
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Monthly Account Fee</p>
+                          <p className="text-sm text-muted-foreground">R 150.00 → Bank Charges Account</p>
+                        </div>
+                        <Badge variant="outline">Standard Bank</Badge>
+                      </div>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Transaction Fees</p>
+                          <p className="text-sm text-muted-foreground">Variable → Bank Transaction Fees</p>
+                        </div>
+                        <Badge variant="outline">All Banks</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configure Fee Mappings
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Import Settings */}
+                <div>
+                  <h3 className="font-semibold mb-4">Import Settings</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">Auto-match transactions</p>
+                          <p className="text-sm text-muted-foreground">Automatically match imported transactions</p>
+                        </div>
+                      </div>
+                      <Badge variant="default">Enabled</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Zap className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">Smart categorization</p>
+                          <p className="text-sm text-muted-foreground">Use AI to suggest categories</p>
+                        </div>
+                      </div>
+                      <Badge variant="default">Enabled</Badge>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
