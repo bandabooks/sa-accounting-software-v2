@@ -281,7 +281,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const settings = await storage.getAiSettings(companyId);
-      res.json(settings);
+      
+      // Provide default settings if none exist
+      const defaultSettings = {
+        enabled: true,
+        provider: 'anthropic',
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: '',
+        model: 'claude-sonnet-4-20250514',
+        maxTokens: 4096,
+        temperature: 0.7
+      };
+      
+      res.json(settings || defaultSettings);
     } catch (error) {
       console.error('Error fetching AI settings:', error);
       res.status(500).json({ message: "Failed to fetch AI settings" });
@@ -300,17 +314,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current settings first
       const currentSettings = await storage.getAiSettings(companyId);
       
+      // Provide default settings if none exist
+      const defaultSettings = {
+        enabled: true,
+        provider: 'anthropic',
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: '',
+        model: 'claude-sonnet-4-20250514',
+        maxTokens: 4096,
+        temperature: 0.7
+      };
+      
+      const baseSettings = currentSettings || defaultSettings;
+      
       // Only update the fields that are explicitly provided
       const settings = {
-        enabled: req.body.enabled !== undefined ? req.body.enabled === true : currentSettings.enabled,
-        provider: req.body.provider !== undefined ? req.body.provider : currentSettings.provider,
-        contextSharing: req.body.contextSharing !== undefined ? req.body.contextSharing === true : currentSettings.contextSharing,
-        conversationHistory: req.body.conversationHistory !== undefined ? req.body.conversationHistory === true : currentSettings.conversationHistory,
-        suggestions: req.body.suggestions !== undefined ? req.body.suggestions === true : currentSettings.suggestions,
-        apiKey: req.body.apiKey !== undefined ? req.body.apiKey : currentSettings.apiKey,
-        model: req.body.model !== undefined ? req.body.model : currentSettings.model,
-        maxTokens: req.body.maxTokens !== undefined ? req.body.maxTokens : currentSettings.maxTokens,
-        temperature: req.body.temperature !== undefined ? req.body.temperature : currentSettings.temperature
+        enabled: req.body.enabled !== undefined ? req.body.enabled === true : baseSettings.enabled,
+        provider: req.body.provider !== undefined ? req.body.provider : baseSettings.provider,
+        contextSharing: req.body.contextSharing !== undefined ? req.body.contextSharing === true : baseSettings.contextSharing,
+        conversationHistory: req.body.conversationHistory !== undefined ? req.body.conversationHistory === true : baseSettings.conversationHistory,
+        suggestions: req.body.suggestions !== undefined ? req.body.suggestions === true : baseSettings.suggestions,
+        apiKey: req.body.apiKey !== undefined ? req.body.apiKey : baseSettings.apiKey,
+        model: req.body.model !== undefined ? req.body.model : baseSettings.model,
+        maxTokens: req.body.maxTokens !== undefined ? req.body.maxTokens : baseSettings.maxTokens,
+        temperature: req.body.temperature !== undefined ? req.body.temperature : baseSettings.temperature
       };
 
       await storage.saveAiSettings(companyId, settings);

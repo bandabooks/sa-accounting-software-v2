@@ -1,277 +1,171 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { 
   Brain, 
+  Activity, 
   AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Activity,
+  CheckCircle,
+  Clock,
   Settings,
-  RefreshCw,
-  TrendingUp,
-  Clock
+  X
 } from 'lucide-react';
-
-interface AIHealthStatus {
-  status: 'healthy' | 'degraded' | 'down';
-  responseTime: number;
-  message: string;
-  timestamp: string;
-  features: {
-    basicChat: boolean;
-    imageAnalysis: boolean;
-    documentAnalysis: boolean;
-    codeGeneration: boolean;
-  };
-  modelInfo: {
-    model: string;
-    maxTokens: number;
-    contextWindow: number;
-  };
-  rateLimits: {
-    requestsPerMinute: number;
-    tokensPerMinute: number;
-    remainingRequests?: number;
-    remainingTokens?: number;
-  };
-}
-
-interface AIMetrics {
-  totalRequests: number;
-  successfulRequests: number;
-  failedRequests: number;
-  averageResponseTime: number;
-  errorRate: number;
-  uptime: number;
-  features: string[];
-  lastError?: {
-    message: string;
-    timestamp: string;
-  };
-}
+import { AIClient, type AIHealthStatus } from '@/lib/aiClient';
 
 export function AIHealthBanner() {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [isVisible, setIsVisible] = useState(true);
+  const [isDismissed, setIsDismissed] = useState(false);
 
-  // Fetch AI health status
-  const { data: healthStatus, isLoading: healthLoading, refetch: refetchHealth } = useQuery({
-    queryKey: ['/api/ai/health'],
-    refetchInterval: 30000, // Refresh every 30 seconds
-    staleTime: 10000,
+  // Query AI health status
+  const { data: healthStatus, error, isLoading } = useQuery({
+    queryKey: ['ai-health'],
+    queryFn: () => AIClient.getHealthStatus(),
+    refetchInterval: 30000, // Refetch every 30 seconds
+    retry: 2,
+    staleTime: 25000 // Consider data stale after 25 seconds
   });
 
-  // Fetch AI metrics
-  const { data: metrics, isLoading: metricsLoading, refetch: refetchMetrics } = useQuery<AIMetrics>({
-    queryKey: ['/api/ai/metrics'],
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 30000,
-  });
+  // Check if banner should be shown
+  useEffect(() => {
+    const dismissed = localStorage.getItem('ai-health-banner-dismissed');
+    if (dismissed) {
+      const dismissedTime = parseInt(dismissed);
+      const oneHourAgo = Date.now() - (60 * 60 * 1000); // 1 hour
+      
+      if (dismissedTime > oneHourAgo) {
+        setIsDismissed(true);
+        setIsVisible(false);
+      }
+    }
+  }, []);
 
-  const handleRefresh = () => {
-    refetchHealth();
-    refetchMetrics();
-    setLastRefresh(Date.now());
-  };
-
-  // Don't render if AI is healthy and banner is collapsed
-  if (!healthStatus && !healthLoading) return null;
-  
-  const health = healthStatus as AIHealthStatus;
-  const isHealthy = health?.status === 'healthy';
-  const isDegraded = health?.status === 'degraded';
-  const isDown = health?.status === 'down';
-
-  // Only show banner if there are issues or user wants to see details
-  if (isHealthy && !isExpanded) {
-    return (
-      <div className="fixed top-4 right-4 z-50">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsExpanded(true)}
-                className="bg-green-50 border-green-200 hover:bg-green-100 dark:bg-green-950 dark:border-green-800"
-              >
-                <Brain className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 ml-1" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>AI Assistant is healthy</p>
-              <p className="text-xs text-muted-foreground">
-                Response time: {health?.responseTime.toFixed(0)}ms
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    );
+  // Don't show banner if loading, dismissed, or AI is healthy
+  if (isLoading || isDismissed || !isVisible) {
+    return null;
   }
 
-  const getStatusIcon = () => {
-    if (healthLoading) return <RefreshCw className="h-4 w-4 animate-spin" />;
-    if (isHealthy) return <CheckCircle className="h-4 w-4 text-green-600" />;
-    if (isDegraded) return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-    return <XCircle className="h-4 w-4 text-red-600" />;
+  // Don't show if AI is healthy (unless there's an error)
+  if (healthStatus?.status === 'healthy' && !error) {
+    return null;
+  }
+
+  const handleDismiss = () => {
+    localStorage.setItem('ai-health-banner-dismissed', Date.now().toString());
+    setIsDismissed(true);
+    setIsVisible(false);
   };
 
-  const getStatusColor = () => {
-    if (isHealthy) return 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800';
-    if (isDegraded) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800';
-    return 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800';
+  const getStatusDetails = () => {
+    if (error) {
+      return {
+        icon: AlertTriangle,
+        color: 'text-red-600',
+        bgColor: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
+        title: 'AI Assistant Unavailable',
+        message: 'Unable to connect to AI services. Some features may be limited.',
+        badge: 'Down'
+      };
+    }
+
+    if (!healthStatus) {
+      return {
+        icon: Clock,
+        color: 'text-gray-600',
+        bgColor: 'bg-gray-50 border-gray-200 dark:bg-gray-950 dark:border-gray-800',
+        title: 'AI Assistant Loading',
+        message: 'Checking AI assistant status...',
+        badge: 'Checking'
+      };
+    }
+
+    switch (healthStatus.status) {
+      case 'degraded':
+        return {
+          icon: AlertTriangle,
+          color: 'text-yellow-600',
+          bgColor: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800',
+          title: 'AI Assistant Degraded',
+          message: `Response time: ${AIClient.formatResponseTime(healthStatus.responseTime)}. Some delays expected.`,
+          badge: 'Degraded'
+        };
+      case 'down':
+        return {
+          icon: AlertTriangle,
+          color: 'text-red-600',
+          bgColor: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
+          title: 'AI Assistant Down',
+          message: 'AI services are currently unavailable. Please try again later.',
+          badge: 'Down'
+        };
+      default:
+        return {
+          icon: CheckCircle,
+          color: 'text-green-600',
+          bgColor: 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800',
+          title: 'AI Assistant Healthy',
+          message: `Response time: ${AIClient.formatResponseTime(healthStatus.responseTime)}`,
+          badge: 'Healthy'
+        };
+    }
   };
 
-  const getSuccessRate = () => {
-    if (!metrics || metrics.totalRequests === 0) return 100;
-    return ((metrics.successfulRequests / metrics.totalRequests) * 100);
-  };
+  const statusDetails = getStatusDetails();
+  const StatusIcon = statusDetails.icon;
 
   return (
-    <Alert className={`m-4 ${getStatusColor()}`}>
-      <div className="flex items-start justify-between">
+    <Alert className={`mb-4 ${statusDetails.bgColor}`}>
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          {getStatusIcon()}
-          <div className="flex-1">
-            <div className="flex items-center space-x-2">
-              <span className="font-medium">AI Assistant Status</span>
-              <Badge variant={isHealthy ? 'default' : isDegraded ? 'secondary' : 'destructive'}>
-                {health?.status || 'Unknown'}
-              </Badge>
-              {health?.responseTime && (
-                <Badge variant="outline" className="text-xs">
-                  {health.responseTime.toFixed(0)}ms
-                </Badge>
-              )}
-            </div>
-            
-            <AlertDescription className="mt-1">
-              {health?.message || 'Checking AI assistant status...'}
-              {metrics?.lastError && (
-                <div className="text-xs text-red-600 mt-1">
-                  Last error: {metrics.lastError.message}
-                </div>
-              )}
-            </AlertDescription>
-
-            {isExpanded && health && (
-              <div className="mt-3 space-y-3">
-                {/* Feature Status */}
-                <div>
-                  <div className="text-sm font-medium mb-2">Available Features</div>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(health.features).map(([feature, available]) => (
-                      <Badge 
-                        key={feature} 
-                        variant={available ? 'default' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {feature.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                        {available ? ' ✓' : ' ✗'}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Performance Metrics */}
-                {metrics && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Performance</div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                      <div>
-                        <div className="text-muted-foreground">Success Rate</div>
-                        <div className="flex items-center space-x-2">
-                          <Progress value={getSuccessRate()} className="h-2 flex-1" />
-                          <span className="font-medium">{getSuccessRate().toFixed(1)}%</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Avg Response</div>
-                        <div className="font-medium">{metrics.averageResponseTime.toFixed(0)}ms</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Requests</div>
-                        <div className="font-medium">{metrics.totalRequests.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Uptime</div>
-                        <div className="font-medium">
-                          {metrics.uptime > 0 ? `${(metrics.uptime / 3600).toFixed(1)}h` : 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Model Information */}
-                <div>
-                  <div className="text-sm font-medium mb-1">Model Info</div>
-                  <div className="text-xs text-muted-foreground">
-                    {health.modelInfo.model} • {health.modelInfo.maxTokens.toLocaleString()} max tokens
-                  </div>
-                </div>
-
-                {/* Rate Limits */}
-                {health.rateLimits && (
-                  <div>
-                    <div className="text-sm font-medium mb-1">Rate Limits</div>
-                    <div className="text-xs text-muted-foreground">
-                      {health.rateLimits.requestsPerMinute.toLocaleString()} req/min • {' '}
-                      {health.rateLimits.tokensPerMinute.toLocaleString()} tokens/min
-                      {health.rateLimits.remainingRequests && (
-                        <span className="ml-2">
-                          ({health.rateLimits.remainingRequests} remaining)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          <StatusIcon className={`h-4 w-4 ${statusDetails.color}`} />
+          <div className="flex items-center space-x-2">
+            <Brain className="h-4 w-4 text-blue-600" />
+            <span className="font-medium">{statusDetails.title}</span>
+            <Badge 
+              variant="outline" 
+              className={`${statusDetails.color} border-current`}
+            >
+              {statusDetails.badge}
+            </Badge>
           </div>
         </div>
-
-        <div className="flex items-center space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={handleRefresh}>
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Refresh status</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            {isExpanded ? 'Less' : 'More'}
-          </Button>
-
-          {!isHealthy && (
-            <Button variant="ghost" size="sm" onClick={() => window.location.href = '/settings'}>
-              <Settings className="h-4 w-4" />
+        
+        <div className="flex items-center space-x-3">
+          <AlertDescription className="text-sm text-muted-foreground m-0">
+            {statusDetails.message}
+          </AlertDescription>
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => window.location.href = '/ai-monitor'}
+            >
+              <Settings className="h-3 w-3 mr-1" />
+              Monitor
             </Button>
-          )}
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={handleDismiss}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       </div>
-
-      {health?.timestamp && (
-        <div className="text-xs text-muted-foreground mt-2 flex items-center space-x-1">
-          <Clock className="h-3 w-3" />
-          <span>Last checked: {new Date(health.timestamp).toLocaleTimeString()}</span>
+      
+      {healthStatus && (
+        <div className="mt-2 flex items-center space-x-4 text-xs text-muted-foreground">
+          <span>Model: {healthStatus.modelInfo.model}</span>
+          <span>Features: {Object.values(healthStatus.features).filter(Boolean).length}/4 active</span>
+          {healthStatus.rateLimits && (
+            <span>Limits: {healthStatus.rateLimits.requestsPerMinute}/min</span>
+          )}
         </div>
       )}
     </Alert>

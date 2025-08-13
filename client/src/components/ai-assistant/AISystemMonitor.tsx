@@ -1,493 +1,512 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Brain, 
   Activity, 
-  TrendingUp, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle,
-  RefreshCw,
   Play,
-  Pause,
-  Settings,
-  Eye,
+  Square,
+  RotateCcw,
+  CheckCircle,
+  AlertTriangle,
   Clock,
-  Zap
+  Zap,
+  FileText,
+  Image,
+  Code,
+  MessageSquare
 } from 'lucide-react';
-
-interface SystemStatus {
-  configured: boolean;
-  healthy: boolean;
-  monitoring: boolean;
-  lastCheck: string;
-  features: {
-    basicChat: boolean;
-    imageAnalysis: boolean;
-    documentAnalysis: boolean;
-    codeGeneration: boolean;
-  };
-  metrics: {
-    totalRequests: number;
-    successfulRequests: number;
-    failedRequests: number;
-    averageResponseTime: number;
-    errorRate: number;
-    uptime: number;
-    features: string[];
-    lastError?: {
-      message: string;
-      timestamp: string;
-    };
-  };
-}
-
-interface FunctionTest {
-  functionName: string;
-  displayName: string;
-  description: string;
-  testPayload: any;
-}
-
-const FUNCTION_TESTS: FunctionTest[] = [
-  {
-    functionName: 'transaction_matching',
-    displayName: 'Transaction Matching',
-    description: 'AI-powered transaction categorization and account matching',
-    testPayload: {
-      description: 'PURCHASE - OFFICE DEPOT',
-      amount: 125.50,
-      type: 'expense'
-    }
-  },
-  {
-    functionName: 'vat_guidance',
-    displayName: 'VAT Guidance',
-    description: 'South African VAT compliance and guidance',
-    testPayload: {
-      transactionType: 'consulting_service',
-      amount: 1000,
-      customerType: 'business'
-    }
-  },
-  {
-    functionName: 'invoice_analysis',
-    displayName: 'Invoice Analysis',
-    description: 'Invoice risk assessment and payment predictions',
-    testPayload: {
-      invoiceAmount: 2500,
-      daysOverdue: 15,
-      customerHistory: 'good'
-    }
-  },
-  {
-    functionName: 'financial_insights',
-    displayName: 'Financial Insights',
-    description: 'Business intelligence and financial recommendations',
-    testPayload: {
-      revenue: 50000,
-      expenses: 35000,
-      period: 'Q1'
-    }
-  }
-];
+import { AIClient, type AIMetrics, type SystemStatus, type FunctionTestResult } from '@/lib/aiClient';
 
 export function AISystemMonitor() {
-  const [testingFunction, setTestingFunction] = useState<string | null>(null);
+  const [activeTest, setActiveTest] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, FunctionTestResult>>({});
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch system status
-  const { data: systemStatus, isLoading: statusLoading, refetch: refetchStatus } = useQuery<SystemStatus>({
-    queryKey: ['/api/ai/system-status'],
-    refetchInterval: 30000,
+  // Query system status
+  const { data: systemStatus, isLoading: statusLoading, error: statusError } = useQuery({
+    queryKey: ['ai-system-status'],
+    queryFn: () => AIClient.getSystemStatus(),
+    refetchInterval: 60000, // Refetch every minute
+    retry: 2
   });
 
-  // Test AI function
-  const testFunction = useMutation({
-    mutationFn: async ({ functionName, testPayload }: { functionName: string; testPayload: any }) => {
-      const response = await fetch('/api/ai/test-function', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ functionName, testPayload }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Test failed: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
+  // Query metrics
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ['ai-metrics'],
+    queryFn: () => AIClient.getMetrics(),
+    refetchInterval: 30000, // Refetch every 30 seconds
+    retry: 2
+  });
+
+  // Mutations for monitoring controls
+  const startMonitoringMutation = useMutation({
+    mutationFn: (intervalMinutes: number) => AIClient.startMonitoring(intervalMinutes),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/ai/system-status'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/ai/metrics'] });
+      toast({
+        title: 'Monitoring Started',
+        description: 'AI health monitoring is now active.'
+      });
+      queryClient.invalidateQueries({ queryKey: ['ai-system-status'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to Start Monitoring',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive'
+      });
     }
   });
 
-  // Toggle monitoring
-  const toggleMonitoring = useMutation({
-    mutationFn: async (action: 'start' | 'stop') => {
-      const response = await fetch(`/api/ai/monitoring/${action}`, {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} monitoring`);
-      }
-      
-      return response.json();
-    },
+  const stopMonitoringMutation = useMutation({
+    mutationFn: () => AIClient.stopMonitoring(),
     onSuccess: () => {
-      refetchStatus();
+      toast({
+        title: 'Monitoring Stopped',
+        description: 'AI health monitoring has been disabled.'
+      });
+      queryClient.invalidateQueries({ queryKey: ['ai-system-status'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to Stop Monitoring',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive'
+      });
     }
   });
 
-  const handleTestFunction = async (functionTest: FunctionTest) => {
-    setTestingFunction(functionTest.functionName);
+  const resetMetricsMutation = useMutation({
+    mutationFn: () => AIClient.resetMetrics(),
+    onSuccess: () => {
+      toast({
+        title: 'Metrics Reset',
+        description: 'AI performance metrics have been reset.'
+      });
+      queryClient.invalidateQueries({ queryKey: ['ai-metrics'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to Reset Metrics',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Test AI functions
+  const testFunction = async (functionName: string, testPayload: any) => {
+    setActiveTest(functionName);
+    
     try {
-      await testFunction.mutateAsync({
-        functionName: functionTest.functionName,
-        testPayload: functionTest.testPayload
+      const result = await AIClient.testFunction(functionName, testPayload);
+      setTestResults(prev => ({ ...prev, [functionName]: result }));
+      
+      toast({
+        title: result.success ? 'Test Passed' : 'Test Failed',
+        description: `${functionName} test completed in ${AIClient.formatResponseTime(result.responseTime)}`,
+        variant: result.success ? 'default' : 'destructive'
+      });
+    } catch (error) {
+      const errorResult: FunctionTestResult = {
+        functionName,
+        success: false,
+        responseTime: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+      
+      setTestResults(prev => ({ ...prev, [functionName]: errorResult }));
+      
+      toast({
+        title: 'Test Error',
+        description: `Failed to test ${functionName}`,
+        variant: 'destructive'
       });
     } finally {
-      setTestingFunction(null);
+      setActiveTest(null);
     }
   };
 
-  const getStatusIcon = (status?: boolean) => {
-    if (status === undefined) return <RefreshCw className="h-4 w-4 animate-spin" />;
-    return status ? 
-      <CheckCircle className="h-4 w-4 text-green-600" /> : 
-      <XCircle className="h-4 w-4 text-red-600" />;
-  };
-
-  const getSuccessRate = () => {
-    if (!systemStatus?.metrics || systemStatus.metrics.totalRequests === 0) return 100;
-    return ((systemStatus.metrics.successfulRequests / systemStatus.metrics.totalRequests) * 100);
-  };
+  // Test configurations
+  const testConfigs = [
+    {
+      name: 'basicChat',
+      icon: MessageSquare,
+      label: 'Basic Chat',
+      description: 'Test general AI conversation',
+      payload: { message: 'Hello, this is a test message. Please respond briefly.' }
+    },
+    {
+      name: 'documentAnalysis',
+      icon: FileText,
+      label: 'Document Analysis',
+      description: 'Test document processing capabilities',
+      payload: { 
+        text: 'Invoice #12345\nDate: 2025-08-13\nAmount: R1,500.00\nVAT: R195.65',
+        type: 'invoice'
+      }
+    },
+    {
+      name: 'imageAnalysis',
+      icon: Image,
+      label: 'Image Analysis',
+      description: 'Test image processing (placeholder)',
+      payload: { imageType: 'receipt', description: 'Test image analysis capability' }
+    },
+    {
+      name: 'codeGeneration',
+      icon: Code,
+      label: 'Code Generation',
+      description: 'Test code generation capabilities',
+      payload: { 
+        request: 'Generate a simple TypeScript function that calculates VAT',
+        language: 'typescript'
+      }
+    }
+  ];
 
   if (statusLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Brain className="h-5 w-5" />
-            <span>AI System Monitor</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-            Loading AI system status...
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <div className="flex items-center space-x-3">
+          <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+          <span>Loading AI system status...</span>
+        </div>
+      </div>
     );
   }
 
+  if (statusError) {
+    return (
+      <Alert className="bg-red-50 border-red-200">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Failed to load AI system status. Please check your connection and try again.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  const successRate = metrics ? AIClient.calculateSuccessRate(metrics) : 0;
+
   return (
     <div className="space-y-6">
-      {/* System Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Brain className="h-5 w-5" />
-              <span>AI System Monitor</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetchStatus()}
-                disabled={statusLoading}
-              >
-                <RefreshCw className={`h-4 w-4 ${statusLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button
-                variant={systemStatus?.monitoring ? 'destructive' : 'default'}
-                size="sm"
-                onClick={() => toggleMonitoring.mutate(systemStatus?.monitoring ? 'stop' : 'start')}
-                disabled={toggleMonitoring.isPending}
-              >
-                {systemStatus?.monitoring ? (
-                  <>
-                    <Pause className="h-4 w-4 mr-1" />
-                    Stop Monitoring
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-1" />
-                    Start Monitoring
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardTitle>
-          <CardDescription>
-            Monitor and test AI assistant functionality
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="testing">Function Testing</TabsTrigger>
+          <TabsTrigger value="controls">Monitoring Controls</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Status Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Configuration</p>
-                    <p className="font-medium">
-                      {systemStatus?.configured ? 'Configured' : 'Not Configured'}
-                    </p>
-                  </div>
-                  {getStatusIcon(systemStatus?.configured)}
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Configuration</CardTitle>
+                <Brain className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {systemStatus?.configured ? 'Ready' : 'Pending'}
                 </div>
+                <Badge 
+                  variant={systemStatus?.configured ? 'default' : 'secondary'}
+                  className="mt-1"
+                >
+                  {systemStatus?.configured ? 'Configured' : 'Setup Required'}
+                </Badge>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Health Status</p>
-                    <p className="font-medium">
-                      {systemStatus?.healthy ? 'Healthy' : 'Unhealthy'}
-                    </p>
-                  </div>
-                  {getStatusIcon(systemStatus?.healthy)}
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Health Status</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {systemStatus?.healthy ? 'Healthy' : 'Issues'}
                 </div>
+                <Badge 
+                  variant={systemStatus?.healthy ? 'default' : 'destructive'}
+                  className="mt-1"
+                >
+                  {systemStatus?.healthy ? 'Operational' : 'Degraded'}
+                </Badge>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Monitoring</p>
-                    <p className="font-medium">
-                      {systemStatus?.monitoring ? 'Active' : 'Inactive'}
-                    </p>
-                  </div>
-                  {getStatusIcon(systemStatus?.monitoring)}
-                </div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{successRate.toFixed(1)}%</div>
+                <Progress value={successRate} className="mt-2" />
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Success Rate</p>
-                    <p className="font-medium">{getSuccessRate().toFixed(1)}%</p>
-                  </div>
-                  <TrendingUp className="h-4 w-4 text-green-600" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Monitoring</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {systemStatus?.monitoring ? 'Active' : 'Inactive'}
                 </div>
+                <Badge 
+                  variant={systemStatus?.monitoring ? 'default' : 'secondary'}
+                  className="mt-1"
+                >
+                  {systemStatus?.monitoring ? 'Running' : 'Stopped'}
+                </Badge>
               </CardContent>
             </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      <Tabs defaultValue="features" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="features">Features</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="testing">Function Tests</TabsTrigger>
-        </TabsList>
+          {/* Metrics Details */}
+          {metrics && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance Metrics</CardTitle>
+                  <CardDescription>
+                    AI assistant performance over time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between">
+                    <span>Total Requests</span>
+                    <span className="font-medium">{metrics.totalRequests}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Successful</span>
+                    <span className="font-medium text-green-600">{metrics.successfulRequests}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Failed</span>
+                    <span className="font-medium text-red-600">{metrics.failedRequests}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Avg Response Time</span>
+                    <span className="font-medium">
+                      {AIClient.formatResponseTime(metrics.averageResponseTime)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Uptime</span>
+                    <span className="font-medium">
+                      {AIClient.formatUptime(metrics.uptime)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
 
-        <TabsContent value="features">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Feature Status</CardTitle>
+                  <CardDescription>
+                    Current status of AI capabilities
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {systemStatus?.features && Object.entries(systemStatus.features).map(([feature, available]) => (
+                    <div key={feature} className="flex items-center justify-between">
+                      <span>{AIClient.formatFeatureName(feature)}</span>
+                      <Badge 
+                        variant={available ? 'default' : 'secondary'}
+                        className={available ? 'bg-green-100 text-green-800' : ''}
+                      >
+                        {available ? 'Available' : 'Unavailable'}
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="testing" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Feature Availability</CardTitle>
+              <CardTitle>AI Function Testing</CardTitle>
               <CardDescription>
-                Current status of AI features and capabilities
+                Test individual AI capabilities to verify functionality
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {systemStatus?.features && Object.entries(systemStatus.features).map(([feature, available]) => (
-                  <div key={feature} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">
-                        {feature.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {getFeatureDescription(feature)}
-                      </p>
-                    </div>
-                    <Badge variant={available ? 'default' : 'secondary'}>
-                      {available ? 'Available' : 'Unavailable'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                {testConfigs.map((config) => {
+                  const result = testResults[config.name];
+                  const isActive = activeTest === config.name;
+                  const Icon = config.icon;
 
-        <TabsContent value="performance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Metrics</CardTitle>
-              <CardDescription>
-                Real-time performance and usage statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {systemStatus?.metrics && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardContent className="p-4">
+                  return (
+                    <Card key={config.name} className="p-4">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">
-                          <Activity className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">Total Requests</p>
-                            <p className="text-2xl font-bold">{systemStatus.metrics.totalRequests.toLocaleString()}</p>
-                          </div>
+                          <Icon className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium">{config.label}</span>
                         </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-5 w-5 text-green-600" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">Avg Response Time</p>
-                            <p className="text-2xl font-bold">{systemStatus.metrics.averageResponseTime.toFixed(0)}ms</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <Zap className="h-5 w-5 text-purple-600" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">Uptime</p>
-                            <p className="text-2xl font-bold">
-                              {systemStatus.metrics.uptime > 0 ? 
-                                `${(systemStatus.metrics.uptime / 3600).toFixed(1)}h` : 
-                                'N/A'
-                              }
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Success Rate</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Successful Requests</span>
-                        <span>{systemStatus.metrics.successfulRequests.toLocaleString()}</span>
-                      </div>
-                      <Progress value={getSuccessRate()} className="h-2" />
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Error Rate: {systemStatus.metrics.errorRate.toFixed(2)}%</span>
-                        <span>{getSuccessRate().toFixed(1)}% Success</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {systemStatus.metrics.lastError && (
-                    <Alert>
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Last Error:</strong> {systemStatus.metrics.lastError.message}
-                        <br />
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(systemStatus.metrics.lastError.timestamp).toLocaleString()}
-                        </span>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="testing">
-          <Card>
-            <CardHeader>
-              <CardTitle>Function Testing</CardTitle>
-              <CardDescription>
-                Test individual AI functions to verify they're working correctly
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {FUNCTION_TESTS.map((functionTest) => (
-                  <Card key={functionTest.functionName}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium">{functionTest.displayName}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {functionTest.description}
-                          </p>
-                          <div className="mt-2">
-                            <p className="text-xs text-muted-foreground">Test Payload:</p>
-                            <code className="text-xs bg-muted p-1 rounded">
-                              {JSON.stringify(functionTest.testPayload)}
-                            </code>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleTestFunction(functionTest)}
-                          disabled={testingFunction === functionTest.functionName || testFunction.isPending}
-                        >
-                          {testingFunction === functionTest.functionName ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            'Test'
-                          )}
-                        </Button>
+                        {result && (
+                          <Badge 
+                            variant={result.success ? 'default' : 'destructive'}
+                            className={result.success ? 'bg-green-100 text-green-800' : ''}
+                          >
+                            {result.success ? 'Pass' : 'Fail'}
+                          </Badge>
+                        )}
                       </div>
                       
-                      {testFunction.data && testFunction.data.functionName === functionTest.functionName && (
-                        <div className="mt-3 p-2 bg-muted rounded text-xs">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className={testFunction.data.success ? 'text-green-600' : 'text-red-600'}>
-                              {testFunction.data.success ? '✓ Success' : '✗ Failed'}
-                            </span>
-                            <span>{testFunction.data.responseTime}ms</span>
-                          </div>
-                          {testFunction.data.error && (
-                            <p className="text-red-600">{testFunction.data.error}</p>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {config.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between">
+                        <Button
+                          size="sm"
+                          onClick={() => testFunction(config.name, config.payload)}
+                          disabled={isActive}
+                          className="flex items-center space-x-1"
+                        >
+                          {isActive ? (
+                            <>
+                              <div className="animate-spin w-3 h-3 border border-white border-t-transparent rounded-full" />
+                              <span>Testing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-3 w-3" />
+                              <span>Test</span>
+                            </>
                           )}
-                        </div>
+                        </Button>
+                        
+                        {result && (
+                          <span className="text-xs text-muted-foreground">
+                            {AIClient.formatResponseTime(result.responseTime)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {result?.error && (
+                        <Alert className="mt-3 bg-red-50 border-red-200">
+                          <AlertTriangle className="h-3 w-3" />
+                          <AlertDescription className="text-xs">
+                            {result.error}
+                          </AlertDescription>
+                        </Alert>
                       )}
-                    </CardContent>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="controls" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Monitoring Controls</CardTitle>
+                <CardDescription>
+                  Start or stop automated health monitoring
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Health Monitoring</p>
+                    <p className="text-sm text-muted-foreground">
+                      {systemStatus?.monitoring ? 'Currently running' : 'Currently stopped'}
+                    </p>
+                  </div>
+                  <Badge variant={systemStatus?.monitoring ? 'default' : 'secondary'}>
+                    {systemStatus?.monitoring ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={() => startMonitoringMutation.mutate(5)}
+                    disabled={systemStatus?.monitoring || startMonitoringMutation.isPending}
+                    className="flex items-center space-x-1"
+                  >
+                    <Play className="h-3 w-3" />
+                    <span>Start</span>
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => stopMonitoringMutation.mutate()}
+                    disabled={!systemStatus?.monitoring || stopMonitoringMutation.isPending}
+                    className="flex items-center space-x-1"
+                  >
+                    <Square className="h-3 w-3" />
+                    <span>Stop</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Metrics Management</CardTitle>
+                <CardDescription>
+                  Reset performance metrics and counters
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Performance Data</p>
+                    <p className="text-sm text-muted-foreground">
+                      {metrics?.totalRequests || 0} total requests recorded
+                    </p>
+                  </div>
+                  <Badge variant="outline">
+                    {AIClient.formatUptime(metrics?.uptime || 0)} uptime
+                  </Badge>
+                </div>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => resetMetricsMutation.mutate()}
+                  disabled={resetMetricsMutation.isPending}
+                  className="flex items-center space-x-1"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  <span>Reset Metrics</span>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {systemStatus?.lastCheck && (
+            <Alert>
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                Last health check: {new Date(systemStatus.lastCheck).toLocaleString()}
+              </AlertDescription>
+            </Alert>
+          )}
         </TabsContent>
       </Tabs>
     </div>
   );
-}
-
-function getFeatureDescription(feature: string): string {
-  const descriptions: Record<string, string> = {
-    basicChat: 'General AI conversation and assistance',
-    imageAnalysis: 'Image content analysis and description',
-    documentAnalysis: 'Document parsing and information extraction',
-    codeGeneration: 'Code generation and programming assistance'
-  };
-  
-  return descriptions[feature] || 'AI feature functionality';
 }
