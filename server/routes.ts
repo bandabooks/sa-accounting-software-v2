@@ -415,7 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get notification settings from storage or return defaults
       const settings = await storage.getNotificationSettings(companyId);
       
-      // Provide default settings if none exist
+      // Provide default settings if none exist (System Updates active by default)
       const defaultSettings = {
         email: {
           enabled: true,
@@ -447,8 +447,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const settings = req.body;
       
+      console.log('Received settings payload:', JSON.stringify(settings, null, 2));
+      
       // Validate settings structure
-      if (!settings.email || !settings.sms) {
+      if (!settings || !settings.email || !settings.sms) {
+        console.log('Settings validation failed:', { settings });
         return res.status(400).json({ message: "Invalid settings structure" });
       }
 

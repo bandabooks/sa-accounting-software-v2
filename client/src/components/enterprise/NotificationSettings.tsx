@@ -127,6 +127,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
       },
     };
     
+    console.log('Frontend sending settings:', updatedSettings);
     updateNotificationsMutation.mutate(updatedSettings);
   };
 
