@@ -222,6 +222,12 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
 
   const [reportData, setReportData] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Fetch VAT stats for quick summary
+  const { data: vatStats } = useQuery({
+    queryKey: [`/api/vat/stats`, companyId, dateRange],
+    enabled: !!dateRange.startDate && !!dateRange.endDate,
+  });
 
   // Fixed implementation using apiRequest for proper authentication
   const handleGenerateReport = async (format: string) => {
@@ -433,96 +439,58 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
               Preview
             </Button>
           </div>
-
-          {/* Sample button demonstrating the clean Promise function */}
-          <div className="pt-4 border-t">
-            <p className="text-sm text-gray-600 mb-2">Sample Usage (Clean Promise Function):</p>
-            <Button 
-              variant="secondary"
-              onClick={async () => {
-                if (!dateRange.startDate || !dateRange.endDate) {
-                  alert('Please select start and end dates first');
-                  return;
-                }
-                
-                setIsGenerating(true);
-                try {
-                  // Use apiRequest for proper authentication
-                  const response = await apiRequest(`/api/vat/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=pdf`, 'GET');
-                  
-                  if (response.ok) {
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    
-                    toast({
-                      title: "Success",
-                      description: "VAT report generated and opened in new tab",
-                    });
-                  } else {
-                    const errorResult = await response.json();
-                    throw new Error(errorResult.message || 'Failed to generate PDF');
-                  }
-                } catch (error) {
-                  console.error('VAT report generation error:', error);
-                  toast({
-                    title: "Error", 
-                    description: "Failed to generate VAT report. Please try again.",
-                    variant: "destructive"
-                  });
-                } finally {
-                  setIsGenerating(false);
-                }
-              }}
-              disabled={isGenerating || !dateRange.startDate || !dateRange.endDate}
-              className="w-full"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Test Clean Promise Function (PDF in New Tab)
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Output VAT</p>
-                <p className="text-2xl font-bold text-green-600">R 45,230.00</p>
+      {/* Quick Stats - Show real data when period is selected */}
+      {dateRange.startDate && dateRange.endDate && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Output VAT (Sales)</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    R {vatStats?.outputVat ? parseFloat(vatStats.outputVat).toFixed(2) : '0.00'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">VAT collected from customers</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-green-500" />
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Input VAT</p>
-                <p className="text-2xl font-bold text-blue-600">R 12,850.00</p>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Input VAT (Purchases)</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    R {vatStats?.inputVat ? parseFloat(vatStats.inputVat).toFixed(2) : '0.00'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">VAT paid to suppliers</p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-blue-500" />
               </div>
-              <BarChart3 className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Net VAT</p>
-                <p className="text-2xl font-bold text-purple-600">R 32,380.00</p>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Net VAT Payable</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    R {vatStats?.netVat ? parseFloat(vatStats.netVat).toFixed(2) : '0.00'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Amount due to SARS</p>
+                </div>
+                <FileText className="h-8 w-8 text-purple-500" />
               </div>
-              <FileText className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Report Preview Modal */}
       {showPreview && reportData && (

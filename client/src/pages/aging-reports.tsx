@@ -86,126 +86,148 @@ export default function AgingReports() {
     return formatPerc((value / total) * 100, 1);
   };
 
-  // Fetch aging data
+  // Fetch aging data from actual system
   const { data: agingData, isLoading } = useQuery({
     queryKey: [`/api/reports/aging/${reportType}`, filterPeriod],
-    queryFn: () => apiRequest(`/api/reports/aging/${reportType}?period=${filterPeriod}`, "GET"),
-    select: (data) => {
-      // Mock data for demonstration - replace with actual API response
-      const mockReceivables: AgingData[] = [
-        {
-          customerId: 1,
-          name: "ABC Corporation",
-          contactPerson: "John Smith",
-          phone: "+27 11 234 5678",
-          email: "john@abc.com",
-          current: 50000,
-          days0to30: 25000,
-          days31to60: 15000,
-          days61to90: 8000,
-          days90Plus: 5000,
-          total: 103000,
-          oldestInvoiceDate: "2024-05-15",
-          averageDaysOutstanding: 28
-        },
-        {
-          customerId: 2,
-          name: "XYZ Enterprises",
-          contactPerson: "Jane Doe",
-          phone: "+27 21 456 7890",
-          email: "jane@xyz.com",
-          current: 30000,
-          days0to30: 20000,
-          days31to60: 10000,
-          days61to90: 5000,
-          days90Plus: 12000,
-          total: 77000,
-          oldestInvoiceDate: "2024-04-20",
-          averageDaysOutstanding: 45
-        },
-        {
-          customerId: 3,
-          name: "Tech Solutions Ltd",
-          contactPerson: "Mike Johnson",
-          phone: "+27 31 789 0123",
-          email: "mike@techsolutions.com",
-          current: 75000,
-          days0to30: 10000,
-          days31to60: 5000,
-          days61to90: 0,
-          days90Plus: 0,
-          total: 90000,
-          oldestInvoiceDate: "2024-11-01",
-          averageDaysOutstanding: 15
-        }
-      ];
-
-      const mockPayables: AgingData[] = [
-        {
-          supplierId: 1,
-          name: "Office Supplies Co",
-          contactPerson: "Sarah Brown",
-          phone: "+27 11 111 2222",
-          email: "sarah@officesupplies.com",
-          current: 20000,
-          days0to30: 15000,
-          days31to60: 8000,
-          days61to90: 3000,
-          days90Plus: 2000,
-          total: 48000,
-          oldestInvoiceDate: "2024-06-01",
-          averageDaysOutstanding: 25
-        },
-        {
-          supplierId: 2,
-          name: "IT Hardware Ltd",
-          contactPerson: "Tom Wilson",
-          phone: "+27 21 333 4444",
-          email: "tom@ithardware.com",
-          current: 45000,
-          days0to30: 30000,
-          days31to60: 10000,
-          days61to90: 0,
-          days90Plus: 0,
-          total: 85000,
-          oldestInvoiceDate: "2024-10-15",
-          averageDaysOutstanding: 18
-        }
-      ];
-
-      const items = reportType === "receivables" ? mockReceivables : mockPayables;
-      
-      // Sort items
-      const sorted = [...items].sort((a, b) => {
-        switch (sortBy) {
-          case "total":
-            return b.total - a.total;
-          case "oldest":
-            return b.days90Plus - a.days90Plus;
-          case "name":
-            return a.name.localeCompare(b.name);
-          default:
-            return 0;
-        }
-      });
-
-      return sorted;
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/aging/${reportType}?period=${filterPeriod}`, "GET");
+      return response.json ? await response.json() : response;
     }
   });
 
+  // Fetch invoices and bills for real aging calculation
+  const { data: invoices } = useQuery({
+    queryKey: ['/api/invoices'],
+    enabled: reportType === 'receivables'
+  });
+
+  const { data: bills } = useQuery({
+    queryKey: ['/api/bills'],
+    enabled: reportType === 'payables'
+  });
+
+  // Calculate aging from real data
+  const calculateAging = () => {
+    if (reportType === 'receivables' && invoices) {
+      const agingData: AgingData[] = [];
+      const customerMap = new Map();
+      
+      invoices.forEach((invoice: any) => {
+        if (invoice.status !== 'paid') {
+          const customerId = invoice.customerId;
+          const daysOverdue = Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+          const amount = parseFloat(invoice.total);
+          
+          if (!customerMap.has(customerId)) {
+            customerMap.set(customerId, {
+              customerId,
+              name: invoice.customerName || `Customer ${customerId}`,
+              email: invoice.customerEmail,
+              phone: invoice.customerPhone,
+              current: 0,
+              days0to30: 0,
+              days31to60: 0,
+              days61to90: 0,
+              days90Plus: 0,
+              total: 0,
+              oldestInvoiceDate: invoice.issueDate
+            });
+          }
+          
+          const customer = customerMap.get(customerId);
+          
+          if (daysOverdue <= 0) {
+            customer.current += amount;
+          } else if (daysOverdue <= 30) {
+            customer.days0to30 += amount;
+          } else if (daysOverdue <= 60) {
+            customer.days31to60 += amount;
+          } else if (daysOverdue <= 90) {
+            customer.days61to90 += amount;
+          } else {
+            customer.days90Plus += amount;
+          }
+          
+          customer.total += amount;
+          
+          if (new Date(invoice.issueDate) < new Date(customer.oldestInvoiceDate)) {
+            customer.oldestInvoiceDate = invoice.issueDate;
+          }
+        }
+      });
+      
+      return Array.from(customerMap.values());
+    }
+    
+    if (reportType === 'payables' && bills) {
+      const supplierMap = new Map();
+      
+      bills.forEach((bill: any) => {
+        if (bill.status !== 'paid') {
+          const supplierId = bill.supplierId;
+          const daysOverdue = Math.floor((Date.now() - new Date(bill.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+          const amount = parseFloat(bill.total);
+          
+          if (!supplierMap.has(supplierId)) {
+            supplierMap.set(supplierId, {
+              supplierId,
+              name: bill.supplierName || `Supplier ${supplierId}`,
+              email: bill.supplierEmail,
+              phone: bill.supplierPhone,
+              current: 0,
+              days0to30: 0,
+              days31to60: 0,
+              days61to90: 0,
+              days90Plus: 0,
+              total: 0,
+              oldestInvoiceDate: bill.issueDate
+            });
+          }
+          
+          const supplier = supplierMap.get(supplierId);
+          
+          if (daysOverdue <= 0) {
+            supplier.current += amount;
+          } else if (daysOverdue <= 30) {
+            supplier.days0to30 += amount;
+          } else if (daysOverdue <= 60) {
+            supplier.days31to60 += amount;
+          } else if (daysOverdue <= 90) {
+            supplier.days61to90 += amount;
+          } else {
+            supplier.days90Plus += amount;
+          }
+          
+          supplier.total += amount;
+          
+          if (new Date(bill.issueDate) < new Date(supplier.oldestInvoiceDate)) {
+            supplier.oldestInvoiceDate = bill.issueDate;
+          }
+        }
+      });
+      
+      return Array.from(supplierMap.values());
+    }
+    
+    return [];
+  };
+
+  // Use real data or calculated aging
+  const reportData = agingData || calculateAging();
+  
   // Calculate summary statistics
-  const summary: AgingReportSummary = agingData ? {
-    totalOutstanding: agingData.reduce((sum, item) => sum + item.total, 0),
-    current: agingData.reduce((sum, item) => sum + item.current, 0),
-    days0to30: agingData.reduce((sum, item) => sum + item.days0to30, 0),
-    days31to60: agingData.reduce((sum, item) => sum + item.days31to60, 0),
-    days61to90: agingData.reduce((sum, item) => sum + item.days61to90, 0),
-    days90Plus: agingData.reduce((sum, item) => sum + item.days90Plus, 0),
-    averageDaysOutstanding: agingData.length > 0 
-      ? agingData.reduce((sum, item) => sum + (item.averageDaysOutstanding || 0), 0) / agingData.length
+  const summary: AgingReportSummary = reportData ? {
+    totalOutstanding: reportData.reduce((sum, item) => sum + item.total, 0),
+    current: reportData.reduce((sum, item) => sum + item.current, 0),
+    days0to30: reportData.reduce((sum, item) => sum + item.days0to30, 0),
+    days31to60: reportData.reduce((sum, item) => sum + item.days31to60, 0),
+    days61to90: reportData.reduce((sum, item) => sum + item.days61to90, 0),
+    days90Plus: reportData.reduce((sum, item) => sum + item.days90Plus, 0),
+    averageDaysOutstanding: reportData.length > 0 
+      ? reportData.reduce((sum, item) => sum + (item.averageDaysOutstanding || 0), 0) / reportData.length
       : 0,
-    totalCustomers: reportType === "receivables" ? agingData.length : undefined,
-    totalSuppliers: reportType === "payables" ? agingData.length : undefined
+    totalCustomers: reportType === "receivables" ? reportData.length : undefined,
+    totalSuppliers: reportType === "payables" ? reportData.length : undefined
   } : {
     totalOutstanding: 0,
     current: 0,
@@ -488,7 +510,7 @@ export default function AgingReports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {agingData?.map((item, index) => (
+                  {reportData?.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell>
                         <div>

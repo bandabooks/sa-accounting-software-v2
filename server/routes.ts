@@ -8028,6 +8028,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // VAT Stats endpoint for quick summary
+  app.get("/api/vat/stats", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId || 2;
+      const { startDate, endDate } = req.query;
+      
+      // Calculate VAT stats from actual invoices and expenses
+      const invoices = await storage.getInvoicesByDateRange(companyId, startDate as string, endDate as string);
+      const expenses = await storage.getExpensesByDateRange(companyId, startDate as string, endDate as string);
+      
+      let outputVat = 0;
+      let inputVat = 0;
+      
+      // Calculate output VAT from invoices
+      invoices.forEach((invoice: any) => {
+        if (invoice.vatAmount) {
+          outputVat += parseFloat(invoice.vatAmount);
+        }
+      });
+      
+      // Calculate input VAT from expenses  
+      expenses.forEach((expense: any) => {
+        if (expense.vatAmount) {
+          inputVat += parseFloat(expense.vatAmount);
+        }
+      });
+      
+      const netVat = outputVat - inputVat;
+      
+      res.json({
+        outputVat: outputVat.toFixed(2),
+        inputVat: inputVat.toFixed(2),
+        netVat: netVat.toFixed(2),
+        period: { startDate, endDate }
+      });
+    } catch (error) {
+      console.error("Error calculating VAT stats:", error);
+      res.status(500).json({ message: "Failed to calculate VAT stats" });
+    }
+  });
+
   // Your requested specific endpoint
   app.get("/api/vatreports/summ_08-03formatview1", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
