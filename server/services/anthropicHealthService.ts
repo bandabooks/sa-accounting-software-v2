@@ -79,8 +79,10 @@ export class AnthropicHealthService {
         apiKey: process.env.ANTHROPIC_API_KEY,
       });
       console.log('✅ Anthropic client initialized successfully');
+    } else if (process.env.OPENAI_API_KEY) {
+      console.warn('⚠️ ANTHROPIC_API_KEY not found - Using OpenAI as fallback');
     } else {
-      console.warn('⚠️ ANTHROPIC_API_KEY not found - AI features will be unavailable');
+      console.warn('⚠️ No AI API keys found - AI features will be unavailable');
     }
   }
 
