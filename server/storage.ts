@@ -6316,6 +6316,7 @@ export class DatabaseStorage implements IStorage {
           accountCode: account.accountCode,
           accountType: account.accountType,
           balance: balance,
+          currentBalance: balance, // Add currentBalance for frontend compatibility
           isActive: account.isActive,
           bankName: account.accountName.includes('FNB') ? 'FNB' : 
                    account.accountName.includes('ABSA') ? 'ABSA' :
@@ -6324,6 +6325,7 @@ export class DatabaseStorage implements IStorage {
                    account.accountName.includes('Nedbank') ? 'Nedbank' :
                    account.accountName.includes('Discovery') ? 'Discovery Bank' :
                    account.accountName.includes('GSD') ? 'GSD Standard Bank' : 'Bank',
+          accountNumber: account.accountCode, // Use account code as account number
           currency: 'ZAR',
           transactions: recentTransactions,
           chartAccount: account
