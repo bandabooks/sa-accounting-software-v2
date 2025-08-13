@@ -121,111 +121,54 @@ interface AuditLogEntry {
   details?: any;
 }
 
-// NotificationSettings.tsx
-import { useEffect, useId, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
-import { apiRequest } from "@/lib/api";
-
-type Props = {
-  notificationSettings?:
-    | {
-        systemUpdates: boolean; // <- give each toggle its own key
-        emailAlerts: boolean;
-        smsAlerts: boolean;
-        pushNotifications: boolean;
-      }
-    | undefined;
-  systemConfig?: any;
-};
-
-export default function NotificationSettings({ notificationSettings }: Props) {
-  const q = useQueryClient();
-  // local copy so one toggle doesn't rewrite the others
-  const [local, setLocal] = useState({
-    systemUpdates: false,
-    emailAlerts: false,
-    smsAlerts: false,
-    pushNotifications: false,
-  });
-
-  useEffect(() => {
-    if (notificationSettings)
-      setLocal((p) => ({ ...p, ...notificationSettings }));
-  }, [notificationSettings]);
-
-  const saveMutation = useMutation({
-    mutationFn: (patch: Partial<typeof local>) =>
-      apiRequest("/api/notifications/settings", "PUT", patch),
-    onSuccess: () => {
-      q.invalidateQueries({ queryKey: ["/api/notifications/settings"] });
-      toast({ title: "Saved", description: "Notification settings updated." });
-    },
-    onError: () => {
-      toast({
-        title: "Failed",
-        description: "Could not save settings.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // one handler that flips a single key
-  const toggle = (key: keyof typeof local) => (checked: boolean) => {
-    setLocal((prev) => {
-      const next = { ...prev, [key]: checked };
-      // save only the changed key so we don't clobber others
-      saveMutation.mutate({ [key]: checked });
-      return next;
-    });
-  };
-
-  // unique ids (avoid duplicate htmlFor/ids)
-  const idSys = useId();
-  const idEmail = useId();
-  const idSms = useId();
-  const idPush = useId();
-
+export default function EnterpriseSettings() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Label htmlFor={idSys}>System updates</Label>
-        <Switch
-          id={idSys}
-          checked={local.systemUpdates}
-          onCheckedChange={toggle("systemUpdates")}
-        />
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Enterprise Settings
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Configure advanced security, notifications, and enterprise features
+          </p>
+        </div>
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor={idEmail}>Email alerts</Label>
-        <Switch
-          id={idEmail}
-          checked={local.emailAlerts}
-          onCheckedChange={toggle("emailAlerts")}
-        />
-      </div>
+        <Tabs defaultValue="security" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="oauth">OAuth</TabsTrigger>
+            <TabsTrigger value="ai">AI Settings</TabsTrigger>
+            <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+          </TabsList>
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor={idSms}>SMS alerts</Label>
-        <Switch
-          id={idSms}
-          checked={local.smsAlerts}
-          onCheckedChange={toggle("smsAlerts")}
-        />
-      </div>
+          <TabsContent value="security">
+            <SecuritySettings />
+          </TabsContent>
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor={idPush}>Push notifications</Label>
-        <Switch
-          id={idPush}
-          checked={local.pushNotifications}
-          onCheckedChange={toggle("pushNotifications")}
-        />
+          <TabsContent value="notifications">
+            <NotificationSettings />
+          </TabsContent>
+
+          <TabsContent value="oauth">
+            <OAuthSettings />
+          </TabsContent>
+
+          <TabsContent value="ai">
+            <AISettings />
+          </TabsContent>
+
+          <TabsContent value="payments">
+            <PaymentSettings />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <AuditLogs />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 }
-

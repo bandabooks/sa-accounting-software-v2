@@ -275,7 +275,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               <Button 
                 variant="outline" 
                 onClick={() => testEmailMutation.mutate()}
-                disabled={testEmailMutation.isPending || !notificationSettings.email.enabled}
+                disabled={testEmailMutation.isPending || !notificationSettings?.email?.enabled}
                 className="w-full"
               >
                 {testEmailSent ? (

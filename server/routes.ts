@@ -168,6 +168,19 @@ function validateRequest(schema: { body?: z.ZodSchema }) {
   };
 }
 
+// Authentication helper to ensure user is authenticated
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
+// Type-safe user getter
+function getAuthenticatedUser(req: any): AuthenticatedRequest['user'] {
+  return req.user;
+}
+
 // Configure multer for logo uploads
 const logoStorage = multer.diskStorage({
   destination: (req, file, cb) => {

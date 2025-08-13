@@ -1,5 +1,11 @@
 import { apiRequest } from './queryClient';
 
+// Helper function to handle API requests with proper JSON parsing
+async function makeAPICall<T>(url: string, method: string = 'GET', data?: unknown): Promise<T> {
+  const response = await apiRequest(url, method, data);
+  return response.json();
+}
+
 export interface AIHealthStatus {
   status: 'healthy' | 'degraded' | 'down';
   responseTime: number;
@@ -106,45 +112,35 @@ export class AIClient {
    * Get comprehensive system status (requires authentication)
    */
   static async getSystemStatus(): Promise<SystemStatus> {
-    return apiRequest('/api/ai/system-status');
+    return makeAPICall<SystemStatus>('/api/ai/system-status', 'GET');
   }
 
   /**
    * Test a specific AI function
    */
   static async testFunction(functionName: string, testPayload: any): Promise<FunctionTestResult> {
-    return apiRequest('/api/ai/test-function', {
-      method: 'POST',
-      body: JSON.stringify({ functionName, testPayload })
-    });
+    return makeAPICall<FunctionTestResult>('/api/ai/test-function', 'POST', { functionName, testPayload });
   }
 
   /**
    * Start health monitoring
    */
   static async startMonitoring(intervalMinutes: number = 5): Promise<{ message: string; interval: number }> {
-    return apiRequest('/api/ai/monitoring/start', {
-      method: 'POST',
-      body: JSON.stringify({ intervalMinutes })
-    });
+    return makeAPICall<{ message: string; interval: number }>('/api/ai/monitoring/start', 'POST', { intervalMinutes });
   }
 
   /**
    * Stop health monitoring
    */
   static async stopMonitoring(): Promise<{ message: string }> {
-    return apiRequest('/api/ai/monitoring/stop', {
-      method: 'POST'
-    });
+    return makeAPICall<{ message: string }>('/api/ai/monitoring/stop', 'POST');
   }
 
   /**
    * Reset metrics
    */
   static async resetMetrics(): Promise<{ message: string }> {
-    return apiRequest('/api/ai/metrics/reset', {
-      method: 'POST'
-    });
+    return makeAPICall<{ message: string }>('/api/ai/metrics/reset', 'POST');
   }
 
   /**
@@ -166,7 +162,7 @@ export class AIClient {
    * Get user's AI conversations
    */
   static async getConversations(): Promise<AIConversation[]> {
-    return apiRequest('/api/ai/conversations');
+    return makeAPICall<AIConversation[]>('/api/ai/conversations', 'GET');
   }
 
   /**
@@ -177,10 +173,7 @@ export class AIClient {
     context?: string;
     contextId?: number;
   }): Promise<AIConversation> {
-    return apiRequest('/api/ai/conversations', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
+    return makeAPICall<AIConversation>('/api/ai/conversations', 'POST', data);
   }
 
   /**
@@ -195,26 +188,21 @@ export class AIClient {
       contextData?: any;
     };
   }): Promise<{ response: string; messageId: number }> {
-    return apiRequest('/api/ai/chat', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
+    return makeAPICall<{ response: string; messageId: number }>('/api/ai/chat', 'POST', data);
   }
 
   /**
    * Get conversation history
    */
   static async getConversationHistory(conversationId: number): Promise<AIMessage[]> {
-    return apiRequest(`/api/ai/conversations/${conversationId}/messages`);
+    return makeAPICall<AIMessage[]>(`/api/ai/conversations/${conversationId}/messages`, 'GET');
   }
 
   /**
    * Archive a conversation
    */
   static async archiveConversation(conversationId: number): Promise<{ message: string }> {
-    return apiRequest(`/api/ai/conversations/${conversationId}/archive`, {
-      method: 'POST'
-    });
+    return makeAPICall<{ message: string }>(`/api/ai/conversations/${conversationId}/archive`, 'POST');
   }
 
   /**
@@ -225,28 +213,21 @@ export class AIClient {
    * Analyze an invoice
    */
   static async analyzeInvoice(invoiceId: number): Promise<{ response: string; messageId: number }> {
-    return apiRequest(`/api/ai/analyze/invoice/${invoiceId}`, {
-      method: 'POST'
-    });
+    return makeAPICall<{ response: string; messageId: number }>(`/api/ai/analyze/invoice/${invoiceId}`, 'POST');
   }
 
   /**
    * Get chart of accounts suggestions
    */
   static async suggestChartOfAccounts(industry: string): Promise<{ response: string; messageId: number }> {
-    return apiRequest('/api/ai/suggest/chart-of-accounts', {
-      method: 'POST',
-      body: JSON.stringify({ industry })
-    });
+    return makeAPICall<{ response: string; messageId: number }>('/api/ai/suggest/chart-of-accounts', 'POST', { industry });
   }
 
   /**
    * Get VAT compliance help
    */
   static async getVATHelp(): Promise<{ response: string; messageId: number }> {
-    return apiRequest('/api/ai/help/vat-compliance', {
-      method: 'POST'
-    });
+    return makeAPICall<{ response: string; messageId: number }>('/api/ai/help/vat-compliance', 'POST');
   }
 
   /**
@@ -256,7 +237,10 @@ export class AIClient {
   /**
    * Format response time for display
    */
-  static formatResponseTime(ms: number): string {
+  static formatResponseTime(ms: number | undefined): string {
+    if (ms === undefined || ms === null) {
+      return 'Unknown';
+    }
     if (ms < 1000) {
       return `${ms.toFixed(0)}ms`;
     }

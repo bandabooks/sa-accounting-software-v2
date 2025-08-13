@@ -279,6 +279,8 @@ export interface AuthUser {
   role: string;
   permissions: string[];
   companyId?: number;
+  activeCompanyId?: number;
+  phone?: string;
 }
 
 export interface AuthenticatedRequest extends Request {

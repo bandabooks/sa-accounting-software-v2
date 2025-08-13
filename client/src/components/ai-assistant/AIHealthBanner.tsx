@@ -87,7 +87,7 @@ export function AIHealthBanner() {
           color: 'text-yellow-600',
           bgColor: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800',
           title: 'AI Assistant Degraded',
-          message: `Response time: ${AIClient.formatResponseTime(healthStatus.responseTime)}. Some delays expected.`,
+          message: `Response time: ${healthStatus.responseTime ? AIClient.formatResponseTime(healthStatus.responseTime) : 'Unknown'}. Some delays expected.`,
           badge: 'Degraded'
         };
       case 'down':
@@ -105,7 +105,7 @@ export function AIHealthBanner() {
           color: 'text-green-600',
           bgColor: 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800',
           title: 'AI Assistant Healthy',
-          message: `Response time: ${AIClient.formatResponseTime(healthStatus.responseTime)}`,
+          message: `Response time: ${healthStatus.responseTime ? AIClient.formatResponseTime(healthStatus.responseTime) : 'Unknown'}`,
           badge: 'Healthy'
         };
     }
