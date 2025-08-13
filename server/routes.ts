@@ -245,6 +245,10 @@ const bankStatementUpload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure Express middleware
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
   // Initialize PayFast service
   let payFastService: any;
   try {
