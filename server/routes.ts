@@ -538,24 +538,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/notifications/test-sms", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const userPhone = authReq.user?.phone;
+      const { phoneNumber } = req.body;
       
-      if (!userPhone) {
-        return res.status(400).json({ message: "User phone number required" });
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      // Check if SMS service is configured
+      if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
+        // If not configured, save the settings but notify user
+        console.log(`SMS test requested for ${phoneNumber} - SMS service not configured`);
+        return res.json({ 
+          success: true, 
+          message: "SMS settings saved. Configure Twilio credentials to enable actual SMS delivery.",
+          configured: false
+        });
       }
 
       // Import SMS service dynamically
       const { smsService } = await import('./services/smsService');
       
-      const result = await smsService.sendSMS(
-        userPhone,
-        `Test SMS from Taxnify: Your notification settings are working correctly. Sent at ${new Date().toLocaleString()}`
-      );
-
-      res.json({ message: "Test SMS sent successfully", result });
+      try {
+        const testMessage = `Taxnify Test SMS: Your SMS notifications are working correctly. Sent at ${new Date().toLocaleString()}`;
+        const result = await smsService.sendSMS(phoneNumber, testMessage);
+        
+        res.json({ 
+          success: true,
+          message: "Test SMS sent successfully",
+          configured: true,
+          result 
+        });
+      } catch (smsError) {
+        console.error("Failed to send SMS:", smsError);
+        res.json({ 
+          success: false, 
+          message: "SMS settings saved but test message failed. Please check your Twilio credentials.",
+          configured: true,
+          error: smsError.message
+        });
+      }
     } catch (error) {
-      console.error('Error sending test SMS:', error);
-      res.status(500).json({ message: "Failed to send test SMS" });
+      console.error('Error in test SMS endpoint:', error);
+      res.status(500).json({ message: "Failed to process SMS test request" });
     }
   });
 

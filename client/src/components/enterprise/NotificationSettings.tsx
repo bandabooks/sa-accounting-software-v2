@@ -132,21 +132,41 @@ export default function NotificationSettings({ notificationSettings, systemConfi
   // Test SMS notification
   const testSMSMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/notifications/test-sms', 'POST');
-    },
-    onSuccess: () => {
-      setTestSMSSent(true);
-      setTimeout(() => setTestSMSSent(false), 3000);
-      successModal.showSuccess({
-        title: "Test SMS Sent Successfully",
-        description: "Check your phone for the test notification message.",
-        confirmText: "Continue"
+      if (!testPhoneNumber) {
+        throw new Error('Please enter a phone number');
+      }
+      return await apiRequest('/api/notifications/test-sms', 'POST', { 
+        phoneNumber: testPhoneNumber 
       });
     },
-    onError: () => {
+    onSuccess: (data: any) => {
+      setTestSMSSent(true);
+      setTimeout(() => setTestSMSSent(false), 3000);
+      
+      if (data.configured === false) {
+        toast({
+          title: "SMS Settings Saved",
+          description: "SMS settings have been saved. Please configure Twilio credentials to enable actual SMS delivery.",
+          variant: "default",
+        });
+      } else if (data.success) {
+        successModal.showSuccess({
+          title: "Test SMS Sent Successfully",
+          description: "Check your phone for the test notification message.",
+          confirmText: "Continue"
+        });
+      } else {
+        toast({
+          title: "SMS Configuration Issue",
+          description: data.message || "SMS settings saved but test failed. Please check your Twilio credentials.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
       toast({
         title: "Test Failed",
-        description: "Failed to send test SMS",
+        description: error.message || "Failed to send test SMS",
         variant: "destructive",
       });
     },
@@ -366,7 +386,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
                 id="sms-enabled"
                 checked={localSettings.sms.enabled}
                 onCheckedChange={(checked) => handleSMSToggle('enabled', checked)}
-                disabled={!systemConfig?.features.sms || updateNotificationsMutation.isPending}
+                disabled={updateNotificationsMutation.isPending}
               />
             </div>
 
@@ -400,25 +420,44 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               </div>
             )}
 
-            {systemConfig?.features.sms && (
-              <Button 
-                variant="outline" 
-                onClick={() => testSMSMutation.mutate()}
-                disabled={testSMSMutation.isPending || !localSettings.sms.enabled}
-                className="w-full"
-              >
-                {testSMSSent ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4 text-green-600" />
-                    Test SMS Sent
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Test SMS
-                  </>
+            {localSettings.sms.enabled && (
+              <div className="space-y-3 pt-3 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="test-phone">Test Phone Number</Label>
+                  <Input
+                    id="test-phone"
+                    type="tel"
+                    placeholder="Enter phone number (e.g., +27821234567)"
+                    value={testPhoneNumber}
+                    onChange={(e) => setTestPhoneNumber(e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500">Enter a phone number to receive a test SMS notification</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => testSMSMutation.mutate()}
+                  disabled={testSMSMutation.isPending || !testPhoneNumber}
+                  className="w-full"
+                >
+                  {testSMSSent ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4 text-green-600" />
+                      Test SMS Sent
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Test SMS
+                    </>
+                  )}
+                </Button>
+                {!systemConfig?.features.sms && (
+                  <p className="text-xs text-amber-600">
+                    Note: SMS provider credentials need to be configured for actual delivery.
+                  </p>
                 )}
-              </Button>
+              </div>
             )}
           </div>
         </CardContent>
