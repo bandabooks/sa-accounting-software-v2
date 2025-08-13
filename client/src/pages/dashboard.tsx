@@ -27,6 +27,7 @@ import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
 import { PaymentFormModal } from "@/components/payments/PaymentFormModal";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
+import { AIHealthIndicator } from "@/components/ai/AIHealthIndicator";
 
 interface DashboardWidget {
   id: string;
@@ -159,6 +160,7 @@ export default function Dashboard() {
                     <Clock className="h-3 w-3" />
                     <span className="text-xs font-medium">Updated {lastUpdate.toLocaleTimeString()}</span>
                   </div>
+                  <AIHealthIndicator />
                   {priorityNotifications.length > 0 && (
                     <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-orange-500/80 to-red-500/80 backdrop-blur-sm rounded-full border border-white/30">
                       <Bell className="h-3 w-3 animate-bounce" />

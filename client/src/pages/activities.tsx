@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,12 @@ interface Activity {
   time: string;
   priority: 'high' | 'medium' | 'low';
   category: string;
+  link?: string; // Optional link to related page
+  entityId?: string; // Optional entity ID for navigation
 }
 
 export default function Activities() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -31,7 +35,9 @@ export default function Activities() {
       description: "Payment of R2,500 received for Invoice #INV-001",
       time: "2 mins ago",
       priority: "high",
-      category: "payments"
+      category: "payments",
+      link: "/payments",
+      entityId: "INV-001"
     },
     {
       id: "2",
@@ -40,7 +46,8 @@ export default function Activities() {
       description: "VAT201 submission deadline approaching",
       time: "1 hour ago",
       priority: "medium",
-      category: "compliance"
+      category: "compliance",
+      link: "/vat-management"
     },
     {
       id: "3",
@@ -49,7 +56,8 @@ export default function Activities() {
       description: "John Smith has been added to your customer database",
       time: "3 hours ago",
       priority: "low",
-      category: "customers"
+      category: "customers",
+      link: "/customers"
     },
     {
       id: "4",
@@ -58,7 +66,9 @@ export default function Activities() {
       description: "New invoice generated for ABC Corp - R5,200",
       time: "1 day ago",
       priority: "medium",
-      category: "invoices"
+      category: "invoices",
+      link: "/invoices",
+      entityId: "INV-2024-010"
     },
     {
       id: "5",
@@ -67,7 +77,9 @@ export default function Activities() {
       description: "Invoice #INV-009 is 15 days overdue - R1,800",
       time: "2 days ago",
       priority: "high",
-      category: "payments"
+      category: "payments",
+      link: "/invoices",
+      entityId: "INV-009"
     },
     {
       id: "6",
@@ -76,7 +88,8 @@ export default function Activities() {
       description: "Financial report for January 2024 is ready",
       time: "3 days ago",
       priority: "low",
-      category: "reports"
+      category: "reports",
+      link: "/financial-reports"
     },
     {
       id: "7",
@@ -85,7 +98,8 @@ export default function Activities() {
       description: "All transactions for FNB Current Account reconciled",
       time: "1 week ago",
       priority: "medium",
-      category: "banking"
+      category: "banking",
+      link: "/bank-reconciliation"
     },
     {
       id: "8",
@@ -94,7 +108,8 @@ export default function Activities() {
       description: "Product A is running low - only 5 units remaining",
       time: "1 week ago",
       priority: "medium",
-      category: "inventory"
+      category: "inventory",
+      link: "/inventory"
     }
   ];
 
@@ -250,7 +265,17 @@ export default function Activities() {
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      if (activity.link) {
+                        setLocation(activity.link);
+                      }
+                    }}
+                    className="hover:bg-gray-100 transition-colors"
+                    title="View Details"
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
