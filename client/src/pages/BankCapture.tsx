@@ -20,14 +20,16 @@ export default function BankCapture() {
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
 
   // Fetch import batches
-  const { data: batches, isLoading } = useQuery({
+  const { data: batches = [], isLoading } = useQuery({
     queryKey: ['/api/bank/import-batches', accountId],
     enabled: true,
+    initialData: [],
   });
 
   // Fetch bank accounts for dropdown
-  const { data: bankAccounts, isLoading: accountsLoading } = useQuery({
+  const { data: bankAccounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['/api/bank-accounts'],
+    initialData: [],
   });
 
   // Use loading states for comprehensive loading feedback
@@ -44,7 +46,7 @@ export default function BankCapture() {
   }
 
   const handleStartNewImport = () => {
-    if (!accountId && bankAccounts?.length > 0) {
+    if (!accountId && Array.isArray(bankAccounts) && bankAccounts.length > 0) {
       navigate(`/bank/capture?accountId=${bankAccounts[0].id}`);
     }
     setSelectedBatchId(null);
@@ -124,7 +126,7 @@ export default function BankCapture() {
         </Button>
       </div>
 
-      {!accountId && bankAccounts?.length > 0 && (
+      {!accountId && Array.isArray(bankAccounts) && bankAccounts.length > 0 && (
         <Card className="mb-6 border-yellow-200 bg-yellow-50">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
@@ -135,7 +137,7 @@ export default function BankCapture() {
               </div>
             </div>
             <div className="flex gap-2 mt-4">
-              {bankAccounts.slice(0, 3).map((account: any) => (
+              {(Array.isArray(bankAccounts) ? bankAccounts.slice(0, 3) : []).map((account: any) => (
                 <Button
                   key={account.id}
                   variant="outline"
@@ -168,7 +170,7 @@ export default function BankCapture() {
 
         <TabsContent value="recent">
           <ImportBatchList 
-            batches={batches?.slice(0, 10) || []}
+            batches={Array.isArray(batches) ? batches.slice(0, 10) : []}
             isLoading={isLoading}
             onViewBatch={handleViewBatch}
             title="Recent Imports"
@@ -178,7 +180,7 @@ export default function BankCapture() {
 
         <TabsContent value="processing">
           <ImportBatchList 
-            batches={batches?.filter((b: any) => ['processing', 'parsed', 'validated'].includes(b.status)) || []}
+            batches={Array.isArray(batches) ? batches.filter((b: any) => ['processing', 'parsed', 'validated'].includes(b.status)) : []}
             isLoading={isLoading}
             onViewBatch={handleViewBatch}
             title="Processing Imports"
@@ -188,7 +190,7 @@ export default function BankCapture() {
 
         <TabsContent value="completed">
           <ImportBatchList 
-            batches={batches?.filter((b: any) => b.status === 'completed') || []}
+            batches={Array.isArray(batches) ? batches.filter((b: any) => b.status === 'completed') : []}
             isLoading={isLoading}
             onViewBatch={handleViewBatch}
             title="Completed Imports"
@@ -206,7 +208,7 @@ export default function BankCapture() {
                 <FileSpreadsheet className="text-blue-600" size={20} />
               </div>
               <div>
-                <p className="text-2xl font-bold">{batches?.length || 0}</p>
+                <p className="text-2xl font-bold">{Array.isArray(batches) ? batches.length : 0}</p>
                 <p className="text-sm text-muted-foreground">Total Imports</p>
               </div>
             </div>
@@ -221,7 +223,7 @@ export default function BankCapture() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {batches?.reduce((sum: number, batch: any) => sum + (batch.newRows || 0), 0) || 0}
+                  {Array.isArray(batches) ? batches.reduce((sum: number, batch: any) => sum + (batch.newRows || 0), 0) : 0}
                 </p>
                 <p className="text-sm text-muted-foreground">Transactions Imported</p>
               </div>
@@ -237,7 +239,7 @@ export default function BankCapture() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {batches?.reduce((sum: number, batch: any) => sum + (batch.duplicateRows || 0), 0) || 0}
+                  {Array.isArray(batches) ? batches.reduce((sum: number, batch: any) => sum + (batch.duplicateRows || 0), 0) : 0}
                 </p>
                 <p className="text-sm text-muted-foreground">Duplicates Skipped</p>
               </div>
@@ -253,7 +255,7 @@ export default function BankCapture() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {batches?.filter((b: any) => ['processing', 'parsed', 'validated'].includes(b.status)).length || 0}
+                  {Array.isArray(batches) ? batches.filter((b: any) => ['processing', 'parsed', 'validated'].includes(b.status)).length : 0}
                 </p>
                 <p className="text-sm text-muted-foreground">Pending Review</p>
               </div>
