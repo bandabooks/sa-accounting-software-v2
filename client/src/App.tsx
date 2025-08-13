@@ -613,6 +613,11 @@ function AuthenticatedApp() {
             <Banking />
           </ProtectedRoute>
         </Route>
+        <Route path="/bank-capture">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <BankCapture />
+          </ProtectedRoute>
+        </Route>
         <Route path="/bank/capture">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
             <BankCapture />

@@ -107,6 +107,7 @@ const navigationGroups = [
       { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW", module: "accounting" },
       { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
       { path: "/banking", label: "Banking", icon: Landmark, permission: "BANKING_VIEW", module: "banking" },
+      { path: "/bank-capture", label: "Bank Feeds (Stitch)", icon: Upload, permission: "BANKING_VIEW", module: "banking" },
       { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
       { path: "/fixed-assets", label: "Fixed Assets", icon: Building2, permission: "FIXED_ASSETS_VIEW", module: "accounting" },
       { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW", module: "advanced_reports" },
@@ -205,6 +206,7 @@ const navigationGroups = [
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
       { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
       { path: "/integrations", label: "Integrations", icon: Zap, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/ai-monitor", label: "AI Health Monitor", icon: Brain, permission: "SETTINGS_VIEW", module: "dashboard" },
       { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" },
       { path: "/email-settings", label: "Email Settings", icon: Mail, permission: "SETTINGS_VIEW", module: "dashboard" }
     ]
