@@ -416,30 +416,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Company ID required" });
       }
 
+      console.log('🔍 GET /api/notifications/settings called for company:', companyId);
+
       // Get notification settings from storage or return defaults
       const settings = await storage.getNotificationSettings(companyId);
       
-      // Provide default settings if none exist (System Updates active by default)
-      const defaultSettings = {
-        email: {
-          enabled: true,
-          invoiceReminders: true,
-          paymentAlerts: true,
-          securityAlerts: true,
-          systemUpdates: true
-        },
-        sms: {
-          enabled: false,
-          criticalAlerts: false,
-          paymentReminders: false
+      console.log('📦 Storage returned:', settings);
+      
+      // Always ensure systemUpdates is true by default
+      if (settings) {
+        // Force systemUpdates to true if it's missing or false
+        if (!settings.email.systemUpdates) {
+          console.log('⚠️ SystemUpdates was false, forcing to true');
+          settings.email.systemUpdates = true;
         }
-      };
-      
-      console.log('Settings from storage:', settings);
-      console.log('Default settings:', defaultSettings);
-      console.log('Final response:', settings || defaultSettings);
-      
-      res.json(settings || defaultSettings);
+        console.log('✅ Final settings response:', settings);
+        res.json(settings);
+      } else {
+        // Provide default settings if none exist (System Updates active by default)
+        const defaultSettings = {
+          email: {
+            enabled: true,
+            invoiceReminders: true,
+            paymentAlerts: true,
+            securityAlerts: true,
+            systemUpdates: true
+          },
+          sms: {
+            enabled: false,
+            criticalAlerts: false,
+            paymentReminders: false
+          }
+        };
+        
+        console.log('🆕 Using default settings:', defaultSettings);
+        res.json(defaultSettings);
+      }
     } catch (error) {
       console.error('Error fetching notification settings:', error);
       res.status(500).json({ message: "Failed to fetch notification settings" });
