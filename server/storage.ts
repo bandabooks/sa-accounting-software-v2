@@ -4199,12 +4199,14 @@ export class DatabaseStorage implements IStorage {
       .from(notificationSettings)
       .where(eq(notificationSettings.companyId, companyId));
     
+    console.log('Raw database settings for company', companyId, ':', settings);
+    
     if (!settings) {
       return null;
     }
     
     // Transform database structure to match frontend interface
-    return {
+    const transformed = {
       email: {
         enabled: settings.emailEnabled,
         invoiceReminders: settings.invoiceReminders,
@@ -4218,6 +4220,9 @@ export class DatabaseStorage implements IStorage {
         paymentReminders: settings.paymentReminders
       }
     };
+    
+    console.log('Transformed settings for API:', transformed);
+    return transformed;
   }
 
   async saveNotificationSettings(companyId: number, settings: any): Promise<any> {
