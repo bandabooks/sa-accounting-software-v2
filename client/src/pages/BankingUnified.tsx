@@ -45,7 +45,8 @@ const bankAccountSchema = z.object({
 
 type BankAccountForm = z.infer<typeof bankAccountSchema>;
 
-export default function BankingUnified() {
+function BankingUnified() {
+  console.log("BankingUnified component loaded");
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/banking/:accountId");
   const accountId = params?.accountId;
@@ -82,13 +83,13 @@ export default function BankingUnified() {
 
   // Fetch specific account details if accountId is provided
   const { data: selectedAccount } = useQuery({
-    queryKey: accountId ? [`/api/chart-of-accounts/${accountId}`] : null,
+    queryKey: [`/api/chart-of-accounts/${accountId}`],
     enabled: !!accountId,
   });
 
   // Fetch import batches for the selected account
   const { data: importBatches = [] } = useQuery({
-    queryKey: accountId ? [`/api/bank/import-batches`, { bankAccountId: accountId }] : null,
+    queryKey: [`/api/bank/import-batches`, { bankAccountId: accountId }],
     enabled: !!accountId,
   });
 
@@ -545,10 +546,10 @@ export default function BankingUnified() {
                 </Button>
               </div>
 
-              {importBatches.length > 0 && (
+              {(importBatches as any[]).length > 0 && (
                 <div className="mt-6 space-y-4">
                   <h3 className="font-semibold">Recent Uploads</h3>
-                  {importBatches.slice(0, 3).map((batch: any) => (
+                  {(importBatches as any[]).slice(0, 3).map((batch: any) => (
                     <div key={batch.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <FileSpreadsheet className="text-muted-foreground" size={20} />
@@ -715,3 +716,5 @@ export default function BankingUnified() {
     </div>
   );
 }
+
+export default BankingUnified;
