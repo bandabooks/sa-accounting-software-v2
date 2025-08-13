@@ -423,13 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('📦 Storage returned:', settings);
       
-      // Always ensure systemUpdates is true by default
       if (settings) {
-        // Force systemUpdates to true if it's missing or false
-        if (!settings.email.systemUpdates) {
-          console.log('⚠️ SystemUpdates was false, forcing to true');
-          settings.email.systemUpdates = true;
-        }
         console.log('✅ Final settings response:', settings);
         res.json(settings);
       } else {

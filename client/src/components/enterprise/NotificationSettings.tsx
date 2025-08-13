@@ -67,14 +67,8 @@ export default function NotificationSettings({ notificationSettings, systemConfi
     }
   };
   
-  // Always ensure systemUpdates is true regardless of what the API returns
-  const settings = notificationSettings ? {
-    ...notificationSettings,
-    email: {
-      ...notificationSettings.email,
-      systemUpdates: true // Force systemUpdates to always be true
-    }
-  } : defaultNotificationSettings;
+  // Use settings from API, but ensure systemUpdates defaults to true for new users
+  const settings = notificationSettings || defaultNotificationSettings;
 
   // Update notification settings mutation
   const updateNotificationsMutation = useMutation({
