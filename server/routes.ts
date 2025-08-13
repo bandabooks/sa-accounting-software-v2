@@ -435,6 +435,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
+      console.log('Settings from storage:', settings);
+      console.log('Default settings:', defaultSettings);
+      console.log('Final response:', settings || defaultSettings);
+      
       res.json(settings || defaultSettings);
     } catch (error) {
       console.error('Error fetching notification settings:', error);
