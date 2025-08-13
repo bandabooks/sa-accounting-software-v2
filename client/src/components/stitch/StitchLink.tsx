@@ -36,6 +36,7 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
   const [availableAccounts, setAvailableAccounts] = useState<StitchAccount[]>([]);
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   const [linkingError, setLinkingError] = useState<string | null>(null);
+  const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -87,12 +88,15 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
     // Simulate the Stitch Link redirect and callback
     // In a real implementation, this would be handled by Stitch's SDK
     setTimeout(() => {
-      // Simulate successful account selection from Stitch
+      // Simulate successful account selection from selected bank
+      const bankName = selectedBank || 'First National Bank';
+      const bankId = selectedBank ? selectedBank.toLowerCase().replace(/\s+/g, '') : 'fnb';
+      
       const mockAccounts: StitchAccount[] = [
         {
           id: 'acc_demo_12345',
           name: 'Business Current Account',
-          officialName: 'FNB Business Current Account',
+          officialName: `${bankName} Business Current Account`,
           accountType: 'current',
           accountNumber: '1234567890',
           currency: 'ZAR',
@@ -101,15 +105,15 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
             quantity: '25000.50'
           },
           institution: {
-            id: 'fnb',
-            name: 'First National Bank',
-            logo: 'https://stitch.money/images/institutions/fnb.png'
+            id: bankId,
+            name: bankName,
+            logo: `https://stitch.money/images/institutions/${bankId}.png`
           }
         },
         {
           id: 'acc_demo_67890',
           name: 'Business Savings Account',
-          officialName: 'FNB Business Savings Account',
+          officialName: `${bankName} Business Savings Account`,
           accountType: 'savings',
           accountNumber: '0987654321',
           currency: 'ZAR',
@@ -118,9 +122,9 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
             quantity: '150000.00'
           },
           institution: {
-            id: 'fnb',
-            name: 'First National Bank',
-            logo: 'https://stitch.money/images/institutions/fnb.png'
+            id: bankId,
+            name: bankName,
+            logo: `https://stitch.money/images/institutions/${bankId}.png`
           }
         }
       ];
@@ -173,6 +177,7 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
     setLinkingError(null);
     setAvailableAccounts([]);
     setSelectedAccounts(new Set());
+    setSelectedBank(null);
     setIsLinking(false);
   };
 
@@ -187,19 +192,54 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
             <div>
               <h3 className="text-lg font-semibold mb-2">Connect Your Bank Account</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Securely link your South African bank account to automatically sync transactions and keep your books up to date.
+                Select your bank to securely link your account and automatically sync transactions.
               </p>
               <div className="flex flex-wrap gap-2 justify-center mb-4">
-                <Badge variant="secondary">FNB</Badge>
-                <Badge variant="secondary">Standard Bank</Badge>
-                <Badge variant="secondary">ABSA</Badge>
-                <Badge variant="secondary">Nedbank</Badge>
-                <Badge variant="secondary">Capitec</Badge>
+                <Button
+                  variant={selectedBank === 'FNB' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedBank('FNB')}
+                  className="rounded-full"
+                >
+                  FNB
+                </Button>
+                <Button
+                  variant={selectedBank === 'Standard Bank' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedBank('Standard Bank')}
+                  className="rounded-full"
+                >
+                  Standard Bank
+                </Button>
+                <Button
+                  variant={selectedBank === 'ABSA' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedBank('ABSA')}
+                  className="rounded-full"
+                >
+                  ABSA
+                </Button>
+                <Button
+                  variant={selectedBank === 'Nedbank' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedBank('Nedbank')}
+                  className="rounded-full"
+                >
+                  Nedbank
+                </Button>
+                <Button
+                  variant={selectedBank === 'Capitec' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedBank('Capitec')}
+                  className="rounded-full"
+                >
+                  Capitec
+                </Button>
               </div>
             </div>
             <Button 
               onClick={handleStartLinking} 
-              disabled={isLinking}
+              disabled={isLinking || !selectedBank}
               className="w-full"
             >
               {isLinking ? (
@@ -210,7 +250,7 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
               ) : (
                 <>
                   <LinkIcon className="w-4 h-4 mr-2" />
-                  Link Bank Account
+                  {selectedBank ? `Link ${selectedBank} Account` : 'Select a Bank First'}
                 </>
               )}
             </Button>

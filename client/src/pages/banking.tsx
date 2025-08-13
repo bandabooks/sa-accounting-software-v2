@@ -232,10 +232,16 @@ export default function Banking() {
 
   // Process uploaded statement file
   const processStatementFile = (file: File) => {
-    toast.success(`Processing ${file.name}...`);
+    toast({
+      title: 'Processing File',
+      description: `Processing ${file.name}...`,
+    });
     // Here you would implement actual file processing
     setTimeout(() => {
-      toast.success('Statement imported successfully');
+      toast({
+        title: 'Success',
+        description: 'Statement imported successfully',
+      });
     }, 2000);
   };
 
@@ -264,52 +270,78 @@ export default function Banking() {
     if (validFile) {
       processStatementFile(validFile);
     } else {
-      toast.error('Please upload a CSV, OFX, or QIF file');
+      toast({
+        title: 'Invalid File',
+        description: 'Please upload a CSV, OFX, or QIF file',
+        variant: 'destructive',
+      });
     }
   };
 
   // Handler for starting reconciliation
   const handleStartReconciliation = () => {
     if (bankAccounts.length === 0) {
-      toast.error('Please add a bank account first');
+      toast({
+        title: 'No Bank Accounts',
+        description: 'Please add a bank account first',
+        variant: 'destructive',
+      });
       return;
     }
-    toast.success('Starting reconciliation process...');
+    toast({
+      title: 'Reconciliation Started',
+      description: 'Starting reconciliation process...',
+    });
     // Navigate to reconciliation workflow
     setTimeout(() => {
-      toast.info('Reconciliation module loading...');
+      toast({
+        title: 'Loading',
+        description: 'Reconciliation module loading...',
+      });
     }, 1000);
   };
 
   // Handler for adding new rule
   const handleAddNewRule = () => {
-    toast.info('Opening rule configuration...');
+    toast({
+      title: 'Rule Configuration',
+      description: 'Opening rule configuration...',
+    });
     // This would open a dialog to add new categorization rules
   };
 
   // Handler for configuring fee mappings
   const handleConfigureFeeMappings = () => {
-    toast.info('Opening fee mapping configuration...');
+    toast({
+      title: 'Fee Mappings',
+      description: 'Opening fee mapping configuration...',
+    });
     // This would open a dialog to configure fee mappings
   };
 
   // Handler for connecting new bank via Stitch
   const handleConnectBank = () => {
     // Navigate to bank feeds tab to connect a specific bank
-    setActiveTab('feeds');
-    toast.info('Please select a bank to connect via Stitch');
+    toast({
+      title: 'Connect Bank Account',
+      description: 'Please select a bank to connect via Stitch',
+    });
   };
 
   // Handler for managing auto-categorization rules
   const handleManageRules = () => {
-    setActiveTab('rules');
-    toast.info('Manage your auto-categorization rules here');
+    toast({
+      title: 'Auto-Categorization Rules',
+      description: 'Manage your auto-categorization rules here',
+    });
   };
 
   // Handler for configuring banking alerts
   const handleConfigureAlerts = () => {
-    toast.info('Opening banking alerts configuration...');
-    // This would open a dialog for alert configuration
+    toast({
+      title: 'Banking Alerts',
+      description: 'Opening banking alerts configuration...',
+    });
   };
 
   // Calculate metrics from Chart of Accounts bank data
