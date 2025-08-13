@@ -163,6 +163,11 @@ export default function Integrations() {
   ];
 
   // All integrations data with enhanced payment gateways
+  // Merge API integration statuses with local definitions
+  const mergedIntegrations = Array.isArray(integrations) ? integrations : [];
+  const twilioStatus = mergedIntegrations.find((i: any) => i.id === 'twilio');
+  const sendgridStatus = mergedIntegrations.find((i: any) => i.id === 'sendgrid');
+  
   const allIntegrations: IntegrationStatus[] = [
     // Compliance & Government
     {
@@ -332,7 +337,7 @@ export default function Integrations() {
       name: 'Twilio SMS',
       description: 'SMS notifications and two-factor authentication',
       icon: MessageSquare,
-      status: process.env.TWILIO_ACCOUNT_SID ? 'connected' : 'disconnected',
+      status: twilioStatus?.status || 'disconnected',
       features: [
         'SMS notifications',
         'Payment reminders',
@@ -350,7 +355,7 @@ export default function Integrations() {
       name: 'SendGrid Email',
       description: 'Transactional and marketing email service',
       icon: Mail,
-      status: process.env.SENDGRID_API_KEY ? 'connected' : 'disconnected',
+      status: sendgridStatus?.status || 'disconnected',
       features: [
         'Transactional emails',
         'Invoice email delivery',
