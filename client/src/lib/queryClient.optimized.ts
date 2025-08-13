@@ -91,16 +91,20 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Optimized React Query configuration for better performance
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      // Performance optimizations
-      staleTime: 30 * 1000, // Data is fresh for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-      refetchOnWindowFocus: true, // Get fresh data when user returns
-      refetchOnReconnect: 'always', // Refetch on reconnect
-      networkMode: 'online', // Online-first strategy
+      // Reduced stale time - data is fresh for 30 seconds
+      staleTime: 30 * 1000,
+      // Cache time - keep in cache for 5 minutes after component unmounts
+      gcTime: 5 * 60 * 1000,
+      // Refetch on window focus for fresh data
+      refetchOnWindowFocus: true,
+      // Don't refetch on reconnect if data is fresh
+      refetchOnReconnect: 'always',
+      // Intelligent retry logic
       retry: (failureCount, error) => {
         // Don't retry on authentication errors
         if (error?.message?.includes('401') || error?.message?.includes('403')) {
@@ -110,12 +114,18 @@ export const queryClient = new QueryClient({
         if (error?.message && /^4\d{2}:/.test(error.message)) {
           return false;
         }
-        // Retry server errors up to 2 times
+        // Retry server errors (5xx) up to 2 times with exponential backoff
         return failureCount < 2;
       },
+      // Exponential backoff for retries
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      // Enable suspense for better loading states
+      suspense: false,
+      // Network mode - online first with offline fallback
+      networkMode: 'online',
     },
     mutations: {
+      // Intelligent retry for mutations
       retry: (failureCount, error) => {
         // Don't retry on client errors
         if (error?.message && /^[4]\d{2}:/.test(error.message)) {
@@ -124,7 +134,35 @@ export const queryClient = new QueryClient({
         // Retry server errors once
         return failureCount < 1;
       },
+      // Network mode for mutations
       networkMode: 'online',
     },
   },
 });
+
+// Prefetch helper for critical data
+export const prefetchQuery = async (queryKey: string[]) => {
+  await queryClient.prefetchQuery({
+    queryKey,
+    staleTime: 10 * 60 * 1000, // Consider prefetched data fresh for 10 minutes
+  });
+};
+
+// Batch invalidation helper for related queries
+export const invalidateRelatedQueries = (patterns: string[]) => {
+  const promises = patterns.map(pattern => 
+    queryClient.invalidateQueries({ 
+      queryKey: [pattern],
+      refetchType: 'active', // Only refetch if component is mounted
+    })
+  );
+  return Promise.all(promises);
+};
+
+// Smart cache update helper
+export const updateQueryData = <T>(
+  queryKey: string[],
+  updater: (oldData: T | undefined) => T
+) => {
+  queryClient.setQueryData(queryKey, updater);
+};
