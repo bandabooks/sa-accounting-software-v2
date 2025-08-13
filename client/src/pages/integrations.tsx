@@ -15,6 +15,9 @@ import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
 import { TwilioCredentialsForm } from "@/components/integrations/TwilioCredentialsForm";
 import { SendGridCredentialsForm } from "@/components/integrations/SendGridCredentialsForm";
+import { BankingCredentialsForm } from "@/components/integrations/BankingCredentialsForm";
+import { CIPCCredentialsForm } from "@/components/integrations/CIPCCredentialsForm";
+import { SARSCredentialsForm } from "@/components/integrations/SARSCredentialsForm";
 import { 
   Shield, 
   Building2, 
@@ -848,6 +851,18 @@ export default function Integrations() {
                         onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'sars', data })}
                         isLoading={saveCredentialsMutation.isPending}
                       />
+                    ) : selectedIntegration === 'banking' ? (
+                      <BankingCredentialsForm
+                        credentials={credentials.banking}
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'banking', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
+                    ) : selectedIntegration === 'cipc' ? (
+                      <CIPCCredentialsForm
+                        credentials={credentials.cipc}
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'cipc', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
                     ) : selectedIntegration === 'twilio' ? (
                       <TwilioCredentialsForm
                         onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'twilio', data })}
@@ -868,7 +883,7 @@ export default function Integrations() {
                     ) : (
                       <div className="text-center py-8">
                         <Lock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">Credential configuration for {selectedIntegrationData.name} coming soon.</p>
+                        <p className="text-gray-500">Credential configuration for {selectedIntegrationData.name} is being configured.</p>
                       </div>
                     )}
                   </TabsContent>
@@ -1101,183 +1116,6 @@ function PaymentGatewayCredentialsForm({
             <>
               <Shield className="h-4 w-4 mr-2" />
               Save {gatewayName} Settings
-            </>
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// SARS Credentials Form Component
-function SARSCredentialsForm({ 
-  credentials: initialCredentials, 
-  onSave, 
-  isLoading 
-}: { 
-  credentials: any; 
-  onSave: (data: Partial<SARSCredentials>) => void; 
-  isLoading: boolean; 
-}) {
-  const [credentials, setCredentials] = useState<SARSCredentials>({
-    clientId: '',
-    clientSecret: '',
-    username: '',
-    password: '',
-    apiUrl: 'https://secure.sarsefiling.co.za/api/v1',
-    redirectUri: '',
-    environment: 'sandbox',
-  });
-  
-  const [showSecrets, setShowSecrets] = useState({
-    clientSecret: false,
-    password: false
-  });
-
-  useEffect(() => {
-    if (initialCredentials) {
-      setCredentials(prev => ({
-        ...prev,
-        ...initialCredentials,
-        clientSecret: '', // Keep masked
-        password: '' // Keep masked
-      }));
-    }
-  }, [initialCredentials]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Only send non-empty fields
-    const dataToSend = Object.entries(credentials).reduce((acc, [key, value]) => {
-      if (value && value.trim() !== '') {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as any);
-    
-    onSave(dataToSend);
-  };
-
-  const toggleSecretVisibility = (field: 'clientSecret' | 'password') => {
-    setShowSecrets(prev => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Alert>
-        <Shield className="h-4 w-4" />
-        <AlertDescription>
-          <strong>SARS Vendor Registration Required:</strong> To enable real SARS integration, you must register as a software vendor with SARS eFiling. Visit the SARS eFiling portal to obtain your API credentials.
-        </AlertDescription>
-      </Alert>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="clientId">SARS API Key</Label>
-          <Input
-            id="clientId"
-            value={credentials.clientId}
-            onChange={(e) => setCredentials(prev => ({ ...prev, clientId: e.target.value }))}
-            placeholder="Enter your SARS API key"
-          />
-          <p className="text-sm text-gray-600">Your primary API access key from SARS eFiling</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="clientSecret">Client Secret</Label>
-          <div className="relative">
-            <Input
-              id="clientSecret"
-              type={showSecrets.clientSecret ? "text" : "password"}
-              value={credentials.clientSecret}
-              onChange={(e) => setCredentials(prev => ({ ...prev, clientSecret: e.target.value }))}
-              placeholder={initialCredentials?.clientSecret ? "••••••••••••••••" : "Enter your client secret"}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => toggleSecretVisibility('clientSecret')}
-            >
-              {showSecrets.clientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          </div>
-          <p className="text-sm text-gray-600">Your client authentication secret</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="username">Client ID</Label>
-          <Input
-            id="username"
-            value={credentials.username}
-            onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
-            placeholder="Enter your client ID"
-          />
-          <p className="text-sm text-gray-600">Your registered client identifier</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="password">Vendor ID</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showSecrets.password ? "text" : "password"}
-              value={credentials.password}
-              onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-              placeholder={initialCredentials?.password ? "••••••••••••••••" : "Enter your vendor ID"}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => toggleSecretVisibility('password')}
-            >
-              {showSecrets.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          </div>
-          <p className="text-sm text-gray-600">Your assigned vendor identification number</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="apiUrl">API URL</Label>
-          <Input
-            id="apiUrl"
-            value={credentials.apiUrl}
-            onChange={(e) => setCredentials(prev => ({ ...prev, apiUrl: e.target.value }))}
-            placeholder="https://secure.sarsefiling.co.za/api/v1"
-          />
-          <p className="text-sm text-gray-600">SARS eFiling API endpoint URL</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="environment">Environment</Label>
-          <select
-            id="environment"
-            value={credentials.environment}
-            onChange={(e) => setCredentials(prev => ({ ...prev, environment: e.target.value as 'sandbox' | 'production' }))}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="sandbox">Sandbox (Testing)</option>
-            <option value="production">Production (Live)</option>
-          </select>
-          <p className="text-sm text-gray-600">Select testing or live environment</p>
-        </div>
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Shield className="h-4 w-4 mr-2" />
-              Save SARS Settings
             </>
           )}
         </Button>
