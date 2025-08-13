@@ -18,7 +18,13 @@ import {
   Zap,
   Calendar,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  FileSpreadsheet,
+  Link2,
+  RefreshCw,
+  Settings,
+  CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +34,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,6 +43,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { BankAccountWithTransactions, ChartOfAccount } from "@shared/schema";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
+import { BankFeedDashboard } from "@/components/stitch/BankFeedDashboard";
 
 const bankAccountSchema = z.object({
   accountName: z.string().min(1, "Account name is required"),
@@ -489,20 +497,29 @@ export default function Banking() {
           </Card>
         </div>
 
-        {/* Enhanced Bank Accounts Section */}
-        <div className="space-y-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Your Bank Accounts</h2>
-              <p className="text-gray-600 mt-1">Manage and monitor all your financial accounts</p>
+        {/* Tabbed Interface */}
+        <Tabs defaultValue="accounts" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="feeds">Bank Feeds (Stitch)</TabsTrigger>
+            <TabsTrigger value="upload">Statement Upload</TabsTrigger>
+            <TabsTrigger value="reconcile">Reconciliation</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="accounts" className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Your Bank Accounts</h2>
+                <p className="text-gray-600 mt-1">Manage and monitor all your financial accounts</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Badge className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1">
+                  <Zap className="h-3 w-3 mr-1" />
+                  {bankAccounts.length} Total Accounts
+                </Badge>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1">
-                <Zap className="h-3 w-3 mr-1" />
-                {bankAccounts.length} Total Accounts
-              </Badge>
-            </div>
-          </div>
 
           {bankAccounts.length === 0 ? (
             <Card className="border-dashed border-2 border-indigo-300 bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 relative overflow-hidden">
@@ -646,7 +663,97 @@ export default function Banking() {
             ))}
           </div>
         )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="feeds">
+            <BankFeedDashboard />
+          </TabsContent>
+
+          <TabsContent value="upload">
+            <Card>
+              <CardHeader>
+                <CardTitle>Upload Bank Statement</CardTitle>
+                <CardDescription>Import transactions from CSV, OFX, or QIF files</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                  <Upload className="mx-auto text-muted-foreground mb-4" size={48} />
+                  <p className="text-lg font-medium mb-2">Drop your statement file here</p>
+                  <p className="text-sm text-muted-foreground mb-4">Supports CSV, OFX, and QIF formats</p>
+                  <Button>
+                    <FileSpreadsheet size={16} className="mr-2" />
+                    Browse Files
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reconcile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Bank Reconciliation</CardTitle>
+                <CardDescription>Match bank transactions with your records</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="font-medium">Statement Balance</p>
+                      <p className="text-2xl font-bold">R {totalBalance.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Book Balance</p>
+                      <p className="text-2xl font-bold">R {totalBalance.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Difference</p>
+                      <p className="text-2xl font-bold text-green-600">R 0.00</p>
+                    </div>
+                  </div>
+                  <Button className="w-full">
+                    <RefreshCw size={16} className="mr-2" />
+                    Start Reconciliation
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Banking Settings</CardTitle>
+                <CardDescription>Configure bank feeds and automation rules</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold mb-3">Bank Feed Connections</h3>
+                    <Button variant="outline" className="w-full">
+                      <Link2 size={16} className="mr-2" />
+                      Connect New Bank via Stitch
+                    </Button>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-3">Import Rules</h3>
+                    <Button variant="outline" className="w-full">
+                      <Settings size={16} className="mr-2" />
+                      Manage Auto-Categorization Rules
+                    </Button>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-3">Notifications</h3>
+                    <Button variant="outline" className="w-full">
+                      <AlertCircle size={16} className="mr-2" />
+                      Configure Banking Alerts
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Transaction Dialog */}
         <Dialog open={showTransactionDialog} onOpenChange={setShowTransactionDialog}>

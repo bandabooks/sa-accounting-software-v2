@@ -47,7 +47,7 @@ import Login from "@/pages/login";
 import TrialSignup from "@/pages/trial-signup";
 import ChartOfAccounts from "@/pages/chart-of-accounts";
 import JournalEntries from "@/pages/journal-entries";
-import BankingUnified from "@/pages/BankingUnified";
+import Banking from "@/pages/banking";
 import GeneralLedger from "@/pages/general-ledger";
 import FixedAssets from "@/pages/fixed-assets";
 import FixedAssetCreate from "@/pages/fixed-asset-create";
@@ -608,23 +608,23 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/banking">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <BankingUnified />
+            <Banking />
           </ProtectedRoute>
         </Route>
         <Route path="/banking/:accountId">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <BankingUnified />
+            <Banking />
           </ProtectedRoute>
         </Route>
         {/* Redirects for old routes */}
         <Route path="/bank-capture">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <BankingUnified />
+            <Banking />
           </ProtectedRoute>
         </Route>
         <Route path="/bank/capture">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <BankingUnified />
+            <Banking />
           </ProtectedRoute>
         </Route>
         <Route path="/general-ledger">
@@ -659,7 +659,7 @@ function AuthenticatedApp() {
         {/* Bank reconciliation now part of unified banking */}
         <Route path="/bank-reconciliation">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <BankingUnified />
+            <Banking />
           </ProtectedRoute>
         </Route>
 
