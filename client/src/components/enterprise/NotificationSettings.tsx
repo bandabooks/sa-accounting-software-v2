@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -48,9 +48,6 @@ export default function NotificationSettings({ notificationSettings, systemConfi
   const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   
-  // Debug logging
-  console.log('NotificationSettings received:', notificationSettings);
-  
   // Provide default values if notificationSettings is undefined
   const defaultNotificationSettings: NotificationSettings = {
     email: {
@@ -67,8 +64,17 @@ export default function NotificationSettings({ notificationSettings, systemConfi
     }
   };
   
-  // Use settings from API, but ensure systemUpdates defaults to true for new users
-  const settings = notificationSettings || defaultNotificationSettings;
+  // Use local state to manage settings independently
+  const [localSettings, setLocalSettings] = useState<NotificationSettings>(
+    notificationSettings || defaultNotificationSettings
+  );
+  
+  // Update local settings when props change
+  useEffect(() => {
+    if (notificationSettings) {
+      setLocalSettings(notificationSettings);
+    }
+  }, [notificationSettings]);
 
   // Update notification settings mutation
   const updateNotificationsMutation = useMutation({
@@ -76,14 +82,10 @@ export default function NotificationSettings({ notificationSettings, systemConfi
       return await apiRequest('/api/notifications/settings', 'PUT', settings);
     },
     onSuccess: async (data) => {
-      console.log('Update successful, response data:', data);
-      // Small delay to ensure database write completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/settings'] });
-      successModal.showSuccess({
-        title: "Settings Updated Successfully", 
-        description: "Your notification preferences have been saved and are now active.",
-        confirmText: "Continue"
+      // Don't invalidate queries to prevent resetting local state
+      toast({
+        title: "Settings Updated",
+        description: "Your notification preferences have been saved.",
       });
     },
     onError: (error) => {
@@ -144,26 +146,33 @@ export default function NotificationSettings({ notificationSettings, systemConfi
 
   const handleEmailToggle = (key: keyof NotificationSettings['email'], value: boolean) => {
     const updatedSettings = {
-      ...settings,
+      ...localSettings,
       email: {
-        ...settings.email,
+        ...localSettings.email,
         [key]: value,
       },
     };
     
-    console.log(`Toggle independence check - Only changing ${key} to ${value}:`, updatedSettings);
+    // Update local state immediately for responsive UI
+    setLocalSettings(updatedSettings);
+    
+    // Then sync with backend
     updateNotificationsMutation.mutate(updatedSettings);
   };
 
   const handleSMSToggle = (key: keyof NotificationSettings['sms'], value: boolean) => {
     const updatedSettings = {
-      ...settings,
+      ...localSettings,
       sms: {
-        ...settings.sms,
+        ...localSettings.sms,
         [key]: value,
       },
     };
     
+    // Update local state immediately for responsive UI
+    setLocalSettings(updatedSettings);
+    
+    // Then sync with backend
     updateNotificationsMutation.mutate(updatedSettings);
   };
 
@@ -209,13 +218,13 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               </div>
               <Switch
                 id="email-enabled"
-                checked={settings.email.enabled}
+                checked={localSettings.email.enabled}
                 onCheckedChange={(checked) => handleEmailToggle('enabled', checked)}
                 disabled={!systemConfig?.features.smtp || updateNotificationsMutation.isPending}
               />
             </div>
 
-            {settings.email.enabled && (
+            {localSettings.email.enabled && (
               <div className="ml-6 space-y-4 border-l-2 border-gray-200 pl-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -224,7 +233,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
                   </div>
                   <Switch
                     id="invoice-reminders"
-                    checked={settings.email.invoiceReminders}
+                    checked={localSettings.email.invoiceReminders}
                     onCheckedChange={(checked) => handleEmailToggle('invoiceReminders', checked)}
                     disabled={updateNotificationsMutation.isPending}
                   />
@@ -237,7 +246,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
                   </div>
                   <Switch
                     id="payment-alerts"
-                    checked={settings.email.paymentAlerts}
+                    checked={localSettings.email.paymentAlerts}
                     onCheckedChange={(checked) => handleEmailToggle('paymentAlerts', checked)}
                     disabled={updateNotificationsMutation.isPending}
                   />
@@ -250,7 +259,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
                   </div>
                   <Switch
                     id="security-alerts"
-                    checked={settings.email.securityAlerts}
+                    checked={localSettings.email.securityAlerts}
                     onCheckedChange={(checked) => handleEmailToggle('securityAlerts', checked)}
                     disabled={updateNotificationsMutation.isPending}
                   />
@@ -263,7 +272,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
                   </div>
                   <Switch
                     id="system-updates"
-                    checked={settings.email.systemUpdates}
+                    checked={localSettings.email.systemUpdates}
                     onCheckedChange={(checked) => handleEmailToggle('systemUpdates', checked)}
                     disabled={updateNotificationsMutation.isPending}
                   />
@@ -275,7 +284,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               <Button 
                 variant="outline" 
                 onClick={() => testEmailMutation.mutate()}
-                disabled={testEmailMutation.isPending || !notificationSettings?.email?.enabled}
+                disabled={testEmailMutation.isPending || !localSettings.email.enabled}
                 className="w-full"
               >
                 {testEmailSent ? (
@@ -333,13 +342,13 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               </div>
               <Switch
                 id="sms-enabled"
-                checked={settings.sms.enabled}
+                checked={localSettings.sms.enabled}
                 onCheckedChange={(checked) => handleSMSToggle('enabled', checked)}
                 disabled={!systemConfig?.features.sms || updateNotificationsMutation.isPending}
               />
             </div>
 
-            {settings.sms.enabled && (
+            {localSettings.sms.enabled && (
               <div className="ml-6 space-y-4 border-l-2 border-gray-200 pl-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -348,7 +357,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
                   </div>
                   <Switch
                     id="critical-alerts"
-                    checked={settings.sms.criticalAlerts}
+                    checked={localSettings.sms.criticalAlerts}
                     onCheckedChange={(checked) => handleSMSToggle('criticalAlerts', checked)}
                     disabled={updateNotificationsMutation.isPending}
                   />
@@ -361,7 +370,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
                   </div>
                   <Switch
                     id="payment-reminders-sms"
-                    checked={settings.sms.paymentReminders}
+                    checked={localSettings.sms.paymentReminders}
                     onCheckedChange={(checked) => handleSMSToggle('paymentReminders', checked)}
                     disabled={updateNotificationsMutation.isPending}
                   />
@@ -373,7 +382,7 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               <Button 
                 variant="outline" 
                 onClick={() => testSMSMutation.mutate()}
-                disabled={testSMSMutation.isPending || !settings.sms.enabled}
+                disabled={testSMSMutation.isPending || !localSettings.sms.enabled}
                 className="w-full"
               >
                 {testSMSSent ? (
@@ -407,16 +416,16 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               <p className="font-medium mb-2">Email Notifications:</p>
               <ul className="space-y-1 text-gray-600">
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${settings.email.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  Email: {settings.email.enabled ? 'Enabled' : 'Disabled'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${localSettings.email.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  Email: {localSettings.email.enabled ? 'Enabled' : 'Disabled'}
                 </li>
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${settings.email.invoiceReminders ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  Invoice Reminders: {settings.email.invoiceReminders ? 'On' : 'Off'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${localSettings.email.invoiceReminders ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  Invoice Reminders: {localSettings.email.invoiceReminders ? 'On' : 'Off'}
                 </li>
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${settings.email.paymentAlerts ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  Payment Alerts: {settings.email.paymentAlerts ? 'On' : 'Off'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${localSettings.email.paymentAlerts ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  Payment Alerts: {localSettings.email.paymentAlerts ? 'On' : 'Off'}
                 </li>
               </ul>
             </div>
@@ -424,16 +433,16 @@ export default function NotificationSettings({ notificationSettings, systemConfi
               <p className="font-medium mb-2">SMS Notifications:</p>
               <ul className="space-y-1 text-gray-600">
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${settings.sms.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  SMS: {settings.sms.enabled ? 'Enabled' : 'Disabled'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${localSettings.sms.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  SMS: {localSettings.sms.enabled ? 'Enabled' : 'Disabled'}
                 </li>
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${settings.sms.criticalAlerts ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  Critical Alerts: {settings.sms.criticalAlerts ? 'On' : 'Off'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${localSettings.sms.criticalAlerts ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  Critical Alerts: {localSettings.sms.criticalAlerts ? 'On' : 'Off'}
                 </li>
                 <li className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${settings.sms.paymentReminders ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  Payment Reminders: {settings.sms.paymentReminders ? 'On' : 'Off'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${localSettings.sms.paymentReminders ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  Payment Reminders: {localSettings.sms.paymentReminders ? 'On' : 'Off'}
                 </li>
               </ul>
             </div>
