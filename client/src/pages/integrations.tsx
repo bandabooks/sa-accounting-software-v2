@@ -67,6 +67,7 @@ export default function Integrations() {
   const [selectedIntegration, setSelectedIntegration] = useState<string>('sars');
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [credentials, setCredentials] = useState<Record<string, any>>({});
+  const [isSandboxMode, setIsSandboxMode] = useState(true); // Default to sandbox for safety
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -410,7 +411,28 @@ export default function Integrations() {
             Manage third-party integrations and API connections
           </p>
         </div>
+        {/* Sandbox Mode Indicator */}
+        <div className="flex items-center space-x-2">
+          <Badge className="bg-amber-100 text-amber-800 border-amber-300 px-4 py-2">
+            <Shield className="h-4 w-4 mr-2" />
+            SANDBOX MODE ACTIVE
+          </Badge>
+          <Badge className="bg-green-100 text-green-800 border-green-300 px-4 py-2">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Safe for Testing
+          </Badge>
+        </div>
       </div>
+
+      {/* Sandbox Mode Alert */}
+      <Alert className="bg-blue-50 border-blue-200">
+        <Shield className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          <strong>Testing Environment Active:</strong> All integrations (Stitch Banking, SARS, and Payment Gateways) are configured for sandbox/test mode. 
+          This is perfect for testing without processing real transactions or submitting actual tax returns. 
+          When you're ready for production, you can switch to live mode in each integration's settings.
+        </AlertDescription>
+      </Alert>
 
       {/* Status Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
