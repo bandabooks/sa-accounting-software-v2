@@ -4199,29 +4199,31 @@ export class DatabaseStorage implements IStorage {
       .from(notificationSettings)
       .where(eq(notificationSettings.companyId, companyId));
     
-    console.log('Raw database settings for company', companyId, ':', settings);
+    console.log('🔍 Raw database settings for company', companyId, ':', settings);
     
     if (!settings) {
+      console.log('❌ No settings found, returning null');
       return null;
     }
     
-    // Transform database structure to match frontend interface
+    // Transform database structure to match frontend interface  
     const transformed = {
       email: {
-        enabled: settings.emailEnabled,
-        invoiceReminders: settings.invoiceReminders,
-        paymentAlerts: settings.paymentAlerts,
-        securityAlerts: settings.securityAlerts,
-        systemUpdates: settings.systemUpdates
+        enabled: Boolean(settings.emailEnabled),
+        invoiceReminders: Boolean(settings.invoiceReminders),
+        paymentAlerts: Boolean(settings.paymentAlerts),
+        securityAlerts: Boolean(settings.securityAlerts),
+        systemUpdates: Boolean(settings.systemUpdates)
       },
       sms: {
-        enabled: settings.smsEnabled,
-        criticalAlerts: settings.criticalAlerts,
-        paymentReminders: settings.paymentReminders
+        enabled: Boolean(settings.smsEnabled),
+        criticalAlerts: Boolean(settings.criticalAlerts),
+        paymentReminders: Boolean(settings.paymentReminders)
       }
     };
     
-    console.log('Transformed settings for API:', transformed);
+    console.log('✅ Transformed settings for API:', transformed);
+    console.log('🔄 Specifically systemUpdates:', settings.systemUpdates, '→', transformed.email.systemUpdates);
     return transformed;
   }
 
