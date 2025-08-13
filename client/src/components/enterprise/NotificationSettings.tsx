@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 import { SuccessModal } from '@/components/ui/success-modal';
 import { useSuccessModal } from '@/hooks/useSuccessModal';
 import { toast } from '@/hooks/use-toast';
@@ -45,6 +46,8 @@ interface NotificationSettingsProps {
 export default function NotificationSettings({ notificationSettings, systemConfig }: NotificationSettingsProps) {
   const [testEmailSent, setTestEmailSent] = useState(false);
   const [testSMSSent, setTestSMSSent] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const successModal = useSuccessModal();
   const queryClient = useQueryClient();
   
@@ -101,7 +104,12 @@ export default function NotificationSettings({ notificationSettings, systemConfi
   // Test email notification
   const testEmailMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/notifications/test-email', 'POST');
+      if (!testEmailAddress) {
+        throw new Error('Please enter an email address');
+      }
+      return await apiRequest('/api/notifications/test-email', 'POST', { 
+        email: testEmailAddress 
+      });
     },
     onSuccess: () => {
       setTestEmailSent(true);
@@ -112,10 +120,10 @@ export default function NotificationSettings({ notificationSettings, systemConfi
         confirmText: "Continue"
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Test Failed",
-        description: "Failed to send test email",
+        description: error.message || "Failed to send test email",
         variant: "destructive",
       });
     },
@@ -281,24 +289,38 @@ export default function NotificationSettings({ notificationSettings, systemConfi
             )}
 
             {systemConfig?.features.smtp && (
-              <Button 
-                variant="outline" 
-                onClick={() => testEmailMutation.mutate()}
-                disabled={testEmailMutation.isPending || !localSettings.email.enabled}
-                className="w-full"
-              >
-                {testEmailSent ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4 text-green-600" />
-                    Test Email Sent
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Test Email
-                  </>
-                )}
-              </Button>
+              <div className="space-y-3 pt-3 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="test-email">Test Email Address</Label>
+                  <Input
+                    id="test-email"
+                    type="email"
+                    placeholder="Enter email address to send test"
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500">Enter an email address to receive a test notification</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => testEmailMutation.mutate()}
+                  disabled={testEmailMutation.isPending || !localSettings.email.enabled || !testEmailAddress}
+                  className="w-full"
+                >
+                  {testEmailSent ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4 text-green-600" />
+                      Test Email Sent
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Test Email
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>

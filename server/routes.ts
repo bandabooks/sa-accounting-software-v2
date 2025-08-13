@@ -499,25 +499,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/notifications/test-email", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const userEmail = authReq.user?.email;
+      // Use email from request body if provided, otherwise use user's email
+      const targetEmail = req.body.email || authReq.user?.email;
       
-      if (!userEmail) {
-        return res.status(400).json({ message: "User email required" });
+      if (!targetEmail) {
+        return res.status(400).json({ message: "Email address required" });
       }
 
       // Import email service dynamically
       const { emailService } = await import('./services/emailService');
       
       const result = await emailService.sendEmail({
-        to: userEmail,
-        subject: 'Test Notification Email',
-        htmlContent: `
-          <h2>Test Email Notification</h2>
-          <p>This is a test email to verify your notification settings are working correctly.</p>
-          <p><strong>Sent at:</strong> ${new Date().toLocaleString()}</p>
-          <p><strong>From:</strong> Taxnify Notification System</p>
+        to: targetEmail,
+        subject: 'Test Notification Email - Taxnify',
+        bodyHtml: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #2563eb;">Test Email Notification</h2>
+            <p>This is a test email to verify your notification settings are working correctly.</p>
+            <p><strong>Sent at:</strong> ${new Date().toLocaleString()}</p>
+            <p><strong>From:</strong> Taxnify Notification System</p>
+            <p><strong>Sent to:</strong> ${targetEmail}</p>
+            <hr style="margin: 20px 0;">
+            <p style="color: #6b7280; font-size: 14px;">
+              This test email was requested by ${authReq.user?.name || 'System Administrator'}
+            </p>
+          </div>
         `,
-        textContent: `Test Email Notification\n\nThis is a test email to verify your notification settings are working correctly.\n\nSent at: ${new Date().toLocaleString()}\nFrom: Taxnify Notification System`
+        bodyText: `Test Email Notification\n\nThis is a test email to verify your notification settings are working correctly.\n\nSent at: ${new Date().toLocaleString()}\nFrom: Taxnify Notification System\nSent to: ${targetEmail}`
       });
 
       res.json({ message: "Test email sent successfully", result });
@@ -2294,8 +2302,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invoice ID is required" });
       }
       
+      if (!to) {
+        return res.status(400).json({ message: "Recipient email is required" });
+      }
+      
       // Get the invoice to verify it exists and belongs to the user's company
-      const invoice = await storage.getInvoice(invoiceId);
+      const invoice = await storage.getInvoiceWithCustomer(invoiceId);
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
@@ -2305,9 +2317,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
       
-      // For demo purposes, we'll simulate email sending
-      // In production, you would integrate with SendGrid or another email service
-      console.log("Email sent simulation:", { invoiceId, to, subject, message });
+      // Import email service dynamically
+      const { emailService } = await import('./services/emailService');
+      
+      // Prepare email content
+      const emailSubject = subject || `Invoice #${invoice.invoiceNumber} from Taxnify`;
+      const emailMessage = message || `Please find attached your invoice #${invoice.invoiceNumber}.`;
+      
+      // Send actual email using SendGrid
+      const emailResult = await emailService.sendEmail({
+        to: to,
+        subject: emailSubject,
+        bodyHtml: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #2563eb;">Invoice #${invoice.invoiceNumber}</h2>
+            <p>${emailMessage}</p>
+            <hr style="margin: 20px 0;">
+            <h3>Invoice Details:</h3>
+            <p><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
+            <p><strong>Date:</strong> ${new Date(invoice.date).toLocaleDateString()}</p>
+            <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
+            <p><strong>Total Amount:</strong> R ${invoice.total}</p>
+            <p><strong>Status:</strong> ${invoice.status}</p>
+            <hr style="margin: 20px 0;">
+            <p>Customer: ${invoice.customer?.name || 'N/A'}</p>
+            <p style="color: #6b7280; font-size: 14px;">
+              This invoice was sent from Taxnify Business Management Platform.<br>
+              For any queries, please contact us.
+            </p>
+          </div>
+        `,
+        bodyText: `Invoice #${invoice.invoiceNumber}\n\n${emailMessage}\n\nInvoice Details:\nInvoice Number: ${invoice.invoiceNumber}\nDate: ${new Date(invoice.date).toLocaleDateString()}\nDue Date: ${new Date(invoice.dueDate).toLocaleDateString()}\nTotal Amount: R ${invoice.total}\nStatus: ${invoice.status}\n\nCustomer: ${invoice.customer?.name || 'N/A'}\n\nThis invoice was sent from Taxnify Business Management Platform.`
+      });
       
       // Update invoice status to "sent" after successful email sending
       const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, "sent");
@@ -2318,18 +2359,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log the email sending action
       await logAudit(authReq.user?.id || 0, 'EMAIL_SENT', 'invoices', invoiceId, {
         recipient: to,
-        subject: subject,
+        subject: emailSubject,
         previousStatus: invoice.status,
         newStatus: 'sent'
       });
       
       res.json({ 
         message: "Email sent successfully",
-        invoice: updatedInvoice 
+        invoice: updatedInvoice,
+        emailResult
       });
     } catch (error) {
       console.error("Error sending email:", error);
-      res.status(500).json({ message: "Failed to send email" });
+      res.status(500).json({ message: "Failed to send email", error: error.message });
     }
   });
 
