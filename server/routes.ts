@@ -1972,9 +1972,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Payment request body:", req.body);
       
       // Add default companyId if not provided (for backwards compatibility)
+      const companyId = req.body.companyId || 2; // Default company ID
+      
+      // Map Chart of Accounts ID to bank_accounts ID if needed
+      let bankAccountId = req.body.bankAccountId;
+      
+      // Check if the bankAccountId is actually a Chart of Accounts ID (usually > 100)
+      if (bankAccountId && bankAccountId > 100) {
+        // This is likely a Chart of Accounts ID, map it to bank_accounts ID
+        const bankAccountMapping = await storage.getBankAccountByChartId(bankAccountId, companyId);
+        if (bankAccountMapping) {
+          console.log(`Mapped Chart of Accounts ID ${bankAccountId} to bank_accounts ID ${bankAccountMapping.id}`);
+          bankAccountId = bankAccountMapping.id;
+        } else {
+          console.error(`No bank account found for Chart of Accounts ID ${bankAccountId}`);
+          return res.status(400).json({ message: "Invalid bank account selected" });
+        }
+      }
+      
       const paymentData = {
         ...req.body,
-        companyId: req.body.companyId || 2 // Default company ID
+        bankAccountId,
+        companyId
       };
       
       const validatedData = insertPaymentSchema.parse(paymentData);

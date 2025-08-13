@@ -6393,6 +6393,17 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async getBankAccountByChartId(chartAccountId: number, companyId: number): Promise<BankAccount | undefined> {
+    const [account] = await db.select().from(bankAccounts)
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.chartAccountId, chartAccountId),
+        eq(bankAccounts.isActive, true)
+      ));
+    
+    return account;
+  }
+
   async getBankAccount(id: number): Promise<BankAccountWithTransactions | undefined> {
     const [account] = await db.select().from(bankAccounts).where(eq(bankAccounts.id, id));
     if (!account) return undefined;
