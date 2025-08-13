@@ -29,6 +29,7 @@ import {
   emailReminders,
   currencyRates,
   aiSettings,
+  notificationSettings,
   chartOfAccounts,
   journalEntries,
   journalEntryLines,
@@ -4189,6 +4190,66 @@ export class DatabaseStorage implements IStorage {
       .where(eq(companySettings.id, existing.id))
       .returning();
     return updated;
+  }
+
+  // Notification Settings Methods
+  async getNotificationSettings(companyId: number): Promise<any> {
+    const [settings] = await db
+      .select()
+      .from(notificationSettings)
+      .where(eq(notificationSettings.companyId, companyId));
+    
+    if (!settings) {
+      return null;
+    }
+    
+    // Transform database structure to match frontend interface
+    return {
+      email: {
+        enabled: settings.emailEnabled,
+        invoiceReminders: settings.invoiceReminders,
+        paymentAlerts: settings.paymentAlerts,
+        securityAlerts: settings.securityAlerts,
+        systemUpdates: settings.systemUpdates
+      },
+      sms: {
+        enabled: settings.smsEnabled,
+        criticalAlerts: settings.criticalAlerts,
+        paymentReminders: settings.paymentReminders
+      }
+    };
+  }
+
+  async saveNotificationSettings(companyId: number, settings: any): Promise<any> {
+    const existing = await db
+      .select()
+      .from(notificationSettings)
+      .where(eq(notificationSettings.companyId, companyId));
+    
+    const dbSettings = {
+      companyId,
+      emailEnabled: settings.email.enabled,
+      invoiceReminders: settings.email.invoiceReminders,
+      paymentAlerts: settings.email.paymentAlerts,
+      securityAlerts: settings.email.securityAlerts,
+      systemUpdates: settings.email.systemUpdates,
+      smsEnabled: settings.sms.enabled,
+      criticalAlerts: settings.sms.criticalAlerts,
+      paymentReminders: settings.sms.paymentReminders,
+      updatedAt: new Date()
+    };
+    
+    if (existing.length === 0) {
+      const [newSettings] = await db.insert(notificationSettings).values(dbSettings).returning();
+      return newSettings;
+    } else {
+      const [updated] = await db
+        .update(notificationSettings)
+        .set(dbSettings)
+        .where(eq(notificationSettings.companyId, companyId))
+        .returning();
+      return updated;
+    }
   }
 
   async updateCompanyLogo(companyId: number, logoUrl: string): Promise<any> {

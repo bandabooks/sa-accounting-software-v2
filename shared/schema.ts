@@ -2566,6 +2566,28 @@ export const aiSettings = pgTable("ai_settings", {
   companyIdx: index("ai_settings_company_idx").on(table.companyId),
 }));
 
+// Notification Settings table
+export const notificationSettings = pgTable("notification_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  // Email notifications
+  emailEnabled: boolean("email_enabled").default(true),
+  invoiceReminders: boolean("invoice_reminders").default(true),
+  paymentAlerts: boolean("payment_alerts").default(true),
+  securityAlerts: boolean("security_alerts").default(true),
+  systemUpdates: boolean("system_updates").default(true),
+  // SMS notifications
+  smsEnabled: boolean("sms_enabled").default(false),
+  criticalAlerts: boolean("critical_alerts").default(false),
+  paymentReminders: boolean("payment_reminders").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyUnique: unique().on(table.companyId),
+  companyIdx: index("notification_settings_company_idx").on(table.companyId),
+}));
+
 // Schema exports
 export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({
   id: true,
@@ -2597,6 +2619,12 @@ export const insertAiSettingsSchema = createInsertSchema(aiSettings).omit({
   updatedAt: true,
 });
 
+export const insertNotificationSettingsSchema = createInsertSchema(notificationSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
 export type CompanySettings = typeof companySettings.$inferSelect;
 
@@ -2611,6 +2639,9 @@ export type CurrencyRate = typeof currencyRates.$inferSelect;
 
 export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
 export type AiSettings = typeof aiSettings.$inferSelect;
+
+export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
 
 // VAT Types - South African Standard VAT Categories
 export const vatTypes = pgTable("vat_types", {

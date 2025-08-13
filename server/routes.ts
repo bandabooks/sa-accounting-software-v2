@@ -404,6 +404,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notification Settings API
+  app.get("/api/notifications/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      // Get notification settings from storage or return defaults
+      const settings = await storage.getNotificationSettings(companyId);
+      
+      // Provide default settings if none exist
+      const defaultSettings = {
+        email: {
+          enabled: true,
+          invoiceReminders: true,
+          paymentAlerts: true,
+          securityAlerts: true,
+          systemUpdates: true
+        },
+        sms: {
+          enabled: false,
+          criticalAlerts: false,
+          paymentReminders: false
+        }
+      };
+      
+      res.json(settings || defaultSettings);
+    } catch (error) {
+      console.error('Error fetching notification settings:', error);
+      res.status(500).json({ message: "Failed to fetch notification settings" });
+    }
+  });
+
+  app.put("/api/notifications/settings", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const settings = req.body;
+      
+      // Validate settings structure
+      if (!settings.email || !settings.sms) {
+        return res.status(400).json({ message: "Invalid settings structure" });
+      }
+
+      await storage.saveNotificationSettings(companyId, settings);
+      
+      await logAudit(req.user?.id || 0, 'UPDATE', 'notification_settings', 0, {
+        emailEnabled: settings.email.enabled,
+        smsEnabled: settings.sms.enabled
+      });
+
+      res.json({ message: "Notification settings updated successfully", settings });
+    } catch (error) {
+      console.error('Error updating notification settings:', error);
+      res.status(500).json({ message: "Failed to update notification settings" });
+    }
+  });
+
+  app.post("/api/notifications/test-email", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userEmail = authReq.user?.email;
+      
+      if (!userEmail) {
+        return res.status(400).json({ message: "User email required" });
+      }
+
+      // Import email service dynamically
+      const { emailService } = await import('./services/emailService');
+      
+      const result = await emailService.sendEmail({
+        to: userEmail,
+        subject: 'Test Notification Email',
+        htmlContent: `
+          <h2>Test Email Notification</h2>
+          <p>This is a test email to verify your notification settings are working correctly.</p>
+          <p><strong>Sent at:</strong> ${new Date().toLocaleString()}</p>
+          <p><strong>From:</strong> Taxnify Notification System</p>
+        `,
+        textContent: `Test Email Notification\n\nThis is a test email to verify your notification settings are working correctly.\n\nSent at: ${new Date().toLocaleString()}\nFrom: Taxnify Notification System`
+      });
+
+      res.json({ message: "Test email sent successfully", result });
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
+
+  app.post("/api/notifications/test-sms", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userPhone = authReq.user?.phone;
+      
+      if (!userPhone) {
+        return res.status(400).json({ message: "User phone number required" });
+      }
+
+      // Import SMS service dynamically
+      const { smsService } = await import('./services/smsService');
+      
+      const result = await smsService.sendSMS(
+        userPhone,
+        `Test SMS from Taxnify: Your notification settings are working correctly. Sent at ${new Date().toLocaleString()}`
+      );
+
+      res.json({ message: "Test SMS sent successfully", result });
+    } catch (error) {
+      console.error('Error sending test SMS:', error);
+      res.status(500).json({ message: "Failed to send test SMS" });
+    }
+  });
+
   // System Configuration API
   app.get("/api/system/configuration", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
