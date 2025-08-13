@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
+import { TwilioCredentialsForm } from "@/components/integrations/TwilioCredentialsForm";
+import { SendGridCredentialsForm } from "@/components/integrations/SendGridCredentialsForm";
 import { 
   Shield, 
   Building2, 
@@ -31,7 +33,9 @@ import {
   Lock,
   Banknote,
   ShoppingCart,
-  Smartphone
+  Smartphone,
+  MessageSquare,
+  Mail
 } from "lucide-react";
 
 interface IntegrationStatus {
@@ -150,6 +154,11 @@ export default function Integrations() {
       id: 'financial',
       name: 'Financial Services',
       integrations: ['banking']
+    },
+    {
+      id: 'communications',
+      name: 'Communications',
+      integrations: ['twilio', 'sendgrid']
     }
   ];
 
@@ -315,6 +324,44 @@ export default function Integrations() {
         'Multi-bank support',
         'Bank reconciliation'
       ]
+    },
+    
+    // Communications
+    {
+      id: 'twilio',
+      name: 'Twilio SMS',
+      description: 'SMS notifications and two-factor authentication',
+      icon: MessageSquare,
+      status: process.env.TWILIO_ACCOUNT_SID ? 'connected' : 'disconnected',
+      features: [
+        'SMS notifications',
+        'Payment reminders',
+        'Security alerts',
+        'Two-factor authentication',
+        'Bulk SMS campaigns',
+        'Global SMS delivery',
+        'Message status tracking',
+        'SMS queue management'
+      ],
+      connectionUrl: 'https://www.twilio.com'
+    },
+    {
+      id: 'sendgrid',
+      name: 'SendGrid Email',
+      description: 'Transactional and marketing email service',
+      icon: Mail,
+      status: process.env.SENDGRID_API_KEY ? 'connected' : 'disconnected',
+      features: [
+        'Transactional emails',
+        'Invoice email delivery',
+        'Payment notifications',
+        'Marketing campaigns',
+        'Email templates',
+        'Delivery tracking',
+        'Bounce management',
+        'Email analytics'
+      ],
+      connectionUrl: 'https://sendgrid.com'
     }
   ];
 
@@ -475,15 +522,19 @@ export default function Integrations() {
                       ? 'bg-gradient-to-r from-red-50 to-pink-50 border border-red-100' 
                       : category.id === 'payments'
                       ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100'
+                      : category.id === 'communications'
+                      ? 'bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100'
                       : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100'
                   }`}>
                     <h3 className={`font-bold text-sm uppercase tracking-wide flex items-center ${
                       category.id === 'compliance' ? 'text-red-700' :
-                      category.id === 'payments' ? 'text-green-700' : 'text-blue-700'
+                      category.id === 'payments' ? 'text-green-700' : 
+                      category.id === 'communications' ? 'text-purple-700' : 'text-blue-700'
                     }`}>
                       {category.id === 'compliance' && <Shield className="h-4 w-4 mr-2" />}
                       {category.id === 'payments' && <CreditCard className="h-4 w-4 mr-2" />}
                       {category.id === 'financial' && <Landmark className="h-4 w-4 mr-2" />}
+                      {category.id === 'communications' && <MessageSquare className="h-4 w-4 mr-2" />}
                       {category.name}
                     </h3>
                   </div>
@@ -790,6 +841,16 @@ export default function Integrations() {
                       <SARSCredentialsForm 
                         credentials={sarsCredentials}
                         onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'sars', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
+                    ) : selectedIntegration === 'twilio' ? (
+                      <TwilioCredentialsForm
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'twilio', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
+                    ) : selectedIntegration === 'sendgrid' ? (
+                      <SendGridCredentialsForm
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'sendgrid', data })}
                         isLoading={saveCredentialsMutation.isPending}
                       />
                     ) : ['payfast', 'peach', 'paygate', 'stripe', 'yoco', 'ozow'].includes(selectedIntegration) ? (
