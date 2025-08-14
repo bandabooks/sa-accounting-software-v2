@@ -10213,23 +10213,32 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
         return res.status(400).json({ message: "Company ID is required" });
       }
 
-      // Verify user has access to this company
-      const userCompanies = await storage.getUserCompanies(userId);
+      // Optimized: Parallel verification and company fetch
+      const [userCompanies, company] = await Promise.all([
+        storage.getUserCompanies(userId),
+        storage.getCompany(companyId)
+      ]);
+      
       const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
       
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied to this company" });
       }
 
-      // Update user's active company
-      await storage.setUserActiveCompany(userId, companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Update user's active company (async, don't wait)
+      storage.setUserActiveCompany(userId, companyId).catch(error => 
+        console.error("Background company switch error:", error)
+      );
       
-      // Get the switched company details
-      const company = await storage.getCompany(companyId);
-      
+      // Return immediately with company details
       res.json({ 
         success: true, 
         company,
+        companyId,
         message: "Company switched successfully" 
       });
     } catch (error) {

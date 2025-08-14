@@ -56,20 +56,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
 
     try {
-      // 1. Abort all in-flight requests
-      if (abortController) {
-        abortController.abort();
-      }
-      abortController = new AbortController();
+      // 1. Update local state immediately for instant UI feedback
+      setCompanyId(newCompanyId);
+      localStorage.setItem('activeCompanyId', newCompanyId.toString());
 
-      // 2. Cancel all active queries and mutations
-      await queryClient.cancelQueries();
-
-      // 3. Clear all caches for the old company
-      queryClient.clear();
-
-      // 4. Update company in backend
-      const response = await fetch('/api/companies/switch', {
+      // 2. Update company in backend (parallel with cache operations)
+      const backendUpdatePromise = fetch('/api/companies/switch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,49 +70,50 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           'X-Company-ID': newCompanyId.toString(),
         },
         body: JSON.stringify({ companyId: newCompanyId }),
-        signal: abortController.signal,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to switch company');
-      }
+      // 3. Smart cache management - only clear company-specific queries
+      queryClient.removeQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.removeQueries({ queryKey: ['/api/invoices'] });
+      queryClient.removeQueries({ queryKey: ['/api/customers'] });
+      queryClient.removeQueries({ queryKey: ['/api/expenses'] });
+      queryClient.removeQueries({ queryKey: ['/api/suppliers'] });
 
-      const data = await response.json();
-
-      // 5. Update local state and storage
-      setCompanyId(newCompanyId);
-      localStorage.setItem('activeCompanyId', newCompanyId.toString());
-
-      // 6. Update URL with company parameter
+      // 4. Update URL with company parameter (non-blocking)
       const url = new URL(window.location.href);
       url.searchParams.set('co', newCompanyId.toString());
       window.history.pushState({}, '', url.toString());
 
-      // 7. Reconnect WebSocket if exists
+      // 5. WebSocket reconnection (non-blocking)
       if (window.wsConnection) {
-        // Leave old company room
-        if (companyId) {
-          window.wsConnection.send(JSON.stringify({
-            type: 'leave_company',
-            companyId: companyId,
-          }));
-        }
-        
-        // Join new company room
         window.wsConnection.send(JSON.stringify({
-          type: 'join_company',
-          companyId: newCompanyId,
+          type: 'switch_company',
+          oldCompanyId: companyId,
+          newCompanyId: newCompanyId,
         }));
       }
 
-      // 8. Invalidate and refetch all queries with new companyId
-      await queryClient.invalidateQueries();
-      
-      // 9. Force immediate refetch of dashboard data for instant updates
-      await queryClient.refetchQueries({ 
-        queryKey: ['/api/dashboard/stats'],
-        type: 'active' 
-      });
+      // 6. Wait for backend update to complete
+      const response = await backendUpdatePromise;
+      if (!response.ok) {
+        throw new Error('Failed to switch company');
+      }
+
+      // 7. Pre-fetch critical data in parallel for instant display
+      Promise.all([
+        queryClient.prefetchQuery({
+          queryKey: ['/api/dashboard/stats'],
+          staleTime: 0, // Force fresh data
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['/api/customers'],
+          staleTime: 30000, // Cache for 30 seconds
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['/api/invoices'],
+          staleTime: 30000,
+        })
+      ]).catch(error => console.warn('Background prefetch failed:', error));
 
       toast({
         title: "Company switched",
