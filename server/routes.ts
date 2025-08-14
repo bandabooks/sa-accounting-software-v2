@@ -578,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: false, 
           message: "SMS settings saved but test message failed. Please check your Twilio credentials.",
           configured: true,
-          error: smsError.message
+          error: smsError instanceof Error ? smsError.message : String(smsError)
         });
       }
     } catch (error) {
@@ -797,6 +797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create company
       const company = await storage.createCompany({
         name: signupData.companyName,
+        companyId: finalSlug, // Add required companyId field
         displayName: signupData.companyName,
         slug: finalSlug,
         email: signupData.email,
@@ -819,6 +820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user - First user of company gets company admin role (NOT super admin)
       const user = await storage.createUser({
         username,
+        userId: username, // Add required userId field
         name: `${signupData.firstName} ${signupData.lastName}`,
         email: signupData.email,
         password: hashedPassword,
@@ -1423,6 +1425,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const companyId = req.user?.companyId;
       
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+      
       // No cache headers for instant company switching
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
@@ -1643,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = createInvoiceSchema.parse(req.body);
       
       // Auto-generate invoice number if not provided
-      const companyId = req.user.companyId || 1;
+      const companyId = req.user?.companyId || 1;
       let invoiceNumber = validatedData.invoice.invoiceNumber;
       if (!invoiceNumber || invoiceNumber.trim() === '') {
         invoiceNumber = await storage.getNextDocumentNumber(companyId, 'invoice');
@@ -1810,7 +1816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = createEstimateSchema.parse(req.body);
       
       // Auto-generate estimate number if not provided
-      const companyId = req.user.companyId || 1;
+      const companyId = req.user?.companyId || 1;
       let estimateNumber = validatedData.estimate.estimateNumber;
       if (!estimateNumber || estimateNumber.trim() === '') {
         estimateNumber = await storage.getNextDocumentNumber(companyId, 'estimate');
@@ -1837,8 +1843,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Validation errors:", error.errors);
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Internal server error:", error.message);
-      res.status(500).json({ message: "Failed to create estimate", error: error.message });
+      console.error("Internal server error:", error instanceof Error ? error.message : String(error));
+      res.status(500).json({ message: "Failed to create estimate", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
