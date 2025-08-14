@@ -11,11 +11,11 @@ interface ProfitLossChartProps {
     expenses: number;
     profit: number;
   }>;
-  chartType?: 'bar' | 'line';
 }
 
-export default function ProfitLossChart({ data, chartType: propChartType }: ProfitLossChartProps) {
-  const displayChartType = propChartType || 'bar';
+export default function ProfitLossChart({ data }: ProfitLossChartProps) {
+  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+  const [period, setPeriod] = useState('6months');
 
   // Process and format chart data
   const chartData = (data || []).map((item, index) => ({
@@ -24,41 +24,6 @@ export default function ProfitLossChart({ data, chartType: propChartType }: Prof
     expenses: Number(item.expenses) || 0,
     profit: Number(item.profit) || 0
   })).reverse(); // Reverse to show chronological order
-
-  // If being used in the new dashboard, return a simpler version
-  if (propChartType !== undefined) {
-    return (
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          {displayChartType === 'bar' ? (
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `R${(value / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value: any) => formatCurrency(value)} />
-              <Bar dataKey="revenue" fill="#3b82f6" />
-              <Bar dataKey="expenses" fill="#ef4444" />
-              <Bar dataKey="profit" fill="#10b981" />
-            </BarChart>
-          ) : (
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `R${(value / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value: any) => formatCurrency(value)} />
-              <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} />
-              <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} />
-              <Line type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} />
-            </LineChart>
-          )}
-        </ResponsiveContainer>
-      </div>
-    );
-  }
-
-  // Original chart with its own controls
-  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
-  const [period, setPeriod] = useState('6months');
   
   console.log('Chart Data:', chartData); // Debug log
 
