@@ -64,7 +64,6 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       // 2. Cancel all active queries and mutations
       await queryClient.cancelQueries();
-      await queryClient.cancelMutations();
 
       // 3. Clear all caches for the old company
       queryClient.clear();
@@ -123,7 +122,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       });
 
     } catch (error) {
-      if (error.name !== 'AbortError') {
+      if (error instanceof Error && error.name !== 'AbortError') {
         console.error('Failed to switch company:', error);
         toast({
           title: "Error",

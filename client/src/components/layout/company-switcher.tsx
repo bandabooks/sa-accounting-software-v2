@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -25,6 +26,7 @@ import { z } from "zod";
 
 interface Company {
   id: number;
+  companyId?: string;
   name: string;
   displayName?: string;
   industry?: string;
@@ -45,6 +47,7 @@ export default function CompanySwitcher() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { companyId, switchCompany, isLoading: companyLoading } = useCompany();
 
   // Company creation form state
   const [formData, setFormData] = useState({
@@ -108,82 +111,7 @@ export default function CompanySwitcher() {
     });
   }, [userCompanies, searchQuery]);
 
-  // Switch company mutation with proper cache isolation
-  const switchCompanyMutation = useMutation({
-    mutationFn: async (companyId: number) => {
-      // Abort all in-flight requests before switching
-      if ((window as any).abortController) {
-        (window as any).abortController.abort();
-      }
-      (window as any).abortController = new AbortController();
-      
-      // Cancel all active queries
-      await queryClient.cancelQueries();
-      await queryClient.cancelMutations();
-      
-      // Clear all caches for the old company
-      queryClient.clear();
-      
-      const response = await apiRequest(
-        "/api/companies/switch", 
-        "POST", 
-        { companyId },
-        (window as any).abortController.signal
-      );
-      return response.json();
-    },
-    onSuccess: async (data) => {
-      // Update localStorage with new company
-      localStorage.setItem('activeCompanyId', data.company.id.toString());
-      
-      // Update URL with company parameter
-      const url = new URL(window.location.href);
-      url.searchParams.set('co', data.company.id.toString());
-      window.history.pushState({}, '', url.toString());
-      
-      // Reconnect WebSocket if exists
-      if ((window as any).wsConnection) {
-        // Leave old company room
-        const oldCompanyId = activeCompany?.id;
-        if (oldCompanyId) {
-          (window as any).wsConnection.send(JSON.stringify({
-            type: 'leave_company',
-            companyId: oldCompanyId,
-          }));
-        }
-        
-        // Join new company room
-        (window as any).wsConnection.send(JSON.stringify({
-          type: 'join_company',
-          companyId: data.company.id,
-        }));
-      }
-      
-      // Invalidate and refetch all queries with new companyId
-      await queryClient.invalidateQueries();
-      
-      toast({
-        title: "Company switched",
-        description: `Now viewing ${data.company.name}`,
-      });
-      
-      setIsOpen(false);
-      
-      // Force page reload to ensure complete state reset
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-    },
-    onError: (error: any) => {
-      if (error.name !== 'AbortError') {
-        toast({
-          title: "Failed to switch company",
-          description: error.message || "Please try again",
-          variant: "destructive",
-        });
-      }
-    }
-  });
+  // Company switching is now handled by useCompany hook
 
   // Create company mutation
   const createCompanyMutation = useMutation({
@@ -191,7 +119,7 @@ export default function CompanySwitcher() {
       const response = await apiRequest("/api/companies", "POST", data);
       return response.json();
     },
-    onSuccess: (newCompany) => {
+    onSuccess: async (newCompany) => {
       toast({
         title: "Success",
         description: `${newCompany.name} created successfully!`,
@@ -200,8 +128,8 @@ export default function CompanySwitcher() {
       // Invalidate companies query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
       
-      // Switch to the new company immediately - pass companyId object
-      switchCompanyMutation.mutate(newCompany.id);
+      // Switch to the new company immediately
+      await switchCompany(newCompany.id);
       
       // Reset form and close dialogs
       resetForm();
@@ -217,13 +145,18 @@ export default function CompanySwitcher() {
     },
   });
 
-  const handleSwitchCompany = async (companyId: number) => {
-    if (companyId === activeCompany?.id) {
+  const handleSwitchCompany = async (targetCompanyId: number) => {
+    if (targetCompanyId === companyId) {
       setIsOpen(false);
       return;
     }
     
-    await switchCompanyMutation.mutateAsync(companyId);
+    try {
+      await switchCompany(targetCompanyId);
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Failed to switch company:', error);
+    }
   };
 
   // Form handling functions
@@ -307,7 +240,12 @@ export default function CompanySwitcher() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    createCompanyMutation.mutate(formData);
+    // Generate a unique companyId for the new company
+    const companyData = {
+      ...formData,
+      companyId: Math.random().toString(36).substring(2, 15) // Generate unique ID
+    };
+    createCompanyMutation.mutate(companyData);
   };
 
   const handleCreateCompanyClick = () => {
