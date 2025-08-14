@@ -1,5 +1,8 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Global AbortController management
+const abortControllers = new Map<string, AbortController>();
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -7,13 +10,20 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Helper to get current company ID
+function getCurrentCompanyId(): string | null {
+  return localStorage.getItem('activeCompanyId');
+}
+
 export async function apiRequest(
   url: string,
   method: string,
   data?: unknown | undefined,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const token = localStorage.getItem('authToken');
   const sessionToken = localStorage.getItem('sessionToken');
+  const companyId = getCurrentCompanyId();
   
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -27,26 +37,52 @@ export async function apiRequest(
     headers["X-Session-Token"] = sessionToken;
   }
   
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  // Handle authentication errors
-  if (res.status === 401) {
-    // Clear authentication data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('sessionToken');
-    localStorage.removeItem('userData');
-    
-    // Redirect to login
-    window.location.href = '/login';
+  // Always include company ID in headers for transport-level isolation
+  if (companyId) {
+    headers["X-Company-ID"] = companyId;
   }
+  
+  // Create unique key for this request
+  const requestKey = `${method}-${url}-${Date.now()}`;
+  const controller = new AbortController();
+  abortControllers.set(requestKey, controller);
+  
+  // Use provided signal or create new one
+  const finalSignal = signal || controller.signal;
+  
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+      signal: finalSignal,
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    // Handle authentication errors
+    if (res.status === 401) {
+      // Clear authentication data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('sessionToken');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('activeCompanyId');
+      
+      // Redirect to login
+      window.location.href = '/login';
+    }
+
+    await throwIfResNotOk(res);
+    return res;
+  } finally {
+    // Clean up abort controller
+    abortControllers.delete(requestKey);
+  }
+}
+
+// Function to abort all pending requests
+export function abortAllRequests() {
+  abortControllers.forEach(controller => controller.abort());
+  abortControllers.clear();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -54,9 +90,10 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
+  async ({ queryKey, signal }) => {
     const token = localStorage.getItem('authToken');
     const sessionToken = localStorage.getItem('sessionToken');
+    const companyId = getCurrentCompanyId();
     
     const headers: HeadersInit = {};
     
@@ -68,27 +105,44 @@ export const getQueryFn: <T>(options: {
       headers["X-Session-Token"] = sessionToken;
     }
     
-    const res = await fetch(queryKey.join("/") as string, {
-      headers,
-      credentials: "include",
-    });
-
-    if (res.status === 401) {
-      // Clear authentication data
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('sessionToken');
-      localStorage.removeItem('userData');
-      
-      if (unauthorizedBehavior === "returnNull") {
-        return null;
-      }
-      
-      // Redirect to login
-      window.location.href = '/login';
+    // Always include company ID in headers for transport-level isolation
+    if (companyId) {
+      headers["X-Company-ID"] = companyId;
     }
+    
+    // Create abort controller for this query
+    const requestKey = `query-${queryKey.join('/')}-${Date.now()}`;
+    const controller = new AbortController();
+    abortControllers.set(requestKey, controller);
+    
+    try {
+      const res = await fetch(queryKey.join("/") as string, {
+        headers,
+        credentials: "include",
+        signal: signal || controller.signal,
+      });
 
-    await throwIfResNotOk(res);
-    return await res.json();
+      if (res.status === 401) {
+        // Clear authentication data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('activeCompanyId');
+        
+        if (unauthorizedBehavior === "returnNull") {
+          return null;
+        }
+        
+        // Redirect to login
+        window.location.href = '/login';
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } finally {
+      // Clean up abort controller
+      abortControllers.delete(requestKey);
+    }
   };
 
 export const queryClient = new QueryClient({

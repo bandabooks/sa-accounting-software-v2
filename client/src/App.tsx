@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
@@ -212,9 +213,10 @@ const PERMISSIONS = {
 
 function AuthenticatedApp() {
   return (
-    <AppLayout>
-      <AIHealthBanner />
-      <Switch>
+    <CompanyProvider>
+      <AppLayout>
+        <AIHealthBanner />
+        <Switch>
         <Route path="/login">
           <Dashboard />
         </Route>
@@ -856,6 +858,7 @@ function AuthenticatedApp() {
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
+    </CompanyProvider>
   );
 }
 

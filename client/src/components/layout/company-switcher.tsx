@@ -108,15 +108,59 @@ export default function CompanySwitcher() {
     });
   }, [userCompanies, searchQuery]);
 
-  // Switch company mutation
+  // Switch company mutation with proper cache isolation
   const switchCompanyMutation = useMutation({
     mutationFn: async (companyId: number) => {
-      const response = await apiRequest("/api/companies/switch", "POST", { companyId });
+      // Abort all in-flight requests before switching
+      if ((window as any).abortController) {
+        (window as any).abortController.abort();
+      }
+      (window as any).abortController = new AbortController();
+      
+      // Cancel all active queries
+      await queryClient.cancelQueries();
+      await queryClient.cancelMutations();
+      
+      // Clear all caches for the old company
+      queryClient.clear();
+      
+      const response = await apiRequest(
+        "/api/companies/switch", 
+        "POST", 
+        { companyId },
+        (window as any).abortController.signal
+      );
       return response.json();
     },
-    onSuccess: (data) => {
-      // Invalidate all queries to refresh data for new company
-      queryClient.invalidateQueries();
+    onSuccess: async (data) => {
+      // Update localStorage with new company
+      localStorage.setItem('activeCompanyId', data.company.id.toString());
+      
+      // Update URL with company parameter
+      const url = new URL(window.location.href);
+      url.searchParams.set('co', data.company.id.toString());
+      window.history.pushState({}, '', url.toString());
+      
+      // Reconnect WebSocket if exists
+      if ((window as any).wsConnection) {
+        // Leave old company room
+        const oldCompanyId = activeCompany?.id;
+        if (oldCompanyId) {
+          (window as any).wsConnection.send(JSON.stringify({
+            type: 'leave_company',
+            companyId: oldCompanyId,
+          }));
+        }
+        
+        // Join new company room
+        (window as any).wsConnection.send(JSON.stringify({
+          type: 'join_company',
+          companyId: data.company.id,
+        }));
+      }
+      
+      // Invalidate and refetch all queries with new companyId
+      await queryClient.invalidateQueries();
       
       toast({
         title: "Company switched",
@@ -125,15 +169,19 @@ export default function CompanySwitcher() {
       
       setIsOpen(false);
       
-      // Force page reload to ensure all data is fresh
-      window.location.reload();
+      // Force page reload to ensure complete state reset
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: any) => {
-      toast({
-        title: "Failed to switch company",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
+      if (error.name !== 'AbortError') {
+        toast({
+          title: "Failed to switch company",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      }
     }
   });
 
