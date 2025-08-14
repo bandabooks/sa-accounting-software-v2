@@ -48,7 +48,6 @@ export default function CompanySwitcher() {
 
   // Company creation form state
   const [formData, setFormData] = useState({
-    companyId: '', // Will be generated as unique identifier
     name: '',
     displayName: '',
     slug: '',
@@ -120,6 +119,7 @@ export default function CompanySwitcher() {
       
       // Cancel all active queries
       await queryClient.cancelQueries();
+      await queryClient.cancelMutations();
       
       // Clear all caches for the old company
       queryClient.clear();
@@ -136,8 +136,10 @@ export default function CompanySwitcher() {
       // Update localStorage with new company
       localStorage.setItem('activeCompanyId', data.company.id.toString());
       
-      // Don't add URL parameters - just use localStorage
-      // This avoids URL pollution and confusion
+      // Update URL with company parameter
+      const url = new URL(window.location.href);
+      url.searchParams.set('co', data.company.id.toString());
+      window.history.pushState({}, '', url.toString());
       
       // Reconnect WebSocket if exists
       if ((window as any).wsConnection) {
@@ -167,8 +169,10 @@ export default function CompanySwitcher() {
       
       setIsOpen(false);
       
-      // Force immediate reload to ensure complete state reset
-      window.location.reload();
+      // Force page reload to ensure complete state reset
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: any) => {
       if (error.name !== 'AbortError') {
@@ -225,7 +229,6 @@ export default function CompanySwitcher() {
   // Form handling functions
   const resetForm = () => {
     setFormData({
-      companyId: '',
       name: '',
       displayName: '',
       slug: '',
@@ -304,12 +307,7 @@ export default function CompanySwitcher() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Generate a unique companyId if not set
-    const dataToSubmit = {
-      ...formData,
-      companyId: formData.companyId || `co_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-    createCompanyMutation.mutate(dataToSubmit);
+    createCompanyMutation.mutate(formData);
   };
 
   const handleCreateCompanyClick = () => {
@@ -518,9 +516,9 @@ export default function CompanySwitcher() {
                       >
                         {userCompany.role}
                       </Badge>
-                      {company.id && (
+                      {company.companyId && (
                         <span className="text-xs text-gray-500 font-mono">
-                          ID: {company.id}
+                          ID: {company.companyId}
                         </span>
                       )}
                       {company.industry && (

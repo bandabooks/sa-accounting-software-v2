@@ -36,7 +36,6 @@ import { PaymentFormModal } from "@/components/payments/PaymentFormModal";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
 import { AIHealthIndicator } from "@/components/ai/AIHealthIndicator";
-import { useCompany } from "@/contexts/CompanyContext";
 
 interface DashboardWidget {
   id: string;
@@ -57,10 +56,8 @@ export default function Dashboard() {
     { id: 3, title: "New customer registration", type: "info", time: "2 hours ago", priority: "low" }
   ]);
 
-  const { companyId } = useCompany();
-
   const { data: stats, isLoading, refetch } = useQuery({
-    queryKey: ["/api/dashboard/stats", companyId],
+    queryKey: ["/api/dashboard/stats"],
     queryFn: dashboardApi.getStats,
     refetchInterval: 30000, // Real-time updates every 30 seconds
   });
