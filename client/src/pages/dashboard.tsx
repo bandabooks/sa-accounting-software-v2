@@ -4,7 +4,7 @@ import {
   Plus, FileText, UserPlus, TrendingUp, Users, DollarSign, AlertTriangle,
   BarChart3, PieChart, Activity, Bell, Settings, ChevronRight, RefreshCw,
   Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, ArrowDownRight,
-  Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download
+  Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download, ChevronDown, Receipt
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import EnhancedStatsGrid from "@/components/dashboard/enhanced-stats-grid";
 import ProfitLossChart from "@/components/dashboard/profit-loss-chart";
 import RecentActivities from "@/components/dashboard/recent-activities";
@@ -224,49 +232,130 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Distinguishable Quick Action Bar with Bulk Entry */}
-            <div className="mt-4 flex flex-wrap gap-3">
-              {/* Primary Action - New Invoice (Green) */}
-              <Button asChild className="bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold">
-                <Link href="/invoices/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Invoice
-                </Link>
-              </Button>
+            {/* Professional Quick Actions Dropdown Bar */}
+            <div className="mt-4 flex items-center gap-3">
+              {/* Quick Create Dropdown - Professional Style */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Quick Create
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-xl">
+                  <DropdownMenuLabel className="text-slate-700 font-semibold">Create New</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {/* Invoice */}
+                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-green-50 focus:bg-green-50">
+                    <Link href="/invoices/new" className="flex items-center gap-3 py-2">
+                      <div className="p-1.5 bg-green-100 text-green-600 rounded-lg">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-slate-700">New Invoice</div>
+                        <div className="text-xs text-slate-500">Create and send invoice</div>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  {/* Estimate */}
+                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50">
+                    <Link href="/estimates/new" className="flex items-center gap-3 py-2">
+                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-slate-700">New Estimate</div>
+                        <div className="text-xs text-slate-500">Create quote for customer</div>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  {/* Payment */}
+                  <DropdownMenuItem 
+                    onClick={() => setIsPaymentModalOpen(true)} 
+                    className="cursor-pointer hover:bg-orange-50 focus:bg-orange-50"
+                  >
+                    <div className="flex items-center gap-3 py-2">
+                      <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
+                        <DollarSign className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-slate-700">Record Payment</div>
+                        <div className="text-xs text-slate-500">Log customer payment</div>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                  
+                  {/* Customer */}
+                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-purple-50 focus:bg-purple-50">
+                    <Link href="/customers/new" className="flex items-center gap-3 py-2">
+                      <div className="p-1.5 bg-purple-100 text-purple-600 rounded-lg">
+                        <UserPlus className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-slate-700">Add Customer</div>
+                        <div className="text-xs text-slate-500">Register new customer</div>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Additional Quick Actions */}
+                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-slate-50 focus:bg-slate-50">
+                    <Link href="/expenses/new" className="flex items-center gap-3 py-2">
+                      <div className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
+                        <Receipt className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-slate-700">New Expense</div>
+                        <div className="text-xs text-slate-500">Record business expense</div>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-slate-50 focus:bg-slate-50">
+                    <Link href="/purchase-orders/new" className="flex items-center gap-3 py-2">
+                      <div className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
+                        <ShoppingCart className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-slate-700">Purchase Order</div>
+                        <div className="text-xs text-slate-500">Create supplier order</div>
+                      </div>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               
-              {/* Secondary Action - New Estimate (Blue) */}
-              <Button asChild className="bg-gradient-to-r from-blue-500/30 to-indigo-600/30 hover:from-blue-500/40 hover:to-indigo-600/40 backdrop-blur-sm text-white border border-blue-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link href="/estimates/new">
-                  <FileText className="h-4 w-4 mr-2" />
-                  New Estimate
-                </Link>
-              </Button>
-              
-              {/* Tertiary Action - Record Payment (Orange) */}
-              <Button 
-                onClick={() => setIsPaymentModalOpen(true)}
-                className="bg-gradient-to-r from-orange-500/30 to-amber-600/30 hover:from-orange-500/40 hover:to-amber-600/40 backdrop-blur-sm text-white border border-orange-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                Record Payment
-              </Button>
-              
-              {/* Quaternary Action - Add Customer (Purple) */}
-              <Button asChild className="bg-gradient-to-r from-purple-500/30 to-violet-600/30 hover:from-purple-500/40 hover:to-violet-600/40 backdrop-blur-sm text-white border border-purple-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link href="/customers/new">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add Customer
-                </Link>
-              </Button>
-              
-              {/* Utility Action - Refresh (White/Transparent) */}
+              {/* Secondary Actions - Keep Refresh as standalone */}
               <Button 
                 onClick={() => refetch()}
                 className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                title="Refresh dashboard data"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
+                <RefreshCw className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Refresh</span>
               </Button>
+              
+              {/* Quick Access Links - Optional secondary actions */}
+              <div className="hidden lg:flex items-center gap-2 ml-auto">
+                <Button asChild variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
+                  <Link href="/reports">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Reports
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
+                  <Link href="/banking">
+                    <Building className="h-4 w-4 mr-2" />
+                    Banking
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
