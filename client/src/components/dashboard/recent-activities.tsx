@@ -77,24 +77,43 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
       </div>
       
       {/* Scrollable container with fixed height for 9 items */}
-      <div className="overflow-y-auto max-h-[540px] pr-2 custom-scrollbar">
-        <div className="space-y-2">
+      <div className="overflow-y-auto max-h-[540px] pr-1 custom-scrollbar">
+        <div className="space-y-2.5">
           {activities.slice(0, Math.min(activities.length, 10)).map((activity, index) => {
             const IconComponent = getActivityIcon(activity.type, activity.status);
             const iconColorClass = getActivityColor(activity.type, activity.status);
             
+            // Determine the left border color based on activity type and status
+            const getBorderColor = () => {
+              if (activity.type === 'payment' || activity.status === 'paid') return 'border-l-green-500';
+              if (activity.type === 'invoice' && activity.status === 'pending') return 'border-l-blue-500';
+              if (activity.type === 'expense') return 'border-l-orange-500';
+              if (activity.status === 'draft') return 'border-l-gray-400';
+              return 'border-l-purple-500';
+            };
+            
+            // Determine the background color based on activity type
+            const getBackgroundColor = () => {
+              if (activity.type === 'payment' || activity.status === 'paid') return 'bg-green-50 dark:bg-green-900/10';
+              if (activity.type === 'invoice' && activity.status === 'pending') return 'bg-blue-50 dark:bg-blue-900/10';
+              if (activity.type === 'expense') return 'bg-orange-50 dark:bg-orange-900/10';
+              if (activity.status === 'draft') return 'bg-gray-50 dark:bg-gray-800/30';
+              return 'bg-purple-50 dark:bg-purple-900/10';
+            };
+            
             return (
-              <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="group flex items-start space-x-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
-                <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${iconColorClass}`}>
-                  <IconComponent size={13} />
+              <div key={`${activity.type}-${activity.id || index}-${activity.date}`} 
+                   className={`group flex items-start space-x-3 p-3 rounded-lg border-l-4 ${getBorderColor()} ${getBackgroundColor()} hover:shadow-sm transition-all`}>
+                <div className={`flex-shrink-0 w-8 h-8 rounded flex items-center justify-center ${iconColorClass}`}>
+                  <IconComponent size={16} />
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {activity.description}
                     </p>
-                    <span className={`text-xs font-semibold ${
+                    <span className={`text-sm font-bold ${
                       activity.amount.startsWith('-') 
                         ? 'text-red-600 dark:text-red-400' 
                         : 'text-green-600 dark:text-green-400'
@@ -103,11 +122,11 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between mt-0.5">
-                    <div className="flex items-center space-x-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                       {activity.customerName && (
                         <>
-                          <span className="truncate max-w-[80px]">{activity.customerName}</span>
+                          <span className="truncate max-w-[100px]">{activity.customerName}</span>
                           <span>•</span>
                         </>
                       )}
