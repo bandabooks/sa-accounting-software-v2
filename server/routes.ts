@@ -287,6 +287,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register integrations routes
   app.use("/api/integrations", integrationsRoutes);
   
+  // Register template routes
+  const templateRoutes = await import("./routes/templateRoutes");
+  app.use(templateRoutes.default);
+  // Initialize default templates on startup
+  await templateRoutes.initializeDefaultTemplates();
+  
   // Register AI routes
   const aiRoutes = await import("./routes/aiRoutes");
   app.use("/api/ai", aiRoutes.default);

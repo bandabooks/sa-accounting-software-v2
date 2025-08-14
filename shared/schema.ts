@@ -2588,6 +2588,111 @@ export const notificationSettings = pgTable("notification_settings", {
   companyIdx: index("notification_settings_company_idx").on(table.companyId),
 }));
 
+// Email Templates table
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id), // Nullable for system templates
+  templateId: text("template_id").notNull(), // Unique identifier like 'invoice-new'
+  name: text("name").notNull(),
+  subject: text("subject").notNull(),
+  category: text("category").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text").notNull(),
+  variables: jsonb("variables").notNull().default([]), // Array of variable names
+  isSystemTemplate: boolean("is_system_template").default(false),
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0),
+  lastUsedAt: timestamp("last_used_at"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  templateIdUnique: unique().on(table.companyId, table.templateId),
+  companyIdx: index("email_templates_company_idx").on(table.companyId),
+  categoryIdx: index("email_templates_category_idx").on(table.category),
+  activeIdx: index("email_templates_active_idx").on(table.isActive),
+}));
+
+// SMS Templates table  
+export const smsTemplates = pgTable("sms_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id), // Nullable for system templates
+  templateId: text("template_id").notNull(), // Unique identifier like 'payment-reminder-sms'
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  message: text("message").notNull(),
+  variables: jsonb("variables").notNull().default([]), // Array of variable names
+  maxLength: integer("max_length").default(160),
+  isSystemTemplate: boolean("is_system_template").default(false),
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0),
+  lastUsedAt: timestamp("last_used_at"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  templateIdUnique: unique().on(table.companyId, table.templateId),
+  companyIdx: index("sms_templates_company_idx").on(table.companyId),
+  categoryIdx: index("sms_templates_category_idx").on(table.category),
+  activeIdx: index("sms_templates_active_idx").on(table.isActive),
+}));
+
+// Email Queue table for scheduled/pending emails
+export const emailQueue = pgTable("email_queue", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  templateId: integer("template_id").references(() => emailTemplates.id),
+  recipientEmail: text("recipient_email").notNull(),
+  recipientName: text("recipient_name"),
+  subject: text("subject").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text").notNull(),
+  variables: jsonb("variables").default({}),
+  attachments: jsonb("attachments").default([]), // Array of attachment URLs/paths
+  status: text("status").notNull().default("pending"), // pending, processing, sent, failed
+  priority: integer("priority").default(5), // 1 (highest) to 10 (lowest)
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  failedAt: timestamp("failed_at"),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("email_queue_company_idx").on(table.companyId),
+  statusIdx: index("email_queue_status_idx").on(table.status),
+  scheduledIdx: index("email_queue_scheduled_idx").on(table.scheduledFor),
+}));
+
+// SMS Queue table for scheduled/pending SMS messages
+export const smsQueue = pgTable("sms_queue", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  templateId: integer("template_id").references(() => smsTemplates.id),
+  recipientPhone: text("recipient_phone").notNull(),
+  recipientName: text("recipient_name"),
+  message: text("message").notNull(),
+  variables: jsonb("variables").default({}),
+  status: text("status").notNull().default("pending"), // pending, processing, sent, failed
+  priority: integer("priority").default(5), // 1 (highest) to 10 (lowest)
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  failedAt: timestamp("failed_at"),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  messageSegments: integer("message_segments").default(1),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sms_queue_company_idx").on(table.companyId),
+  statusIdx: index("sms_queue_status_idx").on(table.status),
+  scheduledIdx: index("sms_queue_scheduled_idx").on(table.scheduledFor),
+}));
+
 // Schema exports
 export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({
   id: true,
@@ -4160,56 +4265,7 @@ export type TimeEntryWithDetails = TimeEntry & {
   customer?: Customer;
 };
 
-// Email and SMS Services
-export const emailTemplates = pgTable("email_templates", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id"),
-  name: text("name").notNull(),
-  subject: text("subject").notNull(),
-  bodyHtml: text("body_html").notNull(),
-  bodyText: text("body_text").notNull(),
-  templateType: text("template_type").notNull(), // invoice, payment_reminder, welcome, etc.
-  variables: jsonb("variables").default([]), // Available template variables
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const emailQueue = pgTable("email_queue", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id"),
-  userId: integer("user_id"),
-  to: text("to").notNull(),
-  cc: text("cc"),
-  bcc: text("bcc"),
-  subject: text("subject").notNull(),
-  bodyHtml: text("body_html").notNull(),
-  bodyText: text("body_text").notNull(),
-  templateId: integer("template_id"),
-  priority: integer("priority").default(5), // 1=high, 5=normal, 10=low
-  status: text("status").default("pending"), // pending, sending, sent, failed
-  attempts: integer("attempts").default(0),
-  errorMessage: text("error_message"),
-  scheduledAt: timestamp("scheduled_at"),
-  sentAt: timestamp("sent_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const smsQueue = pgTable("sms_queue", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id"),
-  userId: integer("user_id"),
-  phoneNumber: text("phone_number").notNull(),
-  message: text("message").notNull(),
-  smsType: text("sms_type").notNull(), // security, alert, reminder, marketing
-  priority: integer("priority").default(5),
-  status: text("status").default("pending"), // pending, sending, sent, failed
-  attempts: integer("attempts").default(0),
-  errorMessage: text("error_message"),
-  scheduledAt: timestamp("scheduled_at"),
-  sentAt: timestamp("sent_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+// Duplicate tables removed - see lines 2595-2693 for email and SMS templates
 
 // Workflow Automation System
 export const workflowRules = pgTable("workflow_rules", {
