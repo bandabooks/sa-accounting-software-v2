@@ -9,7 +9,7 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/dashboard";
+import Dashboard from "@/pages/dashboard-new";
 import Invoices from "@/pages/invoices";
 import InvoiceCreate from "@/pages/invoice-create";
 import InvoiceDetail from "@/pages/invoice-detail";
