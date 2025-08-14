@@ -136,10 +136,8 @@ export default function CompanySwitcher() {
       // Update localStorage with new company
       localStorage.setItem('activeCompanyId', data.company.id.toString());
       
-      // Update URL with company parameter
-      const url = new URL(window.location.href);
-      url.searchParams.set('co', data.company.id.toString());
-      window.history.pushState({}, '', url.toString());
+      // Don't add URL parameters - just use localStorage
+      // This avoids URL pollution and confusion
       
       // Reconnect WebSocket if exists
       if ((window as any).wsConnection) {
@@ -169,10 +167,8 @@ export default function CompanySwitcher() {
       
       setIsOpen(false);
       
-      // Force reload to ensure complete state reset
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Force immediate reload to ensure complete state reset
+      window.location.reload();
     },
     onError: (error: any) => {
       if (error.name !== 'AbortError') {
