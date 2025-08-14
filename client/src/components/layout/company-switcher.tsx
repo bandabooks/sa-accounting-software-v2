@@ -169,7 +169,10 @@ export default function CompanySwitcher() {
       
       setIsOpen(false);
       
-      // No reload needed - data will refresh automatically via query invalidation
+      // Force reload to ensure complete state reset
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: any) => {
       if (error.name !== 'AbortError') {
