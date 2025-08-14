@@ -294,30 +294,30 @@ export class EmailService {
   }
 
   async queueEmail(emailData: {
-    companyId: number;
+    companyId?: number;
+    userId?: number;
     to: string;
-    recipientName?: string;
+    cc?: string;
+    bcc?: string;
     subject: string;
     bodyHtml: string;
     bodyText: string;
     templateId?: number;
     priority?: number;
-    scheduledFor?: Date;
-    createdBy?: number;
+    scheduledAt?: Date;
   }) {
     const [queuedEmail] = await db.insert(emailQueue).values({
       companyId: emailData.companyId,
-      recipientEmail: emailData.to,
-      recipientName: emailData.recipientName,
+      userId: emailData.userId,
+      to: emailData.to,
+      cc: emailData.cc,
+      bcc: emailData.bcc,
       subject: emailData.subject,
       bodyHtml: emailData.bodyHtml,
       bodyText: emailData.bodyText,
       templateId: emailData.templateId,
       priority: emailData.priority || 5,
-      scheduledFor: emailData.scheduledFor,
-      createdBy: emailData.createdBy,
-      variables: {},
-      attachments: [],
+      scheduledAt: emailData.scheduledAt,
     }).returning();
 
     return queuedEmail;
@@ -340,11 +340,13 @@ export class EmailService {
     for (const email of pendingEmails) {
       try {
         await db.update(emailQueue)
-          .set({ status: 'processing' })
+          .set({ status: 'sending' })
           .where(eq(emailQueue.id, email.id));
 
         await this.sendEmail({
-          to: email.recipientEmail,
+          to: email.to,
+          cc: email.cc || undefined,
+          bcc: email.bcc || undefined,
           subject: email.subject,
           bodyHtml: email.bodyHtml,
           bodyText: email.bodyText,
@@ -358,15 +360,14 @@ export class EmailService {
           .where(eq(emailQueue.id, email.id));
 
       } catch (error) {
-        const retryCount = (email.retryCount || 0) + 1;
-        const maxRetries = email.maxRetries || 3;
+        const attempts = (email.attempts || 0) + 1;
+        const maxAttempts = 3;
         
-        if (retryCount >= maxRetries) {
+        if (attempts >= maxAttempts) {
           await db.update(emailQueue)
             .set({ 
               status: 'failed',
-              retryCount,
-              failedAt: new Date(),
+              attempts,
               errorMessage: error instanceof Error ? error.message : 'Unknown error',
             })
             .where(eq(emailQueue.id, email.id));
@@ -374,7 +375,7 @@ export class EmailService {
           await db.update(emailQueue)
             .set({ 
               status: 'pending',
-              retryCount,
+              attempts,
               errorMessage: error instanceof Error ? error.message : 'Unknown error',
             })
             .where(eq(emailQueue.id, email.id));

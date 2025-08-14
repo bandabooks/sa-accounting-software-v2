@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import TemplatesTab from "@/components/email/TemplatesTab";
 import { Mail, Send, CheckCircle, XCircle, Clock, RefreshCw, AlertCircle, Settings, FileText } from "lucide-react";
 import {
   Select,
@@ -525,7 +524,68 @@ export default function EmailSettings() {
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
-          <TemplatesTab />
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Email Templates</CardTitle>
+                  <CardDescription>Manage reusable email templates</CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingTemplate(null);
+                    setIsTemplateDialogOpen(true);
+                  }}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  New Template
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {templatesLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : templates?.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No email templates configured
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {templates?.map((template) => (
+                    <div key={template.id} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{template.name}</p>
+                            <Badge variant="outline">{template.templateType}</Badge>
+                            {template.isActive ? (
+                              <Badge className="bg-green-500">Active</Badge>
+                            ) : (
+                              <Badge variant="secondary">Inactive</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{template.subject}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingTemplate(template);
+                            setIsTemplateDialogOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
