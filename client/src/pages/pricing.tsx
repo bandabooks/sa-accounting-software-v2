@@ -14,34 +14,38 @@ export default function Pricing() {
     {
       name: "Basic Plan",
       description: "Perfect for small businesses getting started",
-      price: { monthly: 29.99, annually: 299.90 },
-      originalPrice: { annually: 359.88 },
+      price: { monthly: 299.99, annually: 3329.89 },
+      originalPrice: { annually: 3599.88 },
       popular: false,
       features: [
-        "Invoice Management",
-        "Customer Database",
-        "Basic Reports",
-        "Email Support"
+        "Customer Management",
+        "Basic Invoicing",
+        "Expense Tracking",
+        "Financial Reports",
+        "VAT Management",
+        "Chart of Accounts"
       ],
       limitations: [
-        "Limited features",
-        "Basic reporting only"
+        "2 Users",
+        "1 Company",
+        "100 Customers",
+        "50 Invoices/month"
       ],
       cta: "Start Free Trial"
     },
     {
       name: "Professional Plan",
       description: "Advanced features for growing businesses",
-      price: { monthly: 79.99, annually: 799.90 },
-      originalPrice: { annually: 959.88 },
+      price: { monthly: 679.99, annually: 7519.89 },
+      originalPrice: { annually: 8159.88 },
       popular: true,
       features: [
         "Everything in Basic",
-        "Purchase Orders",
+        "Advanced Invoicing",
         "Inventory Management",
-        "Financial Reports",
-        "Multi-Currency",
-        "Priority Support"
+        "VAT Management",
+        "Advanced Analytics",
+        "Compliance Management"
       ],
       limitations: [],
       cta: "Start Free Trial"
@@ -49,15 +53,15 @@ export default function Pricing() {
     {
       name: "Enterprise Plan",
       description: "Full-featured solution for large organizations",
-      price: { monthly: 199.99, annually: 1999.90 },
-      originalPrice: { annually: 2399.88 },
+      price: { monthly: 1199.99, annually: 13299.89 },
+      originalPrice: { annually: 14399.88 },
       popular: false,
       features: [
         "Everything in Professional",
         "Multi-Company",
-        "Advanced Analytics",
+        "Payroll Management",
+        "Point of Sale",
         "API Access",
-        "Custom Integrations",
         "Dedicated Support"
       ],
       limitations: [],
