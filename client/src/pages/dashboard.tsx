@@ -132,8 +132,8 @@ export default function Dashboard() {
         {/* Stunning Gradient Hero Section */}
         <div className="relative overflow-hidden">
           {/* Animated Background Gradients */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-lg"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-lg"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded"></div>
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
           
