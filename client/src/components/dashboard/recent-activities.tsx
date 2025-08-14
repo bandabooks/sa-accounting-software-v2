@@ -43,16 +43,16 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'pending': { label: 'Pending', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400' },
-      'paid': { label: 'Paid', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' },
-      'completed': { label: 'Completed', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' },
-      'draft': { label: 'Draft', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400' },
-      'sent': { label: 'Sent', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' }
+      'pending': { label: 'pending', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
+      'paid': { label: 'paid', color: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
+      'completed': { label: 'done', color: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
+      'draft': { label: 'draft', color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-400' },
+      'sent': { label: 'sent', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${config.color}`}>
         {config.label}
       </span>
     );
@@ -76,39 +76,25 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
         <span className="text-sm text-gray-500 dark:text-gray-400">Latest business updates</span>
       </div>
       
-      {/* Scrollable container with fixed height for 6 items */}
-      <div className="overflow-y-auto max-h-[480px] pr-2 custom-scrollbar">
-        <div className="space-y-3">
+      {/* Scrollable container with fixed height for 9 items */}
+      <div className="overflow-y-auto max-h-[540px] pr-2 custom-scrollbar">
+        <div className="space-y-2">
           {activities.slice(0, Math.min(activities.length, 10)).map((activity, index) => {
             const IconComponent = getActivityIcon(activity.type, activity.status);
             const iconColorClass = getActivityColor(activity.type, activity.status);
             
             return (
-              <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="group flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${iconColorClass}`}>
-                  <IconComponent size={14} />
+              <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="group flex items-start space-x-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
+                <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${iconColorClass}`}>
+                  <IconComponent size={13} />
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
                       {activity.description}
                     </p>
-                    {getStatusBadge(activity.status)}
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                      {activity.customerName && (
-                        <>
-                          <span className="truncate max-w-[100px]">{activity.customerName}</span>
-                          <span>•</span>
-                        </>
-                      )}
-                      <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</span>
-                    </div>
-                    
-                    <span className={`text-sm font-semibold ${
+                    <span className={`text-xs font-semibold ${
                       activity.amount.startsWith('-') 
                         ? 'text-red-600 dark:text-red-400' 
                         : 'text-green-600 dark:text-green-400'
@@ -116,17 +102,30 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                       {formatCurrency(activity.amount.replace('-', ''))}
                     </span>
                   </div>
+                  
+                  <div className="flex items-center justify-between mt-0.5">
+                    <div className="flex items-center space-x-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                      {activity.customerName && (
+                        <>
+                          <span className="truncate max-w-[80px]">{activity.customerName}</span>
+                          <span>•</span>
+                        </>
+                      )}
+                      <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</span>
+                    </div>
+                    {getStatusBadge(activity.status)}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
         
-        {/* Show more indicator if there are more than 6 activities */}
-        {activities.length > 6 && (
-          <div className="mt-3 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Scroll to see {activities.length - 6} more activities
+        {/* Show more indicator if there are more than 9 activities */}
+        {activities.length > 9 && (
+          <div className="mt-2 text-center">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">
+              Scroll to see more
             </p>
           </div>
         )}
