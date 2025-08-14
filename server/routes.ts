@@ -998,7 +998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      console.log(`→ Fetching permissions for user ${user.username} in company ${user.activeCompanyId}`);
+      console.log(`→ Fetching permissions for user ${user.username} in company ${user.companyId}`);
       
       // Get user permissions based on their role assignments
       let userPermissions: string[] = [];
@@ -1026,13 +1026,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             // First ensure user has permissions in their company
             try {
-              await createDefaultUserPermissions(user.id, user.activeCompanyId || 1);
+              await createDefaultUserPermissions(user.id, user.companyId || 1);
               console.log(`→ Ensured default permissions exist for ${user.username}`);
             } catch (createPermError) {
-              console.log(`→ Permissions already exist for ${user.username} in company ${user.activeCompanyId}`);
+              console.log(`→ Permissions already exist for ${user.username} in company ${user.companyId}`);
             }
             
-            const permissions = await storage.getUserPermission(user.id, user.activeCompanyId || 1);
+            const permissions = await storage.getUserPermission(user.id, user.companyId || 1);
             if (permissions && permissions.customPermissions) {
               // Extract permissions from JSONB array
               userPermissions = Array.isArray(permissions.customPermissions) 
@@ -1421,7 +1421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Dashboard - protected route with company isolation and caching
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId || req.user?.companyId;
+      const companyId = req.user?.companyId;
       
       // Set cache headers for 3 minutes to improve performance
       res.set('Cache-Control', 'private, max-age=180');
@@ -2132,7 +2132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/invoices/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId || req.user?.companyId;
+      const companyId = req.user?.companyId;
       
       // Set cache headers for performance
       res.set('Cache-Control', 'private, max-age=300');
@@ -7269,7 +7269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chart-of-accounts", authenticate, async (req, res) => {
     try {
       const user = req as AuthenticatedRequest;
-      const companyId = user.user?.activeCompanyId || user.user?.companyId || 2;
+      const companyId = user.user?.companyId || 2;
       
       // Get company-specific Chart of Accounts with calculated balances
       const accounts = await storage.getAllChartOfAccounts(companyId);
@@ -7296,7 +7296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const accountId = parseInt(req.params.id);
       const user = req as AuthenticatedRequest;
-      const companyId = user.user?.activeCompanyId || user.user?.companyId || 2;
+      const companyId = user.user?.companyId || 2;
       const userId = user.user?.id || 1;
 
       // Check user permissions (admin, accountant)
@@ -7682,7 +7682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Banking Routes - Optimized with caching
   app.get("/api/bank-accounts", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.activeCompanyId || (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
       
       // Set cache headers for performance
       res.set('Cache-Control', 'private, max-age=120');
@@ -11679,7 +11679,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Client Management Routes
   app.get("/api/compliance/clients", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const clients = await storage.getAllClients(companyId);
       res.json(clients);
     } catch (error) {
@@ -11719,7 +11719,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const userId = req.user.id;
       
       const clientData = {
@@ -11876,7 +11876,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Task Management Routes
   app.get("/api/compliance/tasks", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
       const assignedTo = req.query.assignedTo ? parseInt(req.query.assignedTo as string) : undefined;
       
@@ -11902,7 +11902,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const userId = req.user.id;
       
       const taskData = {
@@ -11947,7 +11947,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Compliance Calendar Routes
   app.get("/api/compliance/calendar", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
       
@@ -11971,7 +11971,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const userId = req.user.id;
       
       const eventData = {
@@ -12018,7 +12018,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const userId = req.user.id;
       
       const documentData = {
@@ -12038,7 +12038,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Compliance Dashboard Routes
   app.get("/api/compliance/dashboard", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       const stats = await storage.getComplianceDashboardStats(companyId);
       res.json(stats);
     } catch (error) {
@@ -12051,7 +12051,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.get("/api/compliance/ai/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user.id;
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       
       const conversations = await storage.getAiAssistantConversations(userId, companyId);
       res.json(conversations);
@@ -12071,7 +12071,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   }), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user.id;
-      const companyId = req.user.activeCompanyId;
+      const companyId = req.user.companyId;
       
       const conversationData = {
         ...req.body,
@@ -13806,7 +13806,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Company Admin only - Connect company to SARS
   app.get("/api/sars/auth-url", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId || req.user?.companyId;
+      const companyId = req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13853,7 +13853,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Get company SARS connection status
   app.get("/api/sars/status", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId || req.user?.companyId;
+      const companyId = req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13888,7 +13888,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Test SARS connection
   app.post("/api/sars/test", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId || req.user?.companyId;
+      const companyId = req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13904,7 +13904,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Disconnect from SARS
   app.delete("/api/sars/disconnect", authenticate, requirePermission(PERMISSIONS.VAT_MANAGE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId || req.user?.companyId;
+      const companyId = req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13920,7 +13920,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Submit VAT201 to SARS
   app.post("/api/sars/vat201/submit", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId;
+      const companyId = req.user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -13937,7 +13937,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Get VAT return status from SARS
   app.get("/api/sars/vat201/status/:referenceNumber", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.activeCompanyId;
+      const companyId = req.user?.companyId;
       const { referenceNumber } = req.params;
       
       if (!companyId) {
