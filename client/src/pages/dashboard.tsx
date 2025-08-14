@@ -137,112 +137,89 @@ export default function Dashboard() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
           
-          {/* Hero Content - Reduced by 45% */}
-          <div className="relative p-4 lg:p-6 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          {/* Hero Content - Reduced height by 25% */}
+          <div className="relative p-3 lg:p-4 text-white">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
               
-              {/* Welcome Section - Compact */}
-              <div className="space-y-3 flex-1">
-                <div className="space-y-1">
+              {/* Welcome Section - More Compact */}
+              <div className="space-y-2 flex-1">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg">
-                      <Activity className="h-4 w-4 text-white" />
+                    <div className="p-1 bg-white/20 backdrop-blur-sm rounded-lg">
+                      <Activity className="h-3.5 w-3.5 text-white" />
                     </div>
-                    <span className="text-blue-100 text-sm font-medium">Business Dashboard</span>
+                    <span className="text-blue-100 text-xs font-medium">Business Dashboard</span>
                   </div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                  <h1 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
                     {getCurrentGreeting()}!
                   </h1>
-                  <p className="text-blue-100 text-sm">
+                  <p className="text-blue-100 text-xs">
                     Here's your business performance overview
                   </p>
                 </div>
-
-                {/* Live Status Indicators - Compact */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium">Real-time Data</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <Clock className="h-3 w-3" />
-                    <span className="text-xs font-medium">Updated {lastUpdate.toLocaleTimeString()}</span>
-                  </div>
-                  <div className="inline-flex">
-                    <AIHealthIndicator />
-                  </div>
-                  {priorityNotifications.length > 0 && (
-                    <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-orange-500/80 to-red-500/80 backdrop-blur-sm rounded-full border border-white/30">
-                      <Bell className="h-3 w-3 animate-bounce" />
-                      <span className="text-xs font-medium">{priorityNotifications.length} Alert{priorityNotifications.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                </div>
               </div>
 
-              {/* Compact Revenue Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 lg:min-w-[400px]">
-                <div 
-                  data-stat-card="total-revenue"
-                  className="text-center p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 transition-all duration-200"
-                >
-                  <div className="text-xl font-bold text-white mb-1">
+              {/* Compact Revenue Metrics - Moved to align with header */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 lg:min-w-[350px]">
+                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
+                  <div className="text-lg font-bold text-white">
                     {formatCurrency(dashboardStats.totalRevenue)}
                   </div>
-                  <div className="text-blue-100 text-xs font-medium mb-1">Total Revenue</div>
+                  <div className="text-blue-100 text-xs font-medium">Total Revenue</div>
                   <div className="flex items-center justify-center gap-1 text-green-300">
-                    <ArrowUpRight className="h-3 w-3" />
-                    <span className="text-xs font-medium">+{getRevenueGrowth()}%</span>
+                    <ArrowUpRight className="h-2.5 w-2.5" />
+                    <span className="text-xs">+{getRevenueGrowth()}%</span>
                   </div>
                 </div>
                 
-                {/* Outstanding Card - Position 3 as requested */}
-                <div className="text-center p-3 bg-gradient-to-br from-orange-500/30 to-red-500/30 backdrop-blur-md rounded-xl border border-orange-300/50">
-                  <div className="text-xl font-bold text-white mb-1">
+                <div className="text-center p-2 bg-gradient-to-br from-orange-500/30 to-red-500/30 backdrop-blur-md rounded-lg border border-orange-300/50">
+                  <div className="text-lg font-bold text-white">
                     {formatCurrency(dashboardStats.outstandingInvoices)}
                   </div>
-                  <div className="text-orange-100 text-xs font-medium mb-1">Outstanding</div>
+                  <div className="text-orange-100 text-xs font-medium">Outstanding</div>
                   <div className="flex items-center justify-center gap-1 text-orange-300">
-                    <CreditCard className="h-3 w-3" />
-                    <span className="text-xs font-medium">Needs attention</span>
+                    <CreditCard className="h-2.5 w-2.5" />
+                    <span className="text-xs">Needs attention</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                  <div className="text-xl font-bold text-white mb-1">
+                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
+                  <div className="text-lg font-bold text-white">
                     {dashboardStats.totalCustomers}
                   </div>
-                  <div className="text-blue-100 text-xs font-medium mb-1">Active Customers</div>
+                  <div className="text-blue-100 text-xs font-medium">Active Customers</div>
                   <div className="flex items-center justify-center gap-1 text-blue-300">
-                    <Users className="h-3 w-3" />
-                    <span className="text-xs font-medium">Growing</span>
+                    <Users className="h-2.5 w-2.5" />
+                    <span className="text-xs">Growing</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                  <div className="text-xl font-bold text-white mb-1">
+                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
+                  <div className="text-lg font-bold text-white">
                     {dashboardStats.pendingEstimates}
                   </div>
-                  <div className="text-blue-100 text-xs font-medium mb-1">Pending Quotes</div>
+                  <div className="text-blue-100 text-xs font-medium">Pending Quotes</div>
                   <div className="flex items-center justify-center gap-1 text-yellow-300">
-                    <Target className="h-3 w-3" />
-                    <span className="text-xs font-medium">In Progress</span>
+                    <Target className="h-2.5 w-2.5" />
+                    <span className="text-xs">In Progress</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Professional Quick Actions Dropdown Bar */}
-            <div className="mt-4 flex items-center gap-3">
-              {/* Quick Create Dropdown - Professional Style */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 font-semibold">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Quick Create
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
+            {/* Professional Action Bar with Status Badges */}
+            <div className="mt-3 flex items-center justify-between gap-3">
+              {/* Left Side - Quick Create and Refresh */}
+              <div className="flex items-center gap-2">
+                {/* Quick Create Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="h-9 bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-sm">
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Quick Create
+                      <ChevronDown className="h-3.5 w-3.5 ml-1.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-xl">
                   <DropdownMenuLabel className="text-slate-700 font-semibold">Create New</DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -331,27 +308,50 @@ export default function Dashboard() {
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              {/* Secondary Actions - Keep Refresh as standalone */}
-              <Button 
-                onClick={() => refetch()}
-                className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                title="Refresh dashboard data"
-              >
-                <RefreshCw className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Refresh</span>
-              </Button>
+                {/* Refresh Button */}
+                <Button 
+                  onClick={() => refetch()}
+                  className="h-9 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
+                  title="Refresh dashboard data"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span className="ml-1.5 hidden sm:inline">Refresh</span>
+                </Button>
+              </div>
               
-              {/* Quick Access Links - Optional secondary actions */}
-              <div className="hidden lg:flex items-center gap-2 ml-auto">
-                <Button asChild variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
+              {/* Right Side - Status Badges, Reports, Banking */}
+              <div className="flex items-center gap-2">
+                {/* Status Badges */}
+                <div className="flex items-center gap-1.5 mr-2">
+                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-white">Real-time Data</span>
+                  </div>
+                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <Clock className="h-3 w-3 text-white" />
+                    <span className="text-xs font-medium text-white">Updated {lastUpdate.toLocaleTimeString()}</span>
+                  </div>
+                  <div className="inline-flex">
+                    <AIHealthIndicator />
+                  </div>
+                  {priorityNotifications.length > 0 && (
+                    <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-orange-500/80 to-red-500/80 backdrop-blur-sm rounded-full border border-white/30">
+                      <Bell className="h-3 w-3 animate-bounce text-white" />
+                      <span className="text-xs font-medium text-white">{priorityNotifications.length} Alert{priorityNotifications.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Reports & Banking Links */}
+                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
                   <Link href="/reports">
-                    <BarChart3 className="h-4 w-4 mr-2" />
+                    <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
                     Reports
                   </Link>
                 </Button>
-                <Button asChild variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
+                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
                   <Link href="/banking">
-                    <Building className="h-4 w-4 mr-2" />
+                    <Building className="h-3.5 w-3.5 mr-1.5" />
                     Banking
                   </Link>
                 </Button>
