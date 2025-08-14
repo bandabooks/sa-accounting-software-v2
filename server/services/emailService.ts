@@ -48,10 +48,10 @@ export class EmailService {
   private verifiedSenders: Set<string> = new Set();
 
   constructor() {
-    this.initializeService();
+    void this.initializeService();
   }
 
-  private initializeService() {
+  private async initializeService() {
     // Try SendGrid first (preferred for production)
     if (process.env.SENDGRID_API_KEY) {
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
