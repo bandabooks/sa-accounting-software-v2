@@ -76,10 +76,9 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
         <span className="text-sm text-gray-500 dark:text-gray-400">Latest business updates</span>
       </div>
       
-      {/* Scrollable container with fixed height for 9 items */}
-      <div className="overflow-y-auto max-h-[540px] pr-1 custom-scrollbar">
-        <div className="space-y-2.5">
-          {activities.slice(0, Math.min(activities.length, 10)).map((activity, index) => {
+      {/* Display all 10 activities without scrolling */}
+      <div className="space-y-2">
+        {activities.slice(0, 10).map((activity, index) => {
             const IconComponent = getActivityIcon(activity.type, activity.status);
             const iconColorClass = getActivityColor(activity.type, activity.status);
             
@@ -138,16 +137,6 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
               </div>
             );
           })}
-        </div>
-        
-        {/* Show more indicator if there are more than 9 activities */}
-        {activities.length > 9 && (
-          <div className="mt-2 text-center">
-            <p className="text-[10px] text-gray-500 dark:text-gray-400">
-              Scroll to see more
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
