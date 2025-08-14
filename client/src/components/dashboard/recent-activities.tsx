@@ -71,76 +71,65 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Business Activities</h3>
-        <span className="text-sm text-gray-500 dark:text-gray-400">Last 10 activities</span>
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm text-gray-500 dark:text-gray-400">Latest business updates</span>
       </div>
       
-      <div className="space-y-4">
-        {activities.map((activity, index) => {
-          const IconComponent = getActivityIcon(activity.type, activity.status);
-          const iconColorClass = getActivityColor(activity.type, activity.status);
-          
-          return (
-            <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}>
-                <IconComponent size={16} />
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {activity.description}
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        // Navigate based on activity type
-                        if (activity.type === 'invoice') setLocation('/invoices');
-                        else if (activity.type === 'payment') setLocation('/payments');
-                        else if (activity.type === 'expense') setLocation('/expenses');
-                        else setLocation('/activities');
-                      }}
-                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="View details"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    {getStatusBadge(activity.status)}
-                  </div>
+      {/* Scrollable container with fixed height for 6 items */}
+      <div className="overflow-y-auto max-h-[480px] pr-2 custom-scrollbar">
+        <div className="space-y-3">
+          {activities.slice(0, Math.min(activities.length, 10)).map((activity, index) => {
+            const IconComponent = getActivityIcon(activity.type, activity.status);
+            const iconColorClass = getActivityColor(activity.type, activity.status);
+            
+            return (
+              <div key={`${activity.type}-${activity.id || index}-${activity.date}`} className="group flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
+                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${iconColorClass}`}>
+                  <IconComponent size={14} />
                 </div>
                 
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                    {activity.customerName && (
-                      <span>{activity.customerName}</span>
-                    )}
-                    <span>•</span>
-                    <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {activity.description}
+                    </p>
+                    {getStatusBadge(activity.status)}
                   </div>
                   
-                  <span className={`text-sm font-medium ${
-                    activity.amount.startsWith('-') 
-                      ? 'text-red-600 dark:text-red-400' 
-                      : 'text-green-600 dark:text-green-400'
-                  }`}>
-                    {activity.amount.startsWith('-') ? '' : '+'}
-                    {formatCurrency(activity.amount.replace('-', ''))}
-                  </span>
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                      {activity.customerName && (
+                        <>
+                          <span className="truncate max-w-[100px]">{activity.customerName}</span>
+                          <span>•</span>
+                        </>
+                      )}
+                      <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</span>
+                    </div>
+                    
+                    <span className={`text-sm font-semibold ${
+                      activity.amount.startsWith('-') 
+                        ? 'text-red-600 dark:text-red-400' 
+                        : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      {formatCurrency(activity.amount.replace('-', ''))}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-      
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <button className="w-full text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
-          View all activities
-        </button>
+            );
+          })}
+        </div>
+        
+        {/* Show more indicator if there are more than 6 activities */}
+        {activities.length > 6 && (
+          <div className="mt-3 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Scroll to see {activities.length - 6} more activities
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
