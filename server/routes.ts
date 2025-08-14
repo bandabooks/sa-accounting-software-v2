@@ -1418,49 +1418,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Dashboard - protected route with company isolation and caching
+  // Enhanced Dashboard - protected route with company isolation (no caching for instant company switching)
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       
-      // Set cache headers for 3 minutes to improve performance
-      res.set('Cache-Control', 'private, max-age=180');
+      // No cache headers for instant company switching
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
       
-      // Use fast optimized dashboard queries with caching
-      const cacheKey = `fast-dashboard-${companyId}`;
-      const dashboardData = await withCache(cacheKey, async () => {
-        // Use optimized queries for better performance with Promise.all
-        const [fastStats, recentActivities, bankBalances, profitLossData] = await Promise.all([
-          fastStorage.getFastDashboardStats(companyId),
-          fastStorage.getFastRecentActivities(companyId),
-          fastStorage.getFastBankBalances(companyId),
-          fastStorage.getFastProfitLossData(companyId)
-        ]);
+      // Use fast optimized queries directly (no caching for instant switching)
+      const [fastStats, recentActivities, bankBalances, profitLossData] = await Promise.all([
+        fastStorage.getFastDashboardStats(companyId),
+        fastStorage.getFastRecentActivities(companyId),
+        fastStorage.getFastBankBalances(companyId),
+        fastStorage.getFastProfitLossData(companyId)
+      ]);
 
-        return {
-          totalRevenue: fastStats.total_revenue || "0.00",
-          outstandingInvoices: fastStats.outstanding_invoices || "0.00",
-          totalExpenses: fastStats.total_expenses || "0.00", 
-          totalCustomers: fastStats.total_customers || "0",
-          bankBalance: fastStats.bank_balance || "0.00",
-          vatDue: fastStats.vat_due || "0.00",
-          pendingEstimates: fastStats.pending_estimates || "0",
-          outstandingInvoiceCount: fastStats.outstanding_invoice_count || 0,
-          paidInvoiceCount: fastStats.paid_invoice_count || 0,
-          receivablesAging: [],
-          payablesAging: [],
-          cashFlowSummary: {
-            currentCashPosition: fastStats.bank_balance || "0.00",
-            todayInflow: fastStats.today_inflow || "0.00",
-            todayOutflow: fastStats.today_outflow || "0.00", 
-            netCashFlow: (parseFloat(fastStats.today_inflow || "0") - parseFloat(fastStats.today_outflow || "0")).toFixed(2)
-          },
-          bankBalances,
-          profitLossData,
-          recentActivities,
-          complianceAlerts: []
-        };
-      }, 180000); // Cache for 3 minutes
+      const dashboardData = {
+        totalRevenue: fastStats.total_revenue || "0.00",
+        outstandingInvoices: fastStats.outstanding_invoices || "0.00",
+        totalExpenses: fastStats.total_expenses || "0.00", 
+        totalCustomers: fastStats.total_customers || "0",
+        bankBalance: fastStats.bank_balance || "0.00",
+        vatDue: fastStats.vat_due || "0.00",
+        pendingEstimates: fastStats.pending_estimates || "0",
+        outstandingInvoiceCount: fastStats.outstanding_invoice_count || 0,
+        paidInvoiceCount: fastStats.paid_invoice_count || 0,
+        receivablesAging: [],
+        payablesAging: [],
+        cashFlowSummary: {
+          currentCashPosition: fastStats.bank_balance || "0.00",
+          todayInflow: fastStats.today_inflow || "0.00",
+          todayOutflow: fastStats.today_outflow || "0.00", 
+          netCashFlow: (parseFloat(fastStats.today_inflow || "0") - parseFloat(fastStats.today_outflow || "0")).toFixed(2)
+        },
+        bankBalances,
+        profitLossData,
+        recentActivities,
+        complianceAlerts: []
+      };
       
       res.json(dashboardData);
     } catch (error) {

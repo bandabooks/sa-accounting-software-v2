@@ -115,6 +115,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       // 8. Invalidate and refetch all queries with new companyId
       await queryClient.invalidateQueries();
+      
+      // 9. Force immediate refetch of dashboard data for instant updates
+      await queryClient.refetchQueries({ 
+        queryKey: ['/api/dashboard/stats'],
+        type: 'active' 
+      });
 
       toast({
         title: "Company switched",
