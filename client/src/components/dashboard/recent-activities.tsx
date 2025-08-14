@@ -43,16 +43,16 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'pending': { label: 'pending', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
-      'paid': { label: 'paid', color: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
-      'completed': { label: 'done', color: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
-      'draft': { label: 'draft', color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-400' },
-      'sent': { label: 'sent', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' }
+      'pending': { label: 'PENDING', color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200' },
+      'paid': { label: 'PAID', color: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200' },
+      'completed': { label: 'DONE', color: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200' },
+      'draft': { label: 'DRAFT', color: 'bg-gray-50 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400 border border-gray-200' },
+      'sent': { label: 'SENT', color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-200' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
     return (
-      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${config.color}`}>
+      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-semibold tracking-wider ${config.color}`}>
         {config.label}
       </span>
     );
@@ -130,7 +130,7 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                           <span>•</span>
                         </>
                       )}
-                      <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: true })}</span>
+                      <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: false })}</span>
                     </div>
                     {getStatusBadge(activity.status)}
                   </div>

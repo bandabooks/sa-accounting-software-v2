@@ -159,49 +159,49 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Compact Revenue Metrics - Moved to align with header */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 lg:min-w-[350px]">
-                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                  <div className="text-lg font-bold text-white">
+              {/* Compact Revenue Metrics - Professional Alignment */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:min-w-[480px]">
+                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {formatCurrency(dashboardStats.totalRevenue)}
                   </div>
-                  <div className="text-blue-100 text-xs font-medium">Total Revenue</div>
-                  <div className="flex items-center justify-center gap-1 text-green-300">
-                    <ArrowUpRight className="h-2.5 w-2.5" />
-                    <span className="text-xs">+{getRevenueGrowth()}%</span>
+                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Total Revenue</div>
+                  <div className="flex items-center justify-center gap-1 text-green-300 mt-2">
+                    <ArrowUpRight className="h-3 w-3" />
+                    <span className="text-xs font-medium">+{getRevenueGrowth()}%</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-2 bg-gradient-to-br from-orange-500/30 to-red-500/30 backdrop-blur-md rounded-lg border border-orange-300/50">
-                  <div className="text-lg font-bold text-white">
+                <div className="text-center p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-md rounded-lg border border-orange-300/30 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {formatCurrency(dashboardStats.outstandingInvoices)}
                   </div>
-                  <div className="text-orange-100 text-xs font-medium">Outstanding</div>
-                  <div className="flex items-center justify-center gap-1 text-orange-300">
-                    <CreditCard className="h-2.5 w-2.5" />
-                    <span className="text-xs">Needs attention</span>
+                  <div className="text-orange-100 text-xs font-semibold uppercase tracking-wider mt-1">Outstanding</div>
+                  <div className="flex items-center justify-center gap-1 text-orange-300 mt-2">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span className="text-xs font-medium">Needs attention</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                  <div className="text-lg font-bold text-white">
+                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {dashboardStats.totalCustomers}
                   </div>
-                  <div className="text-blue-100 text-xs font-medium">Active Customers</div>
-                  <div className="flex items-center justify-center gap-1 text-blue-300">
-                    <Users className="h-2.5 w-2.5" />
-                    <span className="text-xs">Growing</span>
+                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Active Customers</div>
+                  <div className="flex items-center justify-center gap-1 text-blue-300 mt-2">
+                    <TrendingUp className="h-3 w-3" />
+                    <span className="text-xs font-medium">Growing</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                  <div className="text-lg font-bold text-white">
+                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {dashboardStats.pendingEstimates}
                   </div>
-                  <div className="text-blue-100 text-xs font-medium">Pending Quotes</div>
-                  <div className="flex items-center justify-center gap-1 text-yellow-300">
-                    <Target className="h-2.5 w-2.5" />
-                    <span className="text-xs">In Progress</span>
+                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Pending Quotes</div>
+                  <div className="flex items-center justify-center gap-1 text-yellow-300 mt-2">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-xs font-medium">In Progress</span>
                   </div>
                 </div>
               </div>
@@ -367,42 +367,46 @@ export default function Dashboard() {
 
 
         {/* Modular Widget System */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-800">Dashboard Widgets</h2>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Dashboard Widgets</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Monitor your business performance</p>
+            </div>
             <Button 
               onClick={() => setIsCustomizing(!isCustomizing)}
               variant={isCustomizing ? "default" : "outline"}
               size="sm"
+              className="shadow-sm hover:shadow-md transition-all duration-200"
             >
               <Settings className="h-4 w-4 mr-2" />
               {isCustomizing ? "Done Customizing" : "Customize Layout"}
             </Button>
           </div>
 
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white/80 backdrop-blur-sm border-0 shadow-lg p-1 rounded-lg">
+          <Tabs defaultValue="overview" className="space-y-5">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1.5 rounded-lg">
               <TabsTrigger 
                 value="overview" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
               >
                 Overview
               </TabsTrigger>
               <TabsTrigger 
                 value="sales" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
               >
                 Sales
               </TabsTrigger>
               <TabsTrigger 
                 value="finance" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-violet-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
               >
                 Finance
               </TabsTrigger>
               <TabsTrigger 
                 value="reports" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-semibold px-6 py-3 transition-all duration-300"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
               >
                 Reports
               </TabsTrigger>

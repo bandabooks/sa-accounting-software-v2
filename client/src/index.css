@@ -141,4 +141,27 @@
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-500;
   }
+  
+  /* Professional hover animations and transitions */
+  .hover-scale {
+    @apply transition-transform duration-200 ease-in-out;
+  }
+  
+  .hover-scale:hover {
+    @apply scale-[1.02];
+  }
+  
+  /* Professional card shadows */
+  .card-shadow {
+    @apply shadow-sm;
+  }
+  
+  .card-shadow-hover:hover {
+    @apply shadow-md;
+  }
+  
+  /* Smooth transitions for all interactive elements */
+  button, a, .clickable {
+    @apply transition-all duration-200 ease-in-out;
+  }
 }
