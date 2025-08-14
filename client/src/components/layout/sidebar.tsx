@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import React, { useState } from "react";
 import { 
   Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, 
   Settings, TrendingUp, Package, Building, Archive, Building2, BookOpen, 
@@ -199,7 +199,21 @@ const navigationGroups = [
 ];
 
 interface NavigationGroupProps {
-  group: typeof navigationGroups[0];
+  group: {
+    id: string;
+    label: string;
+    module: string;
+    icon?: any;
+    requiredRole?: string;
+    items: Array<{
+      path: string;
+      label: string;
+      icon: any;
+      permission?: string | null;
+      requiredRole?: string;
+      module: string;
+    }>;
+  };
   location: string;
   userPermissions: string[];
   userRole: string;
@@ -341,7 +355,7 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { isModuleAvailable, currentPlan, subscription, planStatus, isSuperAdminOrOwner } = useCompanySubscription();
-  const [expandedGroup, setExpandedGroup] = useState<string | null>("overview");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
   const userPermissions = user?.permissions || [
@@ -351,6 +365,18 @@ export default function Sidebar() {
     "GENERAL_LEDGER_VIEW", "FINANCIAL_VIEW", "REPORT_VIEW", "VAT_VIEW",
     "COMPANY_VIEW", "SETTINGS_VIEW", "COMPLIANCE_VIEW"
   ];
+
+  // Auto-expand the group containing the active page
+  React.useEffect(() => {
+    const activeGroup = navigationGroups.find(group => 
+      group.items.some(item => 
+        location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path))
+      )
+    );
+    if (activeGroup) {
+      setExpandedGroup(activeGroup.id);
+    }
+  }, [location]);
 
   const toggleGroup = (groupId: string) => {
     // If clicking the same group, collapse it. Otherwise, expand the new group
