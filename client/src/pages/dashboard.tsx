@@ -25,7 +25,6 @@ import EnhancedStatsGrid from "@/components/dashboard/enhanced-stats-grid";
 import ProfitLossChart from "@/components/dashboard/profit-loss-chart";
 import RecentActivities from "@/components/dashboard/recent-activities";
 import ComplianceAlerts from "@/components/dashboard/compliance-alerts";
-import { UpcomingTasks } from "@/components/dashboard/upcoming-tasks";
 import ActionShortcuts from "@/components/dashboard/action-shortcuts";
 import BankComplianceCard from "@/components/dashboard/bank-compliance-card";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
@@ -522,11 +521,6 @@ export default function Dashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                  
-                  {/* Upcoming Tasks - In bottom white space */}
-                  <div className="mt-6">
-                    <UpcomingTasks />
-                  </div>
                 </div>
 
                 {/* Recent Activities Widget - With View All button */}
