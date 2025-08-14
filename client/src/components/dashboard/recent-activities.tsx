@@ -103,7 +103,7 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
             
             return (
               <div key={`${activity.type}-${activity.id || index}-${activity.date}`} 
-                   className={`group flex items-start space-x-3 p-3 rounded-lg border-l-4 ${getBorderColor()} ${getBackgroundColor()} hover:shadow-sm transition-all`}>
+                   className={`group flex items-start space-x-3 p-3 rounded-md border-l-4 ${getBorderColor()} ${getBackgroundColor()} hover:shadow-sm transition-all`}>
                 <div className={`flex-shrink-0 w-8 h-8 rounded flex items-center justify-center ${iconColorClass}`}>
                   <IconComponent size={16} />
                 </div>
