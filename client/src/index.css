@@ -107,4 +107,61 @@
     scrollbar-width: thin;
     scrollbar-color: rgb(209 213 219) rgb(243 244 246);
   }
+  
+  /* Custom scrollbar for recent activities card */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full transition-colors;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+  
+  .dark .custom-scrollbar {
+    scrollbar-color: rgb(71 85 105) transparent;
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-600;
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+  
+  /* Professional hover animations and transitions */
+  .hover-scale {
+    @apply transition-transform duration-200 ease-in-out;
+  }
+  
+  .hover-scale:hover {
+    @apply scale-[1.02];
+  }
+  
+  /* Professional card shadows */
+  .card-shadow {
+    @apply shadow-sm;
+  }
+  
+  .card-shadow-hover:hover {
+    @apply shadow-md;
+  }
+  
+  /* Smooth transitions for all interactive elements */
+  button, a, .clickable {
+    @apply transition-all duration-200 ease-in-out;
+  }
 }

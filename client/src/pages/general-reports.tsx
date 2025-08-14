@@ -66,6 +66,8 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 // Enhanced Report Categories with all advanced features
 const reportCategories = [
@@ -326,7 +328,7 @@ export default function GeneralReports() {
   }, [autoRefresh, refreshInterval, queryClient]);
 
   // Fetch user's bookmarked reports
-  const { data: userBookmarks } = useQuery({
+  const { data: userBookmarks, isLoading: bookmarksLoading } = useQuery({
     queryKey: ['user-bookmarks'],
     queryFn: async () => {
       const response = await apiRequest('/api/reports/bookmarks');
@@ -335,7 +337,7 @@ export default function GeneralReports() {
   });
 
   // Fetch available companies for multi-company reports
-  const { data: companies } = useQuery({
+  const { data: companies, isLoading: companiesLoading } = useQuery({
     queryKey: ['companies-list'],
     queryFn: async () => {
       const response = await apiRequest('/api/companies');
@@ -375,6 +377,21 @@ export default function GeneralReports() {
       });
     }
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: bookmarksLoading, message: 'Loading user bookmarks...' },
+      { isLoading: companiesLoading, message: 'Loading company data...' },
+      { isLoading: bookmarkMutation.isPending, message: 'Updating bookmark...' },
+      { isLoading: scheduleReportMutation.isPending, message: 'Scheduling report...' },
+    ],
+    progressSteps: ['Fetching report preferences', 'Loading company configurations', 'Processing report data'],
+  });
+
+  if (bookmarksLoading || companiesLoading) {
+    return <PageLoader message="Loading general reports..." />;
+  }
 
   // Filter reports based on search, category, and user permissions
   const filteredCategories = reportCategories.map(category => ({

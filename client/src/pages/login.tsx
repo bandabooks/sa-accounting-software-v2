@@ -116,8 +116,12 @@ export default function Login() {
     setLoginSuccessModalOpen(false);
     // Use setTimeout to ensure authentication state is fully processed
     setTimeout(() => {
-      // Force page reload to ensure proper authentication state  
-      window.location.href = '/dashboard';
+      // Redirect to dashboard using react router to avoid full page reload
+      setLocation('/dashboard');
+      // Also trigger a window reload after navigation to ensure fresh state
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }, 100);
   };
 

@@ -17,6 +17,8 @@ import { customersApi } from "@/lib/api";
 import { MiniDashboard } from "@/components/MiniDashboard";
 import { DashboardCard } from "@/components/DashboardCard";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface CustomerHealthScore {
   score: number;
@@ -38,10 +40,23 @@ export default function Customers() {
     queryFn: customersApi.getAll
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/customers/stats"],
     queryFn: () => apiRequest("/api/customers/stats", "GET").then(res => res.json())
   });
+
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading customers...' },
+      { isLoading: statsLoading, message: 'Loading customer statistics...' },
+    ],
+    progressSteps: ['Fetching customer data', 'Processing profiles', 'Calculating health scores'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading customers..." />;
+  }
 
   const filteredCustomers = customers?.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

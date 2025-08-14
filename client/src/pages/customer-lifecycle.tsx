@@ -19,6 +19,8 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate } from "@/lib/utils-invoice";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface Customer {
   id: number;
@@ -86,6 +88,19 @@ export default function CustomerLifecycle() {
     }
   });
 
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading customer lifecycle data...' },
+      { isLoading: updateStageMutation.isPending, message: 'Updating lifecycle stage...' },
+    ],
+    progressSteps: ['Fetching customer data', 'Loading lifecycle statistics', 'Processing customer insights'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading customer lifecycle..." />;
+  }
+
   const filteredCustomers = customers.filter((customer: Customer) => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
@@ -103,22 +118,7 @@ export default function CustomerLifecycle() {
     return "text-red-600";
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <div className="container mx-auto px-4 py-6">
-          <div className="animate-pulse space-y-6">
-            <div className="h-48 bg-gradient-to-r from-blue-200 to-purple-200 rounded-2xl"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-64 bg-white/60 rounded-xl shadow-lg"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">

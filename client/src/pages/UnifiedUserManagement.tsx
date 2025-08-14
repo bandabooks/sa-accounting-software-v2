@@ -77,6 +77,8 @@ import { useSuccessModal } from "@/hooks/useSuccessModal";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { SuccessModal } from "@/components/ui/success-modal";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 // Types and Schemas
 const userFormSchema = z.object({
@@ -367,6 +369,24 @@ export default function UnifiedUserManagement() {
       description: "",
     },
   });
+
+  // Use loading states for comprehensive loading feedback including all mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: usersLoading, message: 'Loading users...' },
+      { isLoading: rolesLoading, message: 'Loading roles...' },
+      { isLoading: auditLoading, message: 'Loading audit logs...' },
+      { isLoading: toggleUserStatusMutation.isPending, message: 'Updating user status...' },
+      { isLoading: updatePermissionMutation.isPending, message: 'Updating permissions...' },
+      { isLoading: resolveDuplicateMutation.isPending, message: 'Resolving duplicate...' },
+      { isLoading: initializeDefaultPermissionsMutation.isPending, message: 'Initializing permissions...' },
+    ],
+    progressSteps: ['Loading user data', 'Fetching system roles', 'Processing permissions matrix', 'Loading audit trail'],
+  });
+
+  if (usersLoading || rolesLoading || auditLoading) {
+    return <PageLoader message="Loading user management..." />;
+  }
 
   // Permission toggle handler for checkbox matrix
   const handlePermissionToggle = (roleId: string, module: string, permission: string, enabled: boolean) => {

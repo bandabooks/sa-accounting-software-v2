@@ -6,6 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { LoadingProvider } from "@/contexts/LoadingContext";
+import { CompanyProvider } from "@/contexts/CompanyContext";
+import { GlobalLoader } from "@/components/ui/global-loader";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
@@ -20,10 +23,14 @@ import EstimateCreate from "@/pages/estimate-create";
 import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
-import FinancialReportsDetailed from "@/pages/financial-reports-detailed";
 import BusinessReports from "@/pages/business-reports";
 import GeneralReports from "@/pages/general-reports";
 import ExpensesStandalone from "@/pages/expenses-standalone";
+import BillsManagement from "@/pages/bills-management";
+import BillCreate from "@/pages/bill-create";
+import RecurringExpenses from "@/pages/recurring-expenses";
+import RecurringExpenseCreate from "@/pages/recurring-expense-create";
+import ExpenseApprovals from "@/pages/expense-approvals";
 import Suppliers from "@/pages/suppliers";
 import PurchaseOrders from "@/pages/purchase-orders";
 import PurchaseOrderCreate from "@/pages/purchase-order-create";
@@ -32,6 +39,7 @@ import ProductCreate from "@/pages/product-create";
 import ProductEdit from "@/pages/product-edit";
 import Categories from "@/pages/categories";
 import Settings from "@/pages/settings";
+import EmailSettings from "@/pages/email-settings";
 import Inventory from "@/pages/inventory";
 import Companies from "@/pages/companies";
 import Profile from "@/pages/profile";
@@ -48,13 +56,13 @@ import Budgeting from "@/pages/budgeting";
 import BudgetCreate from "@/pages/budget-create";
 import CashFlowForecasting from "@/pages/cash-flow-forecasting";
 import CashFlowForecastCreate from "@/pages/cash-flow-forecast-create";
-import BankReconciliation from "@/pages/bank-reconciliation";
 
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import SuperAdminCompanyDetail from "@/pages/super-admin-company-detail";
 import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
 import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
 import SuperAdminAuditLogs from "@/pages/super-admin-audit-logs";
+import ProfessionalIdsManagement from "@/pages/admin/professional-ids";
 import Subscription from "@/pages/subscription";
 import SubscriptionSuccess from "@/pages/subscription-success";
 import SubscriptionCancel from "@/pages/subscription-cancel";
@@ -97,8 +105,8 @@ import CustomerLifecycle from "@/pages/customer-lifecycle";
 import CommunicationCenter from "@/pages/communication-center";
 import CustomerSegments from "@/pages/customer-segments";
 import CustomerInsights from "@/pages/customer-insights";
-import SARSCompliance from "@/pages/sars-compliance";
-import SARSIntegration from "@/pages/sars-integration";
+import AgingReports from "@/pages/aging-reports";
+
 import Integrations from "@/pages/integrations";
 import CIPCCompliance from "@/pages/cipc-compliance";
 import LabourCompliance from "@/pages/labour-compliance";
@@ -109,7 +117,7 @@ import ProfessionalUserManagement from "@/pages/ProfessionalUserManagement";
 import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
-import BulkCapture from "@/pages/bulk-capture-enhanced";
+import BulkCapture from "@/pages/bulk-capture";
 import SalesDashboard from "@/pages/sales-dashboard";
 import SalesOrders from "@/pages/sales-orders";
 import SalesOrderCreate from "@/pages/sales-order-create";
@@ -125,7 +133,7 @@ import PurchaseDashboard from "@/pages/purchase-dashboard";
 import PurchaseReports from "@/pages/purchase-reports";
 import GoodsReceipts from "@/pages/goods-receipts";
 import PurchaseRequisitions from "@/pages/purchase-requisitions";
-import EnhancedExpenses from "@/pages/enhanced-expenses";
+
 
 import Warehouses from "@/pages/warehouses";
 import LotBatchTracking from "@/pages/lot-batch-tracking";
@@ -148,7 +156,10 @@ import POSTerminals from "@/pages/pos-terminals";
 // import PayFastPayments from "@/pages/payfast-payments";
 // import POSShiftManagement from "@/pages/pos-shift-management";
 import ProfessionalServices from "@/pages/professional-services";
+import FinancialReportsPage from "@/pages/reports/financial";
 import AppLayout from "@/components/layout/app-layout";
+import { AIHealthBanner } from "@/components/ai-assistant/AIHealthBanner";
+import AIMonitorPage from "@/pages/ai-monitor";
 
 // Permission constants for route protection
 const PERMISSIONS = {
@@ -202,8 +213,10 @@ const PERMISSIONS = {
 
 function AuthenticatedApp() {
   return (
-    <AppLayout>
-      <Switch>
+    <CompanyProvider>
+      <AppLayout>
+        <AIHealthBanner />
+        <Switch>
         <Route path="/login">
           <Dashboard />
         </Route>
@@ -220,6 +233,31 @@ function AuthenticatedApp() {
         <Route path="/expenses">
           <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
             <ExpensesStandalone />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/bills">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <BillsManagement />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/bills/create">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_CREATE}>
+            <BillCreate />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/recurring-expenses">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <RecurringExpenses />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/recurring-expenses/create">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_CREATE}>
+            <RecurringExpenseCreate />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/expense-approvals">
+          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
+            <ExpenseApprovals />
           </ProtectedRoute>
         </Route>
         <Route path="/invoices">
@@ -388,11 +426,7 @@ function AuthenticatedApp() {
             <PurchaseRequisitions />
           </ProtectedRoute>
         </Route>
-        <Route path="/enhanced-expenses">
-          <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
-            <EnhancedExpenses />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/products">
           <Products />
         </Route>
@@ -420,11 +454,17 @@ function AuthenticatedApp() {
             <FinancialReports />
           </ProtectedRoute>
         </Route>
-        <Route path="/financial-reports-detailed">
+        <Route path="/reports/financial">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
-            <FinancialReportsDetailed />
+            <FinancialReportsPage />
           </ProtectedRoute>
         </Route>
+        <Route path="/reports/aging">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <AgingReports />
+          </ProtectedRoute>
+        </Route>
+
         <Route path="/business-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <BusinessReports />
@@ -459,6 +499,11 @@ function AuthenticatedApp() {
         <Route path="/settings">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <Settings />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/email-settings">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <EmailSettings />
           </ProtectedRoute>
         </Route>
         <Route path="/inventory">
@@ -568,6 +613,22 @@ function AuthenticatedApp() {
             <Banking />
           </ProtectedRoute>
         </Route>
+        <Route path="/banking/:accountId">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <Banking />
+          </ProtectedRoute>
+        </Route>
+        {/* Redirects for old routes */}
+        <Route path="/bank-capture">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <Banking />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/bank/capture">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <Banking />
+          </ProtectedRoute>
+        </Route>
         <Route path="/general-ledger">
           <ProtectedRoute permission={PERMISSIONS.GENERAL_LEDGER_VIEW}>
             <GeneralLedger />
@@ -597,8 +658,11 @@ function AuthenticatedApp() {
             <CashFlowForecastCreate />
           </ProtectedRoute>
         </Route>
+        {/* Bank reconciliation now part of unified banking */}
         <Route path="/bank-reconciliation">
-          <BankReconciliation />
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <Banking />
+          </ProtectedRoute>
         </Route>
 
         <Route path="/projects">
@@ -634,6 +698,11 @@ function AuthenticatedApp() {
         <Route path="/vat-returns">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <VATReturns />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/reports/vat">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <VATReportsPage />
           </ProtectedRoute>
         </Route>
         <Route path="/vat-reports">
@@ -679,6 +748,11 @@ function AuthenticatedApp() {
         <Route path="/super-admin/plans/:id">
           <ProtectedRoute requiredRole="super_admin">
             <SuperAdminPlanEdit />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/professional-ids">
+          <ProtectedRoute requiredRole="super_admin">
+            <ProfessionalIdsManagement />
           </ProtectedRoute>
         </Route>
 
@@ -744,16 +818,7 @@ function AuthenticatedApp() {
             <ComplianceClients />
           </ProtectedRoute>
         </Route>
-        <Route path="/compliance/sars">
-          <ProtectedRoute>
-            <SARSCompliance />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/sars-integration">
-          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
-            <SARSIntegration />
-          </ProtectedRoute>
-        </Route>
+
         <Route path="/integrations">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <Integrations />
@@ -784,10 +849,16 @@ function AuthenticatedApp() {
             <ComplianceDocuments />
           </ProtectedRoute>
         </Route>
+        <Route path="/ai-monitor">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <AIMonitorPage />
+          </ProtectedRoute>
+        </Route>
         <Route path="/portal" component={CustomerPortal} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
+    </CompanyProvider>
   );
 }
 
@@ -841,10 +912,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <NotificationProvider>
-          <Toaster />
-          <Router />
-        </NotificationProvider>
+        <LoadingProvider>
+          <NotificationProvider>
+            <GlobalLoader />
+            <Toaster />
+            <Router />
+          </NotificationProvider>
+        </LoadingProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

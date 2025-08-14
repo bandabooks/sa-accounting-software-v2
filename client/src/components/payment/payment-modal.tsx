@@ -78,6 +78,13 @@ export default function PaymentModal({
     queryKey: ["/api/bank-accounts"],
   });
 
+  // Debug log to see what data is received
+  useEffect(() => {
+    if (bankAccounts.length > 0) {
+      console.log("Bank accounts data:", bankAccounts);
+    }
+  }, [bankAccounts]);
+
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {

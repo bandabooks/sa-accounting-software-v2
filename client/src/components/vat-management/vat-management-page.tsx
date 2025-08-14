@@ -11,7 +11,6 @@ import { VatStatusToggle } from "./vat-status-toggle";
 import { VatComplianceGuide } from "./vat-conditional-fields";
 import AIComplianceTips from "./ai-compliance-tips";
 import VATReports from "./vat-reports";
-import SARSeFiling from "./sars-efiling";
 import VAT201Returns from "./vat201-returns";
 import ComplianceDashboard from "./compliance-dashboard";
 import { FileText, Settings, BarChart3, Calendar, Shield, AlertTriangle, CheckCircle, Eye, EyeOff, Brain, Plus, Download, Upload, Globe, Building, Clock, DollarSign } from "lucide-react";
@@ -103,8 +102,8 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
               Multi-Format VAT Reports
             </div>
             <div className="flex items-center gap-1 text-orange-600 dark:text-orange-300">
-              <Globe className="h-3 w-3" />
-              SARS eFiling Integration
+              <Calendar className="h-3 w-3" />
+              Automated Scheduling
             </div>
             <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-300">
               <Brain className="h-3 w-3" />
@@ -119,7 +118,7 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
       </div>
 
       <Tabs defaultValue="types" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="settings">VAT Settings</TabsTrigger>
           <TabsTrigger value="types" className="bg-blue-50 border-blue-200">
             <Plus className="h-4 w-4 mr-1" />
@@ -132,10 +131,6 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
           <TabsTrigger value="reports" className="bg-purple-50 border-purple-200">
             <BarChart3 className="h-4 w-4 mr-1" />
             VAT Reports
-          </TabsTrigger>
-          <TabsTrigger value="sars-integration" className="bg-orange-50 border-orange-200">
-            <Globe className="h-4 w-4 mr-1" />
-            SARS eFiling
           </TabsTrigger>
           <TabsTrigger value="ai-tips" className="bg-indigo-50 border-indigo-200">
             <Brain className="h-4 w-4 mr-1" />
@@ -258,9 +253,7 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
           <VATReports companyId={companyId} />
         </TabsContent>
 
-        <TabsContent value="sars-integration" className="space-y-6">
-          <SARSeFiling companyId={companyId} />
-        </TabsContent>
+
 
         <TabsContent value="ai-tips" className="space-y-6">
           <AIComplianceTips companyId={companyId} />

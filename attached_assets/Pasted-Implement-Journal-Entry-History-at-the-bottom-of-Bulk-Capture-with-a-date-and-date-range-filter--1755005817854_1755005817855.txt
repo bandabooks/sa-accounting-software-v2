@@ -1,0 +1,124 @@
+Implement Journal Entry History at the bottom of Bulk Capture, with a date (and date-range) filter, and inline edit/delete that mirrors the existing Journal Entries module. Stack: Next.js (TS, App Router), React Query, Prisma/Postgres, Tailwind/Shadcn. Multitenant: enforce companyId from session; roles: company_admin and staff can edit/delete; reader is read-only.
+
+Goals
+
+Default filter = today; users can change to yesterday, last 7 days, or custom date range.
+
+Show a table of journal entries matching the filter.
+
+Inline Edit (modal or row-expand) and Delete without leaving Bulk Capture.
+
+Use the same endpoints/validation as Journal Entries to avoid duplication.
+
+Data & API (reuse where possible; otherwise add):
+
+Ensure Prisma models JournalEntry (header) & JournalLine (details) exist with companyId, date, reference, memo, posted flags, etc.
+
+Endpoints (tenant-guarded):
+
+GET /api/journal?from=YYYY-MM-DD&to=YYYY-MM-DD&take=50&cursor= → list entries with first 10 lines (or counts).
+
+GET /api/journal/:id → full entry + lines.
+
+PUT /api/journal/:id → update header + lines (Zod validate; transactional).
+
+DELETE /api/journal/:id → delete entry (only if not locked/posted).
+
+If these already exist for the Journal Entries page, import and reuse service functions; don’t duplicate logic.
+
+Add indexes if missing: (companyId, date), (companyId, posted).
+
+Validation (Zod)
+
+Header: { date: string(YYYY-MM-DD), reference?: string, memo?: string }.
+
+Lines: array of { accountId: string, description?: string, debit?: number, credit?: number, vatCode?: string } with sum(debit) == sum(credit).
+
+Disallow editing/deleting entries in locked periods; return 409 with message.
+
+UI – Bulk Capture page additions
+
+Component group under src/components/bulk/journal-history/*
+
+JournalHistoryFilters.tsx — Presets (Today, Yesterday, Last 7 Days, Custom) + datepicker/range.
+
+JournalHistoryTable.tsx — Paginated/virtualized table: cols = Date, Reference, Memo, Lines (count/amount), Actions.
+
+JournalEditDialog.tsx — Modal to edit header + lines (same fields/validation as Journal Entries page).
+
+Place the Journal Entry History section below the bulk capture grid.
+
+Show skeletons during load; Shadcn Table, Dialog, Button, DropdownMenu, DatePicker.
+
+React Query hooks (src/hooks/journal.ts)
+
+useJournalList({ from, to }) → GET /api/journal, staleTime: 30_000, cursor pagination.
+
+useJournalGet(id) → GET /api/journal/:id.
+
+useJournalUpdate() → PUT /api/journal/:id.
+
+useJournalDelete() → DELETE /api/journal/:id.
+
+On update/delete success, invalidate list/query and optimistically update the table.
+
+Inline Actions & UX
+
+Edit: opens JournalEditDialog prefilled (header + lines).
+
+Enforce balancing: show running totals; disable save until debits == credits.
+
+Respect period locks; show clear error if locked.
+
+Delete: confirm dialog “This will permanently remove this journal entry.”; handle 409 for locked periods.
+
+Stay on the Bulk Capture page; refresh table state in place.
+
+If user role = reader, hide actions; if staff or company_admin, show actions.
+
+Performance
+
+Fetch list with minimal payload (header + totals + line count). Fetch full lines on Edit only.
+
+Virtualize table rows for large histories (@tanstack/react-virtual).
+
+Add server-side pagination (take=50, cursor).
+
+Security & Compliance
+
+Every handler must enforce companyId.
+
+No PII exposed; sanitize memo/reference in responses.
+
+Log structured events (no raw content), e.g., { evt:'journal.update', companyId, entryId }.
+
+Tests (smoke)
+
+API: list within date range; update valid → 200; invalid/unbalanced → 400; delete locked → 409; delete valid → 204.
+
+UI: filter defaults to today; switching dates reloads; edit modal validates balance; delete updates table without navigation.
+
+Acceptance Criteria
+
+Default shows today’s entries; changing filter shows historical entries.
+
+Inline edit/delete works and mirrors Journal Entries behavior exactly.
+
+No navigation away from Bulk Capture; state updates live.
+
+Tenant/role checks enforced; locked periods protected.
+
+No console errors; typecheck/lint pass.
+
+Deliverables
+
+New components in src/components/bulk/journal-history/*, hooks in src/hooks/journal.ts.
+
+Endpoint additions/reuse under app/api/journal/*.
+
+Indexes/migrations if missing.
+
+README_journal_history.md with usage, filters, and known constraints.
+
+Commit: feat(bulk): journal history with date filter + inline edit/delete (mirrors journal module).
+

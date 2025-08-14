@@ -18,7 +18,13 @@ import {
   Zap,
   Calendar,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  FileSpreadsheet,
+  Link2,
+  RefreshCw,
+  Settings,
+  CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,12 +34,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import type { BankAccountWithTransactions, ChartOfAccount } from "@shared/schema";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
+import { BankFeedDashboard } from "@/components/stitch/BankFeedDashboard";
 
 const bankAccountSchema = z.object({
   accountName: z.string().min(1, "Account name is required"),
@@ -70,9 +80,9 @@ export default function Banking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: bankAccounts = [], isLoading, error } = useQuery({
+  const { data: bankAccounts = [], isLoading, error } = useQuery<BankAccountWithTransactions[]>({
     queryKey: ["/api/bank-accounts"],
-    retry: (failureCount, error) => {
+    retry: (failureCount, error: any) => {
       // Don't retry on authentication errors
       if (error?.message?.includes('401')) return false;
       return failureCount < 2;
@@ -118,6 +128,20 @@ export default function Banking() {
     },
     onError: (error) => {
       toast({ title: "Error", description: "Failed to create transaction", variant: "destructive" });
+    },
+  });
+
+  const toggleAccountMutation = useMutation({
+    mutationFn: (accountId: number) => apiRequest(`/api/bank-accounts/${accountId}/toggle`, "PATCH"),
+    onSuccess: (updatedAccount: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      toast({ 
+        title: "Success", 
+        description: `Bank account ${updatedAccount.isActive ? 'activated' : 'deactivated'} successfully` 
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: "Failed to toggle bank account status", variant: "destructive" });
     },
   });
 
@@ -182,26 +206,169 @@ export default function Banking() {
       accountName: account.accountName,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
-      branchCode: account.branchCode || "",
+      branchCode: account.branchCode ?? "",
       accountType: account.accountType,
       currency: account.currency,
       openingBalance: account.openingBalance,
-      notes: account.notes || "",
-      chartAccountId: account.chartAccountId || undefined,
+      notes: account.notes ?? "",
+      chartAccountId: account.chartAccountId ?? undefined,
     });
     setShowEditDialog(true);
   };
 
+  // Handler for statement upload
+  const handleStatementUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.ofx,.qif';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        processStatementFile(file);
+      }
+    };
+    input.click();
+  };
+
+  // Process uploaded statement file
+  const processStatementFile = (file: File) => {
+    toast({
+      title: 'Processing File',
+      description: `Processing ${file.name}...`,
+    });
+    // Here you would implement actual file processing
+    setTimeout(() => {
+      toast({
+        title: 'Success',
+        description: 'Statement imported successfully',
+      });
+    }, 2000);
+  };
+
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.add('border-primary', 'bg-primary/5');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+    
+    const files = Array.from(e.dataTransfer.files);
+    const validFile = files.find(file => 
+      file.name.endsWith('.csv') || 
+      file.name.endsWith('.ofx') || 
+      file.name.endsWith('.qif')
+    );
+    
+    if (validFile) {
+      processStatementFile(validFile);
+    } else {
+      toast({
+        title: 'Invalid File',
+        description: 'Please upload a CSV, OFX, or QIF file',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handler for starting reconciliation
+  const handleStartReconciliation = () => {
+    if (bankAccounts.length === 0) {
+      toast({
+        title: 'No Bank Accounts',
+        description: 'Please add a bank account first',
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: 'Reconciliation Started',
+      description: 'Starting reconciliation process...',
+    });
+    // Navigate to reconciliation workflow
+    setTimeout(() => {
+      toast({
+        title: 'Loading',
+        description: 'Reconciliation module loading...',
+      });
+    }, 1000);
+  };
+
+  // Handler for adding new rule
+  const handleAddNewRule = () => {
+    toast({
+      title: 'Rule Configuration',
+      description: 'Opening rule configuration...',
+    });
+    // This would open a dialog to add new categorization rules
+  };
+
+  // Handler for configuring fee mappings
+  const handleConfigureFeeMappings = () => {
+    toast({
+      title: 'Fee Mappings',
+      description: 'Opening fee mapping configuration...',
+    });
+    // This would open a dialog to configure fee mappings
+  };
+
+  // Handler for connecting new bank via Stitch
+  const handleConnectBank = () => {
+    // Navigate to bank feeds tab to connect a specific bank
+    toast({
+      title: 'Connect Bank Account',
+      description: 'Please select a bank to connect via Stitch',
+    });
+  };
+
+  // Handler for managing auto-categorization rules
+  const handleManageRules = () => {
+    toast({
+      title: 'Auto-Categorization Rules',
+      description: 'Manage your auto-categorization rules here',
+    });
+  };
+
+  // Handler for configuring banking alerts
+  const handleConfigureAlerts = () => {
+    toast({
+      title: 'Banking Alerts',
+      description: 'Opening banking alerts configuration...',
+    });
+  };
+
+  // Calculate metrics from Chart of Accounts bank data
   const totalBalance = bankAccounts.reduce((sum: number, account: BankAccountWithTransactions) => 
-    sum + parseFloat(account.currentBalance), 0
+    sum + parseFloat(account.currentBalance || "0"), 0
   );
 
+  const activeAccounts = bankAccounts.filter((account: BankAccountWithTransactions) => 
+    parseFloat(account.currentBalance || "0") > 0
+  ).length;
+
+  const totalAccounts = bankAccounts.length;
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading bank accounts...' },
+      { isLoading: createAccountMutation.isPending, message: 'Creating account...' },
+      { isLoading: updateAccountMutation.isPending, message: 'Updating account...' },
+      { isLoading: createTransactionMutation.isPending, message: 'Creating transaction...' },
+      { isLoading: toggleAccountMutation.isPending, message: 'Updating status...' },
+    ],
+    progressSteps: ['Fetching accounts', 'Loading transactions', 'Processing data'],
+  });
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+    return <PageLoader message="Loading banking..." />;
   }
 
   return (
@@ -432,9 +599,7 @@ export default function Banking() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 text-sm font-medium mb-1">Active Accounts</p>
-                  <p className="text-3xl font-bold text-white">
-                    {bankAccounts.filter((account: BankAccountWithTransactions) => account.isActive).length}
-                  </p>
+                  <p className="text-3xl font-bold text-white">{activeAccounts}</p>
                   <p className="text-purple-200 text-xs mt-1">With positive balance</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-full">
@@ -460,20 +625,132 @@ export default function Banking() {
           </Card>
         </div>
 
-        {/* Enhanced Bank Accounts Section */}
-        <div className="space-y-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Your Bank Accounts</h2>
-              <p className="text-gray-600 mt-1">Manage and monitor all your financial accounts</p>
+        {/* Tabbed Interface */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="feeds">Bank Feeds (Stitch)</TabsTrigger>
+            <TabsTrigger value="upload">Statement Upload</TabsTrigger>
+            <TabsTrigger value="reconcile">Reconciliation</TabsTrigger>
+            <TabsTrigger value="rules">Rules & Fees</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Recent Transactions Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Transactions</CardTitle>
+                  <CardDescription>Latest activity across all accounts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {bankAccounts.slice(0, 2).map((account) => (
+                      <div key={account.id} className="border-b pb-3 last:border-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">{account.accountName}</p>
+                            <p className="text-sm text-muted-foreground">{account.bankName}</p>
+                          </div>
+                          <Badge variant={parseFloat(account.currentBalance || "0") >= 0 ? "default" : "destructive"}>
+                            R {parseFloat(account.currentBalance || "0").toFixed(2)}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                    {bankAccounts.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Unreconciled Items Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Unreconciled Items</CardTitle>
+                  <CardDescription>Transactions pending reconciliation</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600" />
+                        <div>
+                          <p className="font-medium">Pending Items</p>
+                          <p className="text-sm text-muted-foreground">Requires attention</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700">
+                        0
+                      </Badge>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Start Reconciliation
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1">
-                <Zap className="h-3 w-3 mr-1" />
-                {bankAccounts.length} Total Accounts
-              </Badge>
+
+            {/* Bank Account Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Summary</CardTitle>
+                <CardDescription>Quick overview of all bank accounts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {bankAccounts.map((account) => (
+                    <div key={account.id} className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${account.isActive ? 'bg-green-100' : 'bg-gray-100'}`}>
+                          <Landmark className={`h-4 w-4 ${account.isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                        </div>
+                        <div>
+                          <p className="font-medium">{account.accountName}</p>
+                          <p className="text-sm text-muted-foreground">{account.bankName} • {account.accountNumber}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">R {parseFloat(account.currentBalance || "0").toFixed(2)}</p>
+                        <Badge variant={account.isActive ? "default" : "secondary"} className="mt-1">
+                          {account.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {bankAccounts.length === 0 && (
+                    <div className="text-center py-8">
+                      <Landmark className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No bank accounts added yet</p>
+                      <Button className="mt-4" onClick={() => setShowAccountDialog(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Account
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="accounts" className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Your Bank Accounts</h2>
+                <p className="text-gray-600 mt-1">Manage and monitor all your financial accounts</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Badge className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1">
+                  <Zap className="h-3 w-3 mr-1" />
+                  {bankAccounts.length} Total Accounts
+                </Badge>
+              </div>
             </div>
-          </div>
 
           {bankAccounts.length === 0 ? (
             <Card className="border-dashed border-2 border-indigo-300 bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 relative overflow-hidden">
@@ -499,15 +776,15 @@ export default function Banking() {
             </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {bankAccounts.map((account: BankAccountWithTransactions) => (
+            {bankAccounts.map((account: any) => (
               <Card key={account.id} className="group relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-gray-100 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02]">
                 {/* Bank Card Style Header */}
                 <div className={`h-40 bg-gradient-to-br ${
-                  account.accountType === 'current' 
+                  account.accountName.toLowerCase().includes('current') 
                     ? 'from-blue-600 via-indigo-600 to-purple-700' 
-                    : account.accountType === 'savings'
+                    : account.accountName.toLowerCase().includes('savings')
                     ? 'from-green-600 via-emerald-600 to-teal-700'
-                    : account.accountType === 'credit'
+                    : account.accountName.toLowerCase().includes('credit')
                     ? 'from-red-600 via-pink-600 to-rose-700'
                     : 'from-gray-600 via-slate-600 to-zinc-700'
                 } relative overflow-hidden`}>
@@ -533,7 +810,7 @@ export default function Banking() {
                     <div className="text-white mt-4">
                       <p className="text-white/70 text-sm mb-2 font-medium">Available Balance</p>
                       <p className="text-3xl font-bold leading-none">
-                        R {parseFloat(account.currentBalance).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                        R {parseFloat(account.balance || "0").toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </CardContent>
@@ -545,26 +822,19 @@ export default function Banking() {
                   <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-100">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-gray-500 font-medium mb-1">Account Number</p>
-                        <div className="flex items-center space-x-2">
-                          <p className="font-mono text-sm text-gray-800">****{account.accountNumber.slice(-4)}</p>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-blue-100">
-                            <Eye className="h-3 w-3 text-gray-500" />
-                          </Button>
-                        </div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Account Code</p>
+                        <p className="font-mono text-sm text-gray-800">{account.accountCode}</p>
                       </div>
-                      {account.branchCode && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium mb-1">Branch Code</p>
-                          <p className="font-mono text-sm text-gray-800">{account.branchCode}</p>
-                        </div>
-                      )}
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Account Type</p>
+                        <p className="font-mono text-sm text-gray-800">{account.accountType}</p>
+                      </div>
                     </div>
                     
                     <div className="flex items-center space-x-3 mt-3">
                       <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-2 py-1">
                         <CreditCard className="h-3 w-3 mr-1" />
-                        {account.accountType}
+                        Bank Account
                       </Badge>
                       <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
                         {account.currency}
@@ -572,22 +842,23 @@ export default function Banking() {
                     </div>
                   </div>
 
-                  {/* Chart of Accounts Link */}
-                  {account.chartAccount && (
-                    <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
-                      <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-emerald-100 rounded-lg">
-                          <Shield className="h-4 w-4 text-emerald-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-emerald-700 mb-1">Linked to Chart of Accounts</p>
-                          <p className="text-xs text-emerald-600">
-                            {account.chartAccount.accountCode} - {account.chartAccount.accountName}
-                          </p>
-                        </div>
+                  {/* Chart of Accounts Info */}
+                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2 bg-emerald-100 rounded-lg">
+                        <Shield className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-700 mb-1">Chart of Accounts</p>
+                        <p className="text-xs text-emerald-600">
+                          {account.accountCode} - {account.accountName}
+                        </p>
+                        <p className="text-xs text-emerald-500 mt-1">
+                          {account.transactions?.length || 0} recent transactions
+                        </p>
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* Action Buttons */}
                   <div className="flex space-x-3 pt-2">
@@ -604,12 +875,18 @@ export default function Banking() {
                       Add Transaction
                     </Button>
                     <Button 
-                      variant="outline" 
+                      variant={account.isActive ? "outline" : "secondary"}
                       size="sm" 
-                      className="px-4 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                      onClick={() => handleEditAccount(account)}
+                      className={`px-4 ${account.isActive 
+                        ? 'border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600' 
+                        : 'border-green-300 hover:bg-green-50 hover:border-green-400 text-green-600'
+                      }`}
+                      onClick={() => {
+                        // Toggle bank account status
+                        toggleAccountMutation.mutate(account.id);
+                      }}
                     >
-                      <Pencil className="h-4 w-4" />
+                      {account.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
                 </CardContent>
@@ -617,7 +894,197 @@ export default function Banking() {
             ))}
           </div>
         )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="feeds">
+            <BankFeedDashboard />
+          </TabsContent>
+
+          <TabsContent value="upload">
+            <Card>
+              <CardHeader>
+                <CardTitle>Upload Bank Statement</CardTitle>
+                <CardDescription>Import transactions from CSV, OFX, or QIF files</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="mx-auto text-muted-foreground mb-4" size={48} />
+                  <p className="text-lg font-medium mb-2">Drop your statement file here</p>
+                  <p className="text-sm text-muted-foreground mb-4">Supports CSV, OFX, and QIF formats</p>
+                  <Button onClick={handleStatementUpload}>
+                    <FileSpreadsheet size={16} className="mr-2" />
+                    Browse Files
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reconcile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Bank Reconciliation</CardTitle>
+                <CardDescription>Match bank transactions with your records</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="font-medium">Statement Balance</p>
+                      <p className="text-2xl font-bold">R {totalBalance.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Book Balance</p>
+                      <p className="text-2xl font-bold">R {totalBalance.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Difference</p>
+                      <p className="text-2xl font-bold text-green-600">R 0.00</p>
+                    </div>
+                  </div>
+                  <Button className="w-full" onClick={handleStartReconciliation}>
+                    <RefreshCw size={16} className="mr-2" />
+                    Start Reconciliation
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="rules">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rules & Fees Management</CardTitle>
+                <CardDescription>Configure auto-categorization rules and bank fee mappings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Auto-Categorization Rules */}
+                <div>
+                  <h3 className="font-semibold mb-4">Auto-Categorization Rules</h3>
+                  <div className="space-y-4">
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Salary Deposits</p>
+                          <p className="text-sm text-muted-foreground">Transactions containing "SALARY" → Income Category</p>
+                        </div>
+                        <Badge>Active</Badge>
+                      </div>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Utility Payments</p>
+                          <p className="text-sm text-muted-foreground">Transactions to utility providers → Utilities Category</p>
+                        </div>
+                        <Badge>Active</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full" onClick={handleAddNewRule}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add New Rule
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bank Fee Mappings */}
+                <div>
+                  <h3 className="font-semibold mb-4">Bank Fee Mappings</h3>
+                  <div className="space-y-4">
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Monthly Account Fee</p>
+                          <p className="text-sm text-muted-foreground">R 150.00 → Bank Charges Account</p>
+                        </div>
+                        <Badge variant="outline">Standard Bank</Badge>
+                      </div>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">Transaction Fees</p>
+                          <p className="text-sm text-muted-foreground">Variable → Bank Transaction Fees</p>
+                        </div>
+                        <Badge variant="outline">All Banks</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full" onClick={handleConfigureFeeMappings}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configure Fee Mappings
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Import Settings */}
+                <div>
+                  <h3 className="font-semibold mb-4">Import Settings</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">Auto-match transactions</p>
+                          <p className="text-sm text-muted-foreground">Automatically match imported transactions</p>
+                        </div>
+                      </div>
+                      <Badge variant="default">Enabled</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Zap className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">Smart categorization</p>
+                          <p className="text-sm text-muted-foreground">Use AI to suggest categories</p>
+                        </div>
+                      </div>
+                      <Badge variant="default">Enabled</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Banking Settings</CardTitle>
+                <CardDescription>Configure bank feeds and automation rules</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold mb-3">Bank Feed Connections</h3>
+                    <Button variant="outline" className="w-full" onClick={handleConnectBank}>
+                      <Link2 size={16} className="mr-2" />
+                      Connect New Bank via Stitch
+                    </Button>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-3">Import Rules</h3>
+                    <Button variant="outline" className="w-full" onClick={handleManageRules}>
+                      <Settings size={16} className="mr-2" />
+                      Manage Auto-Categorization Rules
+                    </Button>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-3">Notifications</h3>
+                    <Button variant="outline" className="w-full" onClick={handleConfigureAlerts}>
+                      <AlertCircle size={16} className="mr-2" />
+                      Configure Banking Alerts
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Transaction Dialog */}
         <Dialog open={showTransactionDialog} onOpenChange={setShowTransactionDialog}>

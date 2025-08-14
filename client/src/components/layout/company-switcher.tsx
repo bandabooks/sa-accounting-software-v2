@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -25,6 +26,7 @@ import { z } from "zod";
 
 interface Company {
   id: number;
+  companyId?: string;
   name: string;
   displayName?: string;
   industry?: string;
@@ -45,6 +47,7 @@ export default function CompanySwitcher() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { companyId, switchCompany, isLoading: companyLoading } = useCompany();
 
   // Company creation form state
   const [formData, setFormData] = useState({
@@ -108,34 +111,7 @@ export default function CompanySwitcher() {
     });
   }, [userCompanies, searchQuery]);
 
-  // Switch company mutation
-  const switchCompanyMutation = useMutation({
-    mutationFn: async (companyId: number) => {
-      const response = await apiRequest("/api/companies/switch", "POST", { companyId });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate all queries to refresh data for new company
-      queryClient.invalidateQueries();
-      
-      toast({
-        title: "Company switched",
-        description: `Now viewing ${data.company.name}`,
-      });
-      
-      setIsOpen(false);
-      
-      // Force page reload to ensure all data is fresh
-      window.location.reload();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to switch company",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
-    }
-  });
+  // Company switching is now handled by useCompany hook
 
   // Create company mutation
   const createCompanyMutation = useMutation({
@@ -143,7 +119,7 @@ export default function CompanySwitcher() {
       const response = await apiRequest("/api/companies", "POST", data);
       return response.json();
     },
-    onSuccess: (newCompany) => {
+    onSuccess: async (newCompany) => {
       toast({
         title: "Success",
         description: `${newCompany.name} created successfully!`,
@@ -152,8 +128,8 @@ export default function CompanySwitcher() {
       // Invalidate companies query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
       
-      // Switch to the new company immediately - pass companyId object
-      switchCompanyMutation.mutate(newCompany.id);
+      // Switch to the new company immediately
+      await switchCompany(newCompany.id);
       
       // Reset form and close dialogs
       resetForm();
@@ -169,13 +145,18 @@ export default function CompanySwitcher() {
     },
   });
 
-  const handleSwitchCompany = async (companyId: number) => {
-    if (companyId === activeCompany?.id) {
+  const handleSwitchCompany = async (targetCompanyId: number) => {
+    if (targetCompanyId === companyId) {
       setIsOpen(false);
       return;
     }
     
-    await switchCompanyMutation.mutateAsync(companyId);
+    try {
+      await switchCompany(targetCompanyId);
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Failed to switch company:', error);
+    }
   };
 
   // Form handling functions
@@ -259,7 +240,12 @@ export default function CompanySwitcher() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    createCompanyMutation.mutate(formData);
+    // Generate a unique companyId for the new company
+    const companyData = {
+      ...formData,
+      companyId: Math.random().toString(36).substring(2, 15) // Generate unique ID
+    };
+    createCompanyMutation.mutate(companyData);
   };
 
   const handleCreateCompanyClick = () => {
@@ -468,6 +454,11 @@ export default function CompanySwitcher() {
                       >
                         {userCompany.role}
                       </Badge>
+                      {company.companyId && (
+                        <span className="text-xs text-gray-500 font-mono">
+                          ID: {company.companyId}
+                        </span>
+                      )}
                       {company.industry && (
                         <span className="text-xs text-gray-500 truncate">
                           {company.industry}

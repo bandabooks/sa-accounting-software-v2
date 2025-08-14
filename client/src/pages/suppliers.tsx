@@ -13,6 +13,8 @@ import { Plus, Edit, Trash2, Building, Search, Filter, Mail, Phone, MapPin, Star
 import { formatDate } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface Supplier {
   id: number;
@@ -111,6 +113,21 @@ export default function Suppliers() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading suppliers...' },
+      { isLoading: createSupplierMutation.isPending, message: 'Creating supplier...' },
+      { isLoading: updateSupplierMutation.isPending, message: 'Updating supplier...' },
+      { isLoading: deleteSupplierMutation.isPending, message: 'Deleting supplier...' },
+    ],
+    progressSteps: ['Fetching supplier data', 'Processing vendor information', 'Loading performance metrics'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading suppliers..." />;
+  }
 
   const filteredSuppliers = suppliers?.filter(supplier => {
     const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -28,6 +28,8 @@ import {
   inventoryTransactions,
   emailReminders,
   currencyRates,
+  aiSettings,
+  notificationSettings,
   chartOfAccounts,
   journalEntries,
   journalEntryLines,
@@ -36,6 +38,8 @@ import {
   bankTransactions,
   generalLedger,
   bankReconciliations,
+  importBatches,
+  importQueue,
   companies,
   industryTemplates,
   companyChartOfAccounts,
@@ -88,6 +92,7 @@ import {
   bulkIncomeEntries,
   bankStatementUploads,
   bankStatementTransactions,
+  bankFeedCursors,
   productSerials,
   stockCounts,
   stockCountItems,
@@ -230,6 +235,10 @@ import {
   type InsertBankTransaction,
   type BankAccountWithTransactions,
   type GeneralLedgerEntry,
+  type ImportBatch,
+  type InsertImportBatch,
+  type ImportQueue,
+  type InsertImportQueue,
   type Company,
   type InsertCompany,
   type CompanyUser,
@@ -402,7 +411,7 @@ import {
   ProductWithPricing
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
+import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, isNotNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -593,6 +602,7 @@ export interface IStorage {
   deleteChartOfAccount(id: number): Promise<boolean>;
   toggleAccountActivation(accountId: number, isActive: boolean, companyId: number): Promise<ChartOfAccount | undefined>;
   seedSouthAfricanChartOfAccounts(companyId: number): Promise<void>;
+  activateEssentialBusinessAccounts(companyId: number): Promise<void>;
   
   // Journal Entries
   getAllJournalEntries(companyId: number): Promise<JournalEntryWithLines[]>;
@@ -1030,6 +1040,19 @@ export interface IStorage {
   getStockMovementReport(companyId: number, productId?: number, startDate?: Date, endDate?: Date): Promise<any[]>;
   getExpiryReport(companyId: number, daysAhead: number): Promise<any[]>;
   getSerialNumberReport(companyId: number, status?: string): Promise<any[]>;
+
+  // Bank Import/Statement Upload Methods
+  getImportBatches(companyId: number, bankAccountId?: number): Promise<ImportBatch[]>;
+  getImportBatch(id: number): Promise<ImportBatch | undefined>;
+  createImportBatch(batch: InsertImportBatch): Promise<ImportBatch>;
+  updateImportBatch(id: number, batch: Partial<InsertImportBatch>): Promise<ImportBatch | undefined>;
+  getImportQueue(importBatchId: number): Promise<ImportQueue[]>;
+  createImportQueueItems(items: InsertImportQueue[]): Promise<ImportQueue[]>;
+  updateImportQueueItem(id: number, item: Partial<InsertImportQueue>): Promise<ImportQueue | undefined>;
+  findDuplicateTransactions(companyId: number, bankAccountId: number, transactions: any[]): Promise<any[]>;
+  commitImportBatch(importBatchId: number): Promise<{ imported: number; skipped: number; failed: number }>;
+  generateImportBatchNumber(companyId: number): Promise<string>;
+  normalizeDescription(description: string): string;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1054,6 +1077,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    // Import the ID generator here to avoid circular dependency
+    const { ProfessionalIdGenerator } = await import('./idGenerator');
+    
+    // Generate professional user ID if not provided
+    if (!insertUser.userId) {
+      insertUser.userId = await ProfessionalIdGenerator.generateUserId();
+    }
+    
     const [user] = await db
       .insert(users)
       .values(insertUser)
@@ -2444,9 +2475,11 @@ export class DatabaseStorage implements IStorage {
         const year = new Date().getFullYear();
         const month = monthIndex + 1;
         
-        // Get revenue for this month
+        // Get revenue for this month - optimized with specific columns
         const monthlyInvoices = await db
-          .select()
+          .select({
+            total: invoices.total
+          })
           .from(invoices)
           .where(and(
             eq(invoices.companyId, companyId),
@@ -2457,9 +2490,11 @@ export class DatabaseStorage implements IStorage {
 
         const revenue = monthlyInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
 
-        // Get expenses for this month
+        // Get expenses for this month - simplified query
         const monthlyExpenses = await db
-          .select()
+          .select({
+            amount: expenses.amount
+          })
           .from(expenses)
           .where(and(
             eq(expenses.companyId, companyId),
@@ -2545,9 +2580,14 @@ export class DatabaseStorage implements IStorage {
         });
       });
 
-      // Recent expenses
+      // Recent expenses - simplified query
       const recentExpenses = await db
-        .select()
+        .select({
+          id: expenses.id,
+          description: expenses.description,
+          amount: expenses.amount,
+          expenseDate: expenses.expenseDate
+        })
         .from(expenses)
         .where(eq(expenses.companyId, companyId))
         .orderBy(desc(expenses.expenseDate))
@@ -2937,6 +2977,23 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(expenses.companyId, companyId),
         eq(expenses.supplierInvoiceNumber, supplierInvoiceNumber.trim())
+      ));
+    return expense;
+  }
+  
+  // Check for duplicate reference per supplier
+  async getExpenseBySupplierReference(companyId: number, supplierId: number, reference: string): Promise<Expense | undefined> {
+    if (!reference || reference.trim() === '') {
+      return undefined;
+    }
+    
+    const [expense] = await db
+      .select()
+      .from(expenses)
+      .where(and(
+        eq(expenses.companyId, companyId),
+        eq(expenses.supplierId, supplierId),
+        eq(expenses.reference, reference)
       ));
     return expense;
   }
@@ -4133,6 +4190,80 @@ export class DatabaseStorage implements IStorage {
       .where(eq(companySettings.id, existing.id))
       .returning();
     return updated;
+  }
+
+  // Notification Settings Methods
+  async getNotificationSettings(companyId: number): Promise<any> {
+    const [settings] = await db
+      .select()
+      .from(notificationSettings)
+      .where(eq(notificationSettings.companyId, companyId));
+    
+    console.log('🔍 Raw database settings for company', companyId, ':', settings);
+    
+    if (!settings) {
+      console.log('❌ No settings found, returning null');
+      return null;
+    }
+    
+    // Transform database structure to match frontend interface  
+    const transformed = {
+      email: {
+        enabled: Boolean(settings.emailEnabled),
+        invoiceReminders: Boolean(settings.invoiceReminders),
+        paymentAlerts: Boolean(settings.paymentAlerts),
+        securityAlerts: Boolean(settings.securityAlerts),
+        systemUpdates: Boolean(settings.systemUpdates)
+      },
+      sms: {
+        enabled: Boolean(settings.smsEnabled),
+        criticalAlerts: Boolean(settings.criticalAlerts),
+        paymentReminders: Boolean(settings.paymentReminders)
+      }
+    };
+    
+    console.log('✅ Transformed settings for API:', transformed);
+    console.log('🔄 Specifically systemUpdates:', settings.systemUpdates, '→', transformed.email.systemUpdates);
+    return transformed;
+  }
+
+  async saveNotificationSettings(companyId: number, settings: any): Promise<any> {
+    const existing = await db
+      .select()
+      .from(notificationSettings)
+      .where(eq(notificationSettings.companyId, companyId));
+    
+    console.log('Saving notification settings for company', companyId, ':', settings);
+    
+    const dbSettings = {
+      companyId,
+      emailEnabled: settings.email.enabled,
+      invoiceReminders: settings.email.invoiceReminders,
+      paymentAlerts: settings.email.paymentAlerts,
+      securityAlerts: settings.email.securityAlerts,
+      systemUpdates: settings.email.systemUpdates,
+      smsEnabled: settings.sms.enabled,
+      criticalAlerts: settings.sms.criticalAlerts,
+      paymentReminders: settings.sms.paymentReminders,
+      isActive: true,
+      updatedAt: new Date()
+    };
+    
+    console.log('Database values being saved:', dbSettings);
+    
+    if (existing.length === 0) {
+      const [newSettings] = await db.insert(notificationSettings).values(dbSettings).returning();
+      console.log('Inserted new settings:', newSettings);
+      return newSettings;
+    } else {
+      const [updated] = await db
+        .update(notificationSettings)
+        .set(dbSettings)
+        .where(eq(notificationSettings.companyId, companyId))
+        .returning();
+      console.log('Updated settings result:', updated);
+      return updated;
+    }
   }
 
   async updateCompanyLogo(companyId: number, logoUrl: string): Promise<any> {
@@ -5700,13 +5831,14 @@ export class DatabaseStorage implements IStorage {
 
   // Chart of Accounts Implementation
   async getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
-    const accounts = await db.select().from(chartOfAccounts)
-      .where(eq(chartOfAccounts.companyId, companyId))
-      .orderBy(chartOfAccounts.accountCode);
+    // Use the new method that properly handles company-specific activation
+    const accountsWithActivation = await this.getCompanyChartOfAccounts(companyId);
     
-    return await Promise.all(accounts.map(async (account) => ({
+    return await Promise.all(accountsWithActivation.map(async (account) => ({
       ...account,
       currentBalance: await this.calculateAccountBalance(account.id),
+      // Ensure isActive field reflects the company-specific activation state  
+      isActive: account.isActivated,
     })));
   }
 
@@ -5797,7 +5929,91 @@ export class DatabaseStorage implements IStorage {
           isSystemAccount: account.isSystemAccount || false,
         }).onConflictDoNothing();
       }
+
+      // Activate essential business accounts by default
+      await this.activateEssentialBusinessAccounts(companyId);
     }
+  }
+
+  // Activate essential business accounts that every business needs
+  async activateEssentialBusinessAccounts(companyId: number): Promise<void> {
+    // Define essential account codes that should be active by default
+    const essentialAccountCodes = [
+      // Assets - Essential for business operations
+      '1100', // Bank Account - Current  
+      '1101', // Bank Account - Savings
+      '1110', // Petty Cash
+      '1150', // Accounts Receivable
+      '1200', // Inventory
+      '1300', // Equipment
+      '1400', // Vehicles
+      '1500', // Furniture & Fixtures
+      '1800', // Computer Equipment
+      
+      // Liabilities - Essential for business operations  
+      '2000', // Accounts Payable
+      '2100', // Credit Cards
+      '2200', // VAT Output
+      '2300', // PAYE Payable
+      '2400', // UIF Payable
+      '2500', // SDL Payable
+      '2600', // WCA Payable
+      
+      // Equity - Essential 
+      '3000', // Owner's Equity
+      '3100', // Retained Earnings
+      
+      // Revenue - Essential for sales
+      '4000', // Sales Revenue
+      '4001', // Service Revenue
+      
+      // Expenses - Essential for operations
+      '5000', // Cost of Goods Sold
+      '6000', // Administrative Expenses  
+      '6100', // Office Supplies
+      '6200', // Telephone & Internet
+      '6300', // Rent
+      '6400', // Utilities
+      '6500', // Insurance
+      '6600', // Professional Fees
+      '6700', // Bank Charges
+      '6800', // Travel & Entertainment
+    ];
+
+    // Get all accounts for this company that match essential codes
+    const accountsToActivate = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(
+        and(
+          eq(chartOfAccounts.companyId, companyId),
+          inArray(chartOfAccounts.accountCode, essentialAccountCodes)
+        )
+      );
+
+    // Activate each essential account in the company activation table
+    for (const account of accountsToActivate) {
+      await db
+        .insert(companyChartOfAccounts)
+        .values({
+          companyId,
+          accountId: account.id,
+          isActive: true,
+          activatedBy: 1, // System activation
+        })
+        .onConflictDoUpdate({
+          target: [companyChartOfAccounts.companyId, companyChartOfAccounts.accountId],
+          set: {
+            isActive: true,
+            activatedAt: sql`now()`,
+            activatedBy: 1,
+            deactivatedAt: null,
+            deactivatedBy: null,
+          },
+        });
+    }
+
+    console.log(`✓ Activated ${accountsToActivate.length} essential business accounts for company ${companyId}`);
   }
 
   async seedDefaultSouthAfricanBanks(companyId: number): Promise<void> {
@@ -6111,7 +6327,129 @@ export class DatabaseStorage implements IStorage {
     return balance.toFixed(2);
   }
 
-  // Banking Implementation
+  // Banking Implementation - Get bank accounts from Chart of Accounts
+  async getBankAccountsFromChartOfAccounts(companyId: number): Promise<any[]> {
+    try {
+      // Get bank accounts from Chart of Accounts (Asset type, codes 1110-1199)
+      const bankAccounts = await db.select()
+        .from(chartOfAccounts)
+        .where(
+          and(
+            eq(chartOfAccounts.companyId, companyId),
+            eq(chartOfAccounts.accountType, "Asset"),
+            gte(chartOfAccounts.accountCode, "1110"),
+            lte(chartOfAccounts.accountCode, "1199"),
+            eq(chartOfAccounts.isActive, true)
+          )
+        )
+        .orderBy(chartOfAccounts.accountCode);
+
+      return await Promise.all(bankAccounts.map(async (account) => {
+        // Calculate balance from journal entries
+        const balanceResult = await db.select({
+          debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), 0)`,
+          creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), 0)`
+        })
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+        .where(
+          and(
+            eq(journalEntryLines.accountId, account.id),
+            eq(journalEntries.isPosted, true),
+            eq(journalEntries.companyId, companyId)
+          )
+        );
+
+        const debitTotal = parseFloat(balanceResult[0]?.debitTotal || "0");
+        const creditTotal = parseFloat(balanceResult[0]?.creditTotal || "0");
+        const balance = (debitTotal - creditTotal).toFixed(2);
+        
+        // Get recent transactions for this account (from journal entries)
+        const recentTransactions = await db.select({
+          id: journalEntryLines.id,
+          date: journalEntries.transactionDate,
+          description: journalEntryLines.description,
+          reference: journalEntries.reference,
+          debitAmount: journalEntryLines.debitAmount,
+          creditAmount: journalEntryLines.creditAmount,
+        })
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+        .where(
+          and(
+            eq(journalEntryLines.accountId, account.id),
+            eq(journalEntries.isPosted, true),
+            eq(journalEntries.companyId, companyId)
+          )
+        )
+        .orderBy(desc(journalEntries.transactionDate))
+        .limit(10);
+
+        return {
+          id: account.id,
+          accountName: account.accountName,
+          accountCode: account.accountCode,
+          accountType: account.accountType,
+          balance: balance,
+          currentBalance: balance, // Add currentBalance for frontend compatibility
+          isActive: account.isActive,
+          bankName: account.accountName.includes('FNB') ? 'FNB' : 
+                   account.accountName.includes('ABSA') ? 'ABSA' :
+                   account.accountName.includes('Capitec') ? 'Capitec' :
+                   account.accountName.includes('Standard') ? 'Standard Bank' :
+                   account.accountName.includes('Nedbank') ? 'Nedbank' :
+                   account.accountName.includes('Discovery') ? 'Discovery Bank' :
+                   account.accountName.includes('GSD') ? 'GSD Standard Bank' : 'Bank',
+          accountNumber: account.accountCode, // Use account code as account number
+          currency: 'ZAR',
+          transactions: recentTransactions,
+          chartAccount: account
+        };
+      }));
+    } catch (error) {
+      console.error("Error fetching bank accounts from Chart of Accounts:", error);
+      throw error;
+    }
+  }
+
+  // Toggle Chart of Accounts account status
+  async toggleChartAccountStatus(accountId: number, companyId: number): Promise<any> {
+    try {
+      // Get current account status
+      const [account] = await db.select()
+        .from(chartOfAccounts)
+        .where(
+          and(
+            eq(chartOfAccounts.id, accountId),
+            eq(chartOfAccounts.companyId, companyId)
+          )
+        );
+
+      if (!account) {
+        throw new Error("Account not found");
+      }
+
+      // Toggle the isActive status
+      const newStatus = !account.isActive;
+      
+      const [updatedAccount] = await db.update(chartOfAccounts)
+        .set({ isActive: newStatus })
+        .where(
+          and(
+            eq(chartOfAccounts.id, accountId),
+            eq(chartOfAccounts.companyId, companyId)
+          )
+        )
+        .returning();
+
+      return updatedAccount;
+    } catch (error) {
+      console.error("Error toggling chart account status:", error);
+      throw error;
+    }
+  }
+
+  // Legacy banking implementation (kept for compatibility)
   async getAllBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
     const accounts = await db.select().from(bankAccounts)
       .where(and(eq(bankAccounts.companyId, companyId), eq(bankAccounts.isActive, true)))
@@ -6130,6 +6468,17 @@ export class DatabaseStorage implements IStorage {
       
       return { ...account, transactions, chartAccount };
     }));
+  }
+
+  async getBankAccountByChartId(chartAccountId: number, companyId: number): Promise<BankAccount | undefined> {
+    const [account] = await db.select().from(bankAccounts)
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.chartAccountId, chartAccountId),
+        eq(bankAccounts.isActive, true)
+      ));
+    
+    return account;
   }
 
   async getBankAccount(id: number): Promise<BankAccountWithTransactions | undefined> {
@@ -6207,6 +6556,86 @@ export class DatabaseStorage implements IStorage {
   async deleteBankTransaction(id: number): Promise<boolean> {
     const result = await db.delete(bankTransactions).where(eq(bankTransactions.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Stitch Bank Feed Integration Methods
+  async getBankAccountByProvider(companyId: number, provider: string, providerAccountId: string): Promise<BankAccount | undefined> {
+    const [account] = await db.select().from(bankAccounts)
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.externalProvider, provider),
+        eq(bankAccounts.providerAccountId, providerAccountId)
+      ));
+    return account || undefined;
+  }
+
+  async getLinkedBankAccounts(companyId: number, provider: string): Promise<BankAccount[]> {
+    return await db.select().from(bankAccounts)
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.externalProvider, provider),
+        isNotNull(bankAccounts.providerAccountId)
+      ));
+  }
+
+  async getBankTransactionByExternalId(companyId: number, bankAccountId: number, externalId: string): Promise<BankTransaction | undefined> {
+    const [transaction] = await db.select().from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        eq(bankTransactions.externalId, externalId)
+      ));
+    return transaction || undefined;
+  }
+
+  async findDuplicateBankTransactions(
+    companyId: number,
+    bankAccountId: number,
+    fromDate: string,
+    toDate: string,
+    amount: string,
+    description: string
+  ): Promise<BankTransaction[]> {
+    return await db.select().from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        gte(bankTransactions.transactionDate, new Date(fromDate)),
+        lte(bankTransactions.transactionDate, new Date(toDate)),
+        eq(bankTransactions.amount, amount),
+        eq(bankTransactions.normalizedDescription, description)
+      ));
+  }
+
+  // Bank Feed Cursor Management
+  async getBankFeedCursor(
+    companyId: number,
+    bankAccountId: number,
+    provider: string,
+    externalAccountId: string
+  ): Promise<BankFeedCursor | undefined> {
+    const [cursor] = await db.select().from(bankFeedCursors)
+      .where(and(
+        eq(bankFeedCursors.companyId, companyId),
+        eq(bankFeedCursors.bankAccountId, bankAccountId),
+        eq(bankFeedCursors.provider, provider),
+        eq(bankFeedCursors.externalAccountId, externalAccountId)
+      ));
+    return cursor || undefined;
+  }
+
+  async createBankFeedCursor(cursor: InsertBankFeedCursor): Promise<BankFeedCursor> {
+    const [newCursor] = await db.insert(bankFeedCursors).values(cursor).returning();
+    return newCursor;
+  }
+
+  async updateBankFeedCursor(id: number, cursor: Partial<InsertBankFeedCursor>): Promise<BankFeedCursor | undefined> {
+    const [updated] = await db
+      .update(bankFeedCursors)
+      .set({ ...cursor, updatedAt: new Date() })
+      .where(eq(bankFeedCursors.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   // General Ledger Implementation
@@ -7187,6 +7616,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCompany(insertCompany: InsertCompany, userId?: number): Promise<Company> {
+    // Import the ID generator here to avoid circular dependency
+    const { ProfessionalIdGenerator } = await import('./idGenerator');
+    
+    // Generate professional company ID if not provided
+    if (!insertCompany.companyId) {
+      insertCompany.companyId = await ProfessionalIdGenerator.generateCompanyId();
+    }
+    
     const [company] = await db
       .insert(companies)
       .values(insertCompany)
@@ -7442,13 +7879,46 @@ export class DatabaseStorage implements IStorage {
     
     if (!user || !user.activeCompanyId) {
       // If no active company set, get the first company the user has access to
-      const userCompanies = await this.getUserCompanies(userId);
-      if (userCompanies.length > 0) {
-        const firstCompany = userCompanies[0].company;
-        await this.setUserActiveCompany(userId, firstCompany.id);
-        return firstCompany;
+      try {
+        const userCompanies = await this.getUserCompanies(userId);
+        if (userCompanies.length > 0 && userCompanies[0] && userCompanies[0].company) {
+          const firstCompany = userCompanies[0].company;
+          await this.setUserActiveCompany(userId, firstCompany.id);
+          return firstCompany;
+        }
+      } catch (companyError) {
+        console.error('Error getting user companies:', companyError);
       }
-      return undefined;
+      
+      // If user has no companies, create a default one
+      console.log(`→ User ${userId} has no companies, creating default company`);
+      try {
+        const defaultCompany = await this.createCompany({
+          name: `Default Company`,
+          displayName: `Default Company`,
+          industry: 'Professional Services',
+          registrationNumber: '',
+          vatNumber: '',
+          phone: '',
+          email: '',
+          address: '',
+          city: '',
+          province: '',
+          postalCode: '',
+          country: 'South Africa',
+          logo: null,
+        });
+        
+        // Add user to the new company
+        await this.addUserToCompany(userId, defaultCompany.id, 'owner');
+        await this.setUserActiveCompany(userId, defaultCompany.id);
+        
+        console.log(`→ Created default company ${defaultCompany.id} for user ${userId}`);
+        return defaultCompany;
+      } catch (error) {
+        console.error('Error creating default company:', error);
+        return undefined;
+      }
     }
 
     const [company] = await db
@@ -13986,6 +14456,536 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(customerPriceLists)
       .where(and(eq(customerPriceLists.customerId, customerId), eq(customerPriceLists.isActive, true)));
+  }
+
+  // ============================================================================
+  // BANK IMPORT/STATEMENT UPLOAD METHODS
+  // ============================================================================
+
+  async getImportBatches(companyId: number, bankAccountId?: number): Promise<ImportBatch[]> {
+    const conditions = [eq(importBatches.companyId, companyId)];
+    if (bankAccountId) {
+      conditions.push(eq(importBatches.bankAccountId, bankAccountId));
+    }
+    
+    return await db
+      .select({
+        ...getTableColumns(importBatches),
+        bankAccountName: bankAccounts.accountName,
+        uploaderName: users.name,
+      })
+      .from(importBatches)
+      .leftJoin(bankAccounts, eq(importBatches.bankAccountId, bankAccounts.id))
+      .leftJoin(users, eq(importBatches.uploadedBy, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(importBatches.createdAt));
+  }
+
+  async getImportBatch(id: number): Promise<ImportBatch | undefined> {
+    const [batch] = await db
+      .select()
+      .from(importBatches)
+      .where(eq(importBatches.id, id));
+    return batch;
+  }
+
+  async createImportBatch(batch: InsertImportBatch): Promise<ImportBatch> {
+    const [newBatch] = await db
+      .insert(importBatches)
+      .values(batch)
+      .returning();
+    return newBatch;
+  }
+
+  async updateImportBatch(id: number, batch: Partial<InsertImportBatch>): Promise<ImportBatch | undefined> {
+    const [updatedBatch] = await db
+      .update(importBatches)
+      .set({ ...batch, updatedAt: new Date() })
+      .where(eq(importBatches.id, id))
+      .returning();
+    return updatedBatch;
+  }
+
+  async getImportQueue(importBatchId: number): Promise<ImportQueue[]> {
+    return await db
+      .select()
+      .from(importQueue)
+      .where(eq(importQueue.importBatchId, importBatchId))
+      .orderBy(asc(importQueue.rowNumber));
+  }
+
+  async createImportQueueItems(items: InsertImportQueue[]): Promise<ImportQueue[]> {
+    const newItems = await db
+      .insert(importQueue)
+      .values(items)
+      .returning();
+    return newItems;
+  }
+
+  async updateImportQueueItem(id: number, item: Partial<InsertImportQueue>): Promise<ImportQueue | undefined> {
+    const [updatedItem] = await db
+      .update(importQueue)
+      .set(item)
+      .where(eq(importQueue.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  async findDuplicateTransactions(companyId: number, bankAccountId: number, transactions: any[]): Promise<any[]> {
+    const duplicates: any[] = [];
+    
+    for (const transaction of transactions) {
+      const { postingDate, amount, normalizedDescription, reference, externalId } = transaction;
+      
+      // Check for duplicates within ±3 days
+      const startDate = new Date(postingDate);
+      startDate.setDate(startDate.getDate() - 3);
+      const endDate = new Date(postingDate);
+      endDate.setDate(endDate.getDate() + 3);
+      
+      const existingTransaction = await db
+        .select()
+        .from(bankTransactions)
+        .where(
+          and(
+            eq(bankTransactions.companyId, companyId),
+            eq(bankTransactions.bankAccountId, bankAccountId),
+            gte(bankTransactions.postingDate, startDate),
+            lte(bankTransactions.postingDate, endDate),
+            eq(bankTransactions.amount, amount),
+            or(
+              eq(bankTransactions.normalizedDescription, normalizedDescription),
+              and(
+                isNotNull(reference),
+                eq(bankTransactions.reference, reference)
+              ),
+              and(
+                isNotNull(externalId),
+                eq(bankTransactions.externalId, externalId)
+              )
+            )
+          )
+        )
+        .limit(1);
+      
+      if (existingTransaction.length > 0) {
+        duplicates.push({
+          ...transaction,
+          duplicateTransactionId: existingTransaction[0].id,
+          status: 'duplicate'
+        });
+      }
+    }
+    
+    return duplicates;
+  }
+
+  async commitImportBatch(importBatchId: number): Promise<{ imported: number; skipped: number; failed: number }> {
+    const queueItems = await db
+      .select()
+      .from(importQueue)
+      .where(
+        and(
+          eq(importQueue.importBatchId, importBatchId),
+          eq(importQueue.willImport, true),
+          eq(importQueue.status, 'validated')
+        )
+      );
+    
+    let imported = 0;
+    let skipped = 0;
+    let failed = 0;
+    
+    for (const item of queueItems) {
+      try {
+        if (item.duplicateTransactionId || !item.willImport) {
+          skipped++;
+          continue;
+        }
+        
+        // Create bank transaction
+        await db.insert(bankTransactions).values({
+          companyId: item.companyId,
+          bankAccountId: item.bankAccountId,
+          transactionDate: item.transactionDate,
+          postingDate: item.postingDate,
+          description: item.description,
+          normalizedDescription: item.normalizedDescription,
+          reference: item.reference,
+          externalId: item.externalId,
+          debitAmount: item.debitAmount,
+          creditAmount: item.creditAmount,
+          amount: item.amount,
+          balance: item.balance,
+          importBatchId: importBatchId,
+          isImported: true,
+          type: item.amount > 0 ? 'credit' : 'debit',
+          status: 'cleared',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        
+        imported++;
+      } catch (error) {
+        console.error(`Failed to import transaction ${item.id}:`, error);
+        failed++;
+      }
+    }
+    
+    // Update batch status
+    await db
+      .update(importBatches)
+      .set({
+        status: 'completed',
+        newRows: imported,
+        duplicate_rows: skipped,
+        invalid_rows: failed,
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(importBatches.id, importBatchId));
+    
+    return { imported, skipped, failed };
+  }
+
+  async generateImportBatchNumber(companyId: number): Promise<string> {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    // Count existing batches for today
+    const count = await db
+      .select({ count: sql`count(*)` })
+      .from(importBatches)
+      .where(
+        and(
+          eq(importBatches.companyId, companyId),
+          gte(importBatches.createdAt, new Date(year, today.getMonth(), today.getDate()))
+        )
+      );
+    
+    const batchNumber = Number(count[0].count) + 1;
+    return `IMP${year}${month}${day}-${String(batchNumber).padStart(3, '0')}`;
+  }
+
+  normalizeDescription(description: string): string {
+    return description
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/[^\w\s]/g, '')
+      .trim();
+  }
+  // SARS eFiling Integration methods
+  async getSarsVendorConfig(): Promise<SarsVendorConfig | undefined> {
+    const [config] = await db.select().from(sarsVendorConfig);
+    return config;
+  }
+
+  async createOrUpdateSarsVendorConfig(configData: InsertSarsVendorConfig): Promise<SarsVendorConfig> {
+    const existingConfig = await this.getSarsVendorConfig();
+    
+    if (existingConfig) {
+      const [updated] = await db.update(sarsVendorConfig)
+        .set({ ...configData, updatedAt: new Date() })
+        .where(eq(sarsVendorConfig.id, existingConfig.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(sarsVendorConfig).values(configData).returning();
+      return created;
+    }
+  }
+
+  async getCompanySarsLink(companyId: number): Promise<CompanySarsLink | undefined> {
+    const [link] = await db.select().from(companySarsLink).where(eq(companySarsLink.companyId, companyId));
+    return link;
+  }
+
+  async createCompanySarsLink(linkData: InsertCompanySarsLink): Promise<CompanySarsLink> {
+    const [link] = await db.insert(companySarsLink).values(linkData).returning();
+    return link;
+  }
+
+  async updateCompanySarsLink(companyId: number, linkData: Partial<InsertCompanySarsLink>): Promise<CompanySarsLink | undefined> {
+    const [link] = await db.update(companySarsLink)
+      .set({ ...linkData, updatedAt: new Date() })
+      .where(eq(companySarsLink.companyId, companyId))
+      .returning();
+    return link;
+  }
+
+  async deleteSarsLink(companyId: number): Promise<boolean> {
+    const result = await db.delete(companySarsLink).where(eq(companySarsLink.companyId, companyId));
+    return result.rowCount > 0;
+  }
+
+  // AI-powered transaction matching support methods
+  async getChartOfAccounts(companyId: number): Promise<Array<{
+    id: string;
+    name: string;
+    code: string;
+    type: string;
+    category: string;
+  }>> {
+    try {
+      const accounts = await db
+        .select({
+          id: chartOfAccounts.id,
+          name: chartOfAccounts.accountName,
+          code: chartOfAccounts.accountNumber,
+          type: chartOfAccounts.accountType,
+          category: chartOfAccounts.accountSubType
+        })
+        .from(chartOfAccounts)
+        .where(eq(chartOfAccounts.companyId, companyId))
+        .orderBy(chartOfAccounts.accountNumber);
+
+      return accounts.map(account => ({
+        id: account.id.toString(),
+        name: account.name,
+        code: account.code,
+        type: account.type,
+        category: account.category || account.type
+      }));
+    } catch (error) {
+      console.error('Error getting chart of accounts:', error);
+      return [];
+    }
+  }
+
+  async getRecentTransactionPatterns(companyId: number, limit: number = 100): Promise<Array<{
+    description: string;
+    accountId: string;
+    accountName: string;
+  }>> {
+    try {
+      // Get patterns from expenses
+      const expensePatterns = await db
+        .select({
+          description: expenses.description,
+          accountId: chartOfAccounts.id,
+          accountName: chartOfAccounts.accountName
+        })
+        .from(expenses)
+        .leftJoin(chartOfAccounts, eq(expenses.categoryId, chartOfAccounts.id))
+        .where(eq(expenses.companyId, companyId))
+        .orderBy(desc(expenses.createdAt))
+        .limit(Math.floor(limit / 2));
+
+      // Get patterns from journal entries
+      const journalPatterns = await db
+        .select({
+          description: journalEntries.description,
+          accountId: chartOfAccounts.id,
+          accountName: chartOfAccounts.accountName
+        })
+        .from(journalEntries)
+        .leftJoin(journalEntryLines, eq(journalEntries.id, journalEntryLines.journalEntryId))
+        .leftJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .where(eq(journalEntries.companyId, companyId))
+        .orderBy(desc(journalEntries.entryDate))
+        .limit(Math.floor(limit / 2));
+
+      return [
+        ...expensePatterns.map(p => ({
+          description: p.description,
+          accountId: p.accountId?.toString() || '',
+          accountName: p.accountName || 'Unknown Account'
+        })),
+        ...journalPatterns.map(p => ({
+          description: p.description || 'Unknown',
+          accountId: p.accountId?.toString() || '',
+          accountName: p.accountName || 'Unknown Account'
+        }))
+      ].filter(p => p.description && p.accountId);
+    } catch (error) {
+      console.error('Error getting recent transaction patterns:', error);
+      return [];
+    }
+  }
+
+  async getBulkCaptureTransactions(companyId: number): Promise<Array<{
+    id: string;
+    description: string;
+    amount: number;
+    type: 'credit' | 'debit';
+    date: string;
+  }>> {
+    try {
+      // Get bulk capture entries from both income and expense tables with status 'draft'
+      const incomeEntries = await db
+        .select({
+          id: bulkIncomeCapture.id,
+          description: bulkIncomeCapture.description,
+          amount: bulkIncomeCapture.amount,
+          transactionDate: bulkIncomeCapture.transactionDate
+        })
+        .from(bulkIncomeCapture)
+        .where(and(
+          eq(bulkIncomeCapture.companyId, companyId),
+          eq(bulkIncomeCapture.status, 'draft')
+        ));
+
+      const expenseEntries = await db
+        .select({
+          id: bulkExpenseCapture.id,
+          description: bulkExpenseCapture.description,
+          amount: bulkExpenseCapture.amount,
+          transactionDate: bulkExpenseCapture.transactionDate
+        })
+        .from(bulkExpenseCapture)
+        .where(and(
+          eq(bulkExpenseCapture.companyId, companyId),
+          eq(bulkExpenseCapture.status, 'draft')
+        ));
+
+      return [
+        ...incomeEntries.map(entry => ({
+          id: `income_${entry.id}`,
+          description: entry.description,
+          amount: parseFloat(entry.amount),
+          type: 'credit' as const,
+          date: entry.transactionDate.toISOString().split('T')[0]
+        })),
+        ...expenseEntries.map(entry => ({
+          id: `expense_${entry.id}`,
+          description: entry.description,
+          amount: parseFloat(entry.amount),
+          type: 'debit' as const,
+          date: entry.transactionDate.toISOString().split('T')[0]
+        }))
+      ];
+    } catch (error) {
+      console.error('Error getting bulk capture transactions:', error);
+      return [];
+    }
+  }
+
+  async updateBulkCaptureTransaction(transactionId: string, updates: {
+    accountId?: string;
+    vatRate?: number;
+    vatType?: string;
+    category?: string;
+    autoMatched?: boolean;
+    matchConfidence?: number;
+  }): Promise<void> {
+    try {
+      const [type, id] = transactionId.split('_');
+      const numericId = parseInt(id);
+
+      if (type === 'income') {
+        await db
+          .update(bulkIncomeCapture)
+          .set({
+            incomeAccountId: updates.accountId ? parseInt(updates.accountId) : undefined,
+            vatRate: updates.vatRate?.toString(),
+            updatedAt: new Date()
+          })
+          .where(eq(bulkIncomeCapture.id, numericId));
+      } else if (type === 'expense') {
+        await db
+          .update(bulkExpenseCapture)
+          .set({
+            categoryId: updates.accountId ? parseInt(updates.accountId) : undefined,
+            vatRate: updates.vatRate?.toString(),
+            updatedAt: new Date()
+          })
+          .where(eq(bulkExpenseCapture.id, numericId));
+      }
+    } catch (error) {
+      console.error('Error updating bulk capture transaction:', error);
+      throw error;
+    }
+  }
+
+  // AI Settings methods
+  async getAiSettings(companyId: number): Promise<any> {
+    try {
+      const [settings] = await db
+        .select()
+        .from(aiSettings)
+        .where(eq(aiSettings.companyId, companyId));
+
+      if (settings) {
+        return {
+          enabled: settings.enabled,
+          provider: settings.provider,
+          model: settings.model,
+          maxTokens: settings.maxTokens,
+          temperature: parseFloat(settings.temperature || '0.7'),
+          contextSharing: settings.contextSharing,
+          conversationHistory: settings.conversationHistory,
+          suggestions: settings.suggestions,
+          apiKey: settings.apiKey || ''
+        };
+      }
+
+      // Return default settings if none exist
+      return {
+        enabled: false,
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        maxTokens: 4096,
+        temperature: 0.7,
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: ''
+      };
+    } catch (error) {
+      console.error('Error getting AI settings:', error);
+      // Return default settings on error
+      return {
+        enabled: false,
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        maxTokens: 4096,
+        temperature: 0.7,
+        contextSharing: true,
+        conversationHistory: true,
+        suggestions: true,
+        apiKey: ''
+      };
+    }
+  }
+
+  async saveAiSettings(companyId: number, settings: any): Promise<void> {
+    try {
+      await db
+        .insert(aiSettings)
+        .values({
+          companyId,
+          enabled: settings.enabled === true,
+          provider: settings.provider || 'anthropic',
+          model: settings.model || 'claude-3-5-sonnet-20241022',
+          apiKey: settings.apiKey || '',
+          maxTokens: settings.maxTokens || 4096,
+          temperature: settings.temperature?.toString() || '0.70',
+          contextSharing: settings.contextSharing === true,
+          conversationHistory: settings.conversationHistory === true,
+          suggestions: settings.suggestions === true,
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: aiSettings.companyId,
+          set: {
+            enabled: settings.enabled === true,
+            provider: settings.provider || 'anthropic',
+            model: settings.model || 'claude-3-5-sonnet-20241022',
+            apiKey: settings.apiKey || '',
+            maxTokens: settings.maxTokens || 4096,
+            temperature: settings.temperature?.toString() || '0.70',
+            contextSharing: settings.contextSharing === true,
+            conversationHistory: settings.conversationHistory === true,
+            suggestions: settings.suggestions === true,
+            updatedAt: new Date()
+          }
+        });
+    } catch (error) {
+      console.error('Error saving AI settings:', error);
+      throw error;
+    }
   }
 }
 

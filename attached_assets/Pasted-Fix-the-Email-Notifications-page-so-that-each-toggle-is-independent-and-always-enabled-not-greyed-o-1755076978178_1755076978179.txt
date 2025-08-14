@@ -1,0 +1,75 @@
+Fix the Email Notifications page so that each toggle is independent and always enabled (not greyed out). Only the Master switch gates delivery; it must NOT flip child toggles when changed.
+
+Do:
+
+Locate the component for this screen (search for “Enable Email Notifications”, “Invoice Reminders”, “Payment Alerts”, “Security Alerts”, “System Updates”).
+
+Replace any single shared boolean with a keyed state object and unique bindings:
+
+tsx
+Copy
+Edit
+// Frontend (React)
+type EmailSettings = {
+  master: boolean;
+  invoiceReminders: boolean;
+  paymentAlerts: boolean;
+  securityAlerts: boolean;
+  systemUpdates: boolean;
+};
+
+const [s, setS] = useState<EmailSettings>({
+  master: true, invoiceReminders: true, paymentAlerts: true, securityAlerts: true, systemUpdates: true
+});
+
+// handlers
+const setKey = (k: keyof EmailSettings) => (v: boolean) =>
+  setS(prev => ({ ...prev, [k]: v }));
+
+// Master switch gates only, do not mutate children
+<input type="checkbox" checked={s.master} onChange={e => setKey('master')(e.target.checked)} />
+
+<input type="checkbox" checked={s.invoiceReminders} onChange={e => setKey('invoiceReminders')(e.target.checked)} />
+<input type="checkbox" checked={s.paymentAlerts}   onChange={e => setKey('paymentAlerts')(e.target.checked)} />
+<input type="checkbox" checked={s.securityAlerts}  onChange={e => setKey('securityAlerts')(e.target.checked)} />
+<input type="checkbox" checked={s.systemUpdates}   onChange={e => setKey('systemUpdates')(e.target.checked)} />
+Ensure each toggle has a unique id/name and checked is bound to its own key.
+
+Remove any code that sets all keys from a single variable or that updates multiple keys on one change event.
+
+Persist per-key changes. Create/align API:
+
+swift
+Copy
+Edit
+GET  /api/settings/email-notifications  -> { master, invoiceReminders, paymentAlerts, securityAlerts, systemUpdates }
+PATCH /api/settings/email-notifications -> accepts any subset of the above keys
+On toggle, PATCH only the changed key (plus master when toggled).
+
+Use optimistic UI; on failure, revert and show error toast.
+
+Defaults for all keys = true. Do not disable the child toggles when master is false—only suppress sending server-side.
+
+Server: ensure the preferences model/table has separate boolean columns for each key and that “master” is enforced only at send time (e.g., if (!settings.master) return;).
+
+QA / Acceptance:
+
+Toggling any child does not change other children.
+
+Toggling Master does not flip child states; it only gates delivery.
+
+Refreshing the page preserves each toggle’s value.
+
+All toggles are always enabled and clickable on this tab.
+
+“Send Test Email” uses the current settings and is unaffected by independent states.
+
+
+
+
+
+
+
+
+
+Ask ChatGPT

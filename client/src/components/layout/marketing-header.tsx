@@ -42,7 +42,7 @@ export default function MarketingHeader() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden md:flex items-center space-x-8">
             {/* Features Dropdown */}
             <div className="relative group">
               <button className={`flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors py-2 ${

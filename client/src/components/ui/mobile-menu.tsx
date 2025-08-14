@@ -8,7 +8,7 @@ import {
   Settings, TrendingUp, Package, Building, Archive, Building2, 
   BookOpen, Landmark, BookOpenCheck, ReceiptText, DollarSign, 
   CreditCard, Box, Truck, PieChart, CheckCircle, Shield, Briefcase,
-  FolderOpen, CheckSquare, Clock, UserCog, Key, ToggleLeft, Upload, Terminal, Zap
+  FolderOpen, CheckSquare, Clock, UserCog, Key, ToggleLeft, Upload, Terminal, Zap, Mail
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -122,7 +122,7 @@ const navigationGroups = [
     items: [
       { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/sars", label: "SARS Compliance", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" },
+
       { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
@@ -137,7 +137,7 @@ const navigationGroups = [
     module: "vat_management",
     items: [
       { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "vat_management" },
-      { path: "/sars-integration", label: "SARS API Integration", icon: Shield, permission: "SETTINGS_VIEW", module: "vat_management" },
+
       { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW", module: "vat_management" },
       { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW", module: "vat_management" },
       { path: "/vat-reports", label: "VAT Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "vat_management" }
@@ -173,7 +173,8 @@ const navigationGroups = [
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
       { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
       { path: "/integrations", label: "Integrations", icon: Zap, permission: "SETTINGS_VIEW", module: "dashboard" },
-      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" }
+      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" },
+      { path: "/email-settings", label: "Email Settings", icon: Mail, permission: "SETTINGS_VIEW", module: "dashboard" }
     ]
   },
   {

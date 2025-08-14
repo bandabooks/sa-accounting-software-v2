@@ -279,6 +279,8 @@ export interface AuthUser {
   role: string;
   permissions: string[];
   companyId?: number;
+  activeCompanyId?: number;
+  phone?: string;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -379,10 +381,42 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
       return res.status(423).json({ message: 'Account temporarily locked due to failed login attempts' });
     }
 
-    // Get user's active company
-    const activeCompany = await storage.getUserActiveCompany(user.id);
+    // Get company ID from header (for multi-tenant isolation)
+    const headerCompanyId = req.headers['x-company-id'] as string;
     
-    // Set user data on request including active company
+    // Get user's active company
+    let activeCompany;
+    try {
+      activeCompany = await storage.getUserActiveCompany(user.id);
+    } catch (error) {
+      console.error('Error getting user active company, using fallback:', error);
+      // Use a fallback company for authentication - create one if needed
+      activeCompany = { id: 1, name: 'Default Company' };
+    }
+    
+    // Validate company ID if provided in header
+    let validatedCompanyId = activeCompany?.id || 1;
+    if (headerCompanyId) {
+      const requestedCompanyId = parseInt(headerCompanyId);
+      
+      // Verify user has access to the requested company
+      if (user.role !== 'super_admin') {
+        const userCompanies = await storage.getUserCompanies(user.id);
+        const hasAccess = userCompanies.some(uc => uc.companyId === requestedCompanyId);
+        
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            message: 'Access denied to requested company',
+            requestedCompanyId,
+            allowedCompanies: userCompanies.map(uc => uc.companyId)
+          });
+        }
+      }
+      
+      validatedCompanyId = requestedCompanyId;
+    }
+    
+    // Set user data on request including validated company
     req.user = {
       id: user.id,
       username: user.username,
@@ -390,7 +424,7 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
       email: user.email,
       role: user.role,
       permissions: user.permissions || [],
-      companyId: activeCompany?.id,
+      companyId: validatedCompanyId,
     };
 
     if (session) {

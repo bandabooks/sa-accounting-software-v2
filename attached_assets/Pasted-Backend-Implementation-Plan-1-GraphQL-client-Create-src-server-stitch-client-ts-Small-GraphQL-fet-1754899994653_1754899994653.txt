@@ -1,0 +1,96 @@
+Backend Implementation Plan
+1) GraphQL client
+Create src/server/stitch/client.ts:
+
+Small GraphQL fetcher with auth header (Client ID/Secret → token if required).
+
+Helper: stitchGql<T>(query, variables).
+
+2) Core operations (service)
+Create src/server/stitch/service.ts with functions (names illustrative; wire to Stitch equivalents):
+
+createLinkToken({ companyId, userId }) → returns short-lived client token for Link.
+
+exchangeLinkSuccess(payload) → read connection id + accounts; upsert provider accounts to our BankAccount.
+
+syncAccounts({ bankAccountId }) → refresh metadata.
+
+syncTransactions({ bankAccountId }):
+
+Load BankFeedCursor.
+
+Call Stitch transactions GraphQL (use cursor/pagination).
+
+Map & upsert new transactions (dedupe by externalId else your ±3 days rule).
+
+Persist updated txnCursor, set lastSyncAt.
+
+Stitch exposes a GraphQL API and uses webhooks for updates; follow their Link → GraphQL pattern. 
+Stitch Money
++1
+
+3) API routes
+swift
+Copy
+Edit
+app/api/stitch/link-token/route.ts      // POST → { clientToken }
+app/api/stitch/exchange/route.ts        // POST ← Link success payload → 200, list of accounts linked
+app/api/stitch/webhook/route.ts         // POST ← provider events; verify signature; enqueue sync
+app/api/stitch/sync-transactions/route.ts // POST { bankAccountId } (manual “Sync now”)
+4) Webhook verification
+Verify STITCH_WEBHOOK_SECRET.
+
+Handle event types (account linked/updated, transactions available).
+
+Enqueue syncTransactions for affected account(s).
+
+Frontend (Link + manage)
+Link button (LinkStitchButton.tsx):
+
+POST /api/stitch/link-token → open Stitch Link with token.
+
+On success (callback), call POST /api/stitch/exchange.
+
+Linked Feeds tab:
+
+List linked accounts (institution, account name, lastSyncAt).
+
+“Sync now” → call /api/stitch/sync-transactions.
+
+Show last N feed imports (pseudo-batches) & counts.
+
+Dedupe & Conflict Rules
+If externalId present → treat as unique key per (companyId, bankAccountId, externalId).
+
+Else fallback to your window match rule (same signed amount + normalized description ±3 days).
+
+Do not create duplicates that match existing manual imports.
+
+Tests
+Mock GraphQL responses; test upsert + cursor advancement.
+
+Webhook signature verifier unit test.
+
+E2E happy path: link → exchange → first sync → webhook → delta sync.
+
+Ensure tenant guard on every handler.
+
+README (README_stitch.md)
+Setup (dashboard keys, webhook URL, whitelisting).
+
+Env vars.
+
+Link flow diagram.
+
+Sync cadence (on-link, hourly cron, on webhook).
+
+Data mapping + dedupe rules.
+
+POPIA notes (no PII logging).
+
+Notes / Caveats
+Start in sandbox; flip to live later.
+
+Some institutions throttle—implement retry with backoff.
+
+Large histories: backfill in pages (respect provider limits).

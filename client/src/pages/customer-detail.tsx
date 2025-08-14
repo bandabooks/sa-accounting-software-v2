@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { generateCustomerStatement } from "@/lib/customer-statement";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 export default function CustomerDetail() {
   const params = useParams();
@@ -64,6 +66,21 @@ export default function CustomerDetail() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: customerLoading, message: 'Loading customer details...' },
+      { isLoading: invoicesLoading, message: 'Loading customer invoices...' },
+      { isLoading: updateCustomerMutation.isPending, message: 'Updating customer...' },
+      { isLoading: setupPortalMutation.isPending, message: 'Setting up portal access...' },
+    ],
+    progressSteps: ['Fetching customer data', 'Loading invoice history', 'Preparing dashboard'],
+  });
+
+  if (customerLoading || invoicesLoading) {
+    return <PageLoader message="Loading customer details..." />;
+  }
 
   const handleGenerateStatement = async () => {
     if (!customer || !invoices) return;

@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, InventoryTransaction } from "@shared/schema";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 const inventoryTransactionSchema = z.object({
   productId: z.number(),
@@ -86,6 +88,20 @@ export default function Inventory() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: productsLoading, message: 'Loading inventory products...' },
+      { isLoading: transactionsLoading, message: 'Loading transaction history...' },
+      { isLoading: createTransactionMutation.isPending, message: 'Processing transaction...' },
+    ],
+    progressSteps: ['Fetching product data', 'Loading stock levels', 'Processing inventory'],
+  });
+
+  if (productsLoading || transactionsLoading) {
+    return <PageLoader message="Loading inventory..." />;
+  }
 
   const onSubmit = (data: InventoryTransactionFormData) => {
     createTransactionMutation.mutate(data);

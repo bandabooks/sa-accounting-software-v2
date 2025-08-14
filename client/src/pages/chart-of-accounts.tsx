@@ -17,6 +17,8 @@ import { Plus, Search, Edit, Trash2, FileText, BarChart, TrendingUp, Building2, 
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader, InlineLoader } from "@/components/ui/global-loader";
 import { z } from "zod";
 
 const accountFormSchema = z.object({
@@ -106,6 +108,7 @@ export default function ChartOfAccounts() {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<ChartOfAccountWithBalance | null>(null);
+  const [toggledAccountId, setToggledAccountId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -208,13 +211,18 @@ export default function ChartOfAccounts() {
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       apiRequest(`/api/chart-of-accounts/${id}/toggle`, "PATCH", { isActive }),
     onSuccess: (_, { isActive }) => {
+      // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      setToggledAccountId(null);
       toast({
-        title: "Success",
-        description: `Account ${isActive ? 'activated' : 'deactivated'} successfully`,
+        title: isActive ? "Account Activated" : "Account Deactivated", 
+        description: `Account has been ${isActive ? 'activated' : 'deactivated'} successfully`,
+        variant: isActive ? "success" : "default",
       });
     },
     onError: (error: any) => {
+      setToggledAccountId(null);
       toast({
         title: "Error",
         description: error.message?.includes("permissions") 
@@ -226,11 +234,24 @@ export default function ChartOfAccounts() {
   });
 
   const handleToggleActivation = (account: ChartOfAccountWithBalance) => {
+    setToggledAccountId(account.id);
     toggleActivationMutation.mutate({
       id: account.id,
       isActive: !account.isActive,
     });
   };
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading Chart of Accounts...' },
+      { isLoading: seedMutation.isPending, message: 'Setting up Chart of Accounts...' },
+      { isLoading: createMutation.isPending, message: 'Creating new account...' },
+      { isLoading: updateMutation.isPending, message: 'Updating account...' },
+      { isLoading: deleteMutation.isPending, message: 'Deleting account...' },
+      { isLoading: toggleActivationMutation.isPending, message: 'Updating account status...' },
+    ],
+  });
 
   const createForm = useForm<AccountFormData>({
     resolver: zodResolver(accountFormSchema),
@@ -306,18 +327,7 @@ export default function ChartOfAccounts() {
   };
 
   if (isLoading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="space-y-3">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading Chart of Accounts..." />;
   }
 
   return (
@@ -681,7 +691,7 @@ export default function ChartOfAccounts() {
                                 <Switch
                                   checked={account.isActive}
                                   onCheckedChange={() => handleToggleActivation(account)}
-                                  disabled={toggleActivationMutation.isPending}
+                                  disabled={toggledAccountId === account.id && toggleActivationMutation.isPending}
                                   className={account.isActive ? "data-[state=checked]:bg-green-500" : ""}
                                 />
                                 {account.isActive ? (

@@ -1,0 +1,69 @@
+reate a crypto util to encrypt token fields at rest.
+
+3) Admin UI (Super Admin only)
+
+Route: /admin/integrations/sars with form fields: ISV Number, Client ID, Client Secret, API Key, API URL, Environment.
+
+Save via POST /api/admin/sars/config (create or update SarsVendorConfig).
+
+Only accessible if role==='super_admin'.
+
+4) Client UI (Company Admin)
+
+Route: /settings/sars (visible for company_admin only).
+
+Show status (Connected/Not Connected), Connect and Disconnect buttons, last sync.
+
+On Connect, call POST /api/sars/initiate-link → receive redirectUrl and navigate user to SARS login (under our ISV).
+
+After SARS redirects back to /sars/callback, handle success/failure and update CompanySarsLink.
+
+5) Backend Endpoints
+
+GET /api/admin/sars/config & POST /api/admin/sars/config (super_admin only).
+
+POST /api/sars/initiate-link (company_admin):
+
+Read SarsVendorConfig; create a short-lived session (state) and return redirectUrl to SARS auth (scoped to our ISV).
+
+GET /api/sars/callback (public route with state): verify state; exchange auth code using vendor ClientID/Secret; store tokens in CompanySarsLink (encrypted), set status='connected', linkedAt=now().
+
+POST /api/sars/disconnect (company_admin): revoke tokens if supported; clear tokens; set status to disconnected.
+
+GET /api/sars/status (company_admin/staff/reader with company scope): return connection status without secrets.
+
+6) Integrations Menu Logic
+
+Sidebar “Integrations” → hide “SARS eFiling” settings entry for non-super-admin.
+
+Company Settings → show SARS card with Connect only for company_admin.
+
+7) Security/POPIA
+
+Never return clientSecret, apiKey, or tokens to the browser.
+
+Log IDs and counts only; no PII.
+
+Tenant guard on all routes (companyId from session).
+
+8) Tests
+
+Access control tests for each route (401/403).
+
+Happy path: admin saves config; company admin connects; callback stores tokens; status returns connected.
+
+Ensure non-admins cannot hit admin endpoints.
+
+9) Acceptance Criteria
+
+Non-admin clients cannot see API credential fields anywhere.
+
+Super Admin can set/update ISV credentials.
+
+Company Admin can connect/disconnect; status shows correctly.
+
+No secrets in network responses or logs.
+
+UI reflects role gating in sidebar and settings pages.
+
+Apply code changes, add migrations, and update README_SARS.md (roles, flows, endpoint

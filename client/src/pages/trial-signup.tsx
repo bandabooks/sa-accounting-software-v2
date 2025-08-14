@@ -48,42 +48,44 @@ export default function TrialSignup() {
     {
       id: 'basic',
       name: 'Basic Plan',
-      price: 'R29.99',
+      price: 'R299.99',
       description: 'Perfect for small businesses getting started',
       features: [
-        'Invoice Management',
-        'Customer Database',
-        'Basic Reports',
-        'Email Support'
+        'Customer Management',
+        'Basic Invoicing',
+        'Expense Tracking',
+        'Financial Reports',
+        'VAT Management',
+        'Chart of Accounts'
       ],
       popular: false
     },
     {
       id: 'professional',
       name: 'Professional Plan',
-      price: 'R79.99',
+      price: 'R679.99',
       description: 'Advanced features for growing businesses',
       features: [
         'Everything in Basic',
-        'Purchase Orders',
+        'Advanced Invoicing',
         'Inventory Management',
-        'Financial Reports',
-        'Multi-Currency',
-        'Priority Support'
+        'VAT Management',
+        'Advanced Analytics',
+        'Compliance Management'
       ],
       popular: true
     },
     {
       id: 'enterprise',
       name: 'Enterprise Plan',
-      price: 'R199.99',
+      price: 'R1199.99',
       description: 'Full-featured solution for large organizations',
       features: [
         'Everything in Professional',
         'Multi-Company',
-        'Advanced Analytics',
+        'Payroll Management',
+        'Point of Sale',
         'API Access',
-        'Custom Integrations',
         'Dedicated Support'
       ],
       popular: false

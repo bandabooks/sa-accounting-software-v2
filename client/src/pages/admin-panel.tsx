@@ -25,6 +25,8 @@ import {
   UserCheck,
   AlertTriangle
 } from "lucide-react";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface User {
   id: number;
@@ -148,6 +150,21 @@ export default function AdminPanel() {
       data: { role: newRole }
     });
   };
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: usersLoading, message: 'Loading users...' },
+      { isLoading: auditLoading, message: 'Loading audit logs...' },
+      { isLoading: createUserMutation.isPending, message: 'Creating user...' },
+      { isLoading: updateUserMutation.isPending, message: 'Updating user...' },
+    ],
+    progressSteps: ['Fetching user data', 'Loading system logs', 'Processing administration'],
+  });
+
+  if (usersLoading || auditLoading) {
+    return <PageLoader message="Loading admin panel..." />;
+  }
 
   const getRoleBadge = (role: string) => {
     const colors = {

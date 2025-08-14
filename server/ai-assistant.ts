@@ -1,33 +1,24 @@
 import { IStorage } from './storage';
+import { AIServiceBase, AIAssistantQuery as BaseQuery, AIAssistantResponse as BaseResponse } from './services/aiServiceBase';
 
-export interface AIAssistantQuery {
+// Extend base types with additional fields
+export interface AIAssistantQuery extends BaseQuery {
   type: 'business_insights' | 'compliance_guidance' | 'financial_analysis' | 'tax_optimization' | 'general_help';
-  query: string;
-  context?: {
-    companyId: number;
-    userId: number;
+  context?: BaseQuery['context'] & {
     currentPage?: string;
     timeframe?: string;
   };
 }
 
-export interface AIAssistantResponse {
-  answer: string;
-  confidence: number;
-  sources: string[];
+export interface AIAssistantResponse extends BaseResponse {
   actionable_items?: string[];
-  follow_up_questions?: string[];
   charts_data?: any;
-  recommendations?: {
-    title: string;
-    description: string;
-    priority: 'low' | 'medium' | 'high' | 'critical';
-    category: string;
-  }[];
 }
 
-export class AIAssistantService {
-  constructor(private storage: IStorage) {}
+export class AIAssistantService extends AIServiceBase {
+  constructor(storage: IStorage) {
+    super(storage as any);
+  }
 
   async processQuery(query: AIAssistantQuery): Promise<AIAssistantResponse> {
     console.log('Processing AI Assistant query:', query);

@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { User, Mail, Phone, MapPin, Building, Save, Camera } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -54,6 +56,18 @@ export default function Profile() {
     e.preventDefault();
     updateProfileMutation.mutate(formData);
   };
+
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: updateProfileMutation.isPending, message: 'Updating profile...' },
+    ],
+    progressSteps: ['Validating data', 'Saving changes', 'Refreshing profile'],
+  });
+
+  if (!user) {
+    return <PageLoader message="Loading profile..." />;
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({

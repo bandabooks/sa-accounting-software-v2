@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface BudgetFormData {
   name: string;
@@ -52,6 +54,14 @@ export default function BudgetCreate() {
         variant: "destructive" 
       });
     },
+  });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading: createBudgetMutation.isPending, message: 'Creating budget...' },
+    ],
+    progressSteps: ['Validating budget data', 'Saving to database', 'Setting up budget framework'],
   });
 
   const handleSubmit = (e: React.FormEvent) => {

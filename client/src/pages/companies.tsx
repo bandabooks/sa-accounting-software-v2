@@ -492,6 +492,11 @@ export default function Companies() {
             </CardTitle>
             <CardDescription>
               All operations will be performed under this company
+              {activeCompany.companyId && (
+                <span className="block text-xs font-mono text-gray-600 mt-1">
+                  Company ID: {activeCompany.companyId}
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -518,6 +523,11 @@ export default function Companies() {
                         {getRoleIcon(companyUser.role)}
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{companyUser.company.email}</p>
+                      {companyUser.company.companyId && (
+                        <p className="text-xs text-gray-500 font-mono mb-2">
+                          Company ID: {companyUser.company.companyId}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2">
                         {getRoleBadge(companyUser.role)}
                         <span className={`px-2 py-1 rounded-full text-xs ${
@@ -574,6 +584,17 @@ export default function Companies() {
                 <CardDescription>{selectedCompany.name}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {selectedCompany.companyId && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span className="text-sm font-medium text-blue-800">Company ID</span>
+                    </div>
+                    <span className="text-sm font-mono text-blue-900 ml-4">
+                      {selectedCompany.companyId}
+                    </span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <strong>Email:</strong> {selectedCompany.email}

@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { SalesOrder } from "@shared/schema";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 export default function SalesOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,6 +90,22 @@ export default function SalesOrdersPage() {
       });
     },
   });
+
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading sales orders...' },
+      { isLoading: statsLoading, message: 'Loading sales statistics...' },
+      { isLoading: deleteMutation.isPending, message: 'Deleting sales order...' },
+      { isLoading: updateStatusMutation.isPending, message: 'Updating order status...' },
+      { isLoading: convertToInvoiceMutation.isPending, message: 'Converting to invoice...' },
+    ],
+    progressSteps: ['Fetching sales orders', 'Loading order statistics', 'Processing order data'],
+  });
+
+  if (isLoading || statsLoading) {
+    return <PageLoader message="Loading sales orders..." />;
+  }
 
   const filteredSalesOrders = salesOrders.filter((order: SalesOrder) => {
     const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -77,7 +77,7 @@ export function CustomerSelect({
 
   const createCustomerMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/customers", data);
+      const response = await apiRequest("/api/customers", "POST", data);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to create customer");

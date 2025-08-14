@@ -11,6 +11,13 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
+import { TwilioCredentialsForm } from "@/components/integrations/TwilioCredentialsForm";
+import { SendGridCredentialsForm } from "@/components/integrations/SendGridCredentialsForm";
+import { BankingCredentialsForm } from "@/components/integrations/BankingCredentialsForm";
+import { CIPCCredentialsForm } from "@/components/integrations/CIPCCredentialsForm";
+import { SARSCredentialsForm } from "@/components/integrations/SARSCredentialsForm";
 import { 
   Shield, 
   Building2, 
@@ -29,7 +36,9 @@ import {
   Lock,
   Banknote,
   ShoppingCart,
-  Smartphone
+  Smartphone,
+  MessageSquare,
+  Mail
 } from "lucide-react";
 
 interface IntegrationStatus {
@@ -58,6 +67,7 @@ export default function Integrations() {
   const [selectedIntegration, setSelectedIntegration] = useState<string>('sars');
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [credentials, setCredentials] = useState<Record<string, any>>({});
+  const [isSandboxMode, setIsSandboxMode] = useState(true); // Default to sandbox for safety
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -73,7 +83,7 @@ export default function Integrations() {
     queryFn: () => apiRequest('/api/sars/integration/status', 'GET'),
   });
 
-  const { data: sarsCredentials } = useQuery({
+  const { data: sarsCredentials, isLoading: credentialsLoading } = useQuery({
     queryKey: ['/api/sars/credentials'],
     queryFn: () => apiRequest('/api/sars/credentials', 'GET'),
   });
@@ -117,6 +127,21 @@ export default function Integrations() {
     }
   });
 
+  // Use loading states for comprehensive loading feedback including mutations
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading integrations...' },
+      { isLoading: credentialsLoading, message: 'Loading credentials...' },
+      { isLoading: testConnectionMutation.isPending, message: 'Testing connection...' },
+      { isLoading: saveCredentialsMutation.isPending, message: 'Saving credentials...' },
+    ],
+    progressSteps: ['Fetching integration status', 'Loading configuration', 'Processing settings'],
+  });
+
+  if (isLoading || credentialsLoading) {
+    return <PageLoader message="Loading integrations..." />;
+  }
+
   // Integration categories for better organization
   const integrationCategories = [
     {
@@ -133,10 +158,20 @@ export default function Integrations() {
       id: 'financial',
       name: 'Financial Services',
       integrations: ['banking']
+    },
+    {
+      id: 'communications',
+      name: 'Communications',
+      integrations: ['twilio', 'sendgrid']
     }
   ];
 
   // All integrations data with enhanced payment gateways
+  // Merge API integration statuses with local definitions
+  const mergedIntegrations = Array.isArray(integrations) ? integrations : [];
+  const twilioStatus = mergedIntegrations.find((i: any) => i.id === 'twilio');
+  const sendgridStatus = mergedIntegrations.find((i: any) => i.id === 'sendgrid');
+  
   const allIntegrations: IntegrationStatus[] = [
     // Compliance & Government
     {
@@ -298,6 +333,44 @@ export default function Integrations() {
         'Multi-bank support',
         'Bank reconciliation'
       ]
+    },
+    
+    // Communications
+    {
+      id: 'twilio',
+      name: 'Twilio SMS',
+      description: 'SMS notifications and two-factor authentication',
+      icon: MessageSquare,
+      status: twilioStatus?.status || 'disconnected',
+      features: [
+        'SMS notifications',
+        'Payment reminders',
+        'Security alerts',
+        'Two-factor authentication',
+        'Bulk SMS campaigns',
+        'Global SMS delivery',
+        'Message status tracking',
+        'SMS queue management'
+      ],
+      connectionUrl: 'https://www.twilio.com'
+    },
+    {
+      id: 'sendgrid',
+      name: 'SendGrid Email',
+      description: 'Transactional and marketing email service',
+      icon: Mail,
+      status: sendgridStatus?.status || 'disconnected',
+      features: [
+        'Transactional emails',
+        'Invoice email delivery',
+        'Payment notifications',
+        'Marketing campaigns',
+        'Email templates',
+        'Delivery tracking',
+        'Bounce management',
+        'Email analytics'
+      ],
+      connectionUrl: 'https://sendgrid.com'
     }
   ];
 
@@ -338,7 +411,28 @@ export default function Integrations() {
             Manage third-party integrations and API connections
           </p>
         </div>
+        {/* Sandbox Mode Indicator */}
+        <div className="flex items-center space-x-2">
+          <Badge className="bg-amber-100 text-amber-800 border-amber-300 px-4 py-2">
+            <Shield className="h-4 w-4 mr-2" />
+            SANDBOX MODE ACTIVE
+          </Badge>
+          <Badge className="bg-green-100 text-green-800 border-green-300 px-4 py-2">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Safe for Testing
+          </Badge>
+        </div>
       </div>
+
+      {/* Sandbox Mode Alert */}
+      <Alert className="bg-blue-50 border-blue-200">
+        <Shield className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          <strong>Testing Environment Active:</strong> All integrations (Stitch Banking, SARS, and Payment Gateways) are configured for sandbox/test mode. 
+          This is perfect for testing without processing real transactions or submitting actual tax returns. 
+          When you're ready for production, you can switch to live mode in each integration's settings.
+        </AlertDescription>
+      </Alert>
 
       {/* Status Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -458,15 +552,19 @@ export default function Integrations() {
                       ? 'bg-gradient-to-r from-red-50 to-pink-50 border border-red-100' 
                       : category.id === 'payments'
                       ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100'
+                      : category.id === 'communications'
+                      ? 'bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100'
                       : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100'
                   }`}>
                     <h3 className={`font-bold text-sm uppercase tracking-wide flex items-center ${
                       category.id === 'compliance' ? 'text-red-700' :
-                      category.id === 'payments' ? 'text-green-700' : 'text-blue-700'
+                      category.id === 'payments' ? 'text-green-700' : 
+                      category.id === 'communications' ? 'text-purple-700' : 'text-blue-700'
                     }`}>
                       {category.id === 'compliance' && <Shield className="h-4 w-4 mr-2" />}
                       {category.id === 'payments' && <CreditCard className="h-4 w-4 mr-2" />}
                       {category.id === 'financial' && <Landmark className="h-4 w-4 mr-2" />}
+                      {category.id === 'communications' && <MessageSquare className="h-4 w-4 mr-2" />}
                       {category.name}
                     </h3>
                   </div>
@@ -775,6 +873,28 @@ export default function Integrations() {
                         onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'sars', data })}
                         isLoading={saveCredentialsMutation.isPending}
                       />
+                    ) : selectedIntegration === 'banking' ? (
+                      <BankingCredentialsForm
+                        credentials={credentials.banking}
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'banking', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
+                    ) : selectedIntegration === 'cipc' ? (
+                      <CIPCCredentialsForm
+                        credentials={credentials.cipc}
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'cipc', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
+                    ) : selectedIntegration === 'twilio' ? (
+                      <TwilioCredentialsForm
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'twilio', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
+                    ) : selectedIntegration === 'sendgrid' ? (
+                      <SendGridCredentialsForm
+                        onSave={(data) => saveCredentialsMutation.mutate({ integrationId: 'sendgrid', data })}
+                        isLoading={saveCredentialsMutation.isPending}
+                      />
                     ) : ['payfast', 'peach', 'paygate', 'stripe', 'yoco', 'ozow'].includes(selectedIntegration) ? (
                       <PaymentGatewayCredentialsForm 
                         gatewayId={selectedIntegration}
@@ -785,7 +905,7 @@ export default function Integrations() {
                     ) : (
                       <div className="text-center py-8">
                         <Lock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">Credential configuration for {selectedIntegrationData.name} coming soon.</p>
+                        <p className="text-gray-500">Credential configuration for {selectedIntegrationData.name} is being configured.</p>
                       </div>
                     )}
                   </TabsContent>
@@ -1018,183 +1138,6 @@ function PaymentGatewayCredentialsForm({
             <>
               <Shield className="h-4 w-4 mr-2" />
               Save {gatewayName} Settings
-            </>
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// SARS Credentials Form Component
-function SARSCredentialsForm({ 
-  credentials: initialCredentials, 
-  onSave, 
-  isLoading 
-}: { 
-  credentials: any; 
-  onSave: (data: Partial<SARSCredentials>) => void; 
-  isLoading: boolean; 
-}) {
-  const [credentials, setCredentials] = useState<SARSCredentials>({
-    clientId: '',
-    clientSecret: '',
-    username: '',
-    password: '',
-    apiUrl: 'https://secure.sarsefiling.co.za/api/v1',
-    redirectUri: '',
-    environment: 'sandbox',
-  });
-  
-  const [showSecrets, setShowSecrets] = useState({
-    clientSecret: false,
-    password: false
-  });
-
-  useEffect(() => {
-    if (initialCredentials) {
-      setCredentials(prev => ({
-        ...prev,
-        ...initialCredentials,
-        clientSecret: '', // Keep masked
-        password: '' // Keep masked
-      }));
-    }
-  }, [initialCredentials]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Only send non-empty fields
-    const dataToSend = Object.entries(credentials).reduce((acc, [key, value]) => {
-      if (value && value.trim() !== '') {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as any);
-    
-    onSave(dataToSend);
-  };
-
-  const toggleSecretVisibility = (field: 'clientSecret' | 'password') => {
-    setShowSecrets(prev => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Alert>
-        <Shield className="h-4 w-4" />
-        <AlertDescription>
-          <strong>SARS Vendor Registration Required:</strong> To enable real SARS integration, you must register as a software vendor with SARS eFiling. Visit the SARS eFiling portal to obtain your API credentials.
-        </AlertDescription>
-      </Alert>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="clientId">SARS API Key</Label>
-          <Input
-            id="clientId"
-            value={credentials.clientId}
-            onChange={(e) => setCredentials(prev => ({ ...prev, clientId: e.target.value }))}
-            placeholder="Enter your SARS API key"
-          />
-          <p className="text-sm text-gray-600">Your primary API access key from SARS eFiling</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="clientSecret">Client Secret</Label>
-          <div className="relative">
-            <Input
-              id="clientSecret"
-              type={showSecrets.clientSecret ? "text" : "password"}
-              value={credentials.clientSecret}
-              onChange={(e) => setCredentials(prev => ({ ...prev, clientSecret: e.target.value }))}
-              placeholder={initialCredentials?.clientSecret ? "••••••••••••••••" : "Enter your client secret"}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => toggleSecretVisibility('clientSecret')}
-            >
-              {showSecrets.clientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          </div>
-          <p className="text-sm text-gray-600">Your client authentication secret</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="username">Client ID</Label>
-          <Input
-            id="username"
-            value={credentials.username}
-            onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
-            placeholder="Enter your client ID"
-          />
-          <p className="text-sm text-gray-600">Your registered client identifier</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="password">Vendor ID</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showSecrets.password ? "text" : "password"}
-              value={credentials.password}
-              onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-              placeholder={initialCredentials?.password ? "••••••••••••••••" : "Enter your vendor ID"}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-              onClick={() => toggleSecretVisibility('password')}
-            >
-              {showSecrets.password ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          </div>
-          <p className="text-sm text-gray-600">Your assigned vendor identification number</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="apiUrl">API URL</Label>
-          <Input
-            id="apiUrl"
-            value={credentials.apiUrl}
-            onChange={(e) => setCredentials(prev => ({ ...prev, apiUrl: e.target.value }))}
-            placeholder="https://secure.sarsefiling.co.za/api/v1"
-          />
-          <p className="text-sm text-gray-600">SARS eFiling API endpoint URL</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="environment">Environment</Label>
-          <select
-            id="environment"
-            value={credentials.environment}
-            onChange={(e) => setCredentials(prev => ({ ...prev, environment: e.target.value as 'sandbox' | 'production' }))}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="sandbox">Sandbox (Testing)</option>
-            <option value="production">Production (Live)</option>
-          </select>
-          <p className="text-sm text-gray-600">Select testing or live environment</p>
-        </div>
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Shield className="h-4 w-4 mr-2" />
-              Save SARS Settings
             </>
           )}
         </Button>

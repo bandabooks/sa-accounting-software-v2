@@ -44,6 +44,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
+import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { PageLoader } from "@/components/ui/global-loader";
 
 interface ReportData {
   id: string;
@@ -77,49 +79,92 @@ export default function FinancialReports() {
     }).format(amount);
   };
 
-  // Mock data queries - replace with real API calls
-  const { data: reportData } = useQuery({
+  // Fetch actual financial report data from the API
+  const { data: reportData, isLoading } = useQuery({
     queryKey: ["/api/reports/summary", dateFrom, dateTo],
-    queryFn: () => apiRequest(`/api/reports/summary?from=${dateFrom}&to=${dateTo}`, "GET"),
-    select: (data) => ({
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/summary?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  // Fetch account balances for real balance sheet data
+  const { data: accountBalances } = useQuery({
+    queryKey: ['/api/chart-of-accounts/balances', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/chart-of-accounts/balances?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  // Fetch invoices and expenses for P&L data
+  const { data: invoices } = useQuery({
+    queryKey: ['/api/invoices', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/invoices?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  const { data: expenses } = useQuery({
+    queryKey: ['/api/expenses', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/expenses?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  // Calculate real financial report data from actual transactions
+  const calculateReportData = () => {
+    // Calculate Balance Sheet from account balances
+    const assets = accountBalances?.filter((acc: any) => acc.type === 'asset') || [];
+    const liabilities = accountBalances?.filter((acc: any) => acc.type === 'liability') || [];
+    const equity = accountBalances?.filter((acc: any) => acc.type === 'equity') || [];
+    
+    const totalAssets = assets.reduce((sum: number, acc: any) => sum + (parseFloat(acc.balance) || 0), 0);
+    const totalLiabilities = liabilities.reduce((sum: number, acc: any) => sum + (parseFloat(acc.balance) || 0), 0);
+    const totalEquity = equity.reduce((sum: number, acc: any) => sum + (parseFloat(acc.balance) || 0), 0);
+    
+    // Calculate P&L from invoices and expenses
+    const totalRevenue = invoices?.reduce((sum: number, inv: any) => sum + (parseFloat(inv.total) || 0), 0) || 0;
+    const totalExpenses = expenses?.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0;
+    const netIncome = totalRevenue - totalExpenses;
+    
+    return {
       balanceSheet: {
         id: "balance-sheet",
         title: "Balance Sheet",
         lastGenerated: format(new Date(), "yyyy-MM-dd"),
         summary: {
-          totalAssets: 2500000,
-          totalLiabilities: 1200000,
-          equity: 1300000
+          totalAssets: totalAssets,
+          totalLiabilities: totalLiabilities,
+          equity: totalEquity || (totalAssets - totalLiabilities)
         },
         data: {
           assets: {
-            current: [
-              { account: "Cash and Cash Equivalents", amount: 450000 },
-              { account: "Accounts Receivable", amount: 320000 },
-              { account: "Inventory", amount: 180000 },
-              { account: "Prepaid Expenses", amount: 25000 }
-            ],
-            nonCurrent: [
-              { account: "Property, Plant & Equipment", amount: 1200000 },
-              { account: "Intangible Assets", amount: 185000 },
-              { account: "Long-term Investments", amount: 140000 }
-            ]
+            current: assets.filter((acc: any) => acc.subType === 'current').map((acc: any) => ({
+              account: acc.name,
+              amount: parseFloat(acc.balance) || 0
+            })),
+            nonCurrent: assets.filter((acc: any) => acc.subType !== 'current').map((acc: any) => ({
+              account: acc.name,
+              amount: parseFloat(acc.balance) || 0
+            }))
           },
           liabilities: {
-            current: [
-              { account: "Accounts Payable", amount: 280000 },
-              { account: "Short-term Debt", amount: 150000 },
-              { account: "Accrued Expenses", amount: 95000 }
-            ],
-            nonCurrent: [
-              { account: "Long-term Debt", amount: 525000 },
-              { account: "Deferred Tax Liabilities", amount: 150000 }
-            ]
+            current: liabilities.filter((acc: any) => acc.subType === 'current').map((acc: any) => ({
+              account: acc.name,
+              amount: parseFloat(acc.balance) || 0
+            })),
+            nonCurrent: liabilities.filter((acc: any) => acc.subType !== 'current').map((acc: any) => ({
+              account: acc.name,
+              amount: parseFloat(acc.balance) || 0
+            }))
           },
-          equity: [
-            { account: "Share Capital", amount: 800000 },
-            { account: "Retained Earnings", amount: 500000 }
-          ]
+          equity: equity.map((acc: any) => ({
+            account: acc.name,
+            amount: parseFloat(acc.balance) || 0
+          }))
         }
       },
       profitLoss: {
@@ -127,20 +172,18 @@ export default function FinancialReports() {
         title: "Profit & Loss Statement",
         lastGenerated: format(new Date(), "yyyy-MM-dd"),
         summary: {
-          revenue: 1850000,
-          expenses: 1420000,
-          netIncome: 430000
+          revenue: totalRevenue,
+          expenses: totalExpenses,
+          netIncome: netIncome
         },
         data: {
           revenue: [
-            { account: "Sales Revenue", amount: 1600000 },
-            { account: "Service Revenue", amount: 250000 }
+            { account: "Sales Revenue", amount: totalRevenue }
           ],
-          expenses: [
-            { account: "Cost of Goods Sold", amount: 680000 },
-            { account: "Operating Expenses", amount: 520000 },
-            { account: "Administrative Expenses", amount: 220000 }
-          ]
+          expenses: expenses?.map((exp: any) => ({
+            account: exp.category || "Operating Expenses",
+            amount: parseFloat(exp.amount) || 0
+          })) || []
         }
       },
       cashFlow: {
@@ -148,24 +191,18 @@ export default function FinancialReports() {
         title: "Cash Flow Statement",
         lastGenerated: format(new Date(), "yyyy-MM-dd"),
         summary: {
-          cashInflow: 1950000,
-          cashOutflow: 1680000,
-          netCashFlow: 270000
+          cashInflow: totalRevenue,
+          cashOutflow: totalExpenses,
+          netCashFlow: totalRevenue - totalExpenses
         },
         data: {
           operating: [
-            { activity: "Net Income", amount: 430000 },
-            { activity: "Depreciation", amount: 120000 },
-            { activity: "Changes in Working Capital", amount: -85000 }
+            { activity: "Net Income", amount: netIncome },
+            { activity: "Collections from Customers", amount: totalRevenue },
+            { activity: "Payments to Suppliers", amount: -totalExpenses }
           ],
-          investing: [
-            { activity: "Purchase of Equipment", amount: -180000 },
-            { activity: "Sale of Investments", amount: 65000 }
-          ],
-          financing: [
-            { activity: "Loan Proceeds", amount: 200000 },
-            { activity: "Dividends Paid", amount: -120000 }
-          ]
+          investing: [],
+          financing: []
         }
       },
       trialBalance: {
@@ -173,22 +210,18 @@ export default function FinancialReports() {
         title: "Trial Balance",
         lastGenerated: format(new Date(), "yyyy-MM-dd"),
         data: {
-          accounts: [
-            { account: "Cash", debit: 450000, credit: 0 },
-            { account: "Accounts Receivable", debit: 320000, credit: 0 },
-            { account: "Inventory", debit: 180000, credit: 0 },
-            { account: "Equipment", debit: 1200000, credit: 0 },
-            { account: "Accounts Payable", debit: 0, credit: 280000 },
-            { account: "Long-term Debt", debit: 0, credit: 525000 },
-            { account: "Share Capital", debit: 0, credit: 800000 },
-            { account: "Retained Earnings", debit: 0, credit: 500000 },
-            { account: "Sales Revenue", debit: 0, credit: 1600000 },
-            { account: "Cost of Goods Sold", debit: 680000, credit: 0 }
-          ]
+          accounts: accountBalances?.map((acc: any) => ({
+            account: acc.name,
+            debit: acc.type === 'asset' || acc.type === 'expense' ? parseFloat(acc.balance) || 0 : 0,
+            credit: acc.type === 'liability' || acc.type === 'equity' || acc.type === 'revenue' ? parseFloat(acc.balance) || 0 : 0
+          })) || []
         }
       }
-    })
-  });
+    };
+  };
+
+  // Use real data or fallback to empty structure
+  const finalReportData = reportData || calculateReportData();
 
   const reportCategories = [
     {
@@ -208,7 +241,7 @@ export default function FinancialReports() {
           description: "Assets, liabilities & equity as at specific date",
           lastGenerated: "2025-01-27",
           frequency: "Monthly",
-          data: reportData?.balanceSheet
+          data: finalReportData?.balanceSheet
         },
         { 
           id: "profit-loss", 
@@ -217,7 +250,7 @@ export default function FinancialReports() {
           description: "Revenue, expenses and net income analysis",
           lastGenerated: "2025-01-27", 
           frequency: "Monthly",
-          data: reportData?.profitLoss
+          data: finalReportData?.profitLoss
         },
         { 
           id: "cash-flow", 
@@ -226,7 +259,7 @@ export default function FinancialReports() {
           description: "Operating, investing & financing activities",
           lastGenerated: "2025-01-27",
           frequency: "Monthly",
-          data: reportData?.cashFlow
+          data: finalReportData?.cashFlow
         },
         { 
           id: "trial-balance", 
@@ -235,7 +268,7 @@ export default function FinancialReports() {
           description: "Account balance verification and summary",
           lastGenerated: "2025-01-27",
           frequency: "Monthly",
-          data: reportData?.trialBalance
+          data: finalReportData?.trialBalance
         }
       ]
     },
@@ -452,6 +485,18 @@ export default function FinancialReports() {
       ]
     }
   ];
+
+  // Use loading states for comprehensive loading feedback
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading financial reports...' },
+    ],
+    progressSteps: ['Fetching report data', 'Processing financial statements', 'Generating analytics'],
+  });
+
+  if (isLoading) {
+    return <PageLoader message="Loading financial reports..." />;
+  }
 
   const handleReportClick = (report: any) => {
     if (report.data) {

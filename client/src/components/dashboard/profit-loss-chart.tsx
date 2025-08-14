@@ -17,7 +17,15 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
   const [period, setPeriod] = useState('6months');
 
-  const chartData = data || [];
+  // Process and format chart data
+  const chartData = (data || []).map((item, index) => ({
+    month: new Date(item.month).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+    revenue: Number(item.revenue) || 0,
+    expenses: Number(item.expenses) || 0,
+    profit: Number(item.profit) || 0
+  })).reverse(); // Reverse to show chronological order
+  
+  console.log('Chart Data:', chartData); // Debug log
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -66,20 +74,25 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             {chartType === 'bar' ? (
               <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:stroke-gray-600" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-600" vertical={false} />
                 <XAxis 
                   dataKey="month" 
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  axisLine={{ stroke: '#e5e7eb' }}
                   tickLine={false}
-                  className="text-gray-600 dark:text-gray-400"
                 />
                 <YAxis 
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  axisLine={{ stroke: '#e5e7eb' }}
                   tickLine={false}
-                  tickFormatter={(value) => `R${value.toLocaleString()}`}
-                  className="text-gray-600 dark:text-gray-400"
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) {
+                      return `R ${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `R ${(value / 1000).toFixed(0)}K`;
+                    }
+                    return `R ${value.toLocaleString()}`;
+                  }}
                 />
                 <Tooltip 
                   formatter={(value: number, name: string) => [
@@ -115,20 +128,25 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
               </BarChart>
             ) : (
               <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:stroke-gray-600" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-600" vertical={false} />
                 <XAxis 
                   dataKey="month" 
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  axisLine={{ stroke: '#e5e7eb' }}
                   tickLine={false}
-                  className="text-gray-600 dark:text-gray-400"
                 />
                 <YAxis 
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  axisLine={{ stroke: '#e5e7eb' }}
                   tickLine={false}
-                  tickFormatter={(value) => `R${value.toLocaleString()}`}
-                  className="text-gray-600 dark:text-gray-400"
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) {
+                      return `R ${(value / 1000000).toFixed(1)}M`;
+                    } else if (value >= 1000) {
+                      return `R ${(value / 1000).toFixed(0)}K`;
+                    }
+                    return `R ${value.toLocaleString()}`;
+                  }}
                 />
                 <Tooltip 
                   formatter={(value: number, name: string) => [
@@ -172,19 +190,19 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
           </ResponsiveContainer>
         </div>
         
-        {/* Legend */}
-        <div className="flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Professional Legend */}
+        <div className="flex items-center justify-center space-x-8 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-green-500 rounded"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Revenue</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Revenue</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-red-500 rounded"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Expenses</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Expenses</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-500 rounded"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Profit</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Profit</span>
           </div>
         </div>
       </div>

@@ -1,70 +1,94 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import React, { useState } from "react";
 import { 
   Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, 
   Settings, TrendingUp, Package, Building, Archive, Building2, BookOpen, 
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
-  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck
+  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
 
-// Navigation group structure with module mapping
+// Navigation group structure with module mapping - World-class reorganization (12 groups)
 const navigationGroups = [
+  // 1. Dashboard - Single item, no dropdown
   {
     id: "overview",
     label: "Dashboard",
     module: "dashboard",
     items: [
-      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" },
-      { path: "/spending-wizard", label: "Smart Spending Wizard", icon: Brain, permission: null, module: "dashboard" }
+      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
     ]
   },
+  // 2. Banking & Cash Management
+  {
+    id: "banking",
+    label: "Banking & Cash Management",
+    icon: Landmark,
+    module: "banking",
+    items: [
+      { path: "/banking", label: "Banking Center", icon: Landmark, permission: "BANKING_VIEW", module: "banking" },
+      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW", module: "advanced_reports" }
+    ]
+  },
+  // 3. Sales & Revenue
   {
     id: "sales",
-    label: "Sales",
+    label: "Sales & Revenue",
     icon: DollarSign,
     module: "sales",
     items: [
       { path: "/sales-dashboard", label: "Sales Dashboard", icon: ChartLine, permission: "DASHBOARD_VIEW", module: "sales" },
+      { path: "/invoices", label: "Invoices", icon: Receipt, permission: "INVOICE_VIEW", module: "sales" },
       { path: "/estimates", label: "Estimates / Quotes", icon: FileText, permission: "ESTIMATE_VIEW", module: "sales" },
       { path: "/sales-orders", label: "Sales Orders", icon: ShoppingCart, permission: "SALES_ORDER_VIEW", module: "sales" },
-      { path: "/deliveries", label: "Deliveries", icon: Truck, permission: "DELIVERY_VIEW", module: "sales" },
-      { path: "/invoices", label: "Invoices", icon: Receipt, permission: "INVOICE_VIEW", module: "sales" },
       { path: "/credit-notes", label: "Credit Notes", icon: ReceiptText, permission: "CREDIT_NOTES_VIEW", module: "sales" },
       { path: "/customer-payments", label: "Customer Payments", icon: CreditCard, permission: "PAYMENTS_VIEW", module: "sales" },
+      { path: "/deliveries", label: "Deliveries", icon: Truck, permission: "DELIVERY_VIEW", module: "sales" },
       { path: "/customers", label: "Customers", icon: Users, permission: "CUSTOMER_VIEW", module: "customers" },
       { path: "/sales-reports", label: "Sales Reports", icon: BarChart3, permission: "REPORTS_VIEW", module: "sales" }
     ]
   },
-  {
-    id: "expenses",
-    label: "Expenses",
-    icon: Receipt,
-    module: "expenses",
-    items: [
-      { path: "/expenses", label: "Expense Management", icon: Receipt, permission: "EXPENSE_VIEW", module: "expenses" }
-    ]
-  },
+  // 4. Purchases & Expenses
   {
     id: "purchases",
-    label: "Purchases", 
+    label: "Purchases & Expenses", 
     icon: Truck,
     module: "purchases",
     items: [
       { path: "/purchase-dashboard", label: "Purchase Dashboard", icon: BarChart3, permission: "DASHBOARD_VIEW", module: "purchases" },
-      { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" },
+      { path: "/expenses", label: "Expense Management", icon: Receipt, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/bills", label: "Bills & Accounts Payable", icon: FileText, permission: "EXPENSE_VIEW", module: "expenses" },
       { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" },
       { path: "/goods-receipts", label: "Goods Receipts", icon: PackageCheck, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
       { path: "/purchase-requisitions", label: "Purchase Requisitions", icon: FileText, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
       { path: "/payment-flows", label: "Payment Flows", icon: CreditCard, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
       { path: "/three-way-matching", label: "3-Way Matching", icon: CheckCircle, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/recurring-expenses", label: "Recurring Expenses", icon: Clock, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/expense-approvals", label: "Expense Approvals", icon: CheckCircle, permission: "EXPENSE_VIEW", module: "expenses" },
       { path: "/exception-dashboard", label: "Exception Dashboard", icon: Shield, permission: "EXCEPTIONS_VIEW", module: "purchases" },
       { path: "/purchase-reports", label: "Purchase Reports", icon: FileText, permission: "REPORTS_VIEW", module: "purchases" }
     ]
   },
+  // 5. Accounting
+  {
+    id: "accounting",
+    label: "Accounting",
+    icon: Calculator,
+    module: "accounting",
+    items: [
+      { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW", module: "accounting" },
+      { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
+      { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
+      { path: "/fixed-assets", label: "Fixed Assets", icon: Building2, permission: "FIXED_ASSETS_VIEW", module: "accounting" },
+      { path: "/bulk-capture", label: "Bulk Data Entry", icon: Upload, permission: "BULK_CAPTURE_VIEW", module: "accounting" },
+      { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW", module: "advanced_reports" }
+    ]
+  },
+  // 6. Products & Inventory
   {
     id: "inventory",
     label: "Products & Inventory",
@@ -83,6 +107,64 @@ const navigationGroups = [
       { path: "/inventory-reports", label: "Inventory Reports", icon: BarChart3, permission: "INVENTORY_VIEW", module: "inventory" }
     ]
   },
+  // 7. VAT Management (SEPARATE)
+  {
+    id: "vat",
+    label: "VAT Management",
+    icon: Receipt,
+    module: "vat",
+    items: [
+      { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "vat" },
+      { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW", module: "vat" },
+      { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW", module: "vat" },
+      { path: "/vat-reports", label: "VAT Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "vat" }
+    ]
+  },
+  // 8. Compliance Management (SEPARATE)
+  {
+    id: "compliance",
+    label: "Compliance Management",
+    icon: Shield,
+    module: "compliance",
+    items: [
+      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" }
+    ]
+  },
+  // 9. Reports & Analytics
+  {
+    id: "reports",
+    label: "Reports & Analytics",
+    icon: BarChart3,
+    module: "reports",
+    items: [
+      { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reports" },
+      { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "basic_reports" },
+      { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reports" }
+    ]
+  },
+  // 10. CRM & Projects
+  {
+    id: "crm",
+    label: "CRM & Projects",
+    icon: UserCog,
+    module: "crm",
+    items: [
+      { path: "/customer-lifecycle", label: "Customer Lifecycle", icon: TrendingUp, permission: "CUSTOMER_VIEW", module: "crm" },
+      { path: "/communication-center", label: "Communication Center", icon: MessageCircle, permission: "CUSTOMER_VIEW", module: "crm" },
+      { path: "/customer-segments", label: "Customer Segments", icon: Users, permission: "CUSTOMER_VIEW", module: "crm" },
+      { path: "/customer-insights", label: "Customer Insights", icon: BarChart3, permission: "CUSTOMER_VIEW", module: "crm" },
+      { path: "/projects", label: "Projects", icon: FolderOpen, permission: "PROJECTS_VIEW", module: "projects" },
+      { path: "/tasks", label: "Tasks", icon: CheckSquare, permission: "TASKS_VIEW", module: "projects" },
+      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "projects" }
+    ]
+  },
+  // 11. Point of Sale
   {
     id: "pos",
     label: "Point of Sale",
@@ -95,130 +177,43 @@ const navigationGroups = [
       { path: "/pos/terminals", label: "Terminal Setup", icon: Settings, permission: "POS_MANAGE", module: "pos_sales" }
     ]
   },
+  // 12. Administration
   {
-    id: "accounting",
-    label: "Accounting",
-    icon: Calculator,
-    module: "accounting",
-    items: [
-      { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW", module: "accounting" },
-      { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
-      { path: "/banking", label: "Banking", icon: Landmark, permission: "BANKING_VIEW", module: "banking" },
-      { path: "/general-ledger", label: "General Ledger", icon: CreditCard, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
-      { path: "/fixed-assets", label: "Fixed Assets", icon: Building2, permission: "FIXED_ASSETS_VIEW", module: "accounting" },
-      { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW", module: "advanced_reports" },
-      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW", module: "advanced_reports" },
-      { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANK_RECONCILIATION_VIEW", module: "banking" }
-    ]
-  },
-  {
-    id: "bulk-capture",
-    label: "Bulk Capture",
-    icon: Upload,
-    module: "accounting",
-    items: [
-      { path: "/bulk-capture", label: "Bulk Data Entry", icon: Upload, permission: "BULK_CAPTURE_VIEW", module: "accounting" }
-    ]
-  },
-  {
-    id: "projects",
-    label: "Project Management",
-    icon: Briefcase,
-    module: "projects",
-    items: [
-      { path: "/projects", label: "Projects", icon: FolderOpen, permission: "PROJECTS_VIEW", module: "projects" },
-      { path: "/tasks", label: "Tasks", icon: CheckSquare, permission: "TASKS_VIEW", module: "projects" },
-      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "projects" }
-    ]
-  },
-  {
-    id: "compliance",
-    label: "Compliance Management",
-    icon: Shield,
-    module: "compliance",
-    items: [
-      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/sars", label: "SARS Compliance", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" }
-    ]
-  },
-  {
-    id: "vat",
-    label: "VAT Management",
-    icon: Receipt,
-    module: "vat",
-    items: [
-      { path: "/vat-settings", label: "VAT Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "vat" },
-      { path: "/sars-integration", label: "SARS API Integration", icon: Shield, permission: "SETTINGS_VIEW", module: "vat" },
-      { path: "/vat-types", label: "VAT Types", icon: FileText, permission: "SETTINGS_VIEW", module: "vat" },
-      { path: "/vat-returns", label: "VAT Returns (VAT201)", icon: BarChart3, permission: "FINANCIAL_VIEW", module: "vat" },
-      { path: "/vat-reports", label: "VAT Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "vat" }
-    ]
-  },
-  {
-    id: "reports",
-    label: "Reports",
-    icon: BarChart3,
-    module: "reports",
-    items: [
-      { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reports" },
-      { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reports" },
-      { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "basic_reports" }
-    ]
-  },
-  {
-    id: "crm",
-    label: "CRM",
-    icon: UserCog,
-    module: "crm",
-    items: [
-      { path: "/customer-lifecycle", label: "Customer Lifecycle", icon: TrendingUp, permission: "CUSTOMER_VIEW", module: "crm" },
-      { path: "/communication-center", label: "Communication Center", icon: MessageCircle, permission: "CUSTOMER_VIEW", module: "crm" },
-      { path: "/customer-segments", label: "Customer Segments", icon: Users, permission: "CUSTOMER_VIEW", module: "crm" },
-      { path: "/customer-insights", label: "Customer Insights", icon: BarChart3, permission: "CUSTOMER_VIEW", module: "crm" }
-    ]
-  },
-  {
-    id: "rbac",
-    label: "User Management", 
-    icon: UserCog,
-    module: "advanced_analytics",
-    items: [
-      { path: "/user-management", label: "User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" }
-    ]
-  },
-  {
-    id: "company",
-    label: "Company",
-    icon: Building2,
+    id: "administration",
+    label: "Administration",
+    icon: Settings,
     module: "dashboard",
     items: [
+      { path: "/user-management", label: "User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
       { path: "/companies", label: "Companies", icon: Building2, permission: "COMPANY_VIEW", module: "multi_company" },
-      { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
       { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
       { path: "/integrations", label: "Integrations", icon: Zap, permission: "SETTINGS_VIEW", module: "dashboard" },
-      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" }
-    ]
-  },
-  {
-    id: "super-admin",
-    label: "Super Admin",
-    icon: Settings,
-    requiredRole: "super_admin",
-    module: "advanced_analytics",
-    items: [
-      { path: "/super-admin", label: "Super Admin Panel", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" }
+      { path: "/ai-monitor", label: "AI Health Monitor", icon: Brain, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/email-settings", label: "Email Settings", icon: Mail, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Shield, permission: "SETTINGS_VIEW", module: "advanced_analytics" },
+      { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
+      { path: "/super-admin", label: "Super Admin Panel", icon: Settings, requiredRole: "super_admin", module: "advanced_analytics" },
+      { path: "/spending-wizard", label: "Smart Spending Wizard", icon: Brain, permission: null, module: "dashboard" }
     ]
   }
 ];
 
 interface NavigationGroupProps {
-  group: typeof navigationGroups[0];
+  group: {
+    id: string;
+    label: string;
+    module: string;
+    icon?: any;
+    requiredRole?: string;
+    items: Array<{
+      path: string;
+      label: string;
+      icon: any;
+      permission?: string | null;
+      requiredRole?: string;
+      module: string;
+    }>;
+  };
   location: string;
   userPermissions: string[];
   userRole: string;
@@ -359,8 +354,8 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const { isModuleAvailable, currentPlan, planName, isSuperAdminOrOwner } = useCompanySubscription();
-  const [expandedGroup, setExpandedGroup] = useState<string | null>("overview");
+  const { isModuleAvailable, currentPlan, subscription, planStatus, isSuperAdminOrOwner } = useCompanySubscription();
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   // Get user permissions (fallback to all permissions for super admin or if no user)
   const userPermissions = user?.permissions || [
@@ -370,6 +365,18 @@ export default function Sidebar() {
     "GENERAL_LEDGER_VIEW", "FINANCIAL_VIEW", "REPORT_VIEW", "VAT_VIEW",
     "COMPANY_VIEW", "SETTINGS_VIEW", "COMPLIANCE_VIEW"
   ];
+
+  // Auto-expand the group containing the active page
+  React.useEffect(() => {
+    const activeGroup = navigationGroups.find(group => 
+      group.items.some(item => 
+        location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path))
+      )
+    );
+    if (activeGroup) {
+      setExpandedGroup(activeGroup.id);
+    }
+  }, [location]);
 
   const toggleGroup = (groupId: string) => {
     // If clicking the same group, collapse it. Otherwise, expand the new group
@@ -398,9 +405,9 @@ export default function Sidebar() {
                   <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full font-semibold shadow-lg border border-white/20">
                     ⚡ Super Admin
                   </span>
-                ) : currentPlan ? (
+                ) : subscription ? (
                   <span className="text-xs px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full border border-white/30 font-medium">
-                    {currentPlan.displayName}
+                    {planStatus === 'trial' ? `✨ ${currentPlan?.displayName || 'Basic'} Trial` : currentPlan?.displayName || 'Basic Plan'}
                   </span>
                 ) : (
                   <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-full font-semibold">
@@ -425,7 +432,7 @@ export default function Sidebar() {
           )}
           
           {/* Subscription Plan Information */}
-          {!currentPlan && !isSuperAdminOrOwner && (
+          {!subscription && !isSuperAdminOrOwner && (
             <div className="mt-4">
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
                 <div className="flex items-center gap-3">

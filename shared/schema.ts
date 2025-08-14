@@ -6,6 +6,7 @@ import { relations } from "drizzle-orm";
 // Multi-Company Core Tables
 export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
+  companyId: text("company_id").notNull().unique(), // Professional Company ID like 904886369
   name: text("name").notNull(),
   displayName: text("display_name").notNull(),
   slug: text("slug").notNull().unique(),
@@ -203,12 +204,16 @@ export const invoices = pgTable("invoices", {
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  reference: text("reference"), // Customer reference number (normalized for uniqueness)
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   companyInvoiceUnique: unique().on(table.companyId, table.invoiceNumber),
+  // Optional unique constraint for reference per customer per company
+  companyCustomerReferenceUnique: unique("uniq_inc_ref_per_customer").on(table.companyId, table.customerId, table.reference),
   companyIdx: index("invoices_company_idx").on(table.companyId),
   customerIdx: index("invoices_customer_idx").on(table.customerId),
+  referenceIdx: index("invoices_reference_idx").on(table.reference),
 }));
 
 export const invoiceItems = pgTable("invoice_items", {
@@ -833,6 +838,7 @@ export const numberSequences = pgTable("number_sequences", {
 }));
 
 // Financial reporting tables
+// Enhanced Expense Management with Professional Features
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(), // Client/Company reference
@@ -848,9 +854,25 @@ export const expenses = pgTable("expenses", {
   expenseDate: date("expense_date").notNull(),
   paidStatus: text("paid_status").notNull().default("Unpaid"), // 'Paid', 'Unpaid', 'Partially Paid'
   attachmentUrl: text("attachment_url"), // File upload URL
-  // New fields for standalone expense module
-  supplierInvoiceNumber: text("supplier_invoice_number"), // Supplier's invoice/reference number with duplicate prevention
+  // Professional Expense Management Fields
+  reference: text("reference"), // Supplier invoice/reference number (normalized for uniqueness)
+  supplierInvoiceNumber: text("supplier_invoice_number"), // Legacy field - kept for backwards compatibility
   internalExpenseRef: text("internal_expense_ref").notNull(), // Auto-generated internal reference (EXP-2025-0001)
+  // billId: integer("bill_id"), // Reference to formal bill/accounts payable - TEMPORARILY DISABLED
+  purchaseOrderId: integer("purchase_order_id"), // Reference to originating purchase order
+  approvalStatus: text("approval_status").notNull().default("pending"), // pending, approved, rejected
+  approvedBy: integer("approved_by"), // User who approved the expense
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by"), // User who rejected the expense
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  recurringExpenseId: integer("recurring_expense_id"), // Reference to recurring expense template
+  isRecurring: boolean("is_recurring").default(false),
+  expenseType: text("expense_type").notNull().default("one_time"), // one_time, recurring, reimbursement
+  reimbursementStatus: text("reimbursement_status"), // pending, approved, paid (for employee reimbursements)
+  employeeId: integer("employee_id"), // For employee expense reimbursements
+  projectId: integer("project_id"), // For project-based expense tracking
+  departmentId: integer("department_id"), // For departmental expense allocation
   createdBy: integer("created_by").notNull(), // User who created the expense
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -860,9 +882,130 @@ export const expenses = pgTable("expenses", {
   categoryIdx: index("expenses_category_idx").on(table.categoryId),
   bankAccountIdx: index("expenses_bank_account_idx").on(table.bankAccountId),
   dateIdx: index("expenses_date_idx").on(table.expenseDate),
+  approvalStatusIdx: index("expenses_approval_status_idx").on(table.approvalStatus),
+  // billIdx: index("expenses_bill_idx").on(table.billId), // TEMPORARILY DISABLED
+  purchaseOrderIdx: index("expenses_purchase_order_idx").on(table.purchaseOrderId),
+  recurringIdx: index("expenses_recurring_idx").on(table.recurringExpenseId),
+  typeIdx: index("expenses_type_idx").on(table.expenseType),
   // Unique constraint for supplier invoice number per company to prevent duplicates
   companySupplierInvoiceUnique: unique().on(table.companyId, table.supplierInvoiceNumber),
+  // Unique constraint for reference per supplier per company
+  companySupplierReferenceUnique: unique("uniq_exp_ref_per_supplier").on(table.companyId, table.supplierId, table.reference),
   internalRefIdx: index("expenses_internal_ref_idx").on(table.internalExpenseRef),
+  referenceIdx: index("expenses_reference_idx").on(table.reference),
+}));
+
+// Bills/Accounts Payable - Formal supplier invoices requiring approval
+export const bills = pgTable("bills", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  billNumber: text("bill_number").notNull(), // Auto-generated BILL-2025-0001
+  supplierId: integer("supplier_id").notNull().references(() => suppliers.id),
+  supplierInvoiceNumber: text("supplier_invoice_number").notNull(), // Supplier's invoice number
+  billDate: date("bill_date").notNull(), // Date on supplier's invoice
+  dueDate: date("due_date").notNull(), // Payment due date
+  description: text("description").notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default("0.00"),
+  status: text("status").notNull().default("draft"), // draft, pending_approval, approved, rejected, paid, overdue
+  approvalStatus: text("approval_status").notNull().default("pending"), // pending, approved, rejected
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrders.id), // 3-way matching
+  goodsReceiptId: integer("goods_receipt_id").references(() => goodsReceipts.id), // 3-way matching
+  paymentTerms: integer("payment_terms").default(30), // Days
+  attachmentUrl: text("attachment_url"), // Supplier invoice attachment
+  notes: text("notes"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyBillUnique: unique().on(table.companyId, table.billNumber),
+  companySupplierInvoiceUnique: unique().on(table.companyId, table.supplierInvoiceNumber),
+  companyIdx: index("bills_company_idx").on(table.companyId),
+  supplierIdx: index("bills_supplier_idx").on(table.supplierId),
+  statusIdx: index("bills_status_idx").on(table.status),
+  approvalStatusIdx: index("bills_approval_status_idx").on(table.approvalStatus),
+  dueDateIdx: index("bills_due_date_idx").on(table.dueDate),
+  purchaseOrderIdx: index("bills_purchase_order_idx").on(table.purchaseOrderId),
+}));
+
+// Bill Line Items - Detailed breakdown of bills
+export const billItems = pgTable("bill_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  billId: integer("bill_id").notNull().references(() => bills.id),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default("1.00"),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatType: text("vat_type").notNull().default("Inclusive"), // Inclusive, Exclusive, No VAT
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  lineTotal: decimal("line_total", { precision: 10, scale: 2 }).notNull(),
+  expenseCategoryId: integer("expense_category_id"), // Chart of Accounts reference
+  projectId: integer("project_id"), // For project cost allocation
+  departmentId: integer("department_id"), // For department cost allocation
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bill_items_company_idx").on(table.companyId),
+  billIdx: index("bill_items_bill_idx").on(table.billId),
+}));
+
+// Recurring Expenses - Templates for automated expense creation
+export const recurringExpenses = pgTable("recurring_expenses", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  templateName: text("template_name").notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  description: text("description").notNull(),
+  categoryId: integer("category_id").notNull(), // Chart of Accounts reference
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  vatType: text("vat_type").notNull().default("No VAT"),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  frequency: text("frequency").notNull(), // monthly, quarterly, annually, weekly
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"), // Optional end date
+  nextDueDate: date("next_due_date").notNull(),
+  autoApprove: boolean("auto_approve").default(false), // Auto-approve generated expenses
+  isActive: boolean("is_active").default(true),
+  reminderDays: integer("reminder_days").default(7), // Days before due date to remind
+  notes: text("notes"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("recurring_expenses_company_idx").on(table.companyId),
+  supplierIdx: index("recurring_expenses_supplier_idx").on(table.supplierId),
+  categoryIdx: index("recurring_expenses_category_idx").on(table.categoryId),
+  nextDueDateIdx: index("recurring_expenses_next_due_date_idx").on(table.nextDueDate),
+  activeIdx: index("recurring_expenses_active_idx").on(table.isActive),
+}));
+
+// Expense Approval Workflow
+export const expenseApprovals = pgTable("expense_approvals", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  expenseId: integer("expense_id").references(() => expenses.id),
+  // billId: integer("bill_id").references(() => bills.id), // TEMPORARILY DISABLED
+  approverLevel: integer("approver_level").notNull().default(1), // 1, 2, 3 for multi-level approval
+  approverId: integer("approver_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  comments: text("comments"),
+  approvalLimit: decimal("approval_limit", { precision: 10, scale: 2 }), // Maximum amount this approver can approve
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("expense_approvals_company_idx").on(table.companyId),
+  expenseIdx: index("expense_approvals_expense_idx").on(table.expenseId),
+  // billIdx: index("expense_approvals_bill_idx").on(table.billId), // TEMPORARILY DISABLED
+  approverIdx: index("expense_approvals_approver_idx").on(table.approverId),
+  statusIdx: index("expense_approvals_status_idx").on(table.status),
 }));
 
 export const vatReturns = pgTable("vat_returns", {
@@ -884,6 +1027,7 @@ export const vatReturns = pgTable("vat_returns", {
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().unique(), // Professional User ID like 904886372
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
@@ -1637,6 +1781,40 @@ export type InsertReorderRule = z.infer<typeof insertReorderRuleSchema>;
 export type ProductBundle = typeof productBundles.$inferSelect;
 export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
 
+// SARS eFiling Integration Tables  
+export const sarsVendorConfig = pgTable("sars_vendor_config", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  isvNumber: varchar("isv_number", { length: 50 }).unique().notNull(),
+  clientId: varchar("client_id", { length: 255 }).notNull(),
+  clientSecret: varchar("client_secret", { length: 255 }).notNull(),
+  apiKey: varchar("api_key", { length: 255 }).notNull(),
+  apiUrl: varchar("api_url", { length: 255 }).notNull().default("https://secure.sarsefiling.co.za/api/v1"),
+  environment: varchar("environment", { length: 20 }).notNull().default("sandbox"), // sandbox | live
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const companySarsLink = pgTable("company_sars_link", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  isvNumber: varchar("isv_number", { length: 50 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("disconnected"), // connected | disconnected | error
+  accessToken: text("access_token"), // encrypted
+  refreshToken: text("refresh_token"), // encrypted
+  linkedAt: timestamp("linked_at"),
+  lastSyncAt: timestamp("last_sync_at"),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueCompany: unique().on(table.companyId),
+}));
+
+export type SarsVendorConfig = typeof sarsVendorConfig.$inferSelect;
+export type InsertSarsVendorConfig = typeof sarsVendorConfig.$inferInsert;
+export type CompanySarsLink = typeof companySarsLink.$inferSelect;
+export type InsertCompanySarsLink = typeof companySarsLink.$inferInsert;
+
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
@@ -2011,6 +2189,36 @@ export const insertPurchaseRequisitionItemSchema = createInsertSchema(purchaseRe
   createdAt: true,
 });
 
+// Professional Expense Management - Insert Schemas
+export const insertBillSchema = createInsertSchema(bills).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBillItemSchema = createInsertSchema(billItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRecurringExpenseSchema = createInsertSchema(recurringExpenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExpenseApprovalSchema = createInsertSchema(expenseApprovals).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Updated expense schema to include new fields
+export const insertExpenseSchemaEnhanced = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type exports
 export type GoodsReceipt = typeof goodsReceipts.$inferSelect;
 export type InsertGoodsReceipt = z.infer<typeof insertGoodsReceiptSchema>;
@@ -2020,6 +2228,18 @@ export type PurchaseRequisition = typeof purchaseRequisitions.$inferSelect;
 export type InsertPurchaseRequisition = z.infer<typeof insertPurchaseRequisitionSchema>;
 export type PurchaseRequisitionItem = typeof purchaseRequisitionItems.$inferSelect;
 export type InsertPurchaseRequisitionItem = z.infer<typeof insertPurchaseRequisitionItemSchema>;
+
+// Professional Expense Management Types
+export type Bill = typeof bills.$inferSelect;
+export type InsertBill = z.infer<typeof insertBillSchema>;
+export type BillItem = typeof billItems.$inferSelect;
+export type InsertBillItem = z.infer<typeof insertBillItemSchema>;
+export type RecurringExpense = typeof recurringExpenses.$inferSelect;
+export type InsertRecurringExpense = z.infer<typeof insertRecurringExpenseSchema>;
+export type ExpenseApproval = typeof expenseApprovals.$inferSelect;
+export type InsertExpenseApproval = z.infer<typeof insertExpenseApprovalSchema>;
+export type EnhancedExpense = typeof expenses.$inferSelect;
+export type InsertExpenseEnhanced = z.infer<typeof insertExpenseSchemaEnhanced>;
 
 // Extended types for API responses
 export type InvoiceWithCustomer = Invoice & { customer: Customer };
@@ -2034,6 +2254,26 @@ export type PurchaseRequisitionWithUser = PurchaseRequisition & { requestedByUse
 export type PurchaseRequisitionWithItems = PurchaseRequisition & { items: PurchaseRequisitionItem[]; requestedByUser: User };
 export type SupplierPaymentWithSupplier = SupplierPayment & { supplier: Supplier };
 export type SupplierPaymentWithPurchaseOrder = SupplierPayment & { purchaseOrder?: PurchaseOrder };
+
+// Professional Expense Management Extended Types
+export type BillWithSupplier = Bill & { supplier: Supplier };
+export type BillWithItems = Bill & { items: BillItem[]; supplier: Supplier };
+export type BillWithFullDetails = Bill & { 
+  items: BillItem[]; 
+  supplier: Supplier; 
+  purchaseOrder?: PurchaseOrder;
+  goodsReceipt?: GoodsReceipt;
+  approvals: ExpenseApproval[];
+};
+export type ExpenseWithSupplier = EnhancedExpense & { supplier?: Supplier };
+export type ExpenseWithFullDetails = EnhancedExpense & { 
+  supplier?: Supplier; 
+  bill?: Bill;
+  purchaseOrder?: PurchaseOrder;
+  recurringExpense?: RecurringExpense;
+  approvals: ExpenseApproval[];
+};
+export type RecurringExpenseWithSupplier = RecurringExpense & { supplier?: Supplier };
 
 // Company settings table
 export const companySettings = pgTable("company_settings", {
@@ -2305,6 +2545,49 @@ export const currencyRates = pgTable("currency_rates", {
   companyIdx: index("currency_rates_company_idx").on(table.companyId),
 }));
 
+// AI Assistant Settings table
+export const aiSettings = pgTable("ai_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  enabled: boolean("enabled").default(false),
+  provider: varchar("provider", { length: 20 }).default("anthropic"), // 'anthropic', 'openai'
+  model: varchar("model", { length: 50 }).default("claude-3-5-sonnet-20241022"),
+  apiKey: text("api_key"), // Encrypted API key
+  maxTokens: integer("max_tokens").default(4096),
+  temperature: decimal("temperature", { precision: 3, scale: 2 }).default("0.70"),
+  contextSharing: boolean("context_sharing").default(true),
+  conversationHistory: boolean("conversation_history").default(true),
+  suggestions: boolean("suggestions").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyUnique: unique().on(table.companyId),
+  companyIdx: index("ai_settings_company_idx").on(table.companyId),
+}));
+
+// Notification Settings table
+export const notificationSettings = pgTable("notification_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  // Email notifications
+  emailEnabled: boolean("email_enabled").default(true),
+  invoiceReminders: boolean("invoice_reminders").default(true),
+  paymentAlerts: boolean("payment_alerts").default(true),
+  securityAlerts: boolean("security_alerts").default(true),
+  systemUpdates: boolean("system_updates").default(true),
+  // SMS notifications
+  smsEnabled: boolean("sms_enabled").default(false),
+  criticalAlerts: boolean("critical_alerts").default(false),
+  paymentReminders: boolean("payment_reminders").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyUnique: unique().on(table.companyId),
+  companyIdx: index("notification_settings_company_idx").on(table.companyId),
+}));
+
 // Schema exports
 export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({
   id: true,
@@ -2330,6 +2613,18 @@ export const insertCurrencyRateSchema = createInsertSchema(currencyRates).omit({
   updatedAt: true,
 });
 
+export const insertAiSettingsSchema = createInsertSchema(aiSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationSettingsSchema = createInsertSchema(notificationSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
 export type CompanySettings = typeof companySettings.$inferSelect;
 
@@ -2341,6 +2636,12 @@ export type EmailReminder = typeof emailReminders.$inferSelect;
 
 export type InsertCurrencyRate = z.infer<typeof insertCurrencyRateSchema>;
 export type CurrencyRate = typeof currencyRates.$inferSelect;
+
+export type InsertAiSettings = z.infer<typeof insertAiSettingsSchema>;
+export type AiSettings = typeof aiSettings.$inferSelect;
+
+export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
 
 // VAT Types - South African Standard VAT Categories
 export const vatTypes = pgTable("vat_types", {
@@ -2969,11 +3270,19 @@ export const bankAccounts = pgTable("bank_accounts", {
   reconcileBalance: decimal("reconcile_balance", { precision: 15, scale: 2 }).default("0.00"),
   lastReconciled: timestamp("last_reconciled"),
   chartAccountId: integer("chart_account_id").references(() => chartOfAccounts.id),
+  // Stitch integration fields
+  externalProvider: text("external_provider"), // 'stitch' | null for manual accounts
+  providerAccountId: text("provider_account_id"), // Stitch account ID
+  institutionName: text("institution_name"), // Bank institution name from Stitch
+  lastSyncAt: timestamp("last_sync_at"), // Last successful sync timestamp
   isActive: boolean("is_active").default(true),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("bank_accounts_company_idx").on(table.companyId),
+  providerAccountIdx: index("bank_accounts_provider_account_idx").on(table.providerAccountId),
+}));
 
 // Bank Transactions
 export const bankTransactions = pgTable("bank_transactions", {
@@ -2981,16 +3290,115 @@ export const bankTransactions = pgTable("bank_transactions", {
   companyId: integer("company_id").notNull(),
   bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
   transactionDate: timestamp("transaction_date").notNull(),
+  postingDate: date("posting_date").notNull(), // Date used for deduplication
   description: text("description").notNull(),
+  normalizedDescription: text("normalized_description"), // Cleaned description for deduplication
   reference: text("reference"),
+  externalId: text("external_id"), // Bank's unique ID for deduplication
   transactionType: text("transaction_type").notNull(), // debit, credit
   debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }).default("0.00"),
   creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }).default("0.00"),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(), // Signed amount: positive for credit, negative for debit
   balance: decimal("balance", { precision: 15, scale: 2 }),
   status: text("status").default("pending"), // pending, cleared, reconciled
+  importBatchId: integer("import_batch_id").references(() => importBatches.id), // Reference to import batch
+  isImported: boolean("is_imported").default(false), // Whether this was imported from statement
+  source: text("source").default("manual"), // manual | feed (for Stitch sync)
+  isDuplicate: boolean("is_duplicate").default(false), // Marked as duplicate during import
+  reconciled: boolean("reconciled").default(false), // Whether reconciled with bank statement
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  companyIdx: index("bank_transactions_company_idx").on(table.companyId),
+  bankAccountIdx: index("bank_transactions_bank_account_idx").on(table.bankAccountId),
+  postingDateIdx: index("bank_transactions_posting_date_idx").on(table.postingDate),
+  importBatchIdx: index("bank_transactions_import_batch_idx").on(table.importBatchId),
+  // Compound index for deduplication
+  dedupIdx: index("bank_transactions_dedup_idx").on(
+    table.companyId, 
+    table.bankAccountId, 
+    table.postingDate, 
+    table.amount, 
+    table.normalizedDescription
+  ),
+}));
+
+// Import Batches - Track statement upload sessions
+export const importBatches = pgTable("import_batches", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  batchNumber: text("batch_number").notNull(), // Auto-generated: IMP-2025-0001
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(), // File size in bytes
+  fileType: text("file_type").notNull(), // csv, ofx, mt940, qif
+  uploadedBy: integer("uploaded_by").notNull().references(() => users.id),
+  status: text("status").notNull().default("processing"), // processing, completed, failed, cancelled
+  totalRows: integer("total_rows").default(0),
+  newRows: integer("new_rows").default(0), // Successfully imported new transactions
+  duplicateRows: integer("duplicate_rows").default(0), // Skipped duplicates
+  invalidRows: integer("invalid_rows").default(0), // Failed validation
+  statementStartDate: date("statement_start_date"), // Date range from statement
+  statementEndDate: date("statement_end_date"),
+  processingNotes: text("processing_notes"), // Error details, warnings, etc.
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("import_batches_company_idx").on(table.companyId),
+  bankAccountIdx: index("import_batches_bank_account_idx").on(table.bankAccountId),
+  batchNumberIdx: index("import_batches_batch_number_idx").on(table.batchNumber),
+  statusIdx: index("import_batches_status_idx").on(table.status),
+  uploadedByIdx: index("import_batches_uploaded_by_idx").on(table.uploadedBy),
+}));
+
+// Import Queue - Temporary staging area for parsed statement data before committing
+export const importQueue = pgTable("import_queue", {
+  id: serial("id").primaryKey(),
+  importBatchId: integer("import_batch_id").notNull().references(() => importBatches.id),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  rowNumber: integer("row_number").notNull(), // Original row number in file
+  transactionDate: timestamp("transaction_date"),
+  postingDate: date("posting_date"),
+  description: text("description"),
+  normalizedDescription: text("normalized_description"),
+  reference: text("reference"),
+  externalId: text("external_id"),
+  debitAmount: decimal("debit_amount", { precision: 15, scale: 2 }),
+  creditAmount: decimal("credit_amount", { precision: 15, scale: 2 }),
+  amount: decimal("amount", { precision: 15, scale: 2 }), // Signed amount calculated from debit/credit
+  balance: decimal("balance", { precision: 15, scale: 2 }),
+  status: text("status").notNull(), // new, duplicate, invalid
+  validationErrors: jsonb("validation_errors").default([]), // Array of error messages
+  duplicateTransactionId: integer("duplicate_transaction_id"), // Reference to existing transaction if duplicate
+  willImport: boolean("will_import").default(true), // User decision to import this row
+  rawData: jsonb("raw_data"), // Original parsed data from CSV/OFX
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  importBatchIdx: index("import_queue_import_batch_idx").on(table.importBatchId),
+  companyIdx: index("import_queue_company_idx").on(table.companyId),
+  bankAccountIdx: index("import_queue_bank_account_idx").on(table.bankAccountId),
+  statusIdx: index("import_queue_status_idx").on(table.status),
+  rowNumberIdx: index("import_queue_row_number_idx").on(table.importBatchId, table.rowNumber),
+}));
+
+// Bank Feed Cursors - Track sync state for linked bank accounts
+export const bankFeedCursors = pgTable("bank_feed_cursors", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id),
+  provider: text("provider").notNull(), // 'stitch'
+  externalAccountId: text("external_account_id").notNull(),
+  txnCursor: text("txn_cursor"), // Provider paging cursor for transactions
+  lastSyncAt: timestamp("last_sync_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bank_feed_cursors_company_idx").on(table.companyId),
+  bankAccountIdx: index("bank_feed_cursors_bank_account_idx").on(table.bankAccountId),
+  externalAccountIdx: index("bank_feed_cursors_external_account_idx").on(table.externalAccountId),
+  providerIdx: index("bank_feed_cursors_provider_idx").on(table.provider),
+}));
 
 // General Ledger View (Real-time calculated from journal entries)
 export const generalLedger = pgTable("general_ledger", {
@@ -3048,11 +3456,35 @@ export const insertBankReconciliationSchema = createInsertSchema(bankReconciliat
   completedAt: true,
 });
 
+// Bank import schemas
+export const insertImportBatchSchema = createInsertSchema(importBatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertImportQueueSchema = createInsertSchema(importQueue).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Bank feed cursor schema
+export const insertBankFeedCursorSchema = createInsertSchema(bankFeedCursors).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Banking and GL types
 export type BankAccount = typeof bankAccounts.$inferSelect;
 export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
 export type BankTransaction = typeof bankTransactions.$inferSelect;
 export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
+export type ImportBatch = typeof importBatches.$inferSelect;
+export type InsertImportBatch = z.infer<typeof insertImportBatchSchema>;
+export type ImportQueue = typeof importQueue.$inferSelect;
+export type InsertImportQueue = z.infer<typeof insertImportQueueSchema>;
+export type BankFeedCursor = typeof bankFeedCursors.$inferSelect;
+export type InsertBankFeedCursor = z.infer<typeof insertBankFeedCursorSchema>;
 export type GeneralLedger = typeof generalLedger.$inferSelect;
 export type BankReconciliation = typeof bankReconciliations.$inferSelect;
 export type InsertBankReconciliation = z.infer<typeof insertBankReconciliationSchema>;

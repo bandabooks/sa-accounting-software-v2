@@ -11,6 +11,7 @@ export async function seedDatabase() {
     
     if (existingCompanies.length === 0) {
       defaultCompany = await storage.createCompany({
+        companyId: "904886369",
         name: "Think Mybiz Accounting",
         displayName: "Think Mybiz Accounting",
         slug: "think-mybiz-accounting",
@@ -39,6 +40,7 @@ export async function seedDatabase() {
       const hashedPassword = await hashPassword("admin123");
       
       await storage.createUser({
+        userId: "904886372",
         username: "sysadmin_7f3a2b8e",
         email: "accounts@thinkmybiz.com",
         name: "Production Administrator",
@@ -50,6 +52,7 @@ export async function seedDatabase() {
       // Create demo user  
       const demoPassword = await hashPassword("demo123");
       await storage.createUser({
+        userId: "904886373",
         username: "demo",
         email: "demo@thinkmybiz.com", 
         name: "Demo User",
@@ -83,12 +86,12 @@ export async function seedDatabase() {
       console.log("✓ South African Chart of Accounts seeded");
     }
 
-    // Seed Default South African Banks for default company
-    const existingBanks = await storage.getAllBankAccounts(defaultCompany.id);
-    if (existingBanks.length === 0) {
-      await storage.seedDefaultSouthAfricanBanks(defaultCompany.id);
-      console.log("✓ Default South African banks seeded");
-    }
+    // Seed Default South African Banks for default company - Skip since we now use Chart of Accounts
+    // const existingBanks = await storage.getBankAccountsFromChartOfAccounts(defaultCompany.id);
+    // if (existingBanks.length === 0) {
+    //   await storage.seedDefaultSouthAfricanBanks(defaultCompany.id);
+    //   console.log("✓ Default South African banks seeded");
+    // }
 
     // Seed South African VAT Types (system-wide, not company-specific)
     try {

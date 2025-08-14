@@ -85,18 +85,31 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
     mutationFn: async (data: VatSettingsForm) => {
       return await apiRequest(`/api/companies/${companyId}/vat-settings`, "PUT", data);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const isEnabled = form.getValues('isVatRegistered');
       toast({
-        title: "VAT Settings Updated",
-        description: "Company VAT registration settings have been saved successfully.",
+        title: "VAT Settings Saved Successfully!",
+        description: isEnabled 
+          ? "VAT registration is now enabled. SARS integration is now available below."
+          : "VAT registration has been disabled for your company.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/companies", companyId, "vat-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/vat-types"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("VAT settings error:", error);
+      
+      let errorMessage = "Failed to update VAT settings. Please try again.";
+      
+      if (error?.message?.includes("Insufficient permissions")) {
+        errorMessage = "You don't have permission to modify VAT settings. Please contact your administrator.";
+      } else if (error?.message?.includes("Authentication failed")) {
+        errorMessage = "Your session has expired. Please log in again.";
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to update VAT settings. Please try again.",
+        title: "Unable to Save VAT Settings",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -502,10 +515,17 @@ export function VatStatusToggle({ companyId, initialSettings }: VatStatusToggleP
               <Button
                 type="submit"
                 disabled={updateVatSettingsMutation.isPending}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Shield className="h-4 w-4" />
-                {updateVatSettingsMutation.isPending ? "Saving..." : "Save VAT Settings"}
+                {updateVatSettingsMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving VAT Settings...
+                  </>
+                ) : (
+                  "Save VAT Settings"
+                )}
               </Button>
             </div>
           </form>
