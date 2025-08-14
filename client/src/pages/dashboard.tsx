@@ -362,80 +362,7 @@ export default function Dashboard() {
 
 
 
-        {/* Smart Priority Notifications */}
-        {notifications.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800">Recent Activities</h2>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                asChild
-                className="hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
-              >
-                <Link href="/activities">
-                  <Eye className="h-4 w-4 mr-2" />
-                  View All
-                </Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {notifications.map((notification) => (
-                <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
-                  notification.priority === 'high' ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' :
-                  notification.priority === 'medium' ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10' :
-                  'bg-gradient-to-br from-blue-500/10 to-indigo-500/10'
-                }`}>
-                  <div className={`absolute top-0 left-0 right-0 h-1 ${
-                    notification.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
-                    notification.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
-                    'bg-gradient-to-r from-blue-500 to-indigo-600'
-                  }`}></div>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          notification.priority === 'high' ? 'bg-red-100 text-red-600' :
-                          notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                          'bg-blue-100 text-blue-600'
-                        }`}>
-                          {notification.type === 'success' ? <Award className="h-4 w-4" /> :
-                           notification.type === 'warning' ? <AlertTriangle className="h-4 w-4" /> :
-                           <Bell className="h-4 w-4" />}
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm font-semibold text-gray-800">{notification.title}</CardTitle>
-                          <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            // Navigate based on notification type
-                            if (notification.title.includes('invoice')) setLocation('/invoices');
-                            else if (notification.title.includes('VAT')) setLocation('/reports/vat');
-                            else if (notification.title.includes('customer')) setLocation('/customers');
-                            else if (notification.title.includes('payment')) setLocation('/payments');
-                            else setLocation('/activities');
-                          }}
-                          className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
-                          title="View details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
-                          {notification.priority}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+
 
 
 
@@ -513,54 +440,49 @@ export default function Dashboard() {
                     </CardContent>
                   </Card>
                   
-                  {/* FILLING THE RED-MARKED GAP: Quick Actions */}
-                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-6">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                            <Zap className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-base font-semibold text-gray-800">Quick Actions</CardTitle>
-                            <CardDescription className="text-xs text-gray-600">Essential operations</CardDescription>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs text-gray-600">
-                          Daily
-                        </Badge>
+                    {/* Quick Actions - Now with notification cards */}
+                  <div className="mt-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Quick Actions</h3>
+                    {notifications.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {notifications.map((notification) => (
+                          <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
+                            notification.priority === 'high' ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' :
+                            notification.priority === 'medium' ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10' :
+                            'bg-gradient-to-br from-blue-500/10 to-indigo-500/10'
+                          }`}>
+                            <div className={`absolute top-0 left-0 right-0 h-1 ${
+                              notification.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
+                              notification.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
+                              'bg-gradient-to-r from-blue-500 to-indigo-600'
+                            }`}></div>
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2 rounded-lg ${
+                                    notification.priority === 'high' ? 'bg-red-100 text-red-600' :
+                                    notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                                    'bg-blue-100 text-blue-600'
+                                  }`}>
+                                    {notification.type === 'success' ? <Award className="h-4 w-4" /> :
+                                     notification.type === 'warning' ? <AlertTriangle className="h-4 w-4" /> :
+                                     <Bell className="h-4 w-4" />}
+                                  </div>
+                                  <div>
+                                    <CardTitle className="text-sm font-semibold text-gray-800">{notification.title}</CardTitle>
+                                    <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
+                                  </div>
+                                </div>
+                                <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                                  {notification.priority}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                          </Card>
+                        ))}
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                          <Link href="/invoices/new">
-                            <FileText className="h-4 w-4" />
-                            <span className="text-xs font-medium">Create Invoice</span>
-                          </Link>
-                        </Button>
-                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                          <Link href="/customers/new">
-                            <Plus className="h-4 w-4" />
-                            <span className="text-xs font-medium">Add Customer</span>
-                          </Link>
-                        </Button>
-                        <Button 
-                          onClick={() => setIsPaymentModalOpen(true)}
-                          className="h-16 flex-col gap-1 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300"
-                        >
-                          <DollarSign className="h-4 w-4" />
-                          <span className="text-xs font-medium">Record Payment</span>
-                        </Button>
-                        <Button asChild className="h-16 flex-col gap-1 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                          <Link href="/estimates/new">
-                            <Target className="h-4 w-4" />
-                            <span className="text-xs font-medium">New Estimate</span>
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    )}
+                  </div>
                   
                   {/* FILLING THE RED-MARKED GAP: Compliance Alerts */}
                   <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-3">
@@ -601,11 +523,26 @@ export default function Dashboard() {
                   </Card>
                 </div>
 
-                {/* Recent Activities Widget */}
+                {/* Recent Activities Widget - With View All button */}
                 <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
-                    <CardDescription>Latest business updates</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
+                        <CardDescription>Latest business updates</CardDescription>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        asChild
+                        className="hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+                      >
+                        <Link href="/activities">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View All
+                        </Link>
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <RecentActivities activities={dashboardStats.recentActivities || []} />
