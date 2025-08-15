@@ -10192,6 +10192,10 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
   // Company Management Routes
   app.get("/api/companies/my", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const userId = req.user.id;
       const companies = await storage.getUserCompanies(userId);
       res.json(companies);
@@ -10203,6 +10207,10 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
 
   app.get("/api/companies/active", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const userId = req.user.id;
       const activeCompany = await storage.getUserActiveCompany(userId);
       if (!activeCompany) {
@@ -10217,6 +10225,10 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
 
   app.post("/api/companies/switch", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const userId = req.user.id;
       const { companyId } = req.body;
       
@@ -10224,26 +10236,41 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
         return res.status(400).json({ message: "Company ID is required" });
       }
 
+      console.log(`→ User ${userId} attempting to switch to company ${companyId}`);
+
       // Optimized: Parallel verification and company fetch
       const [userCompanies, company] = await Promise.all([
         storage.getUserCompanies(userId),
         storage.getCompany(companyId)
       ]);
       
+      console.log(`→ User has access to companies: ${userCompanies.map(uc => uc.companyId).join(', ')}`);
+      console.log(`→ Requested company ${companyId} exists: ${!!company}`);
+      
       const hasAccess = userCompanies.some(uc => uc.companyId === companyId);
       
       if (!hasAccess) {
-        return res.status(403).json({ message: "Access denied to this company" });
+        console.log(`→ Access denied: User ${userId} cannot access company ${companyId}`);
+        return res.status(403).json({ 
+          message: "Access denied to this company",
+          userCompanies: userCompanies.map(uc => uc.companyId),
+          requestedCompany: companyId
+        });
       }
 
       if (!company) {
+        console.log(`→ Company ${companyId} not found in database`);
         return res.status(404).json({ message: "Company not found" });
       }
 
-      // Update user's active company (async, don't wait)
-      storage.setUserActiveCompany(userId, companyId).catch(error => 
-        console.error("Background company switch error:", error)
-      );
+      // Update user's active company (wait for completion to ensure consistency)
+      try {
+        await storage.setUserActiveCompany(userId, companyId);
+        console.log(`→ Successfully updated active company for user ${userId} to ${companyId}`);
+      } catch (error) {
+        console.error(`→ Failed to update active company for user ${userId}:`, error);
+        return res.status(500).json({ message: "Failed to update active company" });
+      }
       
       // Return immediately with company details
       res.json({ 
@@ -10270,6 +10297,10 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
 
   app.post("/api/companies", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const userId = req.user.id;
       const validatedData = insertCompanySchema.parse(req.body);
       

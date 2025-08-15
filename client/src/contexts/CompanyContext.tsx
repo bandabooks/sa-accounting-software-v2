@@ -96,7 +96,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       // 6. Wait for backend update to complete
       const response = await backendUpdatePromise;
       if (!response.ok) {
-        throw new Error('Failed to switch company');
+        const errorData = await response.text();
+        console.error('Company switch failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          companyId: newCompanyId
+        });
+        throw new Error(`Failed to switch company: ${response.status} - ${errorData}`);
       }
 
       // 7. Pre-fetch critical data in parallel for instant display
