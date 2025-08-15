@@ -134,95 +134,98 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-hidden">
-        <div className="container mx-auto px-4 h-full flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <div className="container mx-auto px-4 space-y-4 lg:space-y-6">
         
-        {/* Compact Hero Section - Fixed Height */}
-        <div className="relative overflow-hidden dashboard-hero flex-shrink-0" style={{ height: '120px' }}>
+        {/* Stunning Gradient Hero Section */}
+        <div className="relative overflow-hidden dashboard-hero">
           {/* Animated Background Gradients */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded"></div>
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
           
-          {/* Hero Content - Ultra Compact */}
-          <div className="relative p-2 text-white h-full flex items-center">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2 w-full">
+          {/* Hero Content - Reduced height by 25% */}
+          <div className="relative p-3 lg:p-4 text-white">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
               
-              {/* Welcome Section - Ultra Compact */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <Activity className="h-3 w-3 text-white" />
+              {/* Welcome Section - More Compact */}
+              <div className="space-y-2 flex-1">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-white/20 backdrop-blur-sm rounded-lg">
+                      <Activity className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <span className="text-blue-100 text-xs font-medium">Business Dashboard</span>
                   </div>
-                  <div>
-                    <h1 className="text-lg font-bold text-white tracking-tight">
-                      {getCurrentGreeting()}!
-                    </h1>
-                    <p className="text-blue-100 text-xs">Business performance overview</p>
-                  </div>
+                  <h1 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
+                    {getCurrentGreeting()}!
+                  </h1>
+                  <p className="text-blue-100 text-xs">
+                    Here's your business performance overview
+                  </p>
                 </div>
               </div>
 
-              {/* Ultra Compact Metrics */}
-              <div className="grid grid-cols-4 gap-2 lg:min-w-[400px]">
-                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                  <div className="text-lg font-bold text-white">
+              {/* Compact Revenue Metrics - Professional Alignment */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:min-w-[480px]">
+                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {formatCurrency(dashboardStats.totalRevenue)}
                   </div>
-                  <div className="text-blue-100 text-xs uppercase tracking-wider">Revenue</div>
-                  <div className="flex items-center justify-center gap-1 text-green-300">
-                    <ArrowUpRight className="h-2.5 w-2.5" />
-                    <span className="text-xs">+{getRevenueGrowth()}%</span>
+                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Total Revenue</div>
+                  <div className="flex items-center justify-center gap-1 text-green-300 mt-2">
+                    <ArrowUpRight className="h-3 w-3" />
+                    <span className="text-xs font-medium">+{getRevenueGrowth()}%</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-2 bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-md rounded-lg border border-orange-300/30">
-                  <div className="text-lg font-bold text-white">
+                <div className="text-center p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-md rounded-lg border border-orange-300/30 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {formatCurrency(dashboardStats.outstandingInvoices)}
                   </div>
-                  <div className="text-orange-100 text-xs uppercase tracking-wider">Outstanding</div>
-                  <div className="flex items-center justify-center gap-1 text-orange-300">
-                    <AlertTriangle className="h-2.5 w-2.5" />
-                    <span className="text-xs">Attention</span>
+                  <div className="text-orange-100 text-xs font-semibold uppercase tracking-wider mt-1">Outstanding</div>
+                  <div className="flex items-center justify-center gap-1 text-orange-300 mt-2">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span className="text-xs font-medium">Needs attention</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                  <div className="text-lg font-bold text-white">
+                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {dashboardStats.totalCustomers}
                   </div>
-                  <div className="text-blue-100 text-xs uppercase tracking-wider">Customers</div>
-                  <div className="flex items-center justify-center gap-1 text-blue-300">
-                    <TrendingUp className="h-2.5 w-2.5" />
-                    <span className="text-xs">Growing</span>
+                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Active Customers</div>
+                  <div className="flex items-center justify-center gap-1 text-blue-300 mt-2">
+                    <TrendingUp className="h-3 w-3" />
+                    <span className="text-xs font-medium">Growing</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
-                  <div className="text-lg font-bold text-white">
+                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
+                  <div className="text-2xl font-bold text-white">
                     {dashboardStats.pendingEstimates}
                   </div>
-                  <div className="text-blue-100 text-xs uppercase tracking-wider">Quotes</div>
-                  <div className="flex items-center justify-center gap-1 text-yellow-300">
-                    <Clock className="h-2.5 w-2.5" />
-                    <span className="text-xs">Progress</span>
+                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Pending Quotes</div>
+                  <div className="flex items-center justify-center gap-1 text-yellow-300 mt-2">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-xs font-medium">In Progress</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Compact Action Bar */}
-            <div className="mt-1 flex items-center justify-between gap-2">
+            {/* Professional Action Bar with Status Badges */}
+            <div className="mt-3 flex items-center justify-between gap-3">
               {/* Left Side - Quick Create and Refresh */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 {/* Quick Create Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="h-7 bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 text-xs px-2">
-                      <Plus className="h-3 w-3 mr-1" />
+                    <Button className="h-9 bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-sm">
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
                       Quick Create
-                      <ChevronDown className="h-3 w-3 ml-1" />
+                      <ChevronDown className="h-3.5 w-3.5 ml-1.5" />
                     </Button>
                   </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-xl">
@@ -316,21 +319,25 @@ export default function Dashboard() {
                 {/* Refresh Button */}
                 <Button 
                   onClick={() => refetch()}
-                  className="h-7 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 text-xs px-2"
+                  className="h-9 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
                   title="Refresh dashboard data"
                 >
-                  <RefreshCw className="h-3 w-3" />
-                  <span className="ml-1 hidden sm:inline">Refresh</span>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span className="ml-1.5 hidden sm:inline">Refresh</span>
                 </Button>
               </div>
               
-              {/* Right Side - Compact Status */}
-              <div className="flex items-center gap-1">
-                {/* Compact Status Badges */}
-                <div className="flex items-center gap-1">
-                  <div className="flex items-center gap-1 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-white">Live</span>
+              {/* Right Side - Status Badges, Reports, Banking */}
+              <div className="flex items-center gap-2">
+                {/* Status Badges */}
+                <div className="flex items-center gap-1.5 mr-2">
+                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-white">Real-time Data</span>
+                  </div>
+                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <Clock className="h-3 w-3 text-white" />
+                    <span className="text-xs font-medium text-white">Updated {lastUpdate.toLocaleTimeString()}</span>
                   </div>
                   <div className="inline-flex">
                     <AIHealthIndicator />
@@ -343,16 +350,16 @@ export default function Dashboard() {
                   )}
                 </div>
                 
-                {/* Compact Reports & Banking Links */}
-                <Button asChild variant="ghost" className="h-7 text-white/80 hover:text-white hover:bg-white/10 text-xs px-2">
+                {/* Reports & Banking Links */}
+                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
                   <Link href="/reports">
-                    <BarChart3 className="h-3 w-3 mr-1" />
+                    <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
                     Reports
                   </Link>
                 </Button>
-                <Button asChild variant="ghost" className="h-7 text-white/80 hover:text-white hover:bg-white/10 text-xs px-2">
+                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
                   <Link href="/banking">
-                    <Building className="h-3 w-3 mr-1" />
+                    <Building className="h-3.5 w-3.5 mr-1.5" />
                     Banking
                   </Link>
                 </Button>
@@ -367,11 +374,26 @@ export default function Dashboard() {
 
 
 
-        {/* Streamlined Widget System - Flex Growth */}
-        <div className="flex-1 flex flex-col min-h-0 py-2">
+        {/* Modular Widget System */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Dashboard Widgets</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Monitor your business performance</p>
+            </div>
+            <Button 
+              onClick={() => setIsCustomizing(!isCustomizing)}
+              variant={isCustomizing ? "default" : "outline"}
+              size="sm"
+              className="shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              {isCustomizing ? "Done Customizing" : "Customize Layout"}
+            </Button>
+          </div>
 
-          <Tabs defaultValue="overview" className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1 rounded-lg flex-shrink-0">
+          <Tabs defaultValue="overview" className="space-y-5">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1.5 rounded-lg">
               <TabsTrigger 
                 value="overview" 
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
@@ -398,17 +420,17 @@ export default function Dashboard() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="flex-1 flex flex-col min-h-0 pt-2">
+            <TabsContent value="overview" className="space-y-6">
 
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 flex-1 min-h-0">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 {/* Enhanced Chart Widget */}
-                <div className="xl:col-span-2 min-h-0">
-                  <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm h-full flex flex-col">
-                    <CardHeader className="pb-1 flex-shrink-0">
+                <div className="xl:col-span-2">
+                  <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-sm font-semibold text-gray-800">Revenue Trends</CardTitle>
-                          <CardDescription className="text-xs">Monthly performance</CardDescription>
+                          <CardTitle className="text-lg font-semibold text-gray-800">Revenue Trends</CardTitle>
+                          <CardDescription>Monthly performance overview</CardDescription>
                         </div>
                         <div className="flex gap-2">
                           <Button 
@@ -425,22 +447,101 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex-1 pb-2">
-                      <div className="h-full">
-                        <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                    <CardContent>
+                      <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                    </CardContent>
+                  </Card>
+                  
+                    {/* Quick Actions - Now with notification cards */}
+                  <div className="mt-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800">Quick Actions</h3>
+                    {notifications.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {notifications.map((notification) => (
+                          <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
+                            notification.priority === 'high' ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' :
+                            notification.priority === 'medium' ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10' :
+                            'bg-gradient-to-br from-blue-500/10 to-indigo-500/10'
+                          }`}>
+                            <div className={`absolute top-0 left-0 right-0 h-1 ${
+                              notification.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
+                              notification.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
+                              'bg-gradient-to-r from-blue-500 to-indigo-600'
+                            }`}></div>
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2 rounded-lg ${
+                                    notification.priority === 'high' ? 'bg-red-100 text-red-600' :
+                                    notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                                    'bg-blue-100 text-blue-600'
+                                  }`}>
+                                    {notification.type === 'success' ? <Award className="h-4 w-4" /> :
+                                     notification.type === 'warning' ? <AlertTriangle className="h-4 w-4" /> :
+                                     <Bell className="h-4 w-4" />}
+                                  </div>
+                                  <div>
+                                    <CardTitle className="text-sm font-semibold text-gray-800">{notification.title}</CardTitle>
+                                    <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
+                                  </div>
+                                </div>
+                                <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                                  {notification.priority}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* FILLING THE RED-MARKED GAP: Compliance Alerts */}
+                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-3">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
+                            <AlertTriangle className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base font-semibold text-gray-800">Compliance Alerts</CardTitle>
+                            <CardDescription className="text-xs text-gray-600">Important notifications</CardDescription>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                          1 Alert
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-yellow-100 rounded-lg">
+                              <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-800">VAT return due in 5 days</h4>
+                              <p className="text-xs text-gray-600">Action required soon</p>
+                            </div>
+                          </div>
+                          <Button size="sm" className="text-xs bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
+                            Prepare
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-
                 </div>
 
-                {/* Recent Activities Widget - Compact for no-scroll */}
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm h-full flex flex-col">
-                  <CardHeader className="pb-2">
+                {/* Recent Activities Widget - With View All button */}
+                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                  <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-base font-semibold text-gray-800">Recent Activities</CardTitle>
-                        <CardDescription className="text-xs">Latest business updates</CardDescription>
+                        <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
+                        <CardDescription>Latest business updates</CardDescription>
                       </div>
                       <Button 
                         variant="outline" 
@@ -455,10 +556,8 @@ export default function Dashboard() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="flex-1 overflow-hidden">
-                    <div className="h-full overflow-y-auto">
-                      <RecentActivities activities={dashboardStats.recentActivities || []} />
-                    </div>
+                  <CardContent>
+                    <RecentActivities activities={dashboardStats.recentActivities || []} />
                   </CardContent>
                 </Card>
               </div>
