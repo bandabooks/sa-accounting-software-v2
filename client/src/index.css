@@ -174,7 +174,15 @@
   }
   
   .dashboard-page .dashboard-hero {
-    @apply mt-0 !important;
+    margin-top: 0 !important;
+    position: relative !important;
+    top: 0 !important;
+    transform: none !important;
+  }
+  
+  /* Ensure hero section stays fixed at proper position regardless of scroll */
+  .dashboard-page .dashboard-hero {
+    z-index: 1 !important;
   }
   
   .dashboard-page .container {
