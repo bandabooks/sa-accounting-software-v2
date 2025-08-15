@@ -90,9 +90,10 @@ export default function CompanySwitcher() {
     queryKey: ["/api/companies/my"],
   });
 
-  // Get active company
+  // Get active company with dependency on companyId for proper refetching
   const { data: activeCompany, isLoading: activeCompanyLoading } = useQuery<Company>({
-    queryKey: ["/api/companies/active"],
+    queryKey: ["/api/companies/active", companyId],
+    enabled: !!companyId,
   });
 
   // Filter companies based on search query

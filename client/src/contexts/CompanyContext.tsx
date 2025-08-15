@@ -103,11 +103,20 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to switch company: ${response.status} - ${errorData}`);
       }
 
-      // 7. Force immediate page reload for complete data refresh
-      console.log('Company switch successful, forcing page reload for data consistency');
-      window.location.reload();
-
+      // 7. Get response data and update UI
       const data = await response.json();
+      
+      // 8. Force refresh of company-specific data with the new company context
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] }),
+        queryClient.refetchQueries({ queryKey: ['/api/companies/active'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/companies/my'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] })
+      ]);
+      
       toast({
         title: "Company switched",
         description: `Now viewing ${data.company.name}`,
