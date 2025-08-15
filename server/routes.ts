@@ -130,6 +130,17 @@ import {
   insertDigitalSignatureSchema,
   insertPricingRuleSchema,
   insertCustomerPriceListSchema,
+  // Enhanced Inventory schema imports
+  insertProductBrandSchema,
+  insertProductVariantSchema,
+  insertWarehouseSchema,
+  insertWarehouseStockSchema,
+  insertProductLotSchema,
+  insertProductSerialSchema,
+  insertStockCountSchema,
+  insertStockCountItemSchema,
+  insertReorderRuleSchema,
+  insertProductBundleSchema,
   // Bulk Capture schema imports
   bulkCaptureSessions,
   bulkExpenseEntries,
@@ -1000,7 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      console.log(`→ Fetching permissions for user ${user.username} in company ${user.companyId}`);
+      console.log(`→ Fetching permissions for user ${user.username} in company ${user.activeCompanyId}`);
       
       // Get user permissions based on their role assignments
       let userPermissions: string[] = [];
@@ -1028,13 +1039,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             // First ensure user has permissions in their company
             try {
-              await createDefaultUserPermissions(user.id, user.companyId || 1);
+              await createDefaultUserPermissions(user.id, user.activeCompanyId || 1);
               console.log(`→ Ensured default permissions exist for ${user.username}`);
             } catch (createPermError) {
-              console.log(`→ Permissions already exist for ${user.username} in company ${user.companyId}`);
+              console.log(`→ Permissions already exist for ${user.username} in company ${user.activeCompanyId}`);
             }
             
-            const permissions = await storage.getUserPermission(user.id, user.companyId || 1);
+            const permissions = await storage.getUserPermission(user.id, user.activeCompanyId || 1);
             if (permissions && permissions.customPermissions) {
               // Extract permissions from JSONB array
               userPermissions = Array.isArray(permissions.customPermissions) 
