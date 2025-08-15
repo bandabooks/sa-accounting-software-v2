@@ -20,6 +20,8 @@ export default function Companies() {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
   const [selectedSubscriptionCompany, setSelectedSubscriptionCompany] = useState<Company | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>('monthly');
 
   // Fetch current user
   const { data: user } = useQuery({
@@ -864,14 +866,14 @@ export default function Companies() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="plan">Select Plan</Label>
-              <Select name="plan">
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a subscription plan" />
                 </SelectTrigger>
                 <SelectContent>
                   {subscriptionPlans?.map((plan: any) => (
                     <SelectItem key={plan.id} value={plan.id.toString()}>
-                      {plan.name} - R{plan.monthlyPrice}/month
+                      {plan.displayName} - R{plan.monthlyPrice}/month
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -880,7 +882,7 @@ export default function Companies() {
 
             <div>
               <Label htmlFor="billingPeriod">Billing Period</Label>
-              <Select name="billingPeriod" defaultValue="monthly">
+              <Select value={selectedBillingPeriod} onValueChange={setSelectedBillingPeriod}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -901,20 +903,27 @@ export default function Companies() {
                 </Button>
                 <Button
                   onClick={() => {
-                    // Handle subscription update
-                    const formData = new FormData();
-                    const planSelect = document.querySelector('select[name="plan"]') as HTMLSelectElement;
-                    const billingSelect = document.querySelector('select[name="billingPeriod"]') as HTMLSelectElement;
+                    console.log('Update plan clicked:', {
+                      company: selectedSubscriptionCompany?.id,
+                      planId: selectedPlanId,
+                      billing: selectedBillingPeriod
+                    });
                     
-                    if (planSelect?.value && selectedSubscriptionCompany) {
+                    if (selectedPlanId && selectedSubscriptionCompany) {
                       updateSubscriptionMutation.mutate({
                         companyId: selectedSubscriptionCompany.id,
-                        planId: parseInt(planSelect.value),
-                        billingPeriod: billingSelect?.value || 'monthly'
+                        planId: parseInt(selectedPlanId),
+                        billingPeriod: selectedBillingPeriod
+                      });
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: "Please select a subscription plan",
+                        variant: "destructive",
                       });
                     }
                   }}
-                  disabled={updateSubscriptionMutation.isPending}
+                  disabled={updateSubscriptionMutation.isPending || !selectedPlanId}
                   className="flex items-center gap-2"
                 >
                   <ArrowUp className="h-4 w-4" />
