@@ -147,10 +147,10 @@ export default function Dashboard() {
           
           {/* Hero Content - Reduced height by 25% */}
           <div className="relative p-3 lg:p-4 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               
               {/* Welcome Section - More Compact */}
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2 lg:flex-1 lg:max-w-md">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <div className="p-1 bg-white/20 backdrop-blur-sm rounded-lg">
@@ -168,7 +168,7 @@ export default function Dashboard() {
               </div>
 
               {/* Compact Revenue Metrics - Professional Alignment */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-full lg:max-w-[480px]">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:flex-1 lg:max-w-2xl w-full">
                 <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
                   <div className="text-2xl font-bold text-white">
                     {formatCurrency(dashboardStats.totalRevenue)}
