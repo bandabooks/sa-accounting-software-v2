@@ -7803,23 +7803,51 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCompany(insertCompany: InsertCompany, userId?: number): Promise<Company> {
-    // Import the ID generator here to avoid circular dependency
-    const { ProfessionalIdGenerator } = await import('./idGenerator');
-    
-    // Generate professional company ID if not provided
-    if (!insertCompany.companyId) {
-      insertCompany.companyId = await ProfessionalIdGenerator.generateCompanyId();
+    try {
+      // Generate professional company ID if not provided
+      if (!insertCompany.companyId) {
+        insertCompany.companyId = await this.generateNextCompanyId();
+      }
+      
+      const [company] = await db
+        .insert(companies)
+        .values(insertCompany)
+        .returning();
+
+      console.log(`✓ Created company ${company.id} with professional ID: ${company.companyId}`);
+
+      // Initialize company with clean data and essential setup
+      await this.initializeNewCompany(company.id, company.industry || 'general', userId || 1);
+
+      return company;
+    } catch (error) {
+      console.error('Error creating company:', error);
+      throw error;
     }
+  }
+
+  // Simplified, reliable company ID generation
+  private async generateNextCompanyId(): Promise<string> {
+    const COMPANY_ID_BASE = 904886369;
     
-    const [company] = await db
-      .insert(companies)
-      .values(insertCompany)
-      .returning();
-
-    // Initialize company with clean data and essential setup
-    await this.initializeNewCompany(company.id, company.industry || 'general', userId || 1);
-
-    return company;
+    try {
+      // Get the highest existing company_id from database
+      const result = await db
+        .select({ maxId: sql<string>`MAX(CAST(company_id AS INTEGER))` })
+        .from(companies)
+        .where(sql`company_id ~ '^[0-9]+$'`); // Only numeric company IDs
+      
+      const maxExisting = result[0]?.maxId ? parseInt(result[0].maxId) : COMPANY_ID_BASE - 1;
+      const nextId = Math.max(maxExisting + 1, COMPANY_ID_BASE);
+      
+      console.log(`Generated next company ID: ${nextId} (previous max: ${maxExisting})`);
+      return nextId.toString();
+      
+    } catch (error) {
+      console.error('Error generating company ID, using fallback:', error);
+      // Safe fallback - get current timestamp-based ID
+      return (COMPANY_ID_BASE + Math.floor(Date.now() / 1000) % 10000).toString();
+    }
   }
 
   // Initialize a new company with clean data and essential configurations
