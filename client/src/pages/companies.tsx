@@ -584,7 +584,7 @@ export default function Companies() {
                 )}
                 
                 <p className="text-sm text-gray-500 mt-3">
-                  You can change your subscription plan later in company settings
+                  <span className="text-red-600">*</span> You must select a subscription plan to continue
                 </p>
               </div>
 
@@ -594,9 +594,19 @@ export default function Companies() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={createCompanyMutation.isPending || !slugValidation.isValid || !formData.name || !formData.displayName || !formData.slug || !formData.email} 
-                  className="min-w-[140px]"
+                  disabled={
+                    createCompanyMutation.isPending || 
+                    !slugValidation.isValid || 
+                    !formData.name || 
+                    !formData.displayName || 
+                    !formData.slug || 
+                    !formData.email ||
+                    !formData.subscriptionPlan ||
+                    formData.subscriptionPlan === ''
+                  } 
+                  className="min-w-[140px] flex items-center gap-2"
                 >
+                  <Plus className="h-4 w-4" />
                   {createCompanyMutation.isPending ? "Creating..." : "Create Company"}
                 </Button>
               </div>
