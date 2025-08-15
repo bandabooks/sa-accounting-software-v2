@@ -165,19 +165,32 @@
     @apply transition-all duration-200 ease-in-out;
   }
   
-  /* Dashboard top gap fix - 6px gap between header and hero */
+  /* Dashboard top gap fix - REMOVE ALL WHITE SPACE */
   .dashboard-page .main-content {
-    padding-top: 6px !important;
+    padding-top: 0 !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
     padding-bottom: 0 !important;
+    margin-top: 0 !important;
   }
   
   .dashboard-page .dashboard-hero {
     margin-top: 0 !important;
+    margin-bottom: 0 !important;
     position: relative !important;
     top: 0 !important;
     transform: none !important;
+  }
+  
+  /* Remove space from parent containers */
+  .dashboard-page > div {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  .dashboard-page .w-full.space-y-4 {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
   
   /* Ensure hero section stays fixed at proper position regardless of scroll */
