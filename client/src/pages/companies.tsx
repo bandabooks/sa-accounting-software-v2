@@ -74,6 +74,8 @@ export default function Companies() {
         registrationNumber: '',
         industry: 'general',
         industryTemplate: 'general',
+        subscriptionPlan: 'trial',
+        subscriptionStatus: 'active',
       });
       setManuallyEdited({
         displayName: false,
@@ -153,6 +155,8 @@ export default function Companies() {
     registrationNumber: '',
     industry: 'general',
     industryTemplate: 'general',
+    subscriptionPlan: 'trial',
+    subscriptionStatus: 'active',
   });
 
   // Track manual edits to prevent overwriting user changes
@@ -496,6 +500,100 @@ export default function Companies() {
                 <p className="text-sm text-gray-500 mt-1">
                   This determines which Chart of Accounts will be activated for your company
                 </p>
+              </div>
+
+              {/* Subscription Plan Selection */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <Label htmlFor="subscriptionPlan" className="text-base font-semibold text-blue-900">
+                  Subscription Plan *
+                </Label>
+                <Select 
+                  value={formData.subscriptionPlan} 
+                  onValueChange={(value) => handleInputChange('subscriptionPlan', value)}
+                >
+                  <SelectTrigger className="mt-2 bg-white">
+                    <SelectValue placeholder="Select subscription plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="trial">
+                      <div className="flex flex-col items-start py-1">
+                        <span className="font-medium text-green-700">🆓 Trial (14 days FREE)</span>
+                        <span className="text-xs text-gray-600">Test all basic features • 10 invoices • Email support</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="starter">
+                      <div className="flex flex-col items-start py-1">
+                        <span className="font-medium text-blue-700">💼 Starter Plan (R299/month)</span>
+                        <span className="text-xs text-gray-600">Solo practitioners • Unlimited invoices • Professional services • 2 companies</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="professional">
+                      <div className="flex flex-col items-start py-1">
+                        <span className="font-medium text-orange-700">🏆 Professional Plan (R899/month)</span>
+                        <span className="text-xs text-gray-600">SARS integration • Full compliance • 20+ service templates • 10 companies</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="enterprise">
+                      <div className="flex flex-col items-start py-1">
+                        <span className="font-medium text-purple-700">🚀 Enterprise Plan (R1,899/month)</span>
+                        <span className="text-xs text-gray-600">Unlimited companies • API access • White-label • Dedicated support</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="mt-3 p-3 bg-white rounded border border-blue-100">
+                  {formData.subscriptionPlan === 'trial' && (
+                    <div className="text-sm">
+                      <div className="font-semibold text-green-700 mb-1">✨ 14-Day FREE Trial</div>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>• Basic chart of accounts (50 accounts)</li>
+                        <li>• 10 invoices per month</li>
+                        <li>• 5 customers maximum</li>
+                        <li>• Basic VAT management</li>
+                        <li>• No professional services templates</li>
+                      </ul>
+                    </div>
+                  )}
+                  {formData.subscriptionPlan === 'starter' && (
+                    <div className="text-sm">
+                      <div className="font-semibold text-blue-700 mb-1">💼 Perfect for Solo Practitioners</div>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>• Complete chart of accounts (100+ accounts)</li>
+                        <li>• Unlimited invoices & estimates</li>
+                        <li>• Professional services templates (5 core)</li>
+                        <li>• Multi-company support (2 companies)</li>
+                        <li>• Email & phone support</li>
+                      </ul>
+                    </div>
+                  )}
+                  {formData.subscriptionPlan === 'professional' && (
+                    <div className="text-sm">
+                      <div className="font-semibold text-orange-700 mb-1">🏆 RECOMMENDED for Accounting Practices</div>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>• Full SARS integration (VAT201, ITR12/14, EMP501/502)</li>
+                        <li>• Complete compliance management suite</li>
+                        <li>• Professional services templates (20+)</li>
+                        <li>• AI-powered transaction matching</li>
+                        <li>• Multi-company support (10 companies)</li>
+                        <li>• Client portal & CRM features</li>
+                      </ul>
+                    </div>
+                  )}
+                  {formData.subscriptionPlan === 'enterprise' && (
+                    <div className="text-sm">
+                      <div className="font-semibold text-purple-700 mb-1">🚀 For Large Accounting Firms</div>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>• Everything in Professional plan</li>
+                        <li>• Unlimited companies & users</li>
+                        <li>• API access for custom integrations</li>
+                        <li>• White-label client portals</li>
+                        <li>• Dedicated account manager</li>
+                        <li>• Custom professional service templates</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">

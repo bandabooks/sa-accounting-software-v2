@@ -2085,8 +2085,12 @@ export type InsertSubscriptionPayment = z.infer<typeof insertSubscriptionPayment
 // Multi-Company Schemas
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
+  companyId: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  subscriptionPlan: z.enum(["trial", "starter", "professional", "enterprise"]).default("trial"),
+  subscriptionStatus: z.enum(["active", "suspended", "cancelled", "pending"]).default("active"),
 });
 
 export const insertCompanyUserSchema = createInsertSchema(companyUsers).omit({
