@@ -165,9 +165,12 @@
     @apply transition-all duration-200 ease-in-out;
   }
   
-  /* Dashboard top gap fix - completely close gap between header and hero */
+  /* Dashboard top gap fix - 6px gap between header and hero */
   .dashboard-page .main-content {
-    @apply pt-0 lg:pt-0 p-0 lg:p-0 !important;
+    padding-top: 6px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
   }
   
   .dashboard-page .dashboard-hero {
@@ -186,7 +189,10 @@
   /* Add minimal spacing only on mobile for better visibility */
   @media (max-width: 1024px) {
     .dashboard-page .main-content {
-      @apply pt-2 p-2 !important;
+      padding-top: 6px !important;
+      padding-left: 8px !important;
+      padding-right: 8px !important;
+      padding-bottom: 0 !important;
     }
     .dashboard-page .container {
       @apply px-2 !important;
