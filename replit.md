@@ -8,6 +8,13 @@ Taxnify is evolving into a comprehensive professional practice management platfo
 
 Preferred communication style: Simple, everyday language.
 
+**Deployment Integrity Protocol**: 
+- ALWAYS verify working functionality in deployed app before making changes
+- When user reports "this works in deployed app", treat current working version as source of truth
+- Implement minimal changes that preserve existing working patterns
+- Create rollback plan before making any modifications to core functionality
+- Document what works in production to prevent accidental regression
+
 ## Current Project Status
 
 **Major Achievement**: Successfully completed comprehensive sales module enhancement with 5 world-class components:
@@ -31,7 +38,13 @@ Preferred communication style: Simple, everyday language.
 - ✅ **Invoice Editing Database Persistence Fix (Aug 2025)**: Completely resolved critical issue where invoice item modifications (quantity, price, descriptions) were only updating UI calculations but not persisting to database. Enhanced backend API to handle both invoice header and items updates, implemented smart product matching for edit mode, and ensured all item changes now properly save to database. Invoice editing now maintains full data integrity across sessions.
 - ✅ **Expense Metrics Display Fix (Aug 2025)**: Resolved critical issue where expense metrics cards were showing R 0.00 instead of actual financial data. Identified and fixed dual expense page architecture (expenses.tsx vs expenses-standalone.tsx) where routing was using ExpensesStandalone component. Updated correct component to display proper values: Total Expenses (R 12,000.00), This Month (R 1,200.00), Unpaid Expenses (R 0.00), and Average Expense (R 4,000.00).
 
-**Current Status**: ✅ **Cross-Tenant Data Isolation COMPLETE (Aug 14, 2025)**
+**Current Status**: ✅ **Company Switching Functionality RESTORED (Aug 15, 2025)**
+- ✅ **Critical Learning**: Company switching was working perfectly in deployed app - backend logs confirm successful switches between companies 4, 5, 26
+- ✅ **Issue Identified**: Frontend cache invalidation was over-complicated, causing display issues despite working backend
+- ✅ **Solution Applied**: Simplified to match deployed app logic - minimal cache invalidation, preserved original working patterns
+- ✅ **Prevention Protocol**: Established deployment integrity checklist to prevent future regression of working features
+
+**Previous Status**: ✅ **Cross-Tenant Data Isolation COMPLETE (Aug 14, 2025)**
 - ✅ **Critical Security Fix**: Resolved major data mixing issue where dashboard endpoints were using incorrect `activeCompanyId` property instead of `companyId`
 - ✅ **Company Switching Fixed**: Fixed all 14+ API endpoints (dashboard stats, invoice stats, chart of accounts, banking, SARS integration, financial reports) to use proper company ID
 - ✅ **Data Integrity Verified**: Each company now displays only its own financial data with complete separation between tenants
