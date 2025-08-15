@@ -78,12 +78,19 @@ export default function Header() {
           {/* Onboarding Help Button */}
           <OnboardingHelpButton />
           
-          <button className="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <Bell size={18} className="sm:w-5 sm:h-5" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
-              3
-            </span>
-          </button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            asChild
+            className="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          >
+            <Link href="/alerts">
+              <Bell size={18} className="sm:w-5 sm:h-5" />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                1
+              </span>
+            </Link>
+          </Button>
           
           {user && (
             <DropdownMenu>

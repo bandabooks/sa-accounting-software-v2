@@ -85,6 +85,7 @@ import Landing from "@/pages/landing";
 import Features from "@/pages/features";
 import AccountingFeatures from "@/pages/features/accounting";
 import Activities from "@/pages/activities";
+import Alerts from "@/pages/alerts";
 import ComplianceFeatures from "@/pages/features/compliance";
 import SmallBusiness from "@/pages/small-business";
 import RetailSolutions from "@/pages/small-business/retail";
@@ -500,6 +501,11 @@ function AuthenticatedApp() {
         <Route path="/activities">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <Activities />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/alerts">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <Alerts />
           </ProtectedRoute>
         </Route>
         <Route path="/settings">

@@ -581,7 +581,23 @@ export default function Dashboard() {
                     <CardDescription>Latest billing activity</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <RecentInvoices invoices={dashboardStats.recentInvoices || []} />
+                    {dashboardStats.recentInvoices && dashboardStats.recentInvoices.length > 0 ? (
+                      <RecentInvoices invoices={dashboardStats.recentInvoices} />
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 text-sm">
+                          <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          No recent invoices
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">Your latest invoices will appear here</p>
+                        <Button asChild size="sm" className="mt-3">
+                          <Link href="/invoices/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create First Invoice
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
