@@ -506,7 +506,7 @@ export default function Dashboard() {
 
                 </div>
 
-                {/* Recent Activities Widget - Compact with clickable invoices */}
+                {/* Recent Activities Widget - No Scroll, Fixed Height */}
                 <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-64">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -528,8 +528,8 @@ export default function Dashboard() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-3 pt-0">
-                    <div className="space-y-2 max-h-44 overflow-y-auto">
-                      {(dashboardStats.recentActivities || []).slice(0, 4).map((activity: any, index: number) => (
+                    <div className="space-y-2">
+                      {(dashboardStats.recentActivities || []).slice(0, 3).map((activity: any, index: number) => (
                         <div 
                           key={index} 
                           className={`flex items-center gap-2 p-2 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100/70 transition-colors duration-200 ${
@@ -560,7 +560,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {(!dashboardStats.recentActivities || dashboardStats.recentActivities.length === 0) && (
-                        <div className="text-center py-6">
+                        <div className="text-center py-8">
                           <div className="text-gray-500 text-xs">
                             <Activity className="h-6 w-6 mx-auto mb-2 opacity-50" />
                             No recent activities
