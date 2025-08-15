@@ -134,98 +134,95 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <div className="container mx-auto px-4 space-y-2 lg:space-y-3 h-screen overflow-hidden">
+      <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-hidden">
+        <div className="container mx-auto px-4 h-full flex flex-col">
         
-        {/* Stunning Gradient Hero Section */}
-        <div className="relative overflow-hidden dashboard-hero">
+        {/* Compact Hero Section - Fixed Height */}
+        <div className="relative overflow-hidden dashboard-hero flex-shrink-0" style={{ height: '120px' }}>
           {/* Animated Background Gradients */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded"></div>
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
           
-          {/* Hero Content - Reduced height by 25% */}
-          <div className="relative p-3 lg:p-4 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+          {/* Hero Content - Ultra Compact */}
+          <div className="relative p-2 text-white h-full flex items-center">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2 w-full">
               
-              {/* Welcome Section - More Compact */}
-              <div className="space-y-2 flex-1">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1 bg-white/20 backdrop-blur-sm rounded-lg">
-                      <Activity className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-blue-100 text-xs font-medium">Business Dashboard</span>
+              {/* Welcome Section - Ultra Compact */}
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <Activity className="h-3 w-3 text-white" />
                   </div>
-                  <h1 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
-                    {getCurrentGreeting()}!
-                  </h1>
-                  <p className="text-blue-100 text-xs">
-                    Here's your business performance overview
-                  </p>
+                  <div>
+                    <h1 className="text-lg font-bold text-white tracking-tight">
+                      {getCurrentGreeting()}!
+                    </h1>
+                    <p className="text-blue-100 text-xs">Business performance overview</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Compact Revenue Metrics - Professional Alignment */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:min-w-[480px]">
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
+              {/* Ultra Compact Metrics */}
+              <div className="grid grid-cols-4 gap-2 lg:min-w-[400px]">
+                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
+                  <div className="text-lg font-bold text-white">
                     {formatCurrency(dashboardStats.totalRevenue)}
                   </div>
-                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Total Revenue</div>
-                  <div className="flex items-center justify-center gap-1 text-green-300 mt-2">
-                    <ArrowUpRight className="h-3 w-3" />
-                    <span className="text-xs font-medium">+{getRevenueGrowth()}%</span>
+                  <div className="text-blue-100 text-xs uppercase tracking-wider">Revenue</div>
+                  <div className="flex items-center justify-center gap-1 text-green-300">
+                    <ArrowUpRight className="h-2.5 w-2.5" />
+                    <span className="text-xs">+{getRevenueGrowth()}%</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-md rounded-lg border border-orange-300/30 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
+                <div className="text-center p-2 bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-md rounded-lg border border-orange-300/30">
+                  <div className="text-lg font-bold text-white">
                     {formatCurrency(dashboardStats.outstandingInvoices)}
                   </div>
-                  <div className="text-orange-100 text-xs font-semibold uppercase tracking-wider mt-1">Outstanding</div>
-                  <div className="flex items-center justify-center gap-1 text-orange-300 mt-2">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span className="text-xs font-medium">Needs attention</span>
+                  <div className="text-orange-100 text-xs uppercase tracking-wider">Outstanding</div>
+                  <div className="flex items-center justify-center gap-1 text-orange-300">
+                    <AlertTriangle className="h-2.5 w-2.5" />
+                    <span className="text-xs">Attention</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
+                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
+                  <div className="text-lg font-bold text-white">
                     {dashboardStats.totalCustomers}
                   </div>
-                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Active Customers</div>
-                  <div className="flex items-center justify-center gap-1 text-blue-300 mt-2">
-                    <TrendingUp className="h-3 w-3" />
-                    <span className="text-xs font-medium">Growing</span>
+                  <div className="text-blue-100 text-xs uppercase tracking-wider">Customers</div>
+                  <div className="flex items-center justify-center gap-1 text-blue-300">
+                    <TrendingUp className="h-2.5 w-2.5" />
+                    <span className="text-xs">Growing</span>
                   </div>
                 </div>
                 
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
+                <div className="text-center p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20">
+                  <div className="text-lg font-bold text-white">
                     {dashboardStats.pendingEstimates}
                   </div>
-                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Pending Quotes</div>
-                  <div className="flex items-center justify-center gap-1 text-yellow-300 mt-2">
-                    <Clock className="h-3 w-3" />
-                    <span className="text-xs font-medium">In Progress</span>
+                  <div className="text-blue-100 text-xs uppercase tracking-wider">Quotes</div>
+                  <div className="flex items-center justify-center gap-1 text-yellow-300">
+                    <Clock className="h-2.5 w-2.5" />
+                    <span className="text-xs">Progress</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Professional Action Bar with Status Badges */}
-            <div className="mt-3 flex items-center justify-between gap-3">
+            {/* Compact Action Bar */}
+            <div className="mt-1 flex items-center justify-between gap-2">
               {/* Left Side - Quick Create and Refresh */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {/* Quick Create Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="h-9 bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-sm">
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    <Button className="h-7 bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 text-xs px-2">
+                      <Plus className="h-3 w-3 mr-1" />
                       Quick Create
-                      <ChevronDown className="h-3.5 w-3.5 ml-1.5" />
+                      <ChevronDown className="h-3 w-3 ml-1" />
                     </Button>
                   </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-xl">
@@ -319,25 +316,21 @@ export default function Dashboard() {
                 {/* Refresh Button */}
                 <Button 
                   onClick={() => refetch()}
-                  className="h-9 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
+                  className="h-7 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 text-xs px-2"
                   title="Refresh dashboard data"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  <span className="ml-1.5 hidden sm:inline">Refresh</span>
+                  <RefreshCw className="h-3 w-3" />
+                  <span className="ml-1 hidden sm:inline">Refresh</span>
                 </Button>
               </div>
               
-              {/* Right Side - Status Badges, Reports, Banking */}
-              <div className="flex items-center gap-2">
-                {/* Status Badges */}
-                <div className="flex items-center gap-1.5 mr-2">
-                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-white">Real-time Data</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <Clock className="h-3 w-3 text-white" />
-                    <span className="text-xs font-medium text-white">Updated {lastUpdate.toLocaleTimeString()}</span>
+              {/* Right Side - Compact Status */}
+              <div className="flex items-center gap-1">
+                {/* Compact Status Badges */}
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-white">Live</span>
                   </div>
                   <div className="inline-flex">
                     <AIHealthIndicator />
@@ -350,16 +343,16 @@ export default function Dashboard() {
                   )}
                 </div>
                 
-                {/* Reports & Banking Links */}
-                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
+                {/* Compact Reports & Banking Links */}
+                <Button asChild variant="ghost" className="h-7 text-white/80 hover:text-white hover:bg-white/10 text-xs px-2">
                   <Link href="/reports">
-                    <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+                    <BarChart3 className="h-3 w-3 mr-1" />
                     Reports
                   </Link>
                 </Button>
-                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
+                <Button asChild variant="ghost" className="h-7 text-white/80 hover:text-white hover:bg-white/10 text-xs px-2">
                   <Link href="/banking">
-                    <Building className="h-3.5 w-3.5 mr-1.5" />
+                    <Building className="h-3 w-3 mr-1" />
                     Banking
                   </Link>
                 </Button>
@@ -374,11 +367,11 @@ export default function Dashboard() {
 
 
 
-        {/* Streamlined Widget System - No scroll */}
-        <div className="space-y-3">
+        {/* Streamlined Widget System - Flex Growth */}
+        <div className="flex-1 flex flex-col min-h-0 py-2">
 
-          <Tabs defaultValue="overview" className="space-y-3">
-            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1.5 rounded-lg">
+          <Tabs defaultValue="overview" className="flex-1 flex flex-col">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1 rounded-lg flex-shrink-0">
               <TabsTrigger 
                 value="overview" 
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
@@ -405,17 +398,17 @@ export default function Dashboard() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-3">
+            <TabsContent value="overview" className="flex-1 flex flex-col min-h-0 pt-2">
 
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 h-[calc(100vh-280px)] overflow-hidden">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 flex-1 min-h-0">
                 {/* Enhanced Chart Widget */}
-                <div className="xl:col-span-2 h-full">
+                <div className="xl:col-span-2 min-h-0">
                   <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm h-full flex flex-col">
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-1 flex-shrink-0">
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-base font-semibold text-gray-800">Revenue Trends</CardTitle>
-                          <CardDescription className="text-xs">Monthly performance overview</CardDescription>
+                          <CardTitle className="text-sm font-semibold text-gray-800">Revenue Trends</CardTitle>
+                          <CardDescription className="text-xs">Monthly performance</CardDescription>
                         </div>
                         <div className="flex gap-2">
                           <Button 
