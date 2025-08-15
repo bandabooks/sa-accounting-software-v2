@@ -580,22 +580,22 @@ export default function Dashboard() {
                 <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-2xl transition-all duration-300">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold text-gray-800">Sales Performance</CardTitle>
-                    <CardDescription>Key sales metrics</CardDescription>
+                    <CardDescription>Key sales metrics from real transactions</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Monthly Target</span>
-                        <span className="font-medium text-gray-900">R50,000</span>
-                      </div>
-                      <Progress value={75} className="h-2 bg-blue-100" />
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Conversion Rate</span>
-                        <span className="font-medium text-green-600">73%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Average Deal Size</span>
-                        <span className="font-medium text-gray-900">R2,150</span>
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 text-sm">
+                          <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          No sales data yet
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">Performance metrics will appear once you start creating invoices</p>
+                        <Button asChild size="sm" className="mt-3">
+                          <Link href="/invoices/create">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create First Invoice
+                          </Link>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -604,21 +604,22 @@ export default function Dashboard() {
                 <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-2xl transition-all duration-300">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold text-gray-800">Sales Pipeline</CardTitle>
-                    <CardDescription>Opportunities in progress</CardDescription>
+                    <CardDescription>Real customer opportunities</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm font-medium">Qualified Leads</span>
-                        <span className="font-semibold text-purple-600">12</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm font-medium">In Negotiation</span>
-                        <span className="font-semibold text-blue-600">8</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                        <span className="text-sm font-medium">Closing Soon</span>
-                        <span className="font-semibold text-green-600">5</span>
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 text-sm">
+                          <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          No active pipeline yet
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">Your sales opportunities will appear here</p>
+                        <Button asChild size="sm" className="mt-3">
+                          <Link href="/customers/create">
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add First Customer
+                          </Link>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

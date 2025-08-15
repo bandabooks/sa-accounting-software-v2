@@ -63,14 +63,53 @@ export default function CustomerLifecycle() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading, error } = useQuery({
     queryKey: ["/api/customers/lifecycle"],
-    queryFn: () => apiRequest("/api/customers/lifecycle", "GET").then(res => res.json())
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/customers", {
+          credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to fetch customers');
+        const data = await response.json();
+        // Transform regular customers to lifecycle format
+        return (data || []).map((customer: any) => ({
+          ...customer,
+          lifecycleStage: customer.lifecycleStage || 'prospect',
+          leadSource: customer.leadSource || 'direct',
+          healthScore: customer.healthScore || 75,
+          lastContactDate: customer.lastContactDate || customer.createdAt,
+          nextFollowUpDate: customer.nextFollowUpDate || null,
+          tags: customer.tags || []
+        }));
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        return [];
+      }
+    }
   });
 
   const { data: lifecycleStats } = useQuery({
     queryKey: ["/api/customers/lifecycle/stats"],
-    queryFn: () => apiRequest("/api/customers/lifecycle/stats", "GET").then(res => res.json())
+    queryFn: async () => {
+      // Calculate stats from customers data
+      const stageCounts = customers.reduce((acc: any, customer: Customer) => {
+        const stage = customer.lifecycleStage || 'prospect';
+        acc[stage] = (acc[stage] || 0) + 1;
+        return acc;
+      }, {});
+      
+      return {
+        totalCustomers: customers.length,
+        prospects: stageCounts.prospect || 0,
+        leads: stageCounts.lead || 0,
+        customers: stageCounts.customer || 0,
+        advocates: stageCounts.advocate || 0,
+        champions: stageCounts.champion || 0,
+        dormant: stageCounts.dormant || 0
+      };
+    },
+    enabled: customers.length >= 0
   });
 
   const { data: lifecycleEvents = [] } = useQuery({
