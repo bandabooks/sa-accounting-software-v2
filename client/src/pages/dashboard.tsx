@@ -413,7 +413,7 @@ export default function Dashboard() {
 
             <TabsContent value="overview" className="space-y-4">
 
-              {/* Quick Actions and Compliance Alerts - Moved to top */}
+              {/* Notification Cards - Moved to red-marked area */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 {notifications.map((notification) => (
                   <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
@@ -516,88 +516,7 @@ export default function Dashboard() {
                       <ProfitLossChart data={dashboardStats.profitLossData || []} />
                     </CardContent>
                   </Card>
-                  
-                    {/* Quick Actions - Now with notification cards */}
-                  <div className="mt-6 space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Quick Actions</h3>
-                    {notifications.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {notifications.map((notification) => (
-                          <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
-                            notification.priority === 'high' ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' :
-                            notification.priority === 'medium' ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10' :
-                            'bg-gradient-to-br from-blue-500/10 to-indigo-500/10'
-                          }`}>
-                            <div className={`absolute top-0 left-0 right-0 h-1 ${
-                              notification.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
-                              notification.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
-                              'bg-gradient-to-r from-blue-500 to-indigo-600'
-                            }`}></div>
-                            <CardHeader className="pb-3">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className={`p-2 rounded-lg ${
-                                    notification.priority === 'high' ? 'bg-red-100 text-red-600' :
-                                    notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                                    'bg-blue-100 text-blue-600'
-                                  }`}>
-                                    {notification.type === 'success' ? <Award className="h-4 w-4" /> :
-                                     notification.type === 'warning' ? <AlertTriangle className="h-4 w-4" /> :
-                                     <Bell className="h-4 w-4" />}
-                                  </div>
-                                  <div>
-                                    <CardTitle className="text-sm font-semibold text-gray-800">{notification.title}</CardTitle>
-                                    <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
-                                  </div>
-                                </div>
-                                <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
-                                  {notification.priority}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* FILLING THE RED-MARKED GAP: Compliance Alerts */}
-                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-3">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
-                            <AlertTriangle className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-base font-semibold text-gray-800">Compliance Alerts</CardTitle>
-                            <CardDescription className="text-xs text-gray-600">Important notifications</CardDescription>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                          1 Alert
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                          <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-yellow-100 rounded-lg">
-                              <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold text-gray-800">VAT return due in 5 days</h4>
-                              <p className="text-xs text-gray-600">Action required soon</p>
-                            </div>
-                          </div>
-                          <Button size="sm" className="text-xs bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
-                            Prepare
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+
                 </div>
 
                 {/* Recent Activities Widget - With View All button */}
