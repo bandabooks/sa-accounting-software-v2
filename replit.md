@@ -2,7 +2,7 @@
 
 ## Overview
 
-Taxnify is evolving into a comprehensive professional practice management platform targeting South African tax practitioners, accountants, auditors, and CAs. The platform provides unified accounting, compliance, CRM-centric workflow management, and business operations. The CRM serves as the central hub for customer communication and practice management, with integrated document request workflows, engagement letter automation, and contract management. The platform aims to be a world-class solution with strong South African VAT compliance, SARS integration, and professional workflow automation comparable to industry leaders like Karbon.
+Taxnify is a comprehensive business management platform serving individuals, entrepreneurs, business owners, and professional practices (including South African tax practitioners, accountants, auditors, and CAs). The platform provides unified invoicing, quotes, accounting, compliance, CRM-centric workflow management, and complete business operations. While offering specialized features for accounting practices, it's designed to serve any business needing professional invoicing, financial management, and business operations. The platform aims to be a world-class solution with strong South African VAT compliance, SARS integration, and versatile business management tools for all business types.
 
 ## User Preferences
 
@@ -71,13 +71,13 @@ Preferred communication style: Simple, everyday language.
 - Database queries 75% faster, lists load 65% faster, memory usage down 20-30%
 - Created 24 critical indexes, smart React Query caching, performance utilities ready
 
-**Latest Achievement**: ✅ **Comprehensive Subscription Management System COMPLETE (Aug 15, 2025)**
-- ✅ **Accounting Practice-Focused Plans**: Created trial, starter, professional, enterprise plans specifically designed for South African accounting practices
-- ✅ **Professional Services Integration**: Professional+ plans automatically include 5+ professional service templates (AFS, VAT Registration, Tax Compliance, Monthly Bookkeeping)
-- ✅ **SARS Compliance Alignment**: Professional+ plans include full SARS integration and compliance management suite
-- ✅ **Company Creation Enhancement**: Added subscription plan selection to company creation with detailed feature breakdown
+**Latest Achievement**: ✅ **Comprehensive Business-Focused Subscription System COMPLETE (Aug 15, 2025)**
+- ✅ **Universal Business Plans**: Created trial, starter, professional, enterprise plans designed for individuals, entrepreneurs, business owners, AND accounting practices
+- ✅ **Professional Services Integration**: Professional+ plans include specialized templates for accounting practices only
+- ✅ **SARS Compliance for All**: Professional+ plans include full SARS integration for any business type needing tax compliance
+- ✅ **Enhanced Company Creation**: Added subscription plan selection with detailed feature breakdown for all user types
 - ✅ **Multi-Company Architecture**: Trial (1 company), Starter (2 companies), Professional (10 companies), Enterprise (unlimited)
-- ✅ **Clean Data System**: All companies start with clean data, professional services only load for appropriate subscription plans
+- ✅ **Clean Data System**: All companies start with clean data, professional services load only for accounting practices on appropriate plans
 
 **Next Phase**: CRM Professional Practice Management Transformation (Priority #1) - Transform CRM into central hub for customer communication and practice management targeting South African tax practitioners, accountants, auditors, and CAs. Implement document request workflows, engagement letter automation, contract module integration, and professional workflow simplification similar to Karbonhq.com platform standards.
 

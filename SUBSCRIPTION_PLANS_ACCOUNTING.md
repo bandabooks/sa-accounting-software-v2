@@ -1,6 +1,6 @@
-# Accounting Practice Subscription Plans
+# Business Management Subscription Plans
 **Date:** August 15, 2025  
-**Target:** South African Accounting Practices, Tax Practitioners, CAs, Auditors
+**Target:** Individuals, Business Owners, Entrepreneurs, Accounting Practices, Tax Practitioners, CAs, Auditors - Complete Business Management Solution
 
 ## 📋 **Subscription Plan Structure**
 
@@ -19,66 +19,66 @@
 - ❌ Email Support Only
 
 ### 💼 **Starter Plan** - R299/month
-**Perfect for:** Solo practitioners, small accounting firms
+**Perfect for:** Individuals, small businesses, entrepreneurs, freelancers
 **Price:** R299/month or R2,990/year (save 2 months)
 **Features:**
 - ✅ Complete Chart of Accounts (100+ accounts)
-- ✅ Unlimited Invoices & Estimates
-- ✅ 50 Customers
+- ✅ Unlimited Invoices, Quotes & Estimates
+- ✅ Unlimited Customers
 - ✅ Full VAT Management & VAT201 Returns
-- ✅ Professional Services Templates (5 core services)
+- ✅ Customer Management & Basic CRM
 - ✅ Basic Financial Reports (P&L, Balance Sheet, Trial Balance)
 - ✅ Multi-Company Support (2 companies)
 - ✅ Email & Phone Support
 - ❌ No SARS Integration
-- ❌ Limited Compliance Tools
+- ❌ No Professional Services Templates
 
 ### 🏆 **Professional Plan** - R899/month (RECOMMENDED)
-**Perfect for:** Established accounting practices, tax practitioners
+**Perfect for:** Established businesses, accounting practices, tax practitioners, consultants
 **Price:** R899/month or R8,990/year (save 2 months)
 **Features:**
 - ✅ Everything in Starter Plan
 - ✅ **FULL SARS Integration** (VAT201, ITR12/14, EMP501/502)
-- ✅ **Complete Compliance Management Suite**
-- ✅ **Professional Services Templates** (20+ templates)
+- ✅ **Complete Business Management Suite**
+- ✅ **Professional Services Templates** (for accounting practices)
 - ✅ Advanced Financial Reports + Custom Reports
 - ✅ Multi-Company Support (10 companies)
 - ✅ **Client Portal** for document sharing
 - ✅ **Audit Trail** & Advanced Security
 - ✅ **AI-Powered Transaction Matching**
 - ✅ Priority Phone & Email Support
-- ✅ **Compliance Calendar & Reminders**
-- ✅ **CRM & Customer Lifecycle Management**
+- ✅ **Advanced CRM & Customer Lifecycle Management**
+- ✅ **Project Management & Time Tracking**
 
 ### 🚀 **Enterprise Plan** - R1,899/month
-**Perfect for:** Large accounting firms, CA firms, audit practices
+**Perfect for:** Large businesses, enterprise companies, accounting firms, multi-location businesses
 **Price:** R1,899/month or R18,990/year (save 2 months)
 **Features:**
 - ✅ Everything in Professional Plan
 - ✅ **Unlimited Companies**
 - ✅ **Advanced User Management** (Role-based permissions)
-- ✅ **White-label Client Portals**
-- ✅ **API Access** for integrations
-- ✅ **Advanced Analytics & Dashboards**
+- ✅ **White-label Solutions**
+- ✅ **API Access** for custom integrations
+- ✅ **Advanced Analytics & Business Intelligence**
 - ✅ **Dedicated Account Manager**
-- ✅ **Custom Professional Services Templates**
-- ✅ **Advanced Compliance Workflows**
-- ✅ **Multi-location Support**
+- ✅ **Custom Workflows & Automations**
+- ✅ **Advanced Multi-location Support**
 - ✅ **Priority Implementation Support**
 - ✅ **SLA Guarantees** (99.9% uptime)
+- ✅ **Custom Branding & Domain**
 
-## 🎯 **Key Differentiators for Accounting Practices**
+## 🎯 **Key Features for All Business Types**
 
 ### **SARS Compliance (Professional+ Plans)**
-- Complete SARS eFiling integration
+- Complete SARS eFiling integration for all businesses
 - Automated VAT201 submissions
 - ITR12/14 income tax returns
 - EMP501/502 payroll submissions
 - Real-time SARS status tracking
 
-### **Professional Services Templates**
-- **Starter:** 5 core templates (AFS, VAT Registration, etc.)
-- **Professional:** 20+ specialized templates
+### **Professional Services Templates (Accounting Practices Only)**
+- **Starter:** No templates (general business focus)
+- **Professional:** 20+ specialized accounting templates
 - **Enterprise:** Unlimited custom templates
 
 ### **Compliance Management Suite (Professional+ Plans)**

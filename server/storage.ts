@@ -7819,8 +7819,8 @@ export class DatabaseStorage implements IStorage {
       // Initialize company with clean data and essential setup
       await this.initializeNewCompany(company.id, company.industry || 'general', userId || 1);
       
-      // Load professional services templates only for professional plan users
-      if (insertCompany.subscriptionPlan === 'professional') {
+      // Load professional services templates only for professional plan users AND accounting practices
+      if (insertCompany.subscriptionPlan === 'professional' && insertCompany.industry === 'professional_services') {
         await this.loadProfessionalServicesTemplates(company.id);
       }
 
