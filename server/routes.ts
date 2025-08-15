@@ -63,6 +63,7 @@ import {
 import { registerCompanyRoutes } from "./companyRoutes";
 import { registerEnterpriseRoutes } from "./routes/enterpriseRoutes";
 import { registerOnboardingRoutes } from "./routes/onboardingRoutes";
+import { registerChartManagementRoutes } from "./routes/chartManagementRoutes";
 import emailRoutes from "./routes/emailRoutes";
 import integrationsRoutes from "./routes/integrationsRoutes";
 import { sarsService } from "./sarsService";

@@ -64,6 +64,7 @@ export default function CompanySwitcher() {
     registrationNumber: '',
     industry: 'general',
     industryTemplate: 'general',
+    subscriptionPlan: 'basic',
   });
 
   // Track manual edits to prevent overwriting user changes
@@ -93,6 +94,11 @@ export default function CompanySwitcher() {
   // Get active company
   const { data: activeCompany, isLoading: activeCompanyLoading } = useQuery<Company>({
     queryKey: ["/api/companies/active"],
+  });
+
+  // Get subscription plans
+  const { data: subscriptionPlans = [], isLoading: plansLoading } = useQuery<any[]>({
+    queryKey: ["/api/subscription/plans"],
   });
 
   // Filter companies based on search query
@@ -175,6 +181,7 @@ export default function CompanySwitcher() {
       registrationNumber: '',
       industry: 'general',
       industryTemplate: 'general',
+      subscriptionPlan: 'basic',
     });
     setManuallyEdited({
       displayName: false,
@@ -243,7 +250,8 @@ export default function CompanySwitcher() {
     // Generate a unique companyId for the new company
     const companyData = {
       ...formData,
-      companyId: Math.random().toString(36).substring(2, 15) // Generate unique ID
+      companyId: Math.random().toString(36).substring(2, 15), // Generate unique ID
+      subscriptionStatus: "active" as const, // Add required field
     };
     createCompanyMutation.mutate(companyData);
   };
@@ -577,6 +585,35 @@ export default function CompanySwitcher() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="subscriptionPlan">Subscription Plan</Label>
+              <Select 
+                value={formData.subscriptionPlan} 
+                onValueChange={(value) => handleInputChange('subscriptionPlan', value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select subscription plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plansLoading ? (
+                    <SelectItem value="loading" disabled>Loading plans...</SelectItem>
+                  ) : (
+                    subscriptionPlans.map((plan: any) => (
+                      <SelectItem key={plan.id} value={plan.name}>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium">{plan.displayName}</span>
+                          <span className="text-sm text-gray-500 ml-2">R{plan.monthlyPrice}/month</span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                You can change your subscription plan later in company settings
+              </p>
             </div>
           </div>
 

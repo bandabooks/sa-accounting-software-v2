@@ -47,6 +47,7 @@ import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
 import TrialSignup from "@/pages/trial-signup";
 import ChartOfAccounts from "@/pages/chart-of-accounts";
+import ChartManagement from "@/pages/chart-management";
 import JournalEntries from "@/pages/journal-entries";
 import Banking from "@/pages/banking";
 import GeneralLedger from "@/pages/general-ledger";
@@ -613,6 +614,11 @@ function AuthenticatedApp() {
         <Route path="/chart-of-accounts">
           <ProtectedRoute permission={PERMISSIONS.CHART_OF_ACCOUNTS_VIEW}>
             <ChartOfAccounts />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/chart-management">
+          <ProtectedRoute permission={PERMISSIONS.CHART_OF_ACCOUNTS_VIEW}>
+            <ChartManagement />
           </ProtectedRoute>
         </Route>
         <Route path="/journal-entries">
