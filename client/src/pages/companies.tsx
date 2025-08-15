@@ -534,85 +534,58 @@ export default function Companies() {
                     <SelectValue placeholder="Select subscription plan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trial">
-                      <div className="flex flex-col items-start py-1">
-                        <span className="font-medium text-green-700">🆓 Trial (14 days FREE)</span>
-                        <span className="text-xs text-gray-600">Perfect for testing • 10 invoices • Basic features • Email support</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="starter">
-                      <div className="flex flex-col items-start py-1">
-                        <span className="font-medium text-blue-700">💼 Starter Plan (R299/month)</span>
-                        <span className="text-xs text-gray-600">Individuals & small businesses • Unlimited invoices • 2 companies • Phone support</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="professional">
-                      <div className="flex flex-col items-start py-1">
-                        <span className="font-medium text-orange-700">🏆 Professional Plan (R899/month)</span>
-                        <span className="text-xs text-gray-600">Business owners & practices • SARS integration • Advanced features • 10 companies</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="enterprise">
-                      <div className="flex flex-col items-start py-1">
-                        <span className="font-medium text-purple-700">🚀 Enterprise Plan (R1,899/month)</span>
-                        <span className="text-xs text-gray-600">Large businesses • Unlimited companies • API access • Custom integrations</span>
-                      </div>
-                    </SelectItem>
+                    {subscriptionPlans && subscriptionPlans.length > 0 ? (
+                      subscriptionPlans.map((plan: any) => (
+                        <SelectItem key={plan.id} value={plan.id.toString()}>
+                          <div className="flex flex-col items-start py-1">
+                            <span className="font-medium text-blue-700">
+                              {plan.name} (R{plan.monthlyPrice}/month)
+                            </span>
+                            <span className="text-xs text-gray-600">
+                              {plan.description}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="loading" disabled>
+                        Loading plans...
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 
-                <div className="mt-3 p-3 bg-white rounded border border-blue-100">
-                  {formData.subscriptionPlan === 'trial' && (
-                    <div className="text-sm">
-                      <div className="font-semibold text-green-700 mb-1">✨ 14-Day FREE Trial</div>
-                      <ul className="text-xs text-gray-600 space-y-1">
-                        <li>• Basic chart of accounts (50 accounts)</li>
-                        <li>• 10 invoices & quotes per month</li>
-                        <li>• 5 customers maximum</li>
-                        <li>• Basic VAT management</li>
-                        <li>• Email support only</li>
-                      </ul>
-                    </div>
-                  )}
-                  {formData.subscriptionPlan === 'starter' && (
-                    <div className="text-sm">
-                      <div className="font-semibold text-blue-700 mb-1">💼 Perfect for Individuals & Small Businesses</div>
-                      <ul className="text-xs text-gray-600 space-y-1">
-                        <li>• Complete chart of accounts (100+ accounts)</li>
-                        <li>• Unlimited invoices, quotes & estimates</li>
-                        <li>• Customer management & CRM basics</li>
-                        <li>• Multi-company support (2 companies)</li>
-                        <li>• Email & phone support</li>
-                      </ul>
-                    </div>
-                  )}
-                  {formData.subscriptionPlan === 'professional' && (
-                    <div className="text-sm">
-                      <div className="font-semibold text-orange-700 mb-1">🏆 RECOMMENDED for Business Owners & Practices</div>
-                      <ul className="text-xs text-gray-600 space-y-1">
-                        <li>• Full SARS integration (VAT201, ITR12/14, EMP501/502)</li>
-                        <li>• Advanced business management suite</li>
-                        <li>• Professional service templates for accounting practices</li>
-                        <li>• AI-powered transaction matching</li>
-                        <li>• Multi-company support (10 companies)</li>
-                        <li>• Client portal & advanced CRM features</li>
-                      </ul>
-                    </div>
-                  )}
-                  {formData.subscriptionPlan === 'enterprise' && (
-                    <div className="text-sm">
-                      <div className="font-semibold text-purple-700 mb-1">🚀 For Large Businesses & Enterprise</div>
-                      <ul className="text-xs text-gray-600 space-y-1">
-                        <li>• Everything in Professional plan</li>
-                        <li>• Unlimited companies & users</li>
-                        <li>• API access for custom integrations</li>
-                        <li>• White-label solutions</li>
-                        <li>• Dedicated account manager</li>
-                        <li>• Custom workflows & automations</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                {subscriptionPlans && formData.subscriptionPlan && (
+                  <div className="mt-3 p-3 bg-white rounded border border-blue-100">
+                    {(() => {
+                      const selectedPlan = subscriptionPlans.find((plan: any) => plan.id.toString() === formData.subscriptionPlan);
+                      if (selectedPlan) {
+                        return (
+                          <div className="text-sm">
+                            <div className="font-semibold text-blue-700 mb-1">
+                              {selectedPlan.name} - R{selectedPlan.monthlyPrice}/month
+                            </div>
+                            <p className="text-xs text-gray-600">
+                              {selectedPlan.description}
+                            </p>
+                            {selectedPlan.features && (
+                              <ul className="text-xs text-gray-600 space-y-1 mt-2">
+                                {selectedPlan.features.map((feature: string, index: number) => (
+                                  <li key={index}>• {feature}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
+                
+                <p className="text-sm text-gray-500 mt-3">
+                  You can change your subscription plan later in company settings
+                </p>
               </div>
 
               <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
