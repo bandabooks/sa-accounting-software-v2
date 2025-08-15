@@ -73,10 +73,7 @@ export default function Header() {
             <CompanySwitcher />
           </div>
           
-          {/* Global Search */}
-          <div className="hidden md:block">
-            <GlobalSearch />
-          </div>
+
           
           {/* Onboarding Help Button */}
           <OnboardingHelpButton />

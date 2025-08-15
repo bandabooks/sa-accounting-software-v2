@@ -592,19 +592,60 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="text-center py-8">
-                        <div className="text-gray-500 text-sm">
-                          <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          No sales data yet
+                      {dashboardStats.recentInvoices && dashboardStats.recentInvoices.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                              <div className="text-xl font-bold text-green-700">
+                                {formatCurrency(dashboardStats.totalRevenue)}
+                              </div>
+                              <div className="text-xs text-green-600 font-medium">Total Revenue</div>
+                            </div>
+                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                              <div className="text-xl font-bold text-blue-700">
+                                {dashboardStats.paidInvoiceCount || 0}
+                              </div>
+                              <div className="text-xs text-blue-600 font-medium">Paid Invoices</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                              <div className="text-xl font-bold text-orange-700">
+                                {formatCurrency(dashboardStats.outstandingInvoices)}
+                              </div>
+                              <div className="text-xs text-orange-600 font-medium">Outstanding</div>
+                            </div>
+                            <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                              <div className="text-xl font-bold text-purple-700">
+                                {dashboardStats.outstandingInvoiceCount || 0}
+                              </div>
+                              <div className="text-xs text-purple-600 font-medium">Pending</div>
+                            </div>
+                          </div>
+                          <div className="pt-2">
+                            <Button asChild size="sm" className="w-full">
+                              <Link href="/invoices">
+                                <Eye className="h-4 w-4 mr-2" />
+                                View All Invoices
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-400 mt-2">Performance metrics will appear once you start creating invoices</p>
-                        <Button asChild size="sm" className="mt-3">
-                          <Link href="/invoices/create">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Create First Invoice
-                          </Link>
-                        </Button>
-                      </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="text-gray-500 text-sm">
+                            <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            No sales data yet
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2">Performance metrics will appear once you start creating invoices</p>
+                          <Button asChild size="sm" className="mt-3">
+                            <Link href="/invoices/new">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create First Invoice
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -616,19 +657,62 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="text-center py-8">
-                        <div className="text-gray-500 text-sm">
-                          <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          No active pipeline yet
+                      {dashboardStats.totalCustomers > 0 || (dashboardStats.recentInvoices && dashboardStats.recentInvoices.length > 0) ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 gap-3">
+                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="text-lg font-bold text-blue-700">
+                                    {dashboardStats.totalCustomers}
+                                  </div>
+                                  <div className="text-xs text-blue-600 font-medium">Active Customers</div>
+                                </div>
+                                <Users className="h-6 w-6 text-blue-500" />
+                              </div>
+                            </div>
+                            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="text-lg font-bold text-green-700">
+                                    {dashboardStats.pendingEstimates || 0}
+                                  </div>
+                                  <div className="text-xs text-green-600 font-medium">Pending Estimates</div>
+                                </div>
+                                <FileText className="h-6 w-6 text-green-500" />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="pt-2 space-y-2">
+                            <Button asChild size="sm" className="w-full">
+                              <Link href="/customers">
+                                <Users className="h-4 w-4 mr-2" />
+                                Manage Customers
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm" variant="outline" className="w-full">
+                              <Link href="/estimates/new">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Create Estimate
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-400 mt-2">Your sales opportunities will appear here</p>
-                        <Button asChild size="sm" className="mt-3">
-                          <Link href="/customers/create">
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Add First Customer
-                          </Link>
-                        </Button>
-                      </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="text-gray-500 text-sm">
+                            <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            No active pipeline yet
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2">Your sales opportunities will appear here</p>
+                          <Button asChild size="sm" className="mt-3">
+                            <Link href="/customers/new">
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Add First Customer
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

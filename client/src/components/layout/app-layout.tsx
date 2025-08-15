@@ -41,7 +41,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <MobileHeader
         title={getPageTitle()}
         onMenuClick={() => setIsMobileSidebarOpen(true)}
-        showSearch={true}
+        showSearch={false}
         showNotifications={true}
         showProfile={true}
         notificationCount={3}
