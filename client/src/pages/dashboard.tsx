@@ -381,15 +381,6 @@ export default function Dashboard() {
               <h2 className="text-xl font-bold text-gray-900">Dashboard Widgets</h2>
               <p className="text-sm text-gray-500 mt-0.5">Monitor your business performance</p>
             </div>
-            <Button 
-              onClick={() => setIsCustomizing(!isCustomizing)}
-              variant={isCustomizing ? "default" : "outline"}
-              size="sm"
-              className="shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              {isCustomizing ? "Done Customizing" : "Customize Layout"}
-            </Button>
           </div>
 
           <Tabs defaultValue="overview" className="space-y-5">
