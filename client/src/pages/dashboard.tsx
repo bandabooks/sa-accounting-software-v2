@@ -135,10 +135,10 @@ export default function Dashboard() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <div className="container mx-auto px-4 py-6 space-y-4 lg:space-y-6">
+        <div className="container mx-auto px-4 py-0 space-y-4 lg:space-y-6">
         
         {/* Stunning Gradient Hero Section */}
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden dashboard-hero">
           {/* Animated Background Gradients */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded"></div>

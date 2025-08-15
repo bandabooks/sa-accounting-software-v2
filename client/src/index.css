@@ -164,4 +164,13 @@
   button, a, .clickable {
     @apply transition-all duration-200 ease-in-out;
   }
+  
+  /* Dashboard top gap fix - reduced spacing between header and hero */
+  .dashboard-page .main-content {
+    @apply pt-4 lg:pt-6 !important;
+  }
+  
+  .dashboard-page .dashboard-hero {
+    @apply mt-0 !important;
+  }
 }
