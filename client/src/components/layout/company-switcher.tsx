@@ -282,18 +282,11 @@ export default function CompanySwitcher() {
     );
   }
 
-  if (userCompanies.length === 0) {
+  if (!activeCompany || userCompanies.length === 0) {
     return (
-      <div className="flex items-center space-x-2 text-sm text-gray-500">
-        <span>No companies available</span>
-      </div>
-    );
-  }
-
-  if (!activeCompany) {
-    return (
-      <div className="flex items-center space-x-2 text-sm text-gray-500">
-        <span>Loading company...</span>
+      <div className="flex items-center space-x-2 animate-pulse">
+        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+        <div className="w-24 h-4 bg-gray-200 rounded"></div>
       </div>
     );
   }

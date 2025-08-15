@@ -72,9 +72,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ companyId: newCompanyId }),
       });
 
-      // 3. Complete cache invalidation - clear ALL company-specific queries
-      queryClient.invalidateQueries();
-      queryClient.clear();
+      // 3. Invalidate relevant queries only
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
 
       // 4. Update URL with company parameter (non-blocking) - Remove this as it's causing issues
       // const url = new URL(window.location.href);
@@ -106,16 +109,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       // 7. Get response data and update UI
       const data = await response.json();
       
-      // 8. Force refresh of company-specific data with the new company context
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] }),
-        queryClient.refetchQueries({ queryKey: ['/api/companies/active'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/companies/my'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/invoices'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/customers'] }),
-        queryClient.invalidateQueries({ queryKey: ['/api/expenses'] })
-      ]);
+      // 8. Simple data refresh after successful switch
+      queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       
       toast({
         title: "Company switched",
