@@ -413,135 +413,162 @@ export default function Dashboard() {
 
             <TabsContent value="overview" className="space-y-4">
 
-              {/* Notification Cards - Moved to red-marked area */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              {/* Notification Cards - 50% smaller height */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                 {notifications.map((notification) => (
-                  <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
+                  <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-lg transition-all duration-300 hover:shadow-xl transform hover:scale-[1.01] h-16 ${
                     notification.priority === 'high' ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' :
                     notification.priority === 'medium' ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10' :
                     'bg-gradient-to-br from-blue-500/10 to-indigo-500/10'
                   }`}>
-                    <div className={`absolute top-0 left-0 right-0 h-1 ${
+                    <div className={`absolute top-0 left-0 right-0 h-0.5 ${
                       notification.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
                       notification.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
                       'bg-gradient-to-r from-blue-500 to-indigo-600'
                     }`}></div>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-lg ${
+                    <CardHeader className="p-2 pb-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`p-1 rounded ${
                             notification.priority === 'high' ? 'bg-red-100 text-red-600' :
                             notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
                             'bg-blue-100 text-blue-600'
                           }`}>
-                            {notification.type === 'success' ? <Award className="h-3 w-3" /> :
-                             notification.type === 'warning' ? <AlertTriangle className="h-3 w-3" /> :
-                             <Bell className="h-3 w-3" />}
+                            {notification.type === 'success' ? <Award className="h-2.5 w-2.5" /> :
+                             notification.type === 'warning' ? <AlertTriangle className="h-2.5 w-2.5" /> :
+                             <Bell className="h-2.5 w-2.5" />}
                           </div>
                           <div>
-                            <CardTitle className="text-sm font-semibold text-gray-800">{notification.title}</CardTitle>
-                            <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
+                            <CardTitle className="text-xs font-semibold text-gray-800 leading-tight">{notification.title}</CardTitle>
+                            <p className="text-xs text-gray-600">{notification.time}</p>
                           </div>
                         </div>
-                        <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                        <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs px-1 py-0 h-4">
                           {notification.priority}
                         </Badge>
                       </div>
                     </CardHeader>
                   </Card>
                 ))}
-                {/* Compliance Alert Card */}
-                <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-                  <CardHeader className="pb-2">
+                {/* Compliance Alert Card - Compact */}
+                <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm h-16">
+                  <CardHeader className="p-2 pb-1">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
-                          <AlertTriangle className="h-3 w-3 text-white" />
+                      <div className="flex items-center gap-1.5">
+                        <div className="p-1 bg-gradient-to-r from-yellow-500 to-orange-600 rounded">
+                          <AlertTriangle className="h-2.5 w-2.5 text-white" />
                         </div>
                         <div>
-                          <CardTitle className="text-sm font-semibold text-gray-800">Compliance Alerts</CardTitle>
-                          <CardDescription className="text-xs text-gray-600">Important notifications</CardDescription>
+                          <CardTitle className="text-xs font-semibold text-gray-800">Compliance Alerts</CardTitle>
+                          <p className="text-xs text-gray-600">1 Alert - VAT return due</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                        1 Alert
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center justify-between p-2 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-yellow-100 rounded-lg">
-                          <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-800">VAT return due in 5 days</h4>
-                          <p className="text-xs text-gray-600">Action required soon</p>
-                        </div>
-                      </div>
-                      <Button size="sm" className="text-xs bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
+                      <Button size="sm" className="text-xs px-2 py-1 h-6 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
                         Prepare
                       </Button>
                     </div>
-                  </CardContent>
+                  </CardHeader>
                 </Card>
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                {/* Enhanced Chart Widget */}
+                {/* Enhanced Chart Widget - Compact */}
                 <div className="xl:col-span-2">
-                  <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
+                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-64">
+                    <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-lg font-semibold text-gray-800">Revenue Trends</CardTitle>
-                          <CardDescription>Monthly performance overview</CardDescription>
+                          <CardTitle className="text-base font-semibold text-gray-800">Revenue Trends</CardTitle>
+                          <CardDescription className="text-xs">Monthly performance overview</CardDescription>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1">
                           <Button 
                             variant="outline" 
                             size="sm"
                             onClick={() => setLocation('/reports/financial')}
                             title="View detailed revenue reports"
+                            className="h-7 text-xs"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3 w-3" />
                           </Button>
-                          <Button variant="outline" size="sm" title="Download revenue report">
-                            <Download className="h-4 w-4" />
+                          <Button variant="outline" size="sm" title="Download revenue report" className="h-7 text-xs">
+                            <Download className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                    <CardContent className="p-3 pt-0">
+                      <div className="h-44">
+                        <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                      </div>
                     </CardContent>
                   </Card>
 
                 </div>
 
-                {/* Recent Activities Widget - With View All button */}
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
+                {/* Recent Activities Widget - Compact with clickable invoices */}
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-64">
+                  <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
-                        <CardDescription>Latest business updates</CardDescription>
+                        <CardTitle className="text-base font-semibold text-gray-800">Recent Activities</CardTitle>
+                        <CardDescription className="text-xs">Latest business updates</CardDescription>
                       </div>
                       <Button 
                         variant="outline" 
                         size="sm" 
                         asChild
-                        className="hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+                        className="hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 text-xs h-7"
                       >
                         <Link href="/activities">
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="h-3 w-3 mr-1" />
                           View All
                         </Link>
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <RecentActivities activities={dashboardStats.recentActivities || []} />
+                  <CardContent className="p-3 pt-0">
+                    <div className="space-y-2 max-h-44 overflow-y-auto">
+                      {(dashboardStats.recentActivities || []).slice(0, 4).map((activity: any, index: number) => (
+                        <div 
+                          key={index} 
+                          className={`flex items-center gap-2 p-2 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100/70 transition-colors duration-200 ${
+                            activity.title?.includes('Invoice') ? 'cursor-pointer hover:border-blue-300 hover:bg-blue-50/70' : ''
+                          }`}
+                          onClick={activity.title?.includes('Invoice') ? () => {
+                            const invoiceMatch = activity.title.match(/Invoice\s+(INV-[\w-]+)/);
+                            if (invoiceMatch) {
+                              setLocation(`/invoices/${invoiceMatch[1]}`);
+                            }
+                          } : undefined}
+                        >
+                          <div className={`p-1 rounded ${
+                            activity.title?.includes('paid') ? 'bg-green-100 text-green-600' :
+                            activity.title?.includes('partially_paid') ? 'bg-yellow-100 text-yellow-600' :
+                            activity.title?.includes('draft') ? 'bg-gray-100 text-gray-600' :
+                            'bg-blue-100 text-blue-600'
+                          }`}>
+                            <FileText className="h-3 w-3" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-gray-800 truncate">{activity.title}</p>
+                            <p className="text-xs text-gray-500">{activity.time}</p>
+                          </div>
+                          <div className="text-xs font-semibold text-gray-900">
+                            {activity.amount && formatCurrency(activity.amount)}
+                          </div>
+                        </div>
+                      ))}
+                      {(!dashboardStats.recentActivities || dashboardStats.recentActivities.length === 0) && (
+                        <div className="text-center py-6">
+                          <div className="text-gray-500 text-xs">
+                            <Activity className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                            No recent activities
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">Your business activities will appear here</p>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
