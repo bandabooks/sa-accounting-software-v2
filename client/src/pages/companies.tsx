@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Building, Plus, Users, Settings, Crown, Shield, User, UserPlus, Edit } from "lucide-react";
+import { Building, Plus, Users, Settings, Crown, Shield, User, UserPlus, Edit, CreditCard, ArrowUp } from "lucide-react";
 import { insertCompanySchema, type Company, type CompanyUser } from "@shared/schema";
 import { z } from "zod";
 
@@ -18,6 +18,8 @@ export default function Companies() {
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
+  const [selectedSubscriptionCompany, setSelectedSubscriptionCompany] = useState<Company | null>(null);
 
   // Fetch current user
   const { data: user } = useQuery({
@@ -38,6 +40,11 @@ export default function Companies() {
   const { data: companyUsers } = useQuery({
     queryKey: ["/api/companies", selectedCompany?.id, "users"],
     enabled: !!selectedCompany,
+  });
+
+  // Fetch subscription plans
+  const { data: subscriptionPlans } = useQuery({
+    queryKey: ["/api/subscription-plans"],
   });
 
   // Create company mutation
@@ -101,6 +108,32 @@ export default function Companies() {
       toast({
         title: "Error",
         description: "Failed to set active company",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update subscription mutation
+  const updateSubscriptionMutation = useMutation({
+    mutationFn: async (data: { companyId: number; planId: number; billingPeriod: string }) => {
+      return await apiRequest("/api/company/subscription/request", "POST", {
+        planId: data.planId,
+        billingPeriod: data.billingPeriod,
+        companyId: data.companyId
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success", 
+        description: "Subscription updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
+      setIsSubscriptionDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update subscription",
         variant: "destructive",
       });
     },
@@ -563,6 +596,19 @@ export default function Companies() {
                       >
                         <Settings className="h-4 w-4" />
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedSubscriptionCompany(companyUser.company);
+                          setIsSubscriptionDialogOpen(true);
+                        }}
+                        className="flex items-center gap-1"
+                      >
+                        <CreditCard className="h-3 w-3" />
+                        Plan
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -688,6 +734,84 @@ export default function Companies() {
           </div>
         )}
       </div>
+
+      {/* Subscription Management Dialog */}
+      <Dialog open={isSubscriptionDialogOpen} onOpenChange={setIsSubscriptionDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Manage Subscription - {selectedSubscriptionCompany?.displayName}
+            </DialogTitle>
+            <DialogDescription>
+              Change the subscription plan for this company. Current plan: {selectedSubscriptionCompany?.subscriptionPlan}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="plan">Select Plan</Label>
+              <Select name="plan">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subscription plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subscriptionPlans?.map((plan: any) => (
+                    <SelectItem key={plan.id} value={plan.id.toString()}>
+                      {plan.name} - R{plan.monthlyPrice}/month
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="billingPeriod">Billing Period</Label>
+              <Select name="billingPeriod" defaultValue="monthly">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="yearly">Yearly (Save 10%)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSubscriptionDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Handle subscription update
+                    const formData = new FormData();
+                    const planSelect = document.querySelector('select[name="plan"]') as HTMLSelectElement;
+                    const billingSelect = document.querySelector('select[name="billingPeriod"]') as HTMLSelectElement;
+                    
+                    if (planSelect?.value && selectedSubscriptionCompany) {
+                      updateSubscriptionMutation.mutate({
+                        companyId: selectedSubscriptionCompany.id,
+                        planId: parseInt(planSelect.value),
+                        billingPeriod: billingSelect?.value || 'monthly'
+                      });
+                    }
+                  }}
+                  disabled={updateSubscriptionMutation.isPending}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                  {updateSubscriptionMutation.isPending ? "Updating..." : "Update Plan"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
