@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { PullToRefresh } from "@/components/mobile/pull-to-refresh";
+import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { 
   Plus, FileText, UserPlus, TrendingUp, Users, DollarSign, AlertTriangle,
   BarChart3, PieChart, Activity, Bell, Settings, ChevronRight, RefreshCw,
@@ -125,9 +127,15 @@ export default function Dashboard() {
 
   const priorityNotifications = notifications.filter(n => n.priority === 'high');
 
+  const handleRefresh = async () => {
+    await refetch();
+    setLastUpdate(new Date());
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      <div className="container mx-auto px-4 py-6 space-y-6">
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <div className="container mx-auto px-4 py-6 space-y-4 lg:space-y-6">
         
         {/* Stunning Gradient Hero Section */}
         <div className="relative overflow-hidden">
@@ -905,7 +913,16 @@ export default function Dashboard() {
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
         />
+        
+        {/* Mobile Floating Action Button */}
+        <FloatingActionButton
+          onClick={() => setLocation("/invoices/new")}
+          label="New Invoice"
+          extended={false}
+          className="md:hidden"
+        />
       </div>
     </div>
+    </PullToRefresh>
   );
 }
