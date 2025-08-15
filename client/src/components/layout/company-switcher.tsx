@@ -90,10 +90,9 @@ export default function CompanySwitcher() {
     queryKey: ["/api/companies/my"],
   });
 
-  // Get active company with dependency on companyId for proper refetching
+  // Get active company
   const { data: activeCompany, isLoading: activeCompanyLoading } = useQuery<Company>({
-    queryKey: ["/api/companies/active", companyId],
-    enabled: !!companyId,
+    queryKey: ["/api/companies/active"],
   });
 
   // Filter companies based on search query
@@ -283,8 +282,20 @@ export default function CompanySwitcher() {
     );
   }
 
-  if (!activeCompany || userCompanies.length === 0) {
-    return null;
+  if (userCompanies.length === 0) {
+    return (
+      <div className="flex items-center space-x-2 text-sm text-gray-500">
+        <span>No companies available</span>
+      </div>
+    );
+  }
+
+  if (!activeCompany) {
+    return (
+      <div className="flex items-center space-x-2 text-sm text-gray-500">
+        <span>Loading company...</span>
+      </div>
+    );
   }
 
   const getCompanyInitials = (name: string) => {

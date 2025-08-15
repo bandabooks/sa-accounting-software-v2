@@ -69,7 +69,7 @@ export default function Header() {
         </div>
         <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
           {/* Professional Company Switcher - Always visible */}
-          <div className="hidden sm:block">
+          <div className="block">
             <CompanySwitcher />
           </div>
           
