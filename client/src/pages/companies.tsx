@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,12 +17,23 @@ import { z } from "zod";
 export default function Companies() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
   const [selectedSubscriptionCompany, setSelectedSubscriptionCompany] = useState<Company | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>('monthly');
+
+  // Check for create=true in URL and open dialog automatically
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('create') === 'true') {
+      setIsCreateDialogOpen(true);
+      // Clean up URL without causing page reload
+      window.history.replaceState({}, '', '/companies');
+    }
+  }, []);
 
   // Fetch current user
   const { data: user } = useQuery({
