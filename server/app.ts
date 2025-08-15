@@ -8,8 +8,8 @@ import { fileURLToPath } from "url";
 const app: Express = express();
 const server = createServer(app);
 
-// Set up routes and middleware through registerRoutes
-const setupServer = async () => {
+// Setup function to initialize the app
+export async function setupApp() {
   // Register all routes and middleware
   await registerRoutes(app);
   
@@ -32,14 +32,11 @@ const setupServer = async () => {
     });
   } else {
     // In development, use Vite middleware
-    setupVite(app, server);
+    await setupVite(app, server);
   }
   
-  return server;
-};
-
-// Initialize server
-setupServer().catch(console.error);
+  return { app, server };
+}
 
 export default app;
 export { server };
