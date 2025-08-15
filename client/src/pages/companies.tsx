@@ -43,9 +43,14 @@ export default function Companies() {
   });
 
   // Fetch subscription plans
-  const { data: subscriptionPlans } = useQuery({
+  const { data: subscriptionPlans, isLoading: isLoadingPlans, error: plansError } = useQuery({
     queryKey: ["/api/subscription-plans"],
   });
+
+  // Debug logging for subscription plans
+  console.log("Subscription plans data:", subscriptionPlans);
+  console.log("Plans loading:", isLoadingPlans);
+  console.log("Plans error:", plansError);
 
   // Create company mutation
   const createCompanyMutation = useMutation({
@@ -534,7 +539,15 @@ export default function Companies() {
                     <SelectValue placeholder="Select subscription plan" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subscriptionPlans && subscriptionPlans.length > 0 ? (
+                    {isLoadingPlans ? (
+                      <SelectItem value="loading" disabled>
+                        Loading plans...
+                      </SelectItem>
+                    ) : plansError ? (
+                      <SelectItem value="error" disabled>
+                        Error loading plans: {plansError?.message || 'Unknown error'}
+                      </SelectItem>
+                    ) : subscriptionPlans && subscriptionPlans.length > 0 ? (
                       subscriptionPlans.map((plan: any) => (
                         <SelectItem key={plan.id} value={plan.id.toString()}>
                           <div className="flex flex-col items-start py-1">
@@ -548,9 +561,11 @@ export default function Companies() {
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="loading" disabled>
-                        Loading plans...
-                      </SelectItem>
+                      <>
+                        <SelectItem value="1">Basic Plan - R299.99/month</SelectItem>
+                        <SelectItem value="2">Professional Plan - R679.99/month</SelectItem>
+                        <SelectItem value="3">Enterprise Plan - R1,199.99/month</SelectItem>
+                      </>
                     )}
                   </SelectContent>
                 </Select>
