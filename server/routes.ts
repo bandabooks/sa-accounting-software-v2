@@ -12947,6 +12947,60 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // Audit Trail Report endpoint
+  app.get("/api/reports/audit-trail", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const { 
+        startDate, 
+        endDate, 
+        userId: filterUserId, 
+        resource, 
+        action,
+        page = 1,
+        limit = 50 
+      } = req.query;
+
+      const offset = (Number(page) - 1) * Number(limit);
+      
+      // Build filters
+      const filters: any = { companyId };
+      
+      if (startDate) {
+        filters.startDate = new Date(startDate as string);
+      }
+      if (endDate) {
+        filters.endDate = new Date(endDate as string);
+      }
+      if (filterUserId && filterUserId !== 'all') {
+        filters.userId = Number(filterUserId);
+      }
+      if (resource && resource !== 'all') {
+        filters.resource = resource as string;
+      }
+      if (action && action !== 'all') {
+        filters.action = action as string;
+      }
+
+      const auditTrail = await storage.getAuditTrail(filters, Number(limit), offset);
+      const totalCount = await storage.getAuditTrailCount(filters);
+      
+      // Get unique users, resources, and actions for filter options
+      const filterOptions = await storage.getAuditTrailFilterOptions(companyId);
+      
+      res.json({
+        auditTrail,
+        totalCount,
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalCount / Number(limit)),
+        filterOptions
+      });
+    } catch (error) {
+      console.error("Error fetching audit trail:", error);
+      res.status(500).json({ message: "Failed to fetch audit trail" });
+    }
+  });
+
   // Report generation with audit logging
   app.post("/api/reports/generate/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

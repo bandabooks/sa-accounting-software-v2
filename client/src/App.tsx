@@ -160,6 +160,7 @@ import FinancialReportsPage from "@/pages/reports/financial";
 import AppLayout from "@/components/layout/app-layout";
 import { AIHealthBanner } from "@/components/ai-assistant/AIHealthBanner";
 import AIMonitorPage from "@/pages/ai-monitor";
+import AuditTrail from "@/pages/audit-trail";
 
 // Permission constants for route protection
 const PERMISSIONS = {
@@ -462,6 +463,11 @@ function AuthenticatedApp() {
         <Route path="/reports/aging">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <AgingReports />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/audit-trail">
+          <ProtectedRoute permission="audit:view">
+            <AuditTrail />
           </ProtectedRoute>
         </Route>
 

@@ -145,7 +145,8 @@ const navigationGroups = [
     items: [
       { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reports" },
       { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "basic_reports" },
-      { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reports" }
+      { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reports" },
+      { path: "/audit-trail", label: "Audit Trail", icon: Shield, permission: "audit:view", module: "reports" }
     ]
   },
   // 10. CRM & Projects

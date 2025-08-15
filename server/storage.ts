@@ -1218,6 +1218,139 @@ export class DatabaseStorage implements IStorage {
     return newLog;
   }
 
+  // Get audit trail with filters and pagination
+  async getAuditTrail(filters: any, limit: number, offset: number): Promise<any[]> {
+    try {
+      let query = db
+        .select({
+          id: auditLogs.id,
+          action: auditLogs.action,
+          resource: auditLogs.resource,
+          resourceId: auditLogs.resourceId,
+          details: auditLogs.details,
+          ipAddress: auditLogs.ipAddress,
+          userAgent: auditLogs.userAgent,
+          timestamp: auditLogs.timestamp,
+          oldValues: auditLogs.oldValues,
+          newValues: auditLogs.newValues,
+          userName: users.name,
+          userEmail: users.email,
+        })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.userId, users.id))
+        .where(eq(auditLogs.companyId, filters.companyId));
+
+      // Apply additional filters
+      if (filters.startDate) {
+        query = query.where(gte(auditLogs.timestamp, filters.startDate));
+      }
+      if (filters.endDate) {
+        query = query.where(lte(auditLogs.timestamp, filters.endDate));
+      }
+      if (filters.userId) {
+        query = query.where(eq(auditLogs.userId, filters.userId));
+      }
+      if (filters.resource) {
+        query = query.where(eq(auditLogs.resource, filters.resource));
+      }
+      if (filters.action) {
+        query = query.where(eq(auditLogs.action, filters.action));
+      }
+
+      const result = await query
+        .orderBy(desc(auditLogs.timestamp))
+        .limit(limit)
+        .offset(offset);
+
+      return result;
+    } catch (error) {
+      console.error("Failed to fetch audit trail:", error);
+      throw error;
+    }
+  }
+
+  // Get audit trail count for pagination
+  async getAuditTrailCount(filters: any): Promise<number> {
+    try {
+      let query = db
+        .select({ count: sql<number>`count(*)` })
+        .from(auditLogs)
+        .where(eq(auditLogs.companyId, filters.companyId));
+
+      if (filters.startDate) {
+        query = query.where(gte(auditLogs.timestamp, filters.startDate));
+      }
+      if (filters.endDate) {
+        query = query.where(lte(auditLogs.timestamp, filters.endDate));
+      }
+      if (filters.userId) {
+        query = query.where(eq(auditLogs.userId, filters.userId));
+      }
+      if (filters.resource) {
+        query = query.where(eq(auditLogs.resource, filters.resource));
+      }
+      if (filters.action) {
+        query = query.where(eq(auditLogs.action, filters.action));
+      }
+
+      const result = await query;
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error("Failed to get audit trail count:", error);
+      throw error;
+    }
+  }
+
+  // Get filter options for audit trail
+  async getAuditTrailFilterOptions(companyId: number): Promise<any> {
+    try {
+      const [usersResult, resourcesResult, actionsResult] = await Promise.all([
+        // Get unique users
+        db
+          .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+          })
+          .from(auditLogs)
+          .innerJoin(users, eq(auditLogs.userId, users.id))
+          .where(eq(auditLogs.companyId, companyId))
+          .groupBy(users.id, users.name, users.email),
+
+        // Get unique resources
+        db
+          .select({
+            resource: auditLogs.resource,
+            count: sql<number>`count(*)`
+          })
+          .from(auditLogs)
+          .where(eq(auditLogs.companyId, companyId))
+          .groupBy(auditLogs.resource)
+          .orderBy(desc(sql`count(*)`)),
+
+        // Get unique actions
+        db
+          .select({
+            action: auditLogs.action,
+            count: sql<number>`count(*)`
+          })
+          .from(auditLogs)
+          .where(eq(auditLogs.companyId, companyId))
+          .groupBy(auditLogs.action)
+          .orderBy(desc(sql`count(*)`))
+      ]);
+
+      return {
+        users: usersResult,
+        resources: resourcesResult,
+        actions: actionsResult
+      };
+    } catch (error) {
+      console.error("Failed to get audit trail filter options:", error);
+      throw error;
+    }
+  }
+
   async getAuditLogs(limit: number = 100, offset: number = 0): Promise<AuditLog[]> {
     const results = await db
       .select({
