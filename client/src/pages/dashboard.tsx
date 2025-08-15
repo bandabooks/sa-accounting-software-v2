@@ -134,8 +134,8 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <div className="container mx-auto px-4 space-y-4 lg:space-y-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-x-hidden">
+        <div className="w-full space-y-4 lg:space-y-6">
         
         {/* Stunning Gradient Hero Section */}
         <div className="relative overflow-hidden dashboard-hero">
@@ -168,7 +168,7 @@ export default function Dashboard() {
               </div>
 
               {/* Compact Revenue Metrics - Professional Alignment */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:min-w-[480px]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-full lg:max-w-[480px]">
                 <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
                   <div className="text-2xl font-bold text-white">
                     {formatCurrency(dashboardStats.totalRevenue)}

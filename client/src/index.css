@@ -167,17 +167,29 @@
   
   /* Dashboard top gap fix - completely close gap between header and hero */
   .dashboard-page .main-content {
-    @apply pt-0 lg:pt-0 !important;
+    @apply pt-0 lg:pt-0 p-0 lg:p-0 !important;
   }
   
   .dashboard-page .dashboard-hero {
     @apply mt-0 !important;
   }
   
+  .dashboard-page .container {
+    @apply px-0 !important;
+  }
+  
+  /* Fix horizontal overflow issues on dashboard */
+  .dashboard-page {
+    @apply overflow-x-hidden !important;
+  }
+  
   /* Add minimal spacing only on mobile for better visibility */
   @media (max-width: 1024px) {
     .dashboard-page .main-content {
-      @apply pt-2 !important;
+      @apply pt-2 p-2 !important;
+    }
+    .dashboard-page .container {
+      @apply px-2 !important;
     }
   }
 }
