@@ -292,6 +292,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register enterprise feature routes
   registerEnterpriseRoutes(app);
   registerOnboardingRoutes(app);
+  // Register chart management routes
+  registerChartManagementRoutes(app);
   
   // Register email routes
   app.use("/api/email", emailRoutes);

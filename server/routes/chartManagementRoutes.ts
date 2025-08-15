@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../db';
 import { chartOfAccounts } from '../../shared/schema';
 import { eq, and } from 'drizzle-orm';
-import { authenticate } from '../middleware/auth';
+import { authenticate } from '../auth';
 
 // Industry templates with account structures
 const industryTemplates = {
