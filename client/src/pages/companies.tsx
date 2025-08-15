@@ -47,7 +47,7 @@ export default function Companies() {
     queryKey: ["/api/subscription-plans"],
   });
 
-  // Debug logging for subscription plans
+  // Debug logging for subscription plans (remove in production)
   console.log("Subscription plans data:", subscriptionPlans);
   console.log("Plans loading:", isLoadingPlans);
   console.log("Plans error:", plansError);
@@ -552,7 +552,7 @@ export default function Companies() {
                         <SelectItem key={plan.id} value={plan.id.toString()}>
                           <div className="flex flex-col items-start py-1">
                             <span className="font-medium text-blue-700">
-                              {plan.name} (R{plan.monthlyPrice}/month)
+                              {plan.displayName} (R{plan.monthlyPrice}/month)
                             </span>
                             <span className="text-xs text-gray-600">
                               {plan.description}
@@ -561,11 +561,9 @@ export default function Companies() {
                         </SelectItem>
                       ))
                     ) : (
-                      <>
-                        <SelectItem value="1">Basic Plan - R299.99/month</SelectItem>
-                        <SelectItem value="2">Professional Plan - R679.99/month</SelectItem>
-                        <SelectItem value="3">Enterprise Plan - R1,199.99/month</SelectItem>
-                      </>
+                      <SelectItem value="no-plans" disabled>
+                        No subscription plans available
+                      </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -578,7 +576,7 @@ export default function Companies() {
                         return (
                           <div className="text-sm">
                             <div className="font-semibold text-blue-700 mb-1">
-                              {selectedPlan.name} - R{selectedPlan.monthlyPrice}/month
+                              {selectedPlan.displayName} - R{selectedPlan.monthlyPrice}/month
                             </div>
                             <p className="text-xs text-gray-600">
                               {selectedPlan.description}
