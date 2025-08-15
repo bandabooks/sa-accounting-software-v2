@@ -135,7 +135,7 @@ export default function Dashboard() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-        <div className="container mx-auto px-4 space-y-4 lg:space-y-6">
+        <div className="container mx-auto px-4 space-y-2 lg:space-y-3 h-screen overflow-hidden">
         
         {/* Stunning Gradient Hero Section */}
         <div className="relative overflow-hidden dashboard-hero">
@@ -374,25 +374,10 @@ export default function Dashboard() {
 
 
 
-        {/* Modular Widget System */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Dashboard Widgets</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Monitor your business performance</p>
-            </div>
-            <Button 
-              onClick={() => setIsCustomizing(!isCustomizing)}
-              variant={isCustomizing ? "default" : "outline"}
-              size="sm"
-              className="shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              {isCustomizing ? "Done Customizing" : "Customize Layout"}
-            </Button>
-          </div>
+        {/* Streamlined Widget System - No scroll */}
+        <div className="space-y-3">
 
-          <Tabs defaultValue="overview" className="space-y-5">
+          <Tabs defaultValue="overview" className="space-y-3">
             <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1.5 rounded-lg">
               <TabsTrigger 
                 value="overview" 
@@ -420,17 +405,17 @@ export default function Dashboard() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-3">
 
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 h-[calc(100vh-280px)] overflow-hidden">
                 {/* Enhanced Chart Widget */}
-                <div className="xl:col-span-2">
-                  <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
+                <div className="xl:col-span-2 h-full">
+                  <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm h-full flex flex-col">
+                    <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-lg font-semibold text-gray-800">Revenue Trends</CardTitle>
-                          <CardDescription>Monthly performance overview</CardDescription>
+                          <CardTitle className="text-base font-semibold text-gray-800">Revenue Trends</CardTitle>
+                          <CardDescription className="text-xs">Monthly performance overview</CardDescription>
                         </div>
                         <div className="flex gap-2">
                           <Button 
@@ -447,101 +432,22 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <ProfitLossChart data={dashboardStats.profitLossData || []} />
-                    </CardContent>
-                  </Card>
-                  
-                    {/* Quick Actions - Now with notification cards */}
-                  <div className="mt-6 space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Quick Actions</h3>
-                    {notifications.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {notifications.map((notification) => (
-                          <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
-                            notification.priority === 'high' ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' :
-                            notification.priority === 'medium' ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10' :
-                            'bg-gradient-to-br from-blue-500/10 to-indigo-500/10'
-                          }`}>
-                            <div className={`absolute top-0 left-0 right-0 h-1 ${
-                              notification.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
-                              notification.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
-                              'bg-gradient-to-r from-blue-500 to-indigo-600'
-                            }`}></div>
-                            <CardHeader className="pb-3">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className={`p-2 rounded-lg ${
-                                    notification.priority === 'high' ? 'bg-red-100 text-red-600' :
-                                    notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                                    'bg-blue-100 text-blue-600'
-                                  }`}>
-                                    {notification.type === 'success' ? <Award className="h-4 w-4" /> :
-                                     notification.type === 'warning' ? <AlertTriangle className="h-4 w-4" /> :
-                                     <Bell className="h-4 w-4" />}
-                                  </div>
-                                  <div>
-                                    <CardTitle className="text-sm font-semibold text-gray-800">{notification.title}</CardTitle>
-                                    <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
-                                  </div>
-                                </div>
-                                <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
-                                  {notification.priority}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* FILLING THE RED-MARKED GAP: Compliance Alerts */}
-                  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm mt-3">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
-                            <AlertTriangle className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-base font-semibold text-gray-800">Compliance Alerts</CardTitle>
-                            <CardDescription className="text-xs text-gray-600">Important notifications</CardDescription>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                          1 Alert
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                          <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-yellow-100 rounded-lg">
-                              <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold text-gray-800">VAT return due in 5 days</h4>
-                              <p className="text-xs text-gray-600">Action required soon</p>
-                            </div>
-                          </div>
-                          <Button size="sm" className="text-xs bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
-                            Prepare
-                          </Button>
-                        </div>
+                    <CardContent className="flex-1 pb-2">
+                      <div className="h-full">
+                        <ProfitLossChart data={dashboardStats.profitLossData || []} />
                       </div>
                     </CardContent>
                   </Card>
+
                 </div>
 
-                {/* Recent Activities Widget - With View All button */}
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
+                {/* Recent Activities Widget - Compact for no-scroll */}
+                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm h-full flex flex-col">
+                  <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
-                        <CardDescription>Latest business updates</CardDescription>
+                        <CardTitle className="text-base font-semibold text-gray-800">Recent Activities</CardTitle>
+                        <CardDescription className="text-xs">Latest business updates</CardDescription>
                       </div>
                       <Button 
                         variant="outline" 
@@ -556,8 +462,10 @@ export default function Dashboard() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <RecentActivities activities={dashboardStats.recentActivities || []} />
+                  <CardContent className="flex-1 overflow-hidden">
+                    <div className="h-full overflow-y-auto">
+                      <RecentActivities activities={dashboardStats.recentActivities || []} />
+                    </div>
                   </CardContent>
                 </Card>
               </div>
