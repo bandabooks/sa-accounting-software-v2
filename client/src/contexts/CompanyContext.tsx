@@ -72,12 +72,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ companyId: newCompanyId }),
       });
 
-      // 3. Smart cache management - only clear company-specific queries
-      queryClient.removeQueries({ queryKey: ['/api/dashboard/stats'] });
-      queryClient.removeQueries({ queryKey: ['/api/invoices'] });
-      queryClient.removeQueries({ queryKey: ['/api/customers'] });
-      queryClient.removeQueries({ queryKey: ['/api/expenses'] });
-      queryClient.removeQueries({ queryKey: ['/api/suppliers'] });
+      // 3. Complete cache invalidation - clear ALL company-specific queries
+      queryClient.invalidateQueries();
+      queryClient.clear();
 
       // 4. Update URL with company parameter (non-blocking) - Remove this as it's causing issues
       // const url = new URL(window.location.href);
@@ -106,21 +103,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to switch company: ${response.status} - ${errorData}`);
       }
 
-      // 7. Pre-fetch critical data in parallel for instant display
-      Promise.all([
-        queryClient.prefetchQuery({
-          queryKey: ['/api/dashboard/stats'],
-          staleTime: 0, // Force fresh data
-        }),
-        queryClient.prefetchQuery({
-          queryKey: ['/api/customers'],
-          staleTime: 30000, // Cache for 30 seconds
-        }),
-        queryClient.prefetchQuery({
-          queryKey: ['/api/invoices'],
-          staleTime: 30000,
-        })
-      ]).catch(error => console.warn('Background prefetch failed:', error));
+      // 7. Force immediate page reload for complete data refresh
+      console.log('Company switch successful, forcing page reload for data consistency');
+      window.location.reload();
 
       const data = await response.json();
       toast({
