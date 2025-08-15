@@ -79,10 +79,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       queryClient.removeQueries({ queryKey: ['/api/expenses'] });
       queryClient.removeQueries({ queryKey: ['/api/suppliers'] });
 
-      // 4. Update URL with company parameter (non-blocking)
-      const url = new URL(window.location.href);
-      url.searchParams.set('co', newCompanyId.toString());
-      window.history.pushState({}, '', url.toString());
+      // 4. Update URL with company parameter (non-blocking) - Remove this as it's causing issues
+      // const url = new URL(window.location.href);
+      // url.searchParams.set('co', newCompanyId.toString());
+      // window.history.pushState({}, '', url.toString());
 
       // 5. WebSocket reconnection (non-blocking)
       if (window.wsConnection) {
@@ -122,6 +122,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         })
       ]).catch(error => console.warn('Background prefetch failed:', error));
 
+      const data = await response.json();
       toast({
         title: "Company switched",
         description: `Now viewing ${data.company.name}`,
