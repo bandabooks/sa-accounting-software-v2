@@ -38,11 +38,18 @@ Preferred communication style: Simple, everyday language.
 - ✅ **Invoice Editing Database Persistence Fix (Aug 2025)**: Completely resolved critical issue where invoice item modifications (quantity, price, descriptions) were only updating UI calculations but not persisting to database. Enhanced backend API to handle both invoice header and items updates, implemented smart product matching for edit mode, and ensured all item changes now properly save to database. Invoice editing now maintains full data integrity across sessions.
 - ✅ **Expense Metrics Display Fix (Aug 2025)**: Resolved critical issue where expense metrics cards were showing R 0.00 instead of actual financial data. Identified and fixed dual expense page architecture (expenses.tsx vs expenses-standalone.tsx) where routing was using ExpensesStandalone component. Updated correct component to display proper values: Total Expenses (R 12,000.00), This Month (R 1,200.00), Unpaid Expenses (R 0.00), and Average Expense (R 4,000.00).
 
-**Current Status**: ✅ **Company Switching Functionality RESTORED (Aug 15, 2025)**
-- ✅ **Critical Learning**: Company switching was working perfectly in deployed app - backend logs confirm successful switches between companies 4, 5, 26
-- ✅ **Issue Identified**: Frontend cache invalidation was over-complicated, causing display issues despite working backend
-- ✅ **Solution Applied**: Simplified to match deployed app logic - minimal cache invalidation, preserved original working patterns
-- ✅ **Prevention Protocol**: Established deployment integrity checklist to prevent future regression of working features
+**Current Status**: ✅ **Chart of Accounts Industry-Based Activation COMPLETE (Aug 15, 2025)**
+- ✅ **Expense Filter Issue Fixed**: Enhanced expense account activation from minimal accounts to 49+ comprehensive expense categories
+- ✅ **Industry-Based Defaults**: Implemented industry-specific chart of accounts templates for 10 business sectors (General, Professional Services, Retail, Manufacturing, etc.)
+- ✅ **Database Schema Fixed**: Resolved critical `normal_balance` constraint errors causing chart seeding failures
+- ✅ **Comprehensive Account Coverage**: New companies now get 100+ active accounts automatically with proper breakdown (Assets: 42, Liabilities: 24, Equity: 10, Revenue: 12, COGS: 8, Expenses: 49+)
+- ✅ **Existing Company Fix**: Applied expense account activation to existing companies showing 0 expense accounts
+- ✅ **Git Protection Enhanced**: Comprehensive .gitignore prevents credential and database overwrite during GitHub deployments
+
+**Previous Status**: ✅ **Company Switching Functionality RESTORED (Aug 15, 2025)**
+- Company switching working perfectly in deployed app - backend logs confirm successful switches
+- Frontend cache invalidation simplified to match deployed app logic
+- Deployment integrity checklist established to prevent future regression
 
 **Previous Status**: ✅ **Cross-Tenant Data Isolation COMPLETE (Aug 14, 2025)**
 - ✅ **Critical Security Fix**: Resolved major data mixing issue where dashboard endpoints were using incorrect `activeCompanyId` property instead of `companyId`

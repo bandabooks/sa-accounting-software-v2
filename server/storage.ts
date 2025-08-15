@@ -6054,13 +6054,22 @@ export class DatabaseStorage implements IStorage {
     if (existingAccounts.length === 0) {
       // Insert comprehensive South African IFRS-compliant Chart of Accounts
       for (const account of SOUTH_AFRICAN_CHART_OF_ACCOUNTS) {
-        await db.insert(chartOfAccounts).values({
-          ...account,
-          companyId,
-          isActive: true,
-          level: 1,
-          isSystemAccount: account.isSystemAccount || false,
-        }).onConflictDoNothing();
+        try {
+          await db.insert(chartOfAccounts).values({
+            ...account,
+            companyId,
+            isActive: true,
+            level: account.level || 1,
+            isSystemAccount: account.isSystemAccount || false,
+            normalBalance: account.normalBalance || (
+              account.accountType === 'Asset' || account.accountType === 'Expense' || account.accountType === 'Cost of Goods Sold' 
+                ? 'Debit' 
+                : 'Credit'
+            ),
+          }).onConflictDoNothing();
+        } catch (error) {
+          console.warn(`Warning: Could not seed account ${account.accountCode} - ${account.accountName}:`, error);
+        }
       }
 
       // Activate essential business accounts by default
@@ -6100,17 +6109,62 @@ export class DatabaseStorage implements IStorage {
       '4000', // Sales Revenue
       '4001', // Service Revenue
       
-      // Expenses - Essential for operations
+      // Cost of Goods Sold - Essential for product businesses
       '5000', // Cost of Goods Sold
+      '5100', // Direct Materials
+      '5200', // Direct Labor
+      '5300', // Manufacturing Overhead
+      
+      // Expenses - Essential for operations (49 common expense accounts)
       '6000', // Administrative Expenses  
+      '6001', // Accounting & Professional Fees
+      '6002', // Legal Fees
+      '6003', // Consulting Fees
+      '6004', // Audit Fees
       '6100', // Office Supplies
-      '6200', // Telephone & Internet
-      '6300', // Rent
-      '6400', // Utilities
+      '6101', // Utilities
+      '6102', // Telephone & Internet
+      '6103', // Software & Subscriptions
+      '6104', // Office Equipment
+      '6105', // Computer Equipment
+      '6106', // Repairs & Maintenance
+      '6200', // Travel & Entertainment
+      '6201', // Travel Expenses
+      '6202', // Meals & Entertainment
+      '6203', // Accommodation
+      '6204', // Vehicle Expenses
+      '6300', // Rent & Property
+      '6301', // Office Rent
+      '6302', // Equipment Lease
+      '6303', // Property Insurance
+      '6304', // Property Taxes
+      '6400', // Marketing & Advertising
+      '6401', // Online Advertising
+      '6402', // Print Advertising
+      '6403', // Marketing Materials
+      '6404', // Trade Shows
       '6500', // Insurance
-      '6600', // Professional Fees
-      '6700', // Bank Charges
-      '6800', // Travel & Entertainment
+      '6501', // General Liability
+      '6502', // Professional Indemnity
+      '6503', // Vehicle Insurance
+      '6600', // Bank & Finance Charges
+      '6601', // Bank Charges
+      '6602', // Interest Expense
+      '6603', // Credit Card Fees
+      '6604', // Loan Interest
+      '6700', // Employee Expenses
+      '6701', // Salaries & Wages
+      '6702', // Employee Benefits
+      '6703', // Training & Development
+      '6704', // Recruitment Costs
+      '6800', // Operations
+      '6801', // Postage & Courier
+      '6802', // Cleaning
+      '6803', // Security
+      '6804', // Waste Removal
+      '6900', // Depreciation
+      '6901', // Equipment Depreciation
+      '6902', // Vehicle Depreciation
     ];
 
     // Get all accounts for this company that match essential codes
@@ -7893,8 +7947,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(industryTemplates.industryCode, industryCode));
 
     if (!template) {
-      // Fallback to basic accounts if template not found
-      await this.activateBasicChartOfAccounts(companyId, userId);
+      // Fallback to enhanced basic accounts if template not found
+      await this.activateEssentialBusinessAccounts(companyId);
       return;
     }
 
@@ -7930,46 +7984,14 @@ export class DatabaseStorage implements IStorage {
           },
         });
     }
+
+    console.log(`✓ Activated ${companyAccounts.length} industry-specific accounts for company ${companyId} (${industryCode})`);
   }
 
   async activateBasicChartOfAccounts(companyId: number, userId: number): Promise<void> {
-    // Basic accounts for general business
-    const basicAccountCodes = [
-      '1000', '1100', '1200', // Assets
-      '2000', '2100', '2200', // Liabilities  
-      '3000', '3100', // Equity
-      '4000', '4100', // Revenue
-      '6000', '6100', '6200', '6300', // Expenses
-      '7000', '7100' // Extraordinary Items
-    ];
-
-    const accountsToActivate = await db
-      .select()
-      .from(chartOfAccounts)
-      .where(inArray(chartOfAccounts.accountCode, basicAccountCodes));
-
-    const companyAccounts = accountsToActivate.map(account => ({
-      companyId,
-      accountId: account.id,
-      isActive: true,
-      activatedBy: userId,
-    }));
-
-    if (companyAccounts.length > 0) {
-      await db
-        .insert(companyChartOfAccounts)
-        .values(companyAccounts)
-        .onConflictDoUpdate({
-          target: [companyChartOfAccounts.companyId, companyChartOfAccounts.accountId],
-          set: {
-            isActive: true,
-            activatedAt: sql`now()`,
-            activatedBy: userId,
-            deactivatedAt: null,
-            deactivatedBy: null,
-          },
-        });
-    }
+    // Enhanced basic accounts - redirect to comprehensive essential accounts
+    await this.activateEssentialBusinessAccounts(companyId);
+    console.log(`✓ Activated comprehensive basic chart of accounts for company ${companyId}`);
   }
 
   // Get industry templates
