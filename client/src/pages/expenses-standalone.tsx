@@ -41,11 +41,22 @@ interface Expense {
 
 interface ExpenseMetrics {
   totalExpenses: string;
-  currentMonthExpenses: string;
-  previousMonthExpenses: string;
+  totalVatClaimed: string;
+  taxDeductibleAmount: string;
+  nonDeductibleAmount: string;
+  paidExpenses: string;
   unpaidExpenses: string;
   expenseCount: number;
-  averageExpense: string;
+  categoryBreakdown: Array<{
+    category: string;
+    amount: string;
+    count: number;
+  }>;
+  supplierBreakdown: Array<{
+    supplier: string;
+    amount: string;
+    count: number;
+  }>;
 }
 
 export default function ExpensesStandalone() {
@@ -240,27 +251,27 @@ export default function ExpensesStandalone() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-                {formatCurrency(metrics?.totalExpenses || "12000.00")}
+                {formatCurrency(metrics?.totalExpenses || "0.00")}
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                {metrics?.expenseCount || 3} expense entries
+                {metrics?.expenseCount || 0} expense entries
               </p>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">This Month</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Paid Expenses</CardTitle>
               <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg">
                 <Calendar className="h-4 w-4 text-white" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                {formatCurrency(metrics?.currentMonthExpenses || "1200.00")}
+                {formatCurrency(metrics?.paidExpenses || "0.00")}
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                Current month expenses
+                Paid expenses
               </p>
             </CardContent>
           </Card>
@@ -284,17 +295,17 @@ export default function ExpensesStandalone() {
 
           <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Average Expense</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">VAT Claimed</CardTitle>
               <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
                 <Receipt className="h-4 w-4 text-white" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                {formatCurrency(metrics?.averageExpense || "4000.00")}
+                {formatCurrency(metrics?.totalVatClaimed || "0.00")}
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                Per expense entry
+                VAT claimed
               </p>
             </CardContent>
           </Card>
