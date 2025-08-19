@@ -165,7 +165,24 @@ const navigationGroups = [
       { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "projects" }
     ]
   },
-  // 11. Point of Sale
+  // 11. Employee Management & HR
+  {
+    id: "hr",
+    label: "Employee Management",
+    icon: UserCog,
+    module: "hr_management",
+    items: [
+      { path: "/employees", label: "Employee Directory", icon: Users, permission: "EMPLOYEE_VIEW", module: "hr_management" },
+      { path: "/payroll", label: "Payroll Management", icon: DollarSign, permission: "PAYROLL_VIEW", module: "hr_management" },
+      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "hr_management" },
+      { path: "/leave-management", label: "Leave Management", icon: CheckSquare, permission: "LEAVE_VIEW", module: "hr_management" },
+      { path: "/attendance", label: "Attendance", icon: CheckCircle, permission: "ATTENDANCE_VIEW", module: "hr_management" },
+      { path: "/employee-documents", label: "Employee Documents", icon: FolderOpen, permission: "EMPLOYEE_DOCUMENTS_VIEW", module: "hr_management" },
+      { path: "/performance", label: "Performance Reviews", icon: BarChart3, permission: "PERFORMANCE_VIEW", module: "hr_management" },
+      { path: "/hr-reports", label: "HR Reports", icon: FileText, permission: "HR_REPORTS_VIEW", module: "hr_management" }
+    ]
+  },
+  // 12. Point of Sale
   {
     id: "pos",
     label: "Point of Sale",
@@ -178,7 +195,7 @@ const navigationGroups = [
       { path: "/pos/terminals", label: "Terminal Setup", icon: Settings, permission: "POS_MANAGE", module: "pos_sales" }
     ]
   },
-  // 12. Administration
+  // 13. Administration
   {
     id: "administration",
     label: "Administration",
