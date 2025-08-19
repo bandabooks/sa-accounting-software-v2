@@ -58,6 +58,7 @@ export default function ComplianceTasks() {
       priority: "medium",
       complianceType: "",
       notes: "",
+      dueDate: "",
     },
   });
 
@@ -235,7 +236,7 @@ export default function ComplianceTasks() {
                     <FormItem>
                       <FormLabel>Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Task title" {...field} />
+                        <Input placeholder="Task title" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -261,7 +262,7 @@ export default function ComplianceTasks() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Task Type</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -284,7 +285,7 @@ export default function ComplianceTasks() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Priority</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select priority" />
@@ -309,7 +310,7 @@ export default function ComplianceTasks() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Compliance Type</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
@@ -332,7 +333,7 @@ export default function ComplianceTasks() {
                       <FormItem>
                         <FormLabel>Due Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -576,7 +577,7 @@ export default function ComplianceTasks() {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Task title" {...field} />
+                      <Input placeholder="Task title" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -602,7 +603,7 @@ export default function ComplianceTasks() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Task Type</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -625,7 +626,7 @@ export default function ComplianceTasks() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Priority</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select priority" />
@@ -650,7 +651,7 @@ export default function ComplianceTasks() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Compliance Type</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -673,7 +674,7 @@ export default function ComplianceTasks() {
                     <FormItem>
                       <FormLabel>Due Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
