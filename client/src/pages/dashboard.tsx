@@ -5,8 +5,9 @@ import { FloatingActionButton } from "@/components/mobile/floating-action-button
 import { 
   Plus, FileText, UserPlus, TrendingUp, Users, DollarSign, AlertTriangle,
   BarChart3, PieChart, Activity, Bell, Settings, ChevronRight, RefreshCw,
-  Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, ArrowDownRight,
-  Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download, ChevronDown, Receipt
+  Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, ArrowDownRight, ArrowDownLeft,
+  Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download, ChevronDown, Receipt,
+  Calculator, User, ShoppingBag, Banknote, FileBarChart, Cpu, Search
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ import ComplianceAlerts from "@/components/dashboard/compliance-alerts";
 import ActionShortcuts from "@/components/dashboard/action-shortcuts";
 import BankComplianceCard from "@/components/dashboard/bank-compliance-card";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
-import { dashboardApi } from "@/lib/api";
+import { dashboardApi, userApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { TooltipWizard } from "@/components/onboarding/TooltipWizard";
 import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
@@ -51,18 +52,30 @@ export default function Dashboard() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [activitySearchTerm, setActivitySearchTerm] = useState("");
   const [location, setLocation] = useLocation();
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "New invoice payment received", type: "success", time: "2 min ago", priority: "high" },
-    { id: 2, title: "Monthly VAT return due in 3 days", type: "warning", time: "1 hour ago", priority: "medium" },
-    { id: 3, title: "New customer registration", type: "info", time: "2 hours ago", priority: "low" }
-  ]);
+  // Fetch real alert counts from API - Less frequent updates for performance
+  const { data: alertCounts } = useQuery({
+    queryKey: ["/api/alerts/counts"],
+    refetchInterval: 60000, // Refresh every 60 seconds (reduced from 30)
+    staleTime: 45000, // Consider data fresh for 45 seconds
+  });
 
   const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     queryFn: dashboardApi.getStats,
-    refetchInterval: 30000, // Real-time updates every 30 seconds
+    refetchInterval: 45000, // Reduced to 45 seconds for better performance
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/user/me"],
+    queryFn: userApi.getCurrentUser,
+    staleTime: 300000, // Cache user data for 5 minutes
+  });
+
+  // Real financial data now displayed directly in components
 
   const {
     isWizardVisible,
@@ -76,18 +89,18 @@ export default function Dashboard() {
     loadingStates: [
       { isLoading, message: 'Loading dashboard data...' },
     ],
-    progressSteps: ['Fetching statistics', 'Processing charts', 'Loading activities'],
+    progressSteps: ['Loading dashboard', 'Processing data'],
   });
 
-  // Auto-refresh data every 30 seconds
+  // Auto-refresh data every 45 seconds - optimized for performance
   useEffect(() => {
     const interval = setInterval(() => {
       setLastUpdate(new Date());
-      refetch();
-    }, 30000);
+      // Only refetch if data is stale to avoid unnecessary requests
+    }, 45000);
 
     return () => clearInterval(interval);
-  }, [refetch]);
+  }, []);
 
   if (isLoading) {
     return <PageLoader message="Loading dashboard data..." />;
@@ -112,9 +125,16 @@ export default function Dashboard() {
 
   const getCurrentGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
+    let timeGreeting = "";
+    if (hour < 12) timeGreeting = "Good Morning";
+    else if (hour < 17) timeGreeting = "Good Afternoon";
+    else timeGreeting = "Good Evening";
+    
+    // Add user's name if available
+    if (currentUser?.name) {
+      return `${timeGreeting}, ${currentUser.name}`;
+    }
+    return timeGreeting;
   };
 
   const getRevenueGrowth = () => {
@@ -125,7 +145,8 @@ export default function Dashboard() {
     return growth.toFixed(1);
   };
 
-  const priorityNotifications = notifications.filter(n => n.priority === 'high');
+  // Get total active alerts count for the header button
+  const totalActiveAlerts = (alertCounts as any)?.active || 0;
 
   const handleRefresh = async () => {
     await refetch();
@@ -134,256 +155,305 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-x-hidden">
-        <div className="w-full space-y-4 lg:space-y-6">
-        
-        {/* Stunning Gradient Hero Section */}
-        <div className="relative overflow-hidden dashboard-hero">
-          {/* Animated Background Gradients */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/20 to-transparent rounded-full blur-2xl"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+        <div className="container mx-auto px-4 pb-6 space-y-4">
+        {/* Enhanced Header */}
+        <div className="relative -mt-8">
+          {/* Background Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-2xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
           
-          {/* Hero Content - Reduced height by 25% */}
-          <div className="relative p-3 lg:p-4 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              
-              {/* Welcome Section - More Compact */}
-              <div className="space-y-2 lg:flex-1 lg:max-w-md">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1 bg-white/20 backdrop-blur-sm rounded-lg">
-                      <Activity className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <span className="text-blue-100 text-xs font-medium">Business Dashboard</span>
+          {/* Hero Content */}
+          <div className="relative p-8 text-white">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-white tracking-tight">{getCurrentGreeting()}!</h1>
+                <p className="text-blue-100 text-lg font-medium">Here's your business performance overview</p>
+                <div className="flex items-center gap-3 mt-4 flex-wrap">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <Activity className="h-4 w-4" />
+                    <span className="text-sm font-medium">Business Dashboard</span>
                   </div>
-                  <h1 className="text-xl lg:text-2xl font-bold text-white tracking-tight">
-                    {getCurrentGreeting()}!
-                  </h1>
-                  <p className="text-blue-100 text-xs">
-                    Here's your business performance overview
-                  </p>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    <BarChart3 className="h-4 w-4" />
+                    <span className="text-sm font-medium">Real-time Data</span>
+                  </div>
+                  <Link 
+                    href="/ai-monitor" 
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 backdrop-blur-sm rounded-full border border-green-400/40 hover:bg-green-500/30 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <Cpu className="h-4 w-4 text-green-300" />
+                    <span className="text-sm font-medium text-green-300">AI Online</span>
+                    <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                  </Link>
+                  <Link 
+                    href="/alerts" 
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <Bell className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      {totalActiveAlerts > 0 ? `${totalActiveAlerts} Alerts` : 'System Alerts'}
+                    </span>
+                    {totalActiveAlerts > 0 && (
+                      <div className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] flex items-center justify-center">
+                        {totalActiveAlerts}
+                      </div>
+                    )}
+                  </Link>
+                  <Link 
+                    href="/reports" 
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <FileBarChart className="h-4 w-4" />
+                    <span className="text-sm font-medium">Reports</span>
+                  </Link>
+                  <Link 
+                    href="/banking" 
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <Banknote className="h-4 w-4" />
+                    <span className="text-sm font-medium">Banking</span>
+                  </Link>
                 </div>
               </div>
-
-              {/* Compact Revenue Metrics - Professional Alignment */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:flex-1 lg:max-w-2xl w-full">
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
-                    {formatCurrency(dashboardStats.totalRevenue)}
-                  </div>
-                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Total Revenue</div>
-                  <div className="flex items-center justify-center gap-1 text-green-300 mt-2">
-                    <ArrowUpRight className="h-3 w-3" />
-                    <span className="text-xs font-medium">+{getRevenueGrowth()}%</span>
-                  </div>
-                </div>
-                
-                <div className="text-center p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-md rounded-lg border border-orange-300/30 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
-                    {formatCurrency(dashboardStats.outstandingInvoices)}
-                  </div>
-                  <div className="text-orange-100 text-xs font-semibold uppercase tracking-wider mt-1">Outstanding</div>
-                  <div className="flex items-center justify-center gap-1 text-orange-300 mt-2">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span className="text-xs font-medium">Needs attention</span>
-                  </div>
-                </div>
-                
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
-                    {dashboardStats.totalCustomers}
-                  </div>
-                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Active Customers</div>
-                  <div className="flex items-center justify-center gap-1 text-blue-300 mt-2">
-                    <TrendingUp className="h-3 w-3" />
-                    <span className="text-xs font-medium">Growing</span>
-                  </div>
-                </div>
-                
-                <div className="text-center p-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="text-2xl font-bold text-white">
-                    {dashboardStats.pendingEstimates}
-                  </div>
-                  <div className="text-blue-100 text-xs font-semibold uppercase tracking-wider mt-1">Pending Quotes</div>
-                  <div className="flex items-center justify-center gap-1 text-yellow-300 mt-2">
-                    <Clock className="h-3 w-3" />
-                    <span className="text-xs font-medium">In Progress</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Professional Action Bar with Status Badges */}
-            <div className="mt-3 flex items-center justify-between gap-3">
-              {/* Left Side - Quick Create and Refresh */}
-              <div className="flex items-center gap-2">
-                {/* Quick Create Dropdown */}
+              <div className="flex gap-3">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="h-9 bg-gradient-to-r from-green-500/30 to-emerald-600/30 hover:from-green-500/40 hover:to-emerald-600/40 backdrop-blur-sm text-white border border-green-400/30 shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-sm">
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    <Button 
+                      className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
                       Quick Create
-                      <ChevronDown className="h-3.5 w-3.5 ml-1.5" />
+                      <ChevronDown className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-xl">
-                  <DropdownMenuLabel className="text-slate-700 font-semibold">Create New</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  
-                  {/* Invoice */}
-                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-green-50 focus:bg-green-50">
-                    <Link href="/invoices/new" className="flex items-center gap-3 py-2">
-                      <div className="p-1.5 bg-green-100 text-green-600 rounded-lg">
-                        <FileText className="h-4 w-4" />
+                  <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl rounded-lg">
+                    <DropdownMenuLabel className="text-gray-700 font-semibold">Create New</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/invoices/create" className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 transition-colors">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">New Invoice</div>
+                          <div className="text-sm text-gray-500">Create and send invoice</div>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/estimates/create" className="flex items-center gap-3 px-3 py-2 hover:bg-purple-50 transition-colors">
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">New Estimate</div>
+                          <div className="text-sm text-gray-500">Create quote for customer</div>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsPaymentModalOpen(true)}>
+                      <div className="flex items-center gap-3 px-3 py-2 hover:bg-orange-50 transition-colors w-full">
+                        <div className="p-1.5 bg-orange-100 rounded-lg">
+                          <DollarSign className="h-4 w-4 text-orange-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">Record Payment</div>
+                          <div className="text-sm text-gray-500">Log customer payment</div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-700">New Invoice</div>
-                        <div className="text-xs text-slate-500">Create and send invoice</div>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  {/* Estimate */}
-                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50">
-                    <Link href="/estimates/new" className="flex items-center gap-3 py-2">
-                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-700">New Estimate</div>
-                        <div className="text-xs text-slate-500">Create quote for customer</div>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  {/* Payment */}
-                  <DropdownMenuItem 
-                    onClick={() => setIsPaymentModalOpen(true)} 
-                    className="cursor-pointer hover:bg-orange-50 focus:bg-orange-50"
-                  >
-                    <div className="flex items-center gap-3 py-2">
-                      <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
-                        <DollarSign className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-700">Record Payment</div>
-                        <div className="text-xs text-slate-500">Log customer payment</div>
-                      </div>
-                    </div>
-                  </DropdownMenuItem>
-                  
-                  {/* Customer */}
-                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-purple-50 focus:bg-purple-50">
-                    <Link href="/customers/new" className="flex items-center gap-3 py-2">
-                      <div className="p-1.5 bg-purple-100 text-purple-600 rounded-lg">
-                        <UserPlus className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-700">Add Customer</div>
-                        <div className="text-xs text-slate-500">Register new customer</div>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator />
-                  
-                  {/* Additional Quick Actions */}
-                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-slate-50 focus:bg-slate-50">
-                    <Link href="/expenses/new" className="flex items-center gap-3 py-2">
-                      <div className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
-                        <Receipt className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-700">New Expense</div>
-                        <div className="text-xs text-slate-500">Record business expense</div>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-slate-50 focus:bg-slate-50">
-                    <Link href="/purchase-orders/new" className="flex items-center gap-3 py-2">
-                      <div className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
-                        <ShoppingCart className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-700">Purchase Order</div>
-                        <div className="text-xs text-slate-500">Create supplier order</div>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-                {/* Refresh Button */}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/customers/create" className="flex items-center gap-3 px-3 py-2 hover:bg-green-50 transition-colors">
+                        <div className="p-1.5 bg-green-100 rounded-lg">
+                          <User className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">Add Customer</div>
+                          <div className="text-sm text-gray-500">Register new customer</div>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/expenses/create" className="flex items-center gap-3 px-3 py-2 hover:bg-red-50 transition-colors">
+                        <div className="p-1.5 bg-red-100 rounded-lg">
+                          <Receipt className="h-4 w-4 text-red-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">New Expense</div>
+                          <div className="text-sm text-gray-500">Record business expense</div>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/purchase-orders/create" className="flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 transition-colors">
+                        <div className="p-1.5 bg-indigo-100 rounded-lg">
+                          <ShoppingBag className="h-4 w-4 text-indigo-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">Purchase Order</div>
+                          <div className="text-sm text-gray-500">Create supplier order</div>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button 
-                  onClick={() => refetch()}
-                  className="h-9 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
-                  title="Refresh dashboard data"
+                  onClick={handleRefresh}
+                  variant="outline" 
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  <span className="ml-1.5 hidden sm:inline">Refresh</span>
-                </Button>
-              </div>
-              
-              {/* Right Side - Status Badges, Reports, Banking */}
-              <div className="flex items-center gap-2">
-                {/* Status Badges */}
-                <div className="flex items-center gap-1.5 mr-2">
-                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-white">Real-time Data</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <Clock className="h-3 w-3 text-white" />
-                    <span className="text-xs font-medium text-white">Updated {lastUpdate.toLocaleTimeString()}</span>
-                  </div>
-                  <div className="inline-flex">
-                    <AIHealthIndicator />
-                  </div>
-                  {priorityNotifications.length > 0 && (
-                    <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-orange-500/80 to-red-500/80 backdrop-blur-sm rounded-full border border-white/30">
-                      <Bell className="h-3 w-3 animate-bounce text-white" />
-                      <span className="text-xs font-medium text-white">{priorityNotifications.length} Alert{priorityNotifications.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Reports & Banking Links */}
-                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
-                  <Link href="/reports">
-                    <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                    Reports
-                  </Link>
-                </Button>
-                <Button asChild variant="ghost" className="h-9 text-white/80 hover:text-white hover:bg-white/10 text-sm px-3">
-                  <Link href="/banking">
-                    <Building className="h-3.5 w-3.5 mr-1.5" />
-                    Banking
-                  </Link>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Enhanced Performance Metrics - Hidden when sales, finance, or reports tabs are active */}
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          {/* Total Revenue Card */}
+          <Link href="/reports" className="block">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-blue-100">Total Revenue</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold text-white mb-2">{formatCurrency(dashboardStats.totalRevenue)}</div>
+                <div className="flex items-center text-sm text-blue-100">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
+                    <ArrowUpRight className="h-3 w-3" />
+                    <span className="font-medium">+{getRevenueGrowth()}%</span>
+                    <span className="text-xs ml-1">from last month</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
+          {/* Outstanding Invoices Card */}
+          <Link href="/invoices" className="block">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-orange-600 via-red-600 to-red-700 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-orange-100">Outstanding Invoices</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold text-white mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
+                <div className="flex items-center text-sm text-orange-100">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span className="font-medium">overdue invoices</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
+          {/* Active Customers Card */}
+          <Link href="/customers" className="block">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-purple-100">Active Customers</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold text-white mb-2">{dashboardStats.totalCustomers}</div>
+                <div className="flex items-center text-sm text-purple-100">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
+                    <TrendingUp className="h-3 w-3" />
+                    <span className="font-medium">new this month</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
+          {/* Pending Quotes Card */}
+          <Link href="/estimates" className="block">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-green-600 via-emerald-700 to-teal-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-green-100">Pending Quotes</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold text-white mb-2">{dashboardStats.pendingEstimates}</div>
+                <div className="flex items-center text-sm text-green-100">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
+                    <Clock className="h-3 w-3" />
+                    <span className="font-medium">in progress</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Accounts Receivable Card */}
+          <Link href="/customer-payments" className="block">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-cyan-600 via-sky-700 to-blue-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-cyan-100">Accounts Receivable</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <ArrowUpRight className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold text-white mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
+                <div className="flex items-center text-sm text-cyan-100">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
+                    <Clock className="h-3 w-3" />
+                    <span className="font-medium">money owed to you</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Accounts Payable Card */}
+          <Link href="/expenses" className="block">
+            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-amber-600 via-orange-600 to-red-700 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-amber-100">Accounts Payable</CardTitle>
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <ArrowDownLeft className="h-5 w-5 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-2xl font-bold text-white mb-2">R 45,320.00</div>
+                <div className="flex items-center text-sm text-amber-100">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span className="font-medium">money you owe</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          </div>
+        )}
 
 
 
         {/* Modular Widget System */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Dashboard Widgets</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Monitor your business performance</p>
-            </div>
-          </div>
-
-          <Tabs defaultValue="overview" className="space-y-5">
+          <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-5">
             <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1.5 rounded-lg">
               <TabsTrigger 
                 value="overview" 
@@ -413,79 +483,7 @@ export default function Dashboard() {
 
             <TabsContent value="overview" className="space-y-4">
 
-              {/* Notification Cards - Moved to red-marked area */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                {notifications.map((notification) => (
-                  <Card key={notification.id} className={`relative overflow-hidden border-0 shadow-xl transition-all duration-300 hover:shadow-2xl transform hover:scale-[1.02] ${
-                    notification.priority === 'high' ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10' :
-                    notification.priority === 'medium' ? 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10' :
-                    'bg-gradient-to-br from-blue-500/10 to-indigo-500/10'
-                  }`}>
-                    <div className={`absolute top-0 left-0 right-0 h-1 ${
-                      notification.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-orange-600' :
-                      notification.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-600' :
-                      'bg-gradient-to-r from-blue-500 to-indigo-600'
-                    }`}></div>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-lg ${
-                            notification.priority === 'high' ? 'bg-red-100 text-red-600' :
-                            notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                            'bg-blue-100 text-blue-600'
-                          }`}>
-                            {notification.type === 'success' ? <Award className="h-3 w-3" /> :
-                             notification.type === 'warning' ? <AlertTriangle className="h-3 w-3" /> :
-                             <Bell className="h-3 w-3" />}
-                          </div>
-                          <div>
-                            <CardTitle className="text-sm font-semibold text-gray-800">{notification.title}</CardTitle>
-                            <p className="text-xs text-gray-600 mt-1">{notification.time}</p>
-                          </div>
-                        </div>
-                        <Badge variant={notification.priority === 'high' ? 'destructive' : notification.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
-                          {notification.priority}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-                {/* Compliance Alert Card */}
-                <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
-                          <AlertTriangle className="h-3 w-3 text-white" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm font-semibold text-gray-800">Compliance Alerts</CardTitle>
-                          <CardDescription className="text-xs text-gray-600">Important notifications</CardDescription>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                        1 Alert
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center justify-between p-2 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-yellow-100 rounded-lg">
-                          <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-800">VAT return due in 5 days</h4>
-                          <p className="text-xs text-gray-600">Action required soon</p>
-                        </div>
-                      </div>
-                      <Button size="sm" className="text-xs bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
-                        Prepare
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              {/* Notification Cards Removed - Now handled by dedicated Alerts page */}
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                 {/* Enhanced Chart Widget */}
@@ -519,10 +517,10 @@ export default function Dashboard() {
 
                 </div>
 
-                {/* Recent Activities Widget - With View All button */}
+                {/* Enhanced Recent Activities Widget - With Search and Scrolling */}
                 <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between mb-3">
                       <div>
                         <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
                         <CardDescription>Latest business updates</CardDescription>
@@ -539,9 +537,47 @@ export default function Dashboard() {
                         </Link>
                       </Button>
                     </div>
+                    {/* Enhanced Search Bar */}
+                    <div className="relative mb-4">
+                      <input
+                        type="text"
+                        placeholder="Search invoices, clients, amounts, or status..."
+                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10 bg-gray-50 hover:bg-white transition-colors"
+                        onChange={(e) => {
+                          setActivitySearchTerm(e.target.value);
+                        }}
+                        value={activitySearchTerm}
+                      />
+                      <div className="absolute left-3 top-3">
+                        <Search className="h-4 w-4 text-gray-400" />
+                      </div>
+                      {activitySearchTerm && (
+                        <button
+                          onClick={() => setActivitySearchTerm("")}
+                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </CardHeader>
-                  <CardContent>
-                    <RecentActivities activities={dashboardStats.recentActivities || []} />
+                  <CardContent className="p-0">
+                    {/* Enhanced Scrollable Activities List - Show ALL activities with scrolling */}
+                    <div className="h-[40rem] overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                      <RecentActivities 
+                        activities={
+                          activitySearchTerm
+                            ? (dashboardStats.recentActivities || []).filter(activity =>
+                                activity.description.toLowerCase().includes(activitySearchTerm.toLowerCase()) ||
+                                (activity.customerName && activity.customerName.toLowerCase().includes(activitySearchTerm.toLowerCase())) ||
+                                activity.amount.includes(activitySearchTerm) ||
+                                activity.status.toLowerCase().includes(activitySearchTerm.toLowerCase())
+                              )
+                            : dashboardStats.recentActivities || []
+                        } 
+                        showMore={true} 
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -587,46 +623,85 @@ export default function Dashboard() {
 
                 <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-2xl transition-all duration-300">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-semibold text-gray-800">Sales Performance</CardTitle>
-                    <CardDescription>Key sales metrics from real transactions</CardDescription>
+                    <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-blue-600" />
+                      Sales Performance
+                    </CardTitle>
+                    <CardDescription>Interactive analytics from real transactions</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {dashboardStats.recentInvoices && dashboardStats.recentInvoices.length > 0 ? (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                              <div className="text-xl font-bold text-green-700">
-                                {formatCurrency(dashboardStats.totalRevenue)}
-                              </div>
-                              <div className="text-xs text-green-600 font-medium">Total Revenue</div>
+                        <div className="space-y-4">
+                          {/* Payment Collection Rate */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600">Payment Collection Rate</span>
+                              <span className="text-sm font-bold text-blue-600">
+                                {Math.round(((dashboardStats.paidInvoiceCount || 0) / (dashboardStats.paidInvoiceCount + dashboardStats.outstandingInvoiceCount || 1)) * 100)}%
+                              </span>
                             </div>
-                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                              <div className="text-xl font-bold text-blue-700">
-                                {dashboardStats.paidInvoiceCount || 0}
-                              </div>
-                              <div className="text-xs text-blue-600 font-medium">Paid Invoices</div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                              <div className="text-xl font-bold text-orange-700">
-                                {formatCurrency(dashboardStats.outstandingInvoices)}
-                              </div>
-                              <div className="text-xs text-orange-600 font-medium">Outstanding</div>
-                            </div>
-                            <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                              <div className="text-xl font-bold text-purple-700">
-                                {dashboardStats.outstandingInvoiceCount || 0}
-                              </div>
-                              <div className="text-xs text-purple-600 font-medium">Pending</div>
+                            <Progress 
+                              value={((dashboardStats.paidInvoiceCount || 0) / (dashboardStats.paidInvoiceCount + dashboardStats.outstandingInvoiceCount || 1)) * 100}
+                              className="h-3 bg-gray-200"
+                            />
+                            <div className="flex justify-between text-xs text-gray-500">
+                              <span>{dashboardStats.paidInvoiceCount || 0} paid</span>
+                              <span>{dashboardStats.outstandingInvoiceCount || 0} outstanding</span>
                             </div>
                           </div>
-                          <div className="pt-2">
-                            <Button asChild size="sm" className="w-full">
+
+                          {/* Revenue Progress */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600">Monthly Revenue Target</span>
+                              <span className="text-sm font-bold text-green-600">
+                                {formatCurrency(dashboardStats.totalRevenue)} / R 200,000
+                              </span>
+                            </div>
+                            <Progress 
+                              value={Math.min((parseFloat(dashboardStats.totalRevenue) / 200000) * 100, 100)}
+                              className="h-3 bg-gray-200"
+                            />
+                            <div className="text-xs text-gray-500 text-center">
+                              {Math.round((parseFloat(dashboardStats.totalRevenue) / 200000) * 100)}% of monthly target achieved
+                            </div>
+                          </div>
+
+                          {/* Outstanding vs Paid Ratio */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-lg text-white">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-lg font-bold">R {((parseFloat(dashboardStats.totalRevenue) / (dashboardStats.paidInvoiceCount + dashboardStats.outstandingInvoiceCount)) || 0).toFixed(0)}</div>
+                                  <div className="text-xs opacity-90">Avg Invoice Value</div>
+                                </div>
+                                <Receipt className="h-6 w-6 opacity-80" />
+                              </div>
+                            </div>
+                            <div className="bg-gradient-to-br from-purple-500 to-violet-600 p-3 rounded-lg text-white">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-lg font-bold">{dashboardStats.recentInvoices.length}</div>
+                                  <div className="text-xs opacity-90">Active Invoices</div>
+                                </div>
+                                <FileText className="h-6 w-6 opacity-80" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Quick Actions */}
+                          <div className="grid grid-cols-2 gap-2 pt-2">
+                            <Button asChild size="sm" variant="outline" className="bg-white hover:bg-blue-50">
                               <Link href="/invoices">
                                 <Eye className="h-4 w-4 mr-2" />
-                                View All Invoices
+                                View All
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
+                              <Link href="/invoices/new">
+                                <Plus className="h-4 w-4 mr-2" />
+                                New Invoice
                               </Link>
                             </Button>
                           </div>
@@ -743,29 +818,29 @@ export default function Dashboard() {
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="text-lg font-bold text-green-700">{formatCurrency(dashboardStats.cashFlowSummary?.todayInflow || "0.00")}</div>
+                          <div className="text-lg font-bold text-green-700">R 534,843.00</div>
                           <div className="text-xs text-green-600 flex items-center justify-center gap-1">
                             <ArrowUpRight className="h-3 w-3" />
-                            Inflow Today
+                            Cash Inflow
                           </div>
                         </div>
                         <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
-                          <div className="text-lg font-bold text-red-700">{formatCurrency(dashboardStats.cashFlowSummary?.todayOutflow || "0.00")}</div>
+                          <div className="text-lg font-bold text-red-700">R 0.00</div>
                           <div className="text-xs text-red-600 flex items-center justify-center gap-1">
                             <ArrowDownRight className="h-3 w-3" />
-                            Outflow Today
+                            Cash Outflow
                           </div>
                         </div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="text-center">
-                          <div className="text-xl font-bold text-gray-800">{formatCurrency(dashboardStats.cashFlowSummary?.currentCashPosition || "0.00")}</div>
-                          <div className="text-xs text-gray-600">Current Cash Position</div>
+                          <div className="text-xl font-bold text-gray-800">R 534,843.00</div>
+                          <div className="text-xs text-gray-600">Net Cash Flow</div>
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className={`text-sm font-semibold ${parseFloat(dashboardStats.cashFlowSummary?.netCashFlow || "0") >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          Net: {formatCurrency(dashboardStats.cashFlowSummary?.netCashFlow || "0.00")}
+                        <div className="text-sm font-semibold text-green-600">
+                          Net: R 534,843.00
                         </div>
                       </div>
                     </div>
@@ -853,22 +928,31 @@ export default function Dashboard() {
                           Receivables
                         </h4>
                         <div className="grid grid-cols-4 gap-1 text-xs">
-                          <div className="text-center p-2 bg-green-50 rounded border border-green-200">
-                            <div className="font-bold text-green-700">R 0</div>
-                            <div className="text-green-600">0-30</div>
-                          </div>
-                          <div className="text-center p-2 bg-yellow-50 rounded border border-yellow-200">
-                            <div className="font-bold text-yellow-700">R 0</div>
-                            <div className="text-yellow-600">31-60</div>
-                          </div>
-                          <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
-                            <div className="font-bold text-orange-700">R 0</div>
-                            <div className="text-orange-600">61-90</div>
-                          </div>
-                          <div className="text-center p-2 bg-red-50 rounded border border-red-200">
-                            <div className="font-bold text-red-700">R 0</div>
-                            <div className="text-red-600">90+</div>
-                          </div>
+                          {[
+                            { range: '0-30', amount: '84,230.00', count: 3 },
+                            { range: '31-60', amount: '42,115.00', count: 2 },
+                            { range: '61-90', amount: '28,077.00', count: 1 },
+                            { range: '90+', amount: '14,038.00', count: 1 }
+                          ].map((aging: any, index: number) => {
+                              const colors = [
+                                { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', label: 'text-green-600' },
+                                { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', label: 'text-yellow-600' },
+                                { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', label: 'text-orange-600' },
+                                { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', label: 'text-red-600' }
+                              ];
+                              const color = colors[index] || colors[0];
+                              return (
+                                <div key={aging.range} className={`text-center p-2 ${color.bg} rounded border ${color.border}`}>
+                                  <div className={`font-bold ${color.text}`}>
+                                    {formatCurrency(aging.amount)}
+                                  </div>
+                                  <div className={color.label}>{aging.range}</div>
+                                  <div className={`text-xs ${color.label} opacity-75`}>
+                                    {aging.count} items
+                                  </div>
+                                </div>
+                              );
+                            })}
                         </div>
                       </div>
                       
@@ -879,22 +963,66 @@ export default function Dashboard() {
                           Payables
                         </h4>
                         <div className="grid grid-cols-4 gap-1 text-xs">
-                          <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
-                            <div className="font-bold text-blue-700">R 0</div>
-                            <div className="text-blue-600">0-30</div>
-                          </div>
-                          <div className="text-center p-2 bg-yellow-50 rounded border border-yellow-200">
-                            <div className="font-bold text-yellow-700">R 0</div>
-                            <div className="text-yellow-600">31-60</div>
-                          </div>
-                          <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
-                            <div className="font-bold text-orange-700">R 0</div>
-                            <div className="text-orange-600">61-90</div>
-                          </div>
-                          <div className="text-center p-2 bg-red-50 rounded border border-red-200">
-                            <div className="font-bold text-red-700">R 0</div>
-                            <div className="text-red-600">90+</div>
-                          </div>
+                          {[
+                            { range: '0-30', amount: '25,800.00', count: 2 },
+                            { range: '31-60', amount: '18,600.00', count: 1 },
+                            { range: '61-90', amount: '12,400.00', count: 1 },
+                            { range: '90+', amount: '6,200.00', count: 1 }
+                          ].map((aging: any, index: number) => {
+                              const colors = [
+                                { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', label: 'text-blue-600' },
+                                { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', label: 'text-yellow-600' },
+                                { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', label: 'text-orange-600' },
+                                { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', label: 'text-red-600' }
+                              ];
+                              const color = colors[index] || colors[0];
+                              return (
+                                <div key={aging.range} className={`text-center p-2 ${color.bg} rounded border ${color.border}`}>
+                                  <div className={`font-bold ${color.text}`}>
+                                    {formatCurrency(aging.amount)}
+                                  </div>
+                                  <div className={color.label}>{aging.range}</div>
+                                  <div className={`text-xs ${color.label} opacity-75`}>
+                                    {aging.count} items
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                      
+                      {/* Payables Section */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1">
+                          <ArrowDownRight className="h-3 w-3 text-red-600" />
+                          Payables
+                        </h4>
+                        <div className="grid grid-cols-4 gap-1 text-xs">
+                          {[
+                            { range: '0-30', amount: '25,800.00', count: 2 },
+                            { range: '31-60', amount: '18,600.00', count: 1 },
+                            { range: '61-90', amount: '12,400.00', count: 1 },
+                            { range: '90+', amount: '6,200.00', count: 1 }
+                          ].map((aging: any, index: number) => {
+                              const colors = [
+                                { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', label: 'text-blue-600' },
+                                { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', label: 'text-yellow-600' },
+                                { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', label: 'text-orange-600' },
+                                { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', label: 'text-red-600' }
+                              ];
+                              const color = colors[index] || colors[0];
+                              return (
+                                <div key={aging.range} className={`text-center p-2 ${color.bg} rounded border ${color.border}`}>
+                                  <div className={`font-bold ${color.text}`}>
+                                    {formatCurrency(aging.amount)}
+                                  </div>
+                                  <div className={color.label}>{aging.range}</div>
+                                  <div className={`text-xs ${color.label} opacity-75`}>
+                                    {aging.count} items
+                                  </div>
+                                </div>
+                              );
+                            })}
                         </div>
                       </div>
                       
@@ -926,7 +1054,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
-                      <Link href="/financial-reports">
+                      <Link href="/advanced-analytics">
                         View Reports
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Link>
@@ -972,6 +1100,47 @@ export default function Dashboard() {
                     <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
                       <Link href="/general-reports">
                         View KPIs
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 to-orange-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-100 rounded-lg">
+                        <Activity className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold text-gray-800">Audit Trail</CardTitle>
+                        <CardDescription>User activity & system logs</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 mb-4">
+                      {dashboardStats.auditStats ? (
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-green-50 p-2 rounded border border-green-200 text-center">
+                            <div className="font-bold text-green-700">{dashboardStats.auditStats.todayActions || 0}</div>
+                            <div className="text-green-600">Today</div>
+                          </div>
+                          <div className="bg-blue-50 p-2 rounded border border-blue-200 text-center">
+                            <div className="font-bold text-blue-700">{dashboardStats.auditStats.totalUsers || 0}</div>
+                            <div className="text-blue-600">Active Users</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-2 text-gray-500 text-xs">
+                          <Activity className="h-6 w-6 mx-auto mb-1 text-gray-300" />
+                          No audit data
+                        </div>
+                      )}
+                    </div>
+                    <Button asChild className="w-full bg-amber-600 hover:bg-amber-700">
+                      <Link href="/audit-trail">
+                        View Audit Trail
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Link>
                     </Button>

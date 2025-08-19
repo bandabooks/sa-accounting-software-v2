@@ -22,6 +22,7 @@ import type { CompanySettings } from "@shared/schema";
 import { VatStatusToggle } from "@/components/vat-management/vat-status-toggle";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
+import { SarsIntegration } from "@/components/SarsIntegration";
 
 const companySettingsSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -737,114 +738,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="sars" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5" />
-                SARS Integration Settings
-              </CardTitle>
-              <CardDescription>
-                Configure South African Revenue Service API integration for automated VAT submissions and compliance
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="font-medium text-lg">Connection Status</h3>
-                  <div className="p-4 border rounded-lg bg-yellow-50 border-yellow-200">
-                    <div className="flex items-center gap-2 text-yellow-800">
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <span className="font-medium">Not Connected</span>
-                    </div>
-                    <p className="text-sm text-yellow-700 mt-2">
-                      SARS integration is not configured. Set up your credentials to enable automated submissions.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="font-medium text-lg">Available Services</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm font-medium">VAT201 Returns</span>
-                      <Badge variant="outline">Pending Setup</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm font-medium">EMP501/502</span>
-                      <Badge variant="outline">Pending Setup</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="text-sm font-medium">ITR12/14</span>
-                      <Badge variant="outline">Pending Setup</Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="font-medium text-lg">API Configuration</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="sars-client-id">Client ID</Label>
-                    <Input 
-                      id="sars-client-id" 
-                      type="password" 
-                      placeholder="Enter SARS Client ID"
-                      disabled
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sars-client-secret">Client Secret</Label>
-                    <Input 
-                      id="sars-client-secret" 
-                      type="password" 
-                      placeholder="Enter SARS Client Secret"
-                      disabled
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sars-vat-vendor">VAT Vendor Number</Label>
-                    <Input 
-                      id="sars-vat-vendor" 
-                      placeholder="Enter VAT Vendor Number"
-                      disabled
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sars-environment">Environment</Label>
-                    <Select disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select environment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sandbox">Sandbox</SelectItem>
-                        <SelectItem value="production">Production</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-blue-900">SARS API Credentials Required</h4>
-                  <p className="text-sm text-blue-700">
-                    Contact SARS or your tax advisor to obtain API credentials for eFiling integration.
-                  </p>
-                </div>
-                <Button variant="outline" disabled>
-                  Test Connection
-                </Button>
-              </div>
-
-              <div className="flex justify-end">
-                <Button disabled className="flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  Save SARS Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <SarsIntegration />
         </TabsContent>
         </Tabs>
       </Form>

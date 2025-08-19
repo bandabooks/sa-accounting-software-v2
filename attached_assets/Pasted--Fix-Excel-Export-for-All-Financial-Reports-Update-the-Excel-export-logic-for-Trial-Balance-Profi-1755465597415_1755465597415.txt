@@ -1,0 +1,81 @@
+(Fix Excel Export for All Financial Reports)
+
+Update the Excel export logic for Trial Balance, Profit & Loss, Balance Sheet, and Cash Flow so it generates a well-formatted, professional Excel report instead of a raw data dump.
+
+General Requirements:
+
+Header Section (first rows in Excel)
+
+Company Name (bold, larger font)
+
+Report Title (e.g., “Trial Balance”)
+
+Date Range / Period (based on filters or company’s financial year settings)
+
+Generated Date & Time
+
+Date Range Filter
+
+Add filter to choose This Year, Last Year, Custom Date Range, or Financial Year.
+
+When printing/exporting:
+
+If “Annually” → export full year (company financial year setting).
+
+If “Custom Range” → export only selected start–end dates.
+
+Table Format
+
+Export data as a proper Excel table, not flat rows.
+
+Use column headers depending on report type:
+
+Trial Balance → Account Code | Account Name | Account Type | Debit | Credit
+
+Profit & Loss → Account Code | Account Name | Category | Amount
+
+Balance Sheet → Account Code | Account Name | Category | Amount
+
+Cash Flow → Category | Inflows | Outflows | Net Movement
+
+Format numbers with thousand separators and 2 decimals.
+
+Auto-adjust column widths.
+
+Freeze top row (headers).
+
+Totals Row
+
+Trial Balance → Debit Total vs Credit Total (must balance).
+
+Profit & Loss → Net Profit/Loss line.
+
+Balance Sheet → Total Assets = Liabilities + Equity.
+
+Cash Flow → Net Cash Flow.
+
+Styling
+
+Bold headers with light background shading.
+
+Borders around table cells.
+
+Company & report headers centered across columns.
+
+Consistent design across all reports.
+
+Export Settings
+
+File names should follow pattern:
+
+Trial_Balance_<Company>_<YYYYMMDD>.xlsx
+
+Profit_Loss_<Company>_<YYYYMMDD>.xlsx
+
+Balance_Sheet_<Company>_<YYYYMMDD>.xlsx
+
+Cash_Flow_<Company>_<YYYYMMDD>.xlsx
+
+Each Excel file must be ready for financial reporting and import into Draftworx.
+
+⚡ Summary: Excel exports must become true formatted workbooks (with headers, date range filters, tables, and totals) instead of raw CSV-style rows. They should adapt to both custom date ranges and the company’s financial year settings.

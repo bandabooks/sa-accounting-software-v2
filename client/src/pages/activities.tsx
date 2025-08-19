@@ -89,7 +89,7 @@ export default function Activities() {
       time: "3 days ago",
       priority: "low",
       category: "reports",
-      link: "/financial-reports"
+      link: "/advanced-analytics"
     },
     {
       id: "7",

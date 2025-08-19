@@ -3,16 +3,15 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Building, Plus, Users, Settings, Crown, Shield, User, UserPlus, Edit, CreditCard, ArrowUp } from "lucide-react";
-import { insertCompanySchema, type Company, type CompanyUser } from "@shared/schema";
-import { z } from "zod";
+import { type Company, type CompanyUser } from "@shared/schema";
+import CompanyCreationForm from "@/components/forms/CompanyCreationForm";
 
 export default function Companies() {
   const { toast } = useToast();
@@ -66,51 +65,6 @@ export default function Companies() {
   console.log("Plans loading:", isLoadingPlans);
   console.log("Plans error:", plansError);
 
-  // Create company mutation
-  const createCompanyMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof insertCompanySchema>) => {
-      return await apiRequest("/api/companies", "POST", data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Company created successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
-      setIsCreateDialogOpen(false);
-      // Reset form and manual edit tracking
-      setFormData({
-        name: '',
-        displayName: '',
-        slug: '',
-        email: '',
-        phone: '',
-        address: '',
-        city: '',
-        postalCode: '',
-        country: 'South Africa',
-        vatNumber: '',
-        registrationNumber: '',
-        industry: 'general',
-        industryTemplate: 'general',
-        subscriptionPlan: 'trial',
-        subscriptionStatus: 'active',
-      });
-      setManuallyEdited({
-        displayName: false,
-        slug: false,
-      });
-      setSlugValidation({ isValid: true, message: '' });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create company",
-        variant: "destructive",
-      });
-    },
-  });
-
   // Set active company mutation
   const setActiveCompanyMutation = useMutation({
     mutationFn: async (companyId: number) => {
@@ -118,17 +72,16 @@ export default function Companies() {
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Active company updated",
+        title: "Company Switched",
+        description: "Successfully switched to the selected company.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/active"] });
-      // Refresh page to update all data with new company context
-      window.location.reload();
+      queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to set active company",
+        description: error.message || "Failed to switch company.",
         variant: "destructive",
       });
     },
@@ -137,151 +90,36 @@ export default function Companies() {
   // Update subscription mutation
   const updateSubscriptionMutation = useMutation({
     mutationFn: async (data: { companyId: number; planId: number; billingPeriod: string }) => {
-      return await apiRequest("/api/company/subscription/request", "POST", {
+      return await apiRequest(`/api/companies/${data.companyId}/subscription`, "PATCH", {
         planId: data.planId,
         billingPeriod: data.billingPeriod,
-        companyId: data.companyId
       });
     },
     onSuccess: () => {
       toast({
-        title: "Success", 
-        description: "Subscription updated successfully",
+        title: "Subscription Updated",
+        description: "Subscription plan updated successfully.",
       });
+      // Invalidate all subscription-related queries for immediate UI refresh
       queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/companies/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/company/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
+      // Force refresh any company-specific subscription status
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/company", "subscription"],
+        exact: false 
+      });
       setIsSubscriptionDialogOpen(false);
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update subscription",
+        description: error.message || "Failed to update subscription.",
         variant: "destructive",
       });
     },
   });
-
-  const [formData, setFormData] = useState({
-    name: '',
-    displayName: '',
-    slug: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    country: 'South Africa',
-    vatNumber: '',
-    registrationNumber: '',
-    industry: 'general',
-    industryTemplate: 'general',
-    subscriptionPlan: 'trial',
-    subscriptionStatus: 'active',
-  });
-
-  // Track manual edits to prevent overwriting user changes
-  const [manuallyEdited, setManuallyEdited] = useState({
-    displayName: false,
-    slug: false,
-  });
-
-  // Generate URL slug from text
-  const generateSlug = (text: string): string => {
-    return text
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
-      .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, multiple hyphens with single hyphen
-      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-  };
-
-  // Check if slug already exists (basic validation)
-  const [slugValidation, setSlugValidation] = useState({ isValid: true, message: '' });
-
-  // Basic duplicate slug check (can be enhanced with API call later)
-  const checkSlugDuplicate = (slug: string): boolean => {
-    if (!userCompanies || !slug) return false;
-    return userCompanies.some((company: any) => 
-      company.slug && company.slug.toLowerCase() === slug.toLowerCase()
-    );
-  };
-
-  // Industry options
-  const industryOptions = [
-    { value: 'general', label: 'General Business', description: 'Default template suitable for most businesses' },
-    { value: 'retail', label: 'Retail & Trading', description: 'Businesses focused on buying and selling merchandise' },
-    { value: 'services', label: 'Professional Services', description: 'Service-based businesses including consulting, professional services' },
-    { value: 'manufacturing', label: 'Manufacturing & Production', description: 'Businesses involved in manufacturing and production' },
-    { value: 'construction', label: 'Construction & Contracting', description: 'Construction companies and contractors' },
-    { value: 'technology', label: 'Technology & Software', description: 'Technology companies, software development, IT services' },
-    { value: 'healthcare', label: 'Healthcare & Medical', description: 'Medical practices, healthcare providers' },
-    { value: 'nonprofit', label: 'Non-Profit Organizations', description: 'Charitable organizations, NGOs, foundations' },
-    { value: 'agriculture', label: 'Agriculture & Farming', description: 'Farming, agriculture, livestock businesses' },
-    { value: 'hospitality', label: 'Hospitality & Tourism', description: 'Hotels, restaurants, tourism businesses' },
-  ];
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    createCompanyMutation.mutate(formData);
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-
-      // Auto-fill logic when company name changes
-      if (field === 'name') {
-        // Auto-fill Display Name if not manually edited
-        if (!manuallyEdited.displayName) {
-          newData.displayName = value;
-        }
-
-        // Auto-generate URL Slug if not manually edited
-        if (!manuallyEdited.slug) {
-          newData.slug = generateSlug(value);
-        }
-      }
-
-      return newData;
-    });
-
-    // Mark fields as manually edited when user directly modifies them
-    if (field === 'displayName') {
-      setManuallyEdited(prev => ({ ...prev, displayName: true }));
-      
-      // Reset flag if user clears the field
-      if (value === '') {
-        setManuallyEdited(prev => ({ ...prev, displayName: false }));
-      }
-    }
-
-    if (field === 'slug') {
-      setManuallyEdited(prev => ({ ...prev, slug: true }));
-      
-      // Reset flag if user clears the field
-      if (value === '') {
-        setManuallyEdited(prev => ({ ...prev, slug: false }));
-      }
-
-      // Validate slug format and duplicates
-      const isValidFormat = /^[a-z0-9-]*$/.test(value) && !value.startsWith('-') && !value.endsWith('-');
-      const isDuplicate = checkSlugDuplicate(value);
-      
-      let message = '';
-      let isValid = true;
-      
-      if (value === '') {
-        isValid = true;
-      } else if (!isValidFormat) {
-        isValid = false;
-        message = 'Only lowercase letters, numbers, and hyphens allowed. Cannot start or end with hyphens.';
-      } else if (isDuplicate) {
-        isValid = false;
-        message = 'This URL slug is already in use. Please choose a different one.';
-      }
-      
-      setSlugValidation({ isValid, message });
-    }
-  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -324,322 +162,13 @@ export default function Companies() {
           <p className="text-gray-600 mt-2">Manage your companies and switch between them</p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="touch-button">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Company
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Company</DialogTitle>
-              <DialogDescription className="space-y-2">
-                <span>Enter the details for your new company. You will be the owner with full access.</span>
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
-                  <strong>Clean Start:</strong> Your new company will begin with zero balances, no transactional data, 
-                  and industry-appropriate chart of accounts. VAT types will be automatically configured.
-                </div>
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Company Name *</Label>
-                  <Input 
-                    id="name" 
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    required 
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="displayName" className="flex items-center gap-2">
-                    Display Name *
-                    {!manuallyEdited.displayName && formData.name && (
-                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Auto-filled</span>
-                    )}
-                  </Label>
-                  <Input 
-                    id="displayName" 
-                    value={formData.displayName}
-                    onChange={(e) => handleInputChange('displayName', e.target.value)}
-                    required 
-                    className="w-full"
-                    placeholder="Company display name"
-                  />
-                  {!manuallyEdited.displayName && (
-                    <p className="text-xs text-gray-500 mt-1">Automatically matches company name • Edit to customize</p>
-                  )}
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="slug" className="flex items-center gap-2">
-                  URL Slug *
-                  {!manuallyEdited.slug && formData.name && (
-                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Auto-generated</span>
-                  )}
-                </Label>
-                <Input 
-                  id="slug" 
-                  value={formData.slug}
-                  onChange={(e) => handleInputChange('slug', e.target.value)}
-                  placeholder="my-company" 
-                  required 
-                  className={`w-full ${!slugValidation.isValid ? 'border-red-500 focus:border-red-500' : ''}`}
-                />
-                <div className="mt-1 space-y-1">
-                  {!slugValidation.isValid && (
-                    <p className="text-xs text-red-600">{slugValidation.message}</p>
-                  )}
-                  {!manuallyEdited.slug ? (
-                    <p className="text-xs text-gray-500">Auto-generated from company name • Edit to customize</p>
-                  ) : (
-                    <p className="text-xs text-gray-500">Used in URLs (lowercase, no spaces)</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email">Email *</Label>
-                  <Input 
-                    id="email" 
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    required 
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input 
-                    id="phone" 
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Textarea 
-                  id="address" 
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input 
-                    id="city" 
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="postalCode">Postal Code</Label>
-                  <Input 
-                    id="postalCode" 
-                    value={formData.postalCode}
-                    onChange={(e) => handleInputChange('postalCode', e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="country">Country</Label>
-                  <Select 
-                    value={formData.country} 
-                    onValueChange={(value) => handleInputChange('country', value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="South Africa">South Africa</SelectItem>
-                      <SelectItem value="Botswana">Botswana</SelectItem>
-                      <SelectItem value="Namibia">Namibia</SelectItem>
-                      <SelectItem value="Zimbabwe">Zimbabwe</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="vatNumber">VAT Number</Label>
-                  <Input 
-                    id="vatNumber" 
-                    value={formData.vatNumber}
-                    onChange={(e) => handleInputChange('vatNumber', e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="registrationNumber">Registration Number</Label>
-                  <Input 
-                    id="registrationNumber" 
-                    value={formData.registrationNumber}
-                    onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="industry">Industry *</Label>
-                <Select 
-                  value={formData.industry} 
-                  onValueChange={(value) => {
-                    handleInputChange('industry', value);
-                    handleInputChange('industryTemplate', value);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your business industry" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {industryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium">{option.label}</span>
-                          <span className="text-xs text-gray-500">{option.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-gray-500 mt-1">
-                  This determines which Chart of Accounts will be activated for your company
-                </p>
-              </div>
-
-              {/* User Role Selection Hint */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                <div className="flex items-start gap-3">
-                  <div className="text-blue-600 mt-1">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-1">Choose the right plan for your business type</h4>
-                    <p className="text-sm text-gray-600">
-                      <strong>Individuals & Small Businesses:</strong> Starter Plan<br/>
-                      <strong>Business Owners & Practices:</strong> Professional Plan<br/>
-                      <strong>Large Businesses & Enterprise:</strong> Enterprise Plan
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Subscription Plan Selection */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <Label htmlFor="subscriptionPlan" className="text-base font-semibold text-blue-900">
-                  Subscription Plan *
-                </Label>
-                <Select 
-                  value={formData.subscriptionPlan} 
-                  onValueChange={(value) => handleInputChange('subscriptionPlan', value)}
-                >
-                  <SelectTrigger className="mt-2 bg-white">
-                    <SelectValue placeholder="Select subscription plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingPlans ? (
-                      <SelectItem value="loading" disabled>
-                        Loading plans...
-                      </SelectItem>
-                    ) : plansError ? (
-                      <SelectItem value="error" disabled>
-                        Error loading plans: {plansError?.message || 'Unknown error'}
-                      </SelectItem>
-                    ) : subscriptionPlans && subscriptionPlans.length > 0 ? (
-                      subscriptionPlans.map((plan: any) => (
-                        <SelectItem key={plan.id} value={plan.id.toString()}>
-                          <div className="flex flex-col items-start py-1">
-                            <span className="font-medium text-blue-700">
-                              {plan.displayName} (R{plan.monthlyPrice}/month)
-                            </span>
-                            <span className="text-xs text-gray-600">
-                              {plan.description}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-plans" disabled>
-                        No subscription plans available
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                
-                {subscriptionPlans && formData.subscriptionPlan && (
-                  <div className="mt-3 p-3 bg-white rounded border border-blue-100">
-                    {(() => {
-                      const selectedPlan = subscriptionPlans.find((plan: any) => plan.id.toString() === formData.subscriptionPlan);
-                      if (selectedPlan) {
-                        return (
-                          <div className="text-sm">
-                            <div className="font-semibold text-blue-700 mb-1">
-                              {selectedPlan.displayName} - R{selectedPlan.monthlyPrice}/month
-                            </div>
-                            <p className="text-xs text-gray-600">
-                              {selectedPlan.description}
-                            </p>
-                            {selectedPlan.features && (
-                              <ul className="text-xs text-gray-600 space-y-1 mt-2">
-                                {selectedPlan.features.map((feature: string, index: number) => (
-                                  <li key={index}>• {feature}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                )}
-                
-                <p className="text-sm text-gray-500 mt-3">
-                  <span className="text-red-600">*</span> You must select a subscription plan to continue
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="min-w-[100px]">
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={
-                    createCompanyMutation.isPending || 
-                    !slugValidation.isValid || 
-                    !formData.name || 
-                    !formData.displayName || 
-                    !formData.slug || 
-                    !formData.email ||
-                    !formData.subscriptionPlan ||
-                    formData.subscriptionPlan === ''
-                  } 
-                  className="min-w-[140px] flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  {createCompanyMutation.isPending ? "Creating..." : "Create Company"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="touch-button"
+          onClick={() => setIsCreateDialogOpen(true)}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Create Company
+        </Button>
       </div>
 
       {/* Active Company */}
@@ -754,106 +283,45 @@ export default function Companies() {
                   <Building className="h-5 w-5" />
                   {selectedCompany.displayName}
                 </CardTitle>
-                <CardDescription>{selectedCompany.name}</CardDescription>
+                <CardDescription>
+                  Company information and team members
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {selectedCompany.companyId && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      <span className="text-sm font-medium text-blue-800">Company ID</span>
-                    </div>
-                    <span className="text-sm font-mono text-blue-900 ml-4">
-                      {selectedCompany.companyId}
-                    </span>
-                  </div>
-                )}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <strong>Email:</strong> {selectedCompany.email}
+                    <span className="font-medium">Email:</span>
+                    <p className="text-gray-600">{selectedCompany.email}</p>
                   </div>
                   <div>
-                    <strong>Phone:</strong> {selectedCompany.phone || 'N/A'}
+                    <span className="font-medium">Plan:</span>
+                    <p className="text-gray-600">{selectedCompany.subscriptionPlan}</p>
                   </div>
-                  <div>
-                    <strong>Country:</strong> {selectedCompany.country}
-                  </div>
-                  <div>
-                    <strong>Currency:</strong> {selectedCompany.currency}
-                  </div>
-                  <div>
-                    <strong>VAT Number:</strong> {selectedCompany.vatNumber || 'N/A'}
-                  </div>
-                  <div>
-                    <strong>Registration:</strong> {selectedCompany.registrationNumber || 'N/A'}
-                  </div>
+                  {selectedCompany.companyId && (
+                    <div className="col-span-2">
+                      <span className="font-medium">Company ID:</span>
+                      <p className="text-gray-600 font-mono">{selectedCompany.companyId}</p>
+                    </div>
+                  )}
                 </div>
 
-                {companyUsers && (
-                  <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Team Members ({companyUsers.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {companyUsers.map((user: CompanyUser & { user: any }) => (
-                        <div key={user.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <div className="flex items-center gap-2">
-                            {getRoleIcon(user.role)}
-                            <span className="font-medium">{user.user.name}</span>
-                            <span className="text-sm text-gray-600">({user.user.email})</span>
-                          </div>
-                          {getRoleBadge(user.role)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Admin/Super Admin Editing Controls */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <Edit className="h-4 w-4" />
-                    Company Management
+                {/* Team Members */}
+                <div>
+                  <h4 className="font-medium flex items-center gap-2 mb-2">
+                    <Users className="h-4 w-4" />
+                    Team Members
                   </h4>
-                  <div className="flex gap-3">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        // Navigate to company settings for this company
-                        window.location.href = `/settings?company=${selectedCompany.id}`;
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Company Settings
-                    </Button>
-                    {(user?.role === 'admin' || user?.role === 'super_admin') && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          // Add company editing modal or navigate to edit page
-                          toast({
-                            title: "Admin Access",
-                            description: `You have ${user.role === 'super_admin' ? 'Super Admin' : 'Admin'} privileges to edit ${selectedCompany.name}`,
-                          });
-                        }}
-                        className="flex items-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        <Shield className="h-4 w-4" />
-                        {user.role === 'super_admin' ? 'Super Admin Edit' : 'Admin Edit'}
-                      </Button>
-                    )}
-                  </div>
-                  <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                    <p className="text-xs text-gray-600">
-                      <strong>Editing Access:</strong><br />
-                      • <strong>Owner/Admin:</strong> Can edit all company details, manage users, and access all settings<br />
-                      • <strong>Super Admin:</strong> Has unrestricted access to edit any company across the platform<br />
-                      • <strong>Manager:</strong> Can view company details and access limited settings<br />
-                      • <strong>Employee:</strong> Can only view basic company information
-                    </p>
+                  <div className="space-y-2">
+                    {companyUsers?.map((companyUser: any) => (
+                      <div key={companyUser.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-gray-500" />
+                          <span className="font-medium">{companyUser.user.name}</span>
+                          <span className="text-sm text-gray-500">({companyUser.user.email})</span>
+                        </div>
+                        {getRoleBadge(companyUser.role)}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </CardContent>
@@ -862,14 +330,11 @@ export default function Companies() {
         )}
       </div>
 
-      {/* Subscription Management Dialog */}
+      {/* Subscription Update Dialog */}
       <Dialog open={isSubscriptionDialogOpen} onOpenChange={setIsSubscriptionDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Manage Subscription - {selectedSubscriptionCompany?.displayName}
-            </DialogTitle>
+            <DialogTitle>Update Subscription Plan</DialogTitle>
             <DialogDescription>
               Change the subscription plan for this company. Current plan: {selectedSubscriptionCompany?.subscriptionPlan}
             </DialogDescription>
@@ -946,6 +411,16 @@ export default function Companies() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Company Creation Form */}
+      <CompanyCreationForm 
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/companies/active"] });
+        }}
+      />
     </div>
   );
 }

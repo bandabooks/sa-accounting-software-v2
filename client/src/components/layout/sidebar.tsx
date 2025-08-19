@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
   Calculator, ChartLine, FileText, Users, ShoppingCart, BarChart3, Receipt, 
   Settings, TrendingUp, Package, Building, Archive, Building2, BookOpen, 
@@ -22,10 +22,10 @@ const navigationGroups = [
       { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
     ]
   },
-  // 2. Banking & Cash Management
+  // 2. Banking & Cash
   {
     id: "banking",
-    label: "Banking & Cash Management",
+    label: "Banking & Cash",
     icon: Landmark,
     module: "banking",
     items: [
@@ -88,7 +88,19 @@ const navigationGroups = [
       { path: "/budgeting", label: "Budgeting", icon: PieChart, permission: "BUDGETING_VIEW", module: "advanced_reports" }
     ]
   },
-  // 6. Products & Inventory
+  // 6. Employee Management & Payroll
+  {
+    id: "employees",
+    label: "Employee Management",
+    icon: Users,
+    module: "employees",
+    items: [
+      { path: "/employees", label: "Employee Directory", icon: Users, permission: "employees:view", module: "employees" },
+      { path: "/employees/payroll", label: "Payroll Management", icon: DollarSign, permission: "payroll:view", module: "employees" },
+      { path: "/employees/attendance", label: "Attendance Tracking", icon: Clock, permission: "attendance:view", module: "employees" }
+    ]
+  },
+  // 7. Products & Inventory
   {
     id: "inventory",
     label: "Products & Inventory",
@@ -136,14 +148,15 @@ const navigationGroups = [
       { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" }
     ]
   },
-  // 9. Reports & Analytics
+  // 9. Reports and Analytics
   {
     id: "reports",
-    label: "Reports & Analytics",
+    label: "Reports and Analytics",
     icon: BarChart3,
     module: "reports",
     items: [
-      { path: "/financial-reports", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reports" },
+      { path: "/reports/financial", label: "Financial Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "financial" },
+      { path: "/advanced-analytics", label: "Advanced Analytics", icon: BarChart3, permission: "FINANCIAL_VIEW", module: "reports" },
       { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "basic_reports" },
       { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reports" },
       { path: "/audit-trail", label: "Audit Trail", icon: Shield, permission: "audit:view", module: "reports" }
@@ -165,24 +178,7 @@ const navigationGroups = [
       { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "projects" }
     ]
   },
-  // 11. Employee Management & HR
-  {
-    id: "hr",
-    label: "Employee Management",
-    icon: UserCog,
-    module: "hr_management",
-    items: [
-      { path: "/employees", label: "Employee Directory", icon: Users, permission: "EMPLOYEE_VIEW", module: "hr_management" },
-      { path: "/payroll", label: "Payroll Management", icon: DollarSign, permission: "PAYROLL_VIEW", module: "hr_management" },
-      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "hr_management" },
-      { path: "/leave-management", label: "Leave Management", icon: CheckSquare, permission: "LEAVE_VIEW", module: "hr_management" },
-      { path: "/attendance", label: "Attendance", icon: CheckCircle, permission: "ATTENDANCE_VIEW", module: "hr_management" },
-      { path: "/employee-documents", label: "Employee Documents", icon: FolderOpen, permission: "EMPLOYEE_DOCUMENTS_VIEW", module: "hr_management" },
-      { path: "/performance", label: "Performance Reviews", icon: BarChart3, permission: "PERFORMANCE_VIEW", module: "hr_management" },
-      { path: "/hr-reports", label: "HR Reports", icon: FileText, permission: "HR_REPORTS_VIEW", module: "hr_management" }
-    ]
-  },
-  // 12. Point of Sale
+  // 11. Point of Sale
   {
     id: "pos",
     label: "Point of Sale",
@@ -195,7 +191,7 @@ const navigationGroups = [
       { path: "/pos/terminals", label: "Terminal Setup", icon: Settings, permission: "POS_MANAGE", module: "pos_sales" }
     ]
   },
-  // 13. Administration
+  // 12. Administration
   {
     id: "administration",
     label: "Administration",
@@ -241,6 +237,40 @@ interface NavigationGroupProps {
 
 function NavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle }: NavigationGroupProps) {
   const { isModuleAvailable } = useCompanySubscription();
+  const [, setLocation] = useLocation();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Auto-scroll to ensure expanded dropdown is always visible within sidebar
+  useEffect(() => {
+    if (isExpanded && dropdownRef.current && buttonRef.current) {
+      setTimeout(() => {
+        if (dropdownRef.current && buttonRef.current) {
+          const dropdown = dropdownRef.current;
+          const button = buttonRef.current;
+          
+          // Find the sidebar navigation container (the scrollable parent)
+          const navContainer = button.closest('nav');
+          if (navContainer) {
+            const navRect = navContainer.getBoundingClientRect();
+            const dropdownRect = dropdown.getBoundingClientRect();
+            
+            // Check if dropdown extends below the visible area of the navigation container
+            if (dropdownRect.bottom > navRect.bottom - 20) { // 20px buffer
+              // Calculate scroll needed to show the dropdown within the nav container
+              const scrollAmount = dropdownRect.bottom - navRect.bottom + 30; // Extra padding
+              
+              // Smooth scroll the navigation container
+              navContainer.scrollBy({
+                top: scrollAmount,
+                behavior: 'smooth'
+              });
+            }
+          }
+        }
+      }, 150); // Wait for dropdown animation to complete
+    }
+  }, [isExpanded]);
   
   // Check if group should be visible based on role requirements
   if (group.requiredRole && userRole !== group.requiredRole) {
@@ -306,17 +336,24 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
   return (
     <div className="mb-1">
       <button
-        onClick={onToggle}
+        ref={buttonRef}
+        onClick={() => {
+          // For main menu groups, navigate to their first item and expand dropdown
+          if ((group.id === "sales" || group.id === "purchases") && visibleItems.length > 0) {
+            setLocation(visibleItems[0].path); // Navigate to the first item (dashboard/main page)
+          }
+          onToggle(); // Always toggle the dropdown
+        }}
         className={`group w-full flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
-          hasActiveItem 
-            ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-md border border-blue-200/50" 
+          hasActiveItem || isExpanded
+            ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white shadow-lg shadow-blue-500/25" 
             : "text-slate-600 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:text-green-800 hover:shadow-sm"
         }`}
       >
         <div className="flex items-center space-x-3">
           <div className={`p-1.5 rounded-lg transition-all duration-300 ${
-            hasActiveItem 
-              ? "bg-blue-100 text-blue-600" 
+            hasActiveItem || isExpanded
+              ? "bg-white/20 shadow-md text-white" 
               : "bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-600"
           }`}>
             {group.icon && <group.icon size={16} />}
@@ -324,16 +361,19 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
           <span className="tracking-tight">{group.label}</span>
         </div>
         <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} ${
-          hasActiveItem ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+          hasActiveItem || isExpanded ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'
         }`}>
           <ChevronDown size={16} />
         </div>
       </button>
       
-      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-        isExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
-      }`}>
-        <div className="ml-2 pl-4 border-l-2 border-slate-200/60 space-y-1">
+      <div 
+        ref={dropdownRef}
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="ml-6 space-y-1 rounded-lg p-2">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
@@ -343,22 +383,22 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
                 key={item.path}
                 href={item.path}
                 data-onboarding={`nav-${item.path.split('/')[1]}`}
-                className={`group relative flex items-center space-x-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-300 transform hover:scale-[1.01] ${
+                className={`group relative flex items-center space-x-3 px-3 py-2 text-xs rounded-md transition-all duration-200 border-l-3 ${
                   isActive 
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20" 
-                    : "text-slate-600 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:text-green-700 hover:shadow-sm"
+                    ? "bg-blue-100 text-blue-900 border-l-blue-500 shadow-sm font-semibold" 
+                    : "bg-green-50 text-slate-700 hover:bg-amber-50 hover:text-amber-900 hover:border-l-amber-300 border-l-transparent hover:shadow-sm border border-green-200"
                 }`}
               >
-                <div className={`p-1.5 rounded-md transition-all duration-300 ${
+                <div className={`p-1 rounded transition-all duration-200 ${
                   isActive 
-                    ? "bg-white/20" 
-                    : "bg-slate-100 group-hover:bg-white"
+                    ? "bg-blue-200/50 text-blue-700" 
+                    : "bg-green-200/70 text-slate-600 group-hover:bg-amber-200/70 group-hover:text-amber-600"
                 }`}>
-                  <Icon size={14} className={isActive ? "text-white" : "text-slate-500 group-hover:text-slate-600"} />
+                  <Icon size={12} />
                 </div>
-                <span className="font-medium tracking-tight">{item.label}</span>
+                <span className="font-medium text-xs leading-tight">{item.label}</span>
                 {isActive && (
-                  <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full shadow-sm"></div>
+                  <div className="absolute right-2 w-1 h-1 bg-blue-500 rounded-full"></div>
                 )}
               </Link>
             );

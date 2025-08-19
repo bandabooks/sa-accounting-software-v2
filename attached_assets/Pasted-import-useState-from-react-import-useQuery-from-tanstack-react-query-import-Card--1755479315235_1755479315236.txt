@@ -1,0 +1,597 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Download, 
+  Calendar, 
+  Users, 
+  FileText,
+  Calculator,
+  Search,
+  Printer,
+  Mail,
+  Eye,
+  Filter,
+  Plus,
+  Clock,
+  CheckCircle,
+  AlertCircle
+} from "lucide-react";
+import { format } from "date-fns";
+
+export default function Payslips() {
+  const [selectedPeriod, setSelectedPeriod] = useState("current");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showPayslipDialog, setShowPayslipDialog] = useState(false);
+  const [currentPayslip, setCurrentPayslip] = useState(null);
+  const { toast } = useToast();
+
+  // Fetch employees
+  const { data: employees = [] } = useQuery({
+    queryKey: ["/api/employees"],
+  });
+
+  // Fetch payroll data
+  const { data: payrollData, isLoading } = useQuery({
+    queryKey: ["/api/payroll/employee-payrolls"],
+  });
+
+  // Mock payslip data - will be replaced with real API data
+  const payslipData = [
+    {
+      id: 1,
+      employeeId: "EMP001",
+      employeeName: "John Smith",
+      position: "Senior Developer",
+      payPeriod: "December 2024",
+      payDate: "2024-12-31",
+      basicSalary: 45000,
+      allowances: 3500,
+      overtime: 0,
+      grossPay: 48500,
+      payeTax: 8200,
+      uifEmployee: 485,
+      netPay: 39815,
+      status: "paid",
+      payslipNumber: "PS-2024-12-001"
+    },
+    {
+      id: 2,
+      employeeId: "EMP002", 
+      employeeName: "Sarah Johnson",
+      position: "Project Manager",
+      payPeriod: "December 2024",
+      payDate: "2024-12-31",
+      basicSalary: 38000,
+      allowances: 3200,
+      overtime: 0,
+      grossPay: 41200,
+      payeTax: 6500,
+      uifEmployee: 412,
+      netPay: 34288,
+      status: "paid",
+      payslipNumber: "PS-2024-12-002"
+    },
+    {
+      id: 3,
+      employeeId: "EMP003",
+      employeeName: "Michael Brown",
+      position: "Accountant",
+      payPeriod: "December 2024", 
+      payDate: "2024-12-31",
+      basicSalary: 35000,
+      allowances: 2800,
+      overtime: 1500,
+      grossPay: 39300,
+      payeTax: 5895,
+      uifEmployee: 393,
+      netPay: 33012,
+      status: "pending",
+      payslipNumber: "PS-2024-12-003"
+    }
+  ];
+
+  const handleViewPayslip = (payslip: any) => {
+    setCurrentPayslip(payslip);
+    setShowPayslipDialog(true);
+  };
+
+  const handleDownloadPayslip = (payslip: any) => {
+    const csvData = generatePayslipCSV(payslip);
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Payslip_${payslip.employeeName.replace(/\s+/g, '_')}_${payslip.payPeriod.replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Download Started",
+      description: `Payslip for ${payslip.employeeName} has been downloaded.`,
+    });
+  };
+
+  const handlePrintPayslip = (payslip: any) => {
+    const printWindow = window.open('', '_blank');
+    const printContent = generatePayslipHTML(payslip);
+    
+    printWindow?.document.write(printContent);
+    printWindow?.document.close();
+    printWindow?.focus();
+    printWindow?.print();
+    
+    toast({
+      title: "Print Ready",
+      description: `Payslip for ${payslip.employeeName} is ready for printing.`,
+    });
+  };
+
+  const handleEmailPayslip = (payslip: any) => {
+    toast({
+      title: "Email Sent",
+      description: `Payslip has been emailed to ${payslip.employeeName}.`,
+    });
+  };
+
+  const generatePayslipCSV = (payslip: any) => {
+    const headers = ['Item', 'Amount'];
+    const rows = [
+      ['Employee Name', payslip.employeeName],
+      ['Employee ID', payslip.employeeId],
+      ['Position', payslip.position],
+      ['Pay Period', payslip.payPeriod],
+      ['Basic Salary', `R${payslip.basicSalary.toLocaleString()}`],
+      ['Allowances', `R${payslip.allowances.toLocaleString()}`],
+      ['Overtime', `R${payslip.overtime.toLocaleString()}`],
+      ['Gross Pay', `R${payslip.grossPay.toLocaleString()}`],
+      ['PAYE Tax', `R${payslip.payeTax.toLocaleString()}`],
+      ['UIF Employee', `R${payslip.uifEmployee.toLocaleString()}`],
+      ['Net Pay', `R${payslip.netPay.toLocaleString()}`]
+    ];
+
+    return [headers, ...rows].map(row => row.join(',')).join('\n');
+  };
+
+  const generatePayslipHTML = (payslip: any) => {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payslip - ${payslip.employeeName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 15px; }
+            .company-name { font-size: 24px; font-weight: bold; color: #2563eb; }
+            .payslip-title { font-size: 18px; margin-top: 10px; color: #666; }
+            .employee-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+            .info-section { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+            .info-title { font-weight: bold; color: #333; margin-bottom: 10px; }
+            .earnings-deductions { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+            .section { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+            .section-title { font-weight: bold; color: #333; margin-bottom: 15px; font-size: 16px; }
+            .line-item { display: flex; justify-content: space-between; margin: 8px 0; }
+            .total-line { border-top: 2px solid #333; margin-top: 15px; padding-top: 10px; font-weight: bold; }
+            .net-pay { background: #2563eb; color: white; padding: 15px; text-align: center; border-radius: 8px; margin-top: 20px; }
+            .footer { margin-top: 30px; text-align: center; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">ThinkMyBiz 360</div>
+            <div class="payslip-title">Employee Payslip</div>
+          </div>
+          
+          <div class="employee-info">
+            <div class="info-section">
+              <div class="info-title">Employee Information</div>
+              <div class="line-item"><span>Name:</span><span>${payslip.employeeName}</span></div>
+              <div class="line-item"><span>Employee ID:</span><span>${payslip.employeeId}</span></div>
+              <div class="line-item"><span>Position:</span><span>${payslip.position}</span></div>
+              <div class="line-item"><span>Payslip Number:</span><span>${payslip.payslipNumber}</span></div>
+            </div>
+            <div class="info-section">
+              <div class="info-title">Pay Period Information</div>
+              <div class="line-item"><span>Pay Period:</span><span>${payslip.payPeriod}</span></div>
+              <div class="line-item"><span>Pay Date:</span><span>${format(new Date(payslip.payDate), 'dd MMM yyyy')}</span></div>
+              <div class="line-item"><span>Status:</span><span style="text-transform: capitalize;">${payslip.status}</span></div>
+            </div>
+          </div>
+
+          <div class="earnings-deductions">
+            <div class="section">
+              <div class="section-title">Earnings</div>
+              <div class="line-item"><span>Basic Salary</span><span>R${payslip.basicSalary.toLocaleString()}</span></div>
+              <div class="line-item"><span>Allowances</span><span>R${payslip.allowances.toLocaleString()}</span></div>
+              <div class="line-item"><span>Overtime</span><span>R${payslip.overtime.toLocaleString()}</span></div>
+              <div class="line-item total-line"><span>Gross Pay</span><span>R${payslip.grossPay.toLocaleString()}</span></div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Deductions</div>
+              <div class="line-item"><span>PAYE Tax</span><span>R${payslip.payeTax.toLocaleString()}</span></div>
+              <div class="line-item"><span>UIF Employee</span><span>R${payslip.uifEmployee.toLocaleString()}</span></div>
+              <div class="line-item total-line"><span>Total Deductions</span><span>R${(payslip.payeTax + payslip.uifEmployee).toLocaleString()}</span></div>
+            </div>
+          </div>
+
+          <div class="net-pay">
+            <h2 style="margin: 0;">Net Pay: R${payslip.netPay.toLocaleString()}</h2>
+          </div>
+
+          <div class="footer">
+            <p>This is a computer-generated payslip. No signature required.</p>
+            <p>Generated on ${format(new Date(), 'dd MMM yyyy HH:mm')} | ThinkMyBiz 360 Payroll System</p>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      paid: { color: "bg-green-500", text: "Paid", icon: CheckCircle },
+      pending: { color: "bg-yellow-500", text: "Pending", icon: Clock },
+      processing: { color: "bg-blue-500", text: "Processing", icon: AlertCircle }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const IconComponent = config.icon;
+
+    return (
+      <Badge className={`${config.color} text-white flex items-center gap-1`}>
+        <IconComponent className="h-3 w-3" />
+        {config.text}
+      </Badge>
+    );
+  };
+
+  const filteredPayslips = payslipData.filter(payslip =>
+    payslip.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    payslip.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    payslip.payslipNumber.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileText className="h-6 w-6 text-green-600" />
+            Employee Payslips
+          </h1>
+          <p className="text-muted-foreground">
+            View, download, and manage employee payslips
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">Current Period</SelectItem>
+              <SelectItem value="2024-12">December 2024</SelectItem>
+              <SelectItem value="2024-11">November 2024</SelectItem>
+              <SelectItem value="2024-10">October 2024</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Generate Payslips
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-600">Total Payslips</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold text-green-700">{payslipData.length}</div>
+            <p className="text-xs text-muted-foreground">This period</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-600">Paid Payslips</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold text-blue-700">{payslipData.filter(p => p.status === 'paid').length}</div>
+            <p className="text-xs text-muted-foreground">Completed</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-l-4 border-l-yellow-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-600">Pending</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold text-yellow-700">{payslipData.filter(p => p.status === 'pending').length}</div>
+            <p className="text-xs text-muted-foreground">Processing</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-purple-600">Total Net Pay</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-2xl font-bold text-purple-700">R{payslipData.reduce((sum, p) => sum + p.netPay, 0).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Net amount</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters and Search */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payslip Management</CardTitle>
+          <CardDescription>Search and manage employee payslips</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by employee name, ID, or payslip number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Button variant="outline">
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+          </div>
+
+          {/* Payslips Table */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Payslip Number</TableHead>
+                <TableHead>Pay Period</TableHead>
+                <TableHead>Gross Pay</TableHead>
+                <TableHead>Deductions</TableHead>
+                <TableHead>Net Pay</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredPayslips.map((payslip) => (
+                <TableRow key={payslip.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{payslip.employeeName}</div>
+                      <div className="text-sm text-muted-foreground">{payslip.employeeId} • {payslip.position}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{payslip.payslipNumber}</TableCell>
+                  <TableCell>{payslip.payPeriod}</TableCell>
+                  <TableCell>R{payslip.grossPay.toLocaleString()}</TableCell>
+                  <TableCell>R{(payslip.payeTax + payslip.uifEmployee).toLocaleString()}</TableCell>
+                  <TableCell className="font-medium text-green-600">R{payslip.netPay.toLocaleString()}</TableCell>
+                  <TableCell>{getStatusBadge(payslip.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleViewPayslip(payslip)}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDownloadPayslip(payslip)}
+                      >
+                        <Download className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handlePrintPayslip(payslip)}
+                      >
+                        <Printer className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleEmailPayslip(payslip)}
+                      >
+                        <Mail className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Payslip Details Dialog */}
+      <Dialog open={showPayslipDialog} onOpenChange={setShowPayslipDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-green-600" />
+              Payslip Details - {currentPayslip?.employeeName}
+            </DialogTitle>
+            <DialogDescription>
+              {currentPayslip?.payslipNumber} • {currentPayslip?.payPeriod}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {currentPayslip && (
+            <div className="space-y-6">
+              {/* Employee Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base text-blue-700">Employee Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Name</span>
+                      <span className="font-medium">{currentPayslip.employeeName}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Employee ID</span>
+                      <span className="font-medium">{currentPayslip.employeeId}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Position</span>
+                      <span className="font-medium">{currentPayslip.position}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Status</span>
+                      <span>{getStatusBadge(currentPayslip.status)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base text-purple-700">Pay Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Pay Period</span>
+                      <span className="font-medium">{currentPayslip.payPeriod}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Pay Date</span>
+                      <span className="font-medium">{format(new Date(currentPayslip.payDate), 'dd MMM yyyy')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Payslip Number</span>
+                      <span className="font-medium">{currentPayslip.payslipNumber}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Earnings and Deductions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base text-green-700">Earnings</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Basic Salary</span>
+                      <span className="font-medium">R{currentPayslip.basicSalary.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Allowances</span>
+                      <span className="font-medium">R{currentPayslip.allowances.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Overtime</span>
+                      <span className="font-medium">R{currentPayslip.overtime.toLocaleString()}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Gross Pay</span>
+                      <span className="text-green-700">R{currentPayslip.grossPay.toLocaleString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base text-red-700">Deductions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>PAYE Tax</span>
+                      <span className="font-medium">R{currentPayslip.payeTax.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>UIF Employee</span>
+                      <span className="font-medium">R{currentPayslip.uifEmployee.toLocaleString()}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Total Deductions</span>
+                      <span className="text-red-700">R{(currentPayslip.payeTax + currentPayslip.uifEmployee).toLocaleString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Net Pay */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold text-blue-800 mb-2">Net Pay</h3>
+                    <div className="text-3xl font-bold text-blue-900">R{currentPayslip.netPay.toLocaleString()}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button 
+                  onClick={() => handleDownloadPayslip(currentPayslip)}
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download CSV
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => handlePrintPayslip(currentPayslip)}
+                  className="flex-1"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print Payslip
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => handleEmailPayslip(currentPayslip)}
+                  className="flex-1"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email to Employee
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowPayslipDialog(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

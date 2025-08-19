@@ -25,7 +25,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
       icon: ChartLine,
       iconBg: "bg-green-100",
       iconColor: "text-accent",
-      onClick: () => setLocation("/financial-reports?report=profit-loss")
+      onClick: () => setLocation("/advanced-analytics?report=profit-loss")
     },
     {
       title: "Outstanding Invoices", 

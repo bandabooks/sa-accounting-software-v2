@@ -51,6 +51,12 @@ import {
   vatTypes,
   vatReports,
   vatTransactions,
+  complianceTracker,
+  complianceAchievements,
+  complianceUserAchievements,
+  complianceMilestones,
+  complianceUserMilestones,
+  complianceActivities,
   fixedAssets,
   depreciationRecords,
   budgets,
@@ -73,6 +79,11 @@ import {
   invoiceReminders,
   invoiceAgingReports,
   approvalWorkflows,
+  employees,
+  employeeAttendance,
+  payrollItems,
+  employeeLeave,
+  payrollTaxTables,
   approvalRequests,
   bankIntegrations,
   // Enhanced Inventory Module imports
@@ -127,6 +138,11 @@ import {
   complianceTasks,
   complianceCalendar,
   correspondenceTracker,
+  // SARS eFiling Integration imports
+  sarsVendorConfig,
+  companySarsLink,
+  sarsPayrollSubmissions,
+  isvClientAccess,
   recurringBilling,
   aiAssistantConversations,
   aiAssistantMessages,
@@ -201,6 +217,18 @@ import {
   type InsertProductCategory,
   type Product,
   type InsertProduct,
+  type ComplianceTracker,
+  type InsertComplianceTracker,
+  type ComplianceAchievement,
+  type InsertComplianceAchievement,
+  type ComplianceUserAchievement,
+  type InsertComplianceUserAchievement,
+  type ComplianceMilestone,
+  type InsertComplianceMilestone,
+  type ComplianceUserMilestone,
+  type InsertComplianceUserMilestone,
+  type ComplianceActivity,
+  type InsertComplianceActivity,
   type PayfastPayment,
   type InsertPayfastPayment,
   type InvoiceWithCustomer,
@@ -255,6 +283,18 @@ import {
   type InsertVatReport,
   type VatTransaction,
   type InsertVatTransaction,
+  type ComplianceTracker,
+  type InsertComplianceTracker,
+  type ComplianceAchievement,
+  type InsertComplianceAchievement,
+  type ComplianceUserAchievement,
+  type InsertComplianceUserAchievement,
+  type ComplianceMilestone,
+  type InsertComplianceMilestone,
+  type ComplianceUserMilestone,
+  type InsertComplianceUserMilestone,
+  type ComplianceActivity,
+  type InsertComplianceActivity,
   type FixedAsset,
   type InsertFixedAsset,
   type DepreciationRecord,
@@ -269,6 +309,13 @@ import {
   type InsertCashFlowForecastLine,
   type AdvancedReport,
   type InsertAdvancedReport,
+  type Employee,
+  type InsertEmployee,
+  type PayrollItem,
+  type InsertPayrollItem,
+  type EmployeeLeave,
+  type InsertEmployeeLeave,
+  type PayrollTaxTable,
   type BankReconciliationItem,
   type InsertBankReconciliationItem,
   type IndustryTemplate,
@@ -408,7 +455,36 @@ import {
   CustomerPriceList,
   InsertCustomerPriceList,
   EstimateWithAnalytics,
-  ProductWithPricing
+  ProductWithPricing,
+  // SARS eFiling Integration type imports
+  type SarsVendorConfig,
+  type InsertSarsVendorConfig,
+  type CompanySarsLink,
+  type InsertCompanySarsLink,
+  type SarsPayrollSubmission,
+  type InsertSarsPayrollSubmission,
+  type IsvClientAccess,
+  type InsertIsvClientAccess,
+  // Gamified Compliance Tracker type imports
+  type ComplianceTracker,
+  type InsertComplianceTracker,
+  type ComplianceAchievement,
+  type InsertComplianceAchievement,
+  type ComplianceUserAchievement,
+  type InsertComplianceUserAchievement,
+  type ComplianceMilestone,
+  type InsertComplianceMilestone,
+  type ComplianceUserMilestone,
+  type InsertComplianceUserMilestone,
+  type ComplianceActivity,
+  type InsertComplianceActivity,
+  // Table imports
+  complianceTracker,
+  complianceAchievements,
+  complianceUserAchievements,
+  complianceMilestones,
+  complianceUserMilestones,
+  complianceActivities
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, isNotNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
@@ -832,6 +908,37 @@ export interface IStorage {
   getPosDailySalesReport(companyId: number, date: Date): Promise<{ totalSales: number; totalTransactions: number; averageTransaction: number }>;
   getPosTopProducts(companyId: number, startDate: Date, endDate: Date): Promise<{ productId: number; productName: string; totalQuantity: number; totalRevenue: number }[]>;
 
+  // Employee Management & Payroll
+  getEmployees(companyId: number): Promise<Employee[]>;
+  getEmployee(id: number, companyId: number): Promise<Employee | undefined>;
+  createEmployee(data: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: number, data: Partial<InsertEmployee>, companyId: number): Promise<Employee | undefined>;
+  deleteEmployee(id: number, companyId: number): Promise<boolean>;
+  getEmployeeByIdNumber(idNumber: string, companyId: number): Promise<Employee | undefined>;
+  
+  // Payroll Management
+  getPayrollItems(companyId: number, period?: string): Promise<PayrollItem[]>;
+  getPayrollItem(id: number, companyId: number): Promise<PayrollItem | undefined>;
+  createPayrollItem(data: InsertPayrollItem): Promise<PayrollItem>;
+  updatePayrollItem(id: number, data: Partial<InsertPayrollItem>, companyId: number): Promise<PayrollItem | undefined>;
+  deletePayrollItem(id: number, companyId: number): Promise<boolean>;
+  getEmployeePayrollHistory(employeeId: number, companyId: number): Promise<PayrollItem[]>;
+  processPayroll(companyId: number, period: string): Promise<PayrollItem[]>;
+  approvePayroll(id: number, approvedBy: number, companyId: number): Promise<PayrollItem | undefined>;
+  
+  // Employee Leave Management
+  getEmployeeLeave(companyId: number, employeeId?: number): Promise<EmployeeLeave[]>;
+  createEmployeeLeave(data: InsertEmployeeLeave): Promise<EmployeeLeave>;
+  updateEmployeeLeave(id: number, data: Partial<InsertEmployeeLeave>, companyId: number): Promise<EmployeeLeave | undefined>;
+  approveLeave(id: number, approvedBy: number, companyId: number): Promise<EmployeeLeave | undefined>;
+  rejectLeave(id: number, approvedBy: number, rejectionReason: string, companyId: number): Promise<EmployeeLeave | undefined>;
+  
+  // Payroll Tax Tables
+  getPayrollTaxTables(taxYear: number): Promise<PayrollTaxTable[]>;
+  calculatePayeTax(grossSalary: number, taxYear: number): Promise<number>;
+  calculateUifContribution(grossSalary: number): Promise<{ employee: number; employer: number }>;
+  calculateSdlContribution(grossSalary: number): Promise<number>;
+
   // RBAC - System Roles
   getSystemRoles(): Promise<SystemRole[]>;
   getSystemRole(id: number): Promise<SystemRole | undefined>;
@@ -1053,6 +1160,22 @@ export interface IStorage {
   commitImportBatch(importBatchId: number): Promise<{ imported: number; skipped: number; failed: number }>;
   generateImportBatchNumber(companyId: number): Promise<string>;
   normalizeDescription(description: string): string;
+
+  // Gamified Tax Compliance Progress Tracker
+  createComplianceTracker(data: InsertComplianceTracker): Promise<ComplianceTracker>;
+  getComplianceTracker(companyId: number): Promise<ComplianceTracker | undefined>;
+  updateComplianceTracker(companyId: number, data: Partial<InsertComplianceTracker>): Promise<ComplianceTracker | undefined>;
+  createComplianceAchievement(data: InsertComplianceAchievement): Promise<ComplianceAchievement>;
+  getAllComplianceAchievements(): Promise<ComplianceAchievement[]>;
+  createUserAchievement(data: InsertComplianceUserAchievement): Promise<ComplianceUserAchievement>;
+  getUserAchievements(companyId: number, userId: number): Promise<ComplianceUserAchievement[]>;
+  createComplianceMilestone(data: InsertComplianceMilestone): Promise<ComplianceMilestone>;
+  getAllComplianceMilestones(): Promise<ComplianceMilestone[]>;
+  createUserMilestone(data: InsertComplianceUserMilestone): Promise<ComplianceUserMilestone>;
+  getUserMilestones(companyId: number, userId: number): Promise<ComplianceUserMilestone[]>;
+  createComplianceActivity(data: InsertComplianceActivity): Promise<ComplianceActivity>;
+  getComplianceActivities(companyId: number, userId: number): Promise<ComplianceActivity[]>;
+  getRecentComplianceActivities(companyId: number, userId: number, limit?: number): Promise<ComplianceActivity[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1351,6 +1474,123 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Get audit trail statistics for dashboard
+  async getAuditTrailStats(companyId: number): Promise<any> {
+    try {
+      // Get counts for different time periods using proper SQL date functions
+      const [todayActions, totalUsers, recentActions, allActions] = await Promise.all([
+        // Today's actions count - using SQL DATE function for proper timezone handling
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(auditLogs)
+          .where(and(
+            eq(auditLogs.companyId, companyId),
+            sql`DATE(${auditLogs.timestamp}) = CURRENT_DATE`
+          )),
+        
+        // Total unique users with activity
+        db
+          .select({ count: sql<number>`count(DISTINCT ${auditLogs.userId})` })
+          .from(auditLogs)
+          .where(eq(auditLogs.companyId, companyId)),
+        
+        // Most recent actions (last 5)
+        db
+          .select({
+            action: auditLogs.action,
+            resource: auditLogs.resource,
+            timestamp: auditLogs.timestamp,
+            userName: users.name
+          })
+          .from(auditLogs)
+          .leftJoin(users, eq(auditLogs.userId, users.id))
+          .where(eq(auditLogs.companyId, companyId))
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(5),
+
+        // Total actions for this company
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(auditLogs)
+          .where(eq(auditLogs.companyId, companyId))
+      ]);
+
+      return {
+        todayActions: todayActions[0]?.count || 0,
+        totalUsers: totalUsers[0]?.count || 0,
+        totalActions: allActions[0]?.count || 0,
+        recentActions: recentActions
+      };
+    } catch (error) {
+      console.error("Failed to get audit trail stats:", error);
+      return {
+        todayActions: 0,
+        totalUsers: 0,
+        totalActions: 0,
+        recentActions: []
+      };
+    }
+  }
+
+  // Get online users for a company
+  async getOnlineUsers(companyId: number): Promise<any> {
+    try {
+      // Consider users online if they've been active in the last 10 minutes (more lenient)
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      
+      const onlineUsersQuery = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          username: users.username,
+          lastActivity: userSessions.lastActivity,
+          sessionToken: userSessions.sessionToken
+        })
+        .from(userSessions)
+        .innerJoin(users, eq(userSessions.userId, users.id))
+        .innerJoin(companyUsers, and(
+          eq(companyUsers.userId, users.id),
+          eq(companyUsers.companyId, companyId)
+        ))
+        .where(and(
+          eq(userSessions.isActive, true),
+          gte(userSessions.lastActivity, tenMinutesAgo),
+          eq(users.isActive, true)
+        ))
+        .groupBy(users.id, users.name, users.email, users.username, userSessions.lastActivity, userSessions.sessionToken)
+        .orderBy(desc(userSessions.lastActivity));
+
+      return {
+        count: onlineUsersQuery.length,
+        users: onlineUsersQuery,
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("Failed to get online users:", error);
+      return {
+        count: 0,
+        users: [],
+        lastUpdated: new Date().toISOString()
+      };
+    }
+  }
+
+  // Update user session activity
+  async updateUserSessionActivity(userId: number): Promise<void> {
+    try {
+      await db
+        .update(userSessions)
+        .set({ lastActivity: new Date() })
+        .where(and(
+          eq(userSessions.userId, userId),
+          eq(userSessions.isActive, true)
+        ));
+    } catch (error) {
+      console.error("Failed to update user session activity:", error);
+    }
+  }
+
   async getAuditLogs(limit: number = 100, offset: number = 0): Promise<AuditLog[]> {
     const results = await db
       .select({
@@ -1409,6 +1649,87 @@ export class DatabaseStorage implements IStorage {
       .where(eq(auditLogs.userId, userId))
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit);
+  }
+
+  // Enhanced audit logs method with filtering capabilities
+  async getFilteredAuditLogs(filters: {
+    startDate?: Date;
+    endDate?: Date;
+    userId?: string;
+    action?: string;
+    resource?: string;
+    companyId?: number;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    auditTrail: AuditLog[];
+    totalCount: number;
+    currentPage: number;
+    totalPages: number;
+  }> {
+    const { startDate, endDate, userId, action, resource, companyId, page = 1, limit = 50 } = filters;
+    const offset = (page - 1) * limit;
+
+    try {
+      // Get basic audit logs with user info 
+      const results = await db
+        .select({
+          id: auditLogs.id,
+          userId: auditLogs.userId,
+          action: auditLogs.action,
+          resource: auditLogs.resource,
+          resourceId: auditLogs.resourceId,
+          details: auditLogs.details,
+          ipAddress: auditLogs.ipAddress,
+          userAgent: auditLogs.userAgent,
+          timestamp: auditLogs.timestamp,
+          userName: users.username,
+          userEmail: users.email,
+          userFullName: users.name,
+        })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.userId, users.id))
+        .orderBy(desc(auditLogs.timestamp))
+        .limit(limit)
+        .offset(offset);
+
+      // Transform results to match expected format
+      const auditTrail = results.map(result => ({
+        id: result.id,
+        userId: result.userId,
+        action: result.action,
+        resource: result.resource,
+        resourceId: result.resourceId,
+        details: result.details,
+        ipAddress: result.ipAddress,
+        userAgent: result.userAgent,
+        timestamp: result.timestamp,
+        user: result.userId ? {
+          id: result.userId,
+          username: result.userName || 'Unknown',
+          name: result.userFullName || 'Unknown User',
+          email: result.userEmail || 'unknown@domain.com',
+        } : null
+      }));
+
+      // Get total count for pagination
+      const totalCount = auditTrail.length;
+
+      return {
+        auditTrail,
+        totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+      };
+    } catch (error) {
+      console.error('Error fetching filtered audit logs:', error);
+      return {
+        auditTrail: [],
+        totalCount: 0,
+        currentPage: page,
+        totalPages: 0,
+      };
+    }
   }
 
   async getCompanyAuditLogs(companyId: number, limit: number = 500): Promise<AuditLog[]> {
@@ -1632,6 +1953,152 @@ export class DatabaseStorage implements IStorage {
       customer: row.customer!,
       paidAmount: row.invoice.paidAmount
     }));
+  }
+
+  async getRecentInvoices(companyId: number, limit: number = 5): Promise<InvoiceWithCustomer[]> {
+    const result = await db
+      .select({
+        invoice: invoices,
+        customer: customers
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .where(eq(invoices.companyId, companyId))
+      .orderBy(desc(invoices.createdAt))
+      .limit(limit);
+    
+    return result.map(row => ({
+      ...row.invoice,
+      customer: row.customer!
+    }));
+  }
+
+  async getReceivablesAging(companyId: number): Promise<{ range: string; amount: string; count: number }[]> {
+    try {
+      // Get all unpaid/partial invoices first
+      const unpaidInvoices = await db
+        .select({
+          id: invoices.id,
+          total: invoices.total,
+          dueDate: invoices.dueDate,
+          status: invoices.status
+        })
+        .from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          or(
+            eq(invoices.status, 'sent'),
+            eq(invoices.status, 'overdue'),
+            eq(invoices.status, 'partial')
+          )
+        ));
+
+      const now = new Date();
+      const aging = {
+        '0-30': { amount: 0, count: 0 },
+        '31-60': { amount: 0, count: 0 },
+        '61-90': { amount: 0, count: 0 },
+        '90+': { amount: 0, count: 0 }
+      };
+
+      for (const invoice of unpaidInvoices) {
+        const daysDiff = Math.floor((now.getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        const amount = parseFloat(invoice.total);
+
+        if (daysDiff >= 0 && daysDiff <= 30) {
+          aging['0-30'].amount += amount;
+          aging['0-30'].count += 1;
+        } else if (daysDiff > 30 && daysDiff <= 60) {
+          aging['31-60'].amount += amount;
+          aging['31-60'].count += 1;
+        } else if (daysDiff > 60 && daysDiff <= 90) {
+          aging['61-90'].amount += amount;
+          aging['61-90'].count += 1;
+        } else if (daysDiff > 90) {
+          aging['90+'].amount += amount;
+          aging['90+'].count += 1;
+        }
+      }
+
+      return [
+        { range: '0-30', amount: aging['0-30'].amount.toFixed(2), count: aging['0-30'].count },
+        { range: '31-60', amount: aging['31-60'].amount.toFixed(2), count: aging['31-60'].count },
+        { range: '61-90', amount: aging['61-90'].amount.toFixed(2), count: aging['61-90'].count },
+        { range: '90+', amount: aging['90+'].amount.toFixed(2), count: aging['90+'].count }
+      ];
+    } catch (error) {
+      console.error('Error calculating receivables aging:', error);
+      return [
+        { range: '0-30', amount: '0.00', count: 0 },
+        { range: '31-60', amount: '0.00', count: 0 },
+        { range: '61-90', amount: '0.00', count: 0 },
+        { range: '90+', amount: '0.00', count: 0 }
+      ];
+    }
+  }
+
+  async getPayablesAging(companyId: number): Promise<{ range: string; amount: string; count: number }[]> {
+    try {
+      // Get all unpaid purchase orders 
+      const unpaidPOs = await db
+        .select({
+          id: purchaseOrders.id,
+          total: purchaseOrders.total,
+          dueDate: purchaseOrders.dueDate,
+          status: purchaseOrders.status
+        })
+        .from(purchaseOrders)
+        .where(and(
+          eq(purchaseOrders.companyId, companyId),
+          or(
+            eq(purchaseOrders.status, 'pending'),
+            eq(purchaseOrders.status, 'approved'),
+            eq(purchaseOrders.status, 'overdue')
+          )
+        ));
+
+      const now = new Date();
+      const aging = {
+        '0-30': { amount: 0, count: 0 },
+        '31-60': { amount: 0, count: 0 },
+        '61-90': { amount: 0, count: 0 },
+        '90+': { amount: 0, count: 0 }
+      };
+
+      for (const po of unpaidPOs) {
+        const daysDiff = Math.floor((now.getTime() - new Date(po.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        const amount = parseFloat(po.total);
+
+        if (daysDiff >= 0 && daysDiff <= 30) {
+          aging['0-30'].amount += amount;
+          aging['0-30'].count += 1;
+        } else if (daysDiff > 30 && daysDiff <= 60) {
+          aging['31-60'].amount += amount;
+          aging['31-60'].count += 1;
+        } else if (daysDiff > 60 && daysDiff <= 90) {
+          aging['61-90'].amount += amount;
+          aging['61-90'].count += 1;
+        } else if (daysDiff > 90) {
+          aging['90+'].amount += amount;
+          aging['90+'].count += 1;
+        }
+      }
+
+      return [
+        { range: '0-30', amount: aging['0-30'].amount.toFixed(2), count: aging['0-30'].count },
+        { range: '31-60', amount: aging['31-60'].amount.toFixed(2), count: aging['31-60'].count },
+        { range: '61-90', amount: aging['61-90'].amount.toFixed(2), count: aging['61-90'].count },
+        { range: '90+', amount: aging['90+'].amount.toFixed(2), count: aging['90+'].count }
+      ];
+    } catch (error) {
+      console.error('Error calculating payables aging:', error);
+      return [
+        { range: '0-30', amount: '0.00', count: 0 },
+        { range: '31-60', amount: '0.00', count: 0 },
+        { range: '61-90', amount: '0.00', count: 0 },
+        { range: '90+', amount: '0.00', count: 0 }
+      ];
+    }
   }
 
   async getInvoice(id: number): Promise<InvoiceWithItems | undefined> {
@@ -4483,6 +4950,121 @@ export class DatabaseStorage implements IStorage {
       .where(eq(companySubscriptions.companyId, companyId))
       .returning();
     return subscription;
+  }
+
+  // Trial vs Active Subscription Management
+  async getSubscriptionStatus(companyId: number): Promise<{
+    status: 'trial' | 'active' | 'expired' | 'suspended' | 'cancelled';
+    planName: string;
+    planDisplayName: string;
+    isTrialActive: boolean;
+    trialDaysRemaining?: number;
+    nextBillingDate?: Date;
+    paymentStatus?: string;
+    amount?: string;
+    billingPeriod?: string;
+  } | null> {
+    // Get company subscription details
+    const subscription = await this.getCompanySubscription(companyId);
+    if (!subscription) return null;
+
+    const now = new Date();
+    let status: 'trial' | 'active' | 'expired' | 'suspended' | 'cancelled' = 'active';
+    let isTrialActive = false;
+    let trialDaysRemaining: number | undefined;
+
+    // Check if this is a trial subscription
+    if (subscription.plan.name === 'trial' || subscription.status === 'trial') {
+      isTrialActive = true;
+      status = 'trial';
+      
+      // Calculate trial days remaining (assuming 14-day trial)
+      const trialStart = subscription.startDate;
+      const trialEnd = new Date(trialStart.getTime() + (14 * 24 * 60 * 60 * 1000));
+      const msRemaining = trialEnd.getTime() - now.getTime();
+      trialDaysRemaining = Math.max(0, Math.ceil(msRemaining / (24 * 60 * 60 * 1000)));
+      
+      if (trialDaysRemaining <= 0) {
+        status = 'expired';
+        isTrialActive = false;
+      }
+    } else {
+      // For paid subscriptions, check payment status and end date
+      if (subscription.endDate && subscription.endDate < now) {
+        status = 'expired';
+      } else if (subscription.status === 'suspended') {
+        status = 'suspended';
+      } else if (subscription.status === 'cancelled') {
+        status = 'cancelled';
+      } else {
+        status = 'active';
+      }
+    }
+
+    return {
+      status,
+      planName: subscription.plan.name,
+      planDisplayName: subscription.plan.displayName,
+      isTrialActive,
+      trialDaysRemaining,
+      nextBillingDate: subscription.nextBillingDate || undefined,
+      paymentStatus: subscription.status,
+      amount: subscription.amount,
+      billingPeriod: subscription.billingPeriod
+    };
+  }
+
+  async getTrialSubscriptions(): Promise<CompanySubscription[]> {
+    return await db
+      .select({
+        subscription: companySubscriptions,
+        plan: subscriptionPlans,
+        company: companies,
+      })
+      .from(companySubscriptions)
+      .innerJoin(subscriptionPlans, eq(companySubscriptions.planId, subscriptionPlans.id))
+      .innerJoin(companies, eq(companySubscriptions.companyId, companies.id))
+      .where(or(
+        eq(subscriptionPlans.name, 'trial'),
+        eq(companySubscriptions.status, 'trial')
+      ))
+      .then(results => results.map(r => ({ ...r.subscription, plan: r.plan, company: r.company })));
+  }
+
+  async getActivePayingSubscriptions(): Promise<CompanySubscription[]> {
+    return await db
+      .select({
+        subscription: companySubscriptions,
+        plan: subscriptionPlans,
+        company: companies,
+      })
+      .from(companySubscriptions)
+      .innerJoin(subscriptionPlans, eq(companySubscriptions.planId, subscriptionPlans.id))
+      .innerJoin(companies, eq(companySubscriptions.companyId, companies.id))
+      .where(and(
+        ne(subscriptionPlans.name, 'trial'),
+        eq(companySubscriptions.status, 'active'),
+        gt(companySubscriptions.endDate, new Date())
+      ))
+      .then(results => results.map(r => ({ ...r.subscription, plan: r.plan, company: r.company })));
+  }
+
+  async getOverdueSubscriptions(): Promise<CompanySubscription[]> {
+    return await db
+      .select({
+        subscription: companySubscriptions,
+        plan: subscriptionPlans,
+        company: companies,
+      })
+      .from(companySubscriptions)
+      .innerJoin(subscriptionPlans, eq(companySubscriptions.planId, subscriptionPlans.id))
+      .innerJoin(companies, eq(companySubscriptions.companyId, companies.id))
+      .where(and(
+        ne(subscriptionPlans.name, 'trial'),
+        eq(companySubscriptions.status, 'active'),
+        lt(companySubscriptions.endDate, new Date())
+      ))
+      .then(results => results.map(r => ({ ...r.subscription, plan: r.plan, company: r.company })));
   }
 
   // Subscription Payment Management
@@ -8576,7 +9158,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Get all invoices in date range for output VAT (using issueDate instead of invoiceDate)
-      const invoicesResult = await db.select()
+      const invoicesResult = await db.select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        total: invoices.total,
+        vatAmount: invoices.vatAmount
+      })
         .from(invoices)
         .where(and(
           eq(invoices.companyId, companyId),
@@ -8585,7 +9172,11 @@ export class DatabaseStorage implements IStorage {
         ));
 
       // Get all expenses in date range for input VAT (using expenseDate field)
-      const expensesResult = await db.select()
+      const expensesResult = await db.select({
+        id: expenses.id,
+        amount: expenses.amount,
+        vatAmount: expenses.vatAmount
+      })
         .from(expenses) 
         .where(and(
           eq(expenses.companyId, companyId),
@@ -9481,8 +10072,8 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(journalEntries, and(
           eq(journalEntries.id, journalEntryLines.journalEntryId),
           eq(journalEntries.companyId, companyId),
-          lte(journalEntries.entryDate, toDate),
-          eq(journalEntries.status, 'posted')
+          lte(journalEntries.transactionDate, toDate),
+          eq(journalEntries.isPosted, true)
         ))
         .where(eq(chartOfAccounts.companyId, companyId))
         .groupBy(chartOfAccounts.id, chartOfAccounts.accountCode, chartOfAccounts.accountName, chartOfAccounts.accountType)
@@ -10336,6 +10927,136 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error generating comprehensive profit & loss:", error);
+      throw error;
+    }
+  }
+
+  async getDetailedProfitLoss(companyId: number, startDate: Date, endDate: Date) {
+    try {
+      // Get all accounts with their balances for the period
+      const accountData = await db
+        .select({
+          accountId: chartOfAccounts.id,
+          accountCode: chartOfAccounts.accountCode,
+          accountName: chartOfAccounts.name,
+          accountType: chartOfAccounts.accountType,
+          debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), '0.00')`,
+          creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), '0.00')`,
+        })
+        .from(chartOfAccounts)
+        .leftJoin(journalEntryLines, eq(chartOfAccounts.id, journalEntryLines.accountId))
+        .leftJoin(journalEntries, and(
+          eq(journalEntryLines.journalEntryId, journalEntries.id),
+          gte(journalEntries.transactionDate, startDate),
+          lte(journalEntries.transactionDate, endDate),
+          eq(journalEntries.status, "posted")
+        ))
+        .where(
+          and(
+            eq(chartOfAccounts.companyId, companyId),
+            sql`${chartOfAccounts.accountType} IN ('revenue', 'expense')`
+          )
+        )
+        .groupBy(chartOfAccounts.id, chartOfAccounts.accountCode, chartOfAccounts.name, chartOfAccounts.accountType)
+        .orderBy(chartOfAccounts.accountCode);
+
+      // Get invoice revenue for sales accounts
+      const invoiceRevenue = await db
+        .select({
+          amount: sql<string>`COALESCE(SUM(${invoices.total}), '0.00')`,
+        })
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.companyId, companyId),
+            gte(invoices.invoiceDate, startDate),
+            lte(invoices.invoiceDate, endDate),
+            ne(invoices.status, "draft")
+          )
+        );
+
+      // Get direct expenses
+      const directExpenses = await db
+        .select({
+          amount: sql<string>`COALESCE(SUM(${expenses.amount}), '0.00')`,
+          category: expenseCategories.name,
+        })
+        .from(expenses)
+        .leftJoin(expenseCategories, eq(expenses.categoryId, expenseCategories.id))
+        .where(
+          and(
+            eq(expenses.companyId, companyId),
+            gte(expenses.expenseDate, startDate),
+            lte(expenses.expenseDate, endDate)
+          )
+        )
+        .groupBy(expenseCategories.name);
+
+      // Process and categorize accounts
+      const detailedAccounts = accountData.map(account => {
+        const debit = parseFloat(account.debitTotal);
+        const credit = parseFloat(account.creditTotal);
+        
+        let amount;
+        let category: 'revenue' | 'cogs' | 'operating_expenses' | 'other_income' | 'other_expenses';
+        
+        if (account.accountType === 'revenue') {
+          amount = credit - debit; // Revenue has normal credit balance
+          // Categorize revenue accounts
+          if (account.accountCode.startsWith('4000') || account.accountCode.startsWith('4100')) {
+            category = 'revenue';
+          } else {
+            category = 'other_income';
+          }
+        } else {
+          amount = debit - credit; // Expense has normal debit balance
+          // Categorize expense accounts
+          if (account.accountCode.startsWith('5')) {
+            category = 'cogs';
+          } else if (account.accountCode.startsWith('6')) {
+            category = 'operating_expenses';
+          } else {
+            category = 'other_expenses';
+          }
+        }
+
+        return {
+          account_code: account.accountCode || '',
+          account_name: account.accountName,
+          account_type: account.accountType,
+          category,
+          amount: amount
+        };
+      }).filter(account => account.amount > 0); // Only show accounts with balances
+
+      // Add main sales revenue from invoices
+      const salesRevenueAmount = parseFloat(invoiceRevenue[0]?.amount || '0');
+      if (salesRevenueAmount > 0) {
+        detailedAccounts.unshift({
+          account_code: '4000',
+          account_name: 'Sales Revenue',
+          account_type: 'revenue',
+          category: 'revenue',
+          amount: salesRevenueAmount
+        });
+      }
+
+      // Add expense categories from direct expenses
+      directExpenses.forEach(expense => {
+        if (parseFloat(expense.amount) > 0) {
+          detailedAccounts.push({
+            account_code: '6100', // Default code for direct expenses
+            account_name: expense.category || 'General Expenses',
+            account_type: 'expense',
+            category: 'operating_expenses',
+            amount: parseFloat(expense.amount)
+          });
+        }
+      });
+
+      return detailedAccounts;
+    } catch (error) {
+      console.error("Error generating detailed profit & loss:", error);
       throw error;
     }
   }
@@ -14975,9 +15696,141 @@ export class DatabaseStorage implements IStorage {
     return link;
   }
 
+  async upsertCompanySarsLink(linkData: InsertCompanySarsLink): Promise<CompanySarsLink> {
+    // Try to update existing link first
+    const existing = await this.getCompanySarsLink(linkData.companyId);
+    
+    if (existing) {
+      const [updated] = await db.update(companySarsLink)
+        .set({ ...linkData, updatedAt: new Date() })
+        .where(eq(companySarsLink.companyId, linkData.companyId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(companySarsLink)
+        .values(linkData)
+        .returning();
+      return created;
+    }
+  }
+
   async deleteSarsLink(companyId: number): Promise<boolean> {
     const result = await db.delete(companySarsLink).where(eq(companySarsLink.companyId, companyId));
     return result.rowCount > 0;
+  }
+
+  // SARS Payroll Submission Methods
+  async createPayrollSubmission(submissionData: InsertSarsPayrollSubmission): Promise<SarsPayrollSubmission> {
+    const [submission] = await db.insert(sarsPayrollSubmissions).values(submissionData).returning();
+    return submission;
+  }
+
+  async getPayrollSubmissions(companyId: number, submissionType?: string): Promise<SarsPayrollSubmission[]> {
+    const query = db.select().from(sarsPayrollSubmissions).where(eq(sarsPayrollSubmissions.companyId, companyId));
+    
+    if (submissionType) {
+      query.where(and(
+        eq(sarsPayrollSubmissions.companyId, companyId),
+        eq(sarsPayrollSubmissions.submissionType, submissionType)
+      ));
+    }
+    
+    return query.orderBy(desc(sarsPayrollSubmissions.createdAt));
+  }
+
+  async updatePayrollSubmission(submissionId: string, updateData: Partial<InsertSarsPayrollSubmission>): Promise<SarsPayrollSubmission | undefined> {
+    const [submission] = await db.update(sarsPayrollSubmissions)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(sarsPayrollSubmissions.id, submissionId))
+      .returning();
+    return submission;
+  }
+
+  // ISV Client Access Methods
+  async createIsvClientAccess(accessData: InsertIsvClientAccess): Promise<IsvClientAccess> {
+    const [access] = await db.insert(isvClientAccess).values(accessData).returning();
+    return access;
+  }
+
+  async getIsvClientAccess(practitionerId: number): Promise<IsvClientAccess[]> {
+    return db.select().from(isvClientAccess)
+      .where(eq(isvClientAccess.practitionerId, practitionerId))
+      .orderBy(desc(isvClientAccess.createdAt));
+  }
+
+  async getClientAccessForCompany(clientCompanyId: number): Promise<IsvClientAccess[]> {
+    return db.select().from(isvClientAccess)
+      .where(eq(isvClientAccess.clientCompanyId, clientCompanyId))
+      .orderBy(desc(isvClientAccess.createdAt));
+  }
+
+  async updateIsvClientAccess(accessId: string, updateData: Partial<InsertIsvClientAccess>): Promise<IsvClientAccess | undefined> {
+    const [access] = await db.update(isvClientAccess)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(isvClientAccess.id, accessId))
+      .returning();
+    return access;
+  }
+
+  async revokeIsvClientAccess(accessId: string): Promise<boolean> {
+    const result = await db.update(isvClientAccess)
+      .set({ status: 'revoked', updatedAt: new Date() })
+      .where(eq(isvClientAccess.id, accessId));
+    return result.rowCount > 0;
+  }
+
+  // Enhanced SARS Compliance Methods
+  async createSarsCompliance(complianceData: InsertSarsCompliance): Promise<SarsCompliance> {
+    const [compliance] = await db.insert(sarsCompliance).values(complianceData).returning();
+    return compliance;
+  }
+
+  async getSarsCompliance(companyId: number, complianceType?: string): Promise<SarsCompliance[]> {
+    const query = db.select().from(sarsCompliance).where(eq(sarsCompliance.companyId, companyId));
+    
+    if (complianceType) {
+      query.where(and(
+        eq(sarsCompliance.companyId, companyId),
+        eq(sarsCompliance.complianceType, complianceType)
+      ));
+    }
+    
+    return query.orderBy(desc(sarsCompliance.dueDate));
+  }
+
+  async updateSarsCompliance(complianceId: string, updateData: Partial<InsertSarsCompliance>): Promise<SarsCompliance | undefined> {
+    const [compliance] = await db.update(sarsCompliance)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(sarsCompliance.id, complianceId))
+      .returning();
+    return compliance;
+  }
+
+  // Enhanced SARS Returns Methods
+  async createSarsReturn(returnData: InsertSarsReturn): Promise<SarsReturn> {
+    const [sarsReturn] = await db.insert(sarsReturns).values(returnData).returning();
+    return sarsReturn;
+  }
+
+  async getSarsReturns(companyId: number, returnType?: string): Promise<SarsReturn[]> {
+    const query = db.select().from(sarsReturns).where(eq(sarsReturns.companyId, companyId));
+    
+    if (returnType) {
+      query.where(and(
+        eq(sarsReturns.companyId, companyId),
+        eq(sarsReturns.returnType, returnType)
+      ));
+    }
+    
+    return query.orderBy(desc(sarsReturns.createdAt));
+  }
+
+  async updateSarsReturn(returnId: string, updateData: Partial<InsertSarsReturn>): Promise<SarsReturn | undefined> {
+    const [sarsReturn] = await db.update(sarsReturns)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(sarsReturns.id, returnId))
+      .returning();
+    return sarsReturn;
   }
 
   // AI-powered transaction matching support methods
@@ -15246,6 +16099,511 @@ export class DatabaseStorage implements IStorage {
       console.error('Error saving AI settings:', error);
       throw error;
     }
+  }
+
+  // Employee Management & Payroll Implementation
+  async getEmployees(companyId: number): Promise<Employee[]> {
+    return await db.select()
+      .from(employees)
+      .where(eq(employees.companyId, companyId))
+      .orderBy(employees.firstName);
+  }
+
+  async getEmployee(id: number, companyId: number): Promise<Employee | undefined> {
+    const [employee] = await db.select()
+      .from(employees)
+      .where(and(eq(employees.id, id), eq(employees.companyId, companyId)));
+    return employee;
+  }
+
+  async createEmployee(data: InsertEmployee): Promise<Employee> {
+    const [employee] = await db.insert(employees).values({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return employee;
+  }
+
+  async updateEmployee(id: number, data: Partial<InsertEmployee>, companyId: number): Promise<Employee | undefined> {
+    const [employee] = await db.update(employees)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(employees.id, id), eq(employees.companyId, companyId)))
+      .returning();
+    return employee;
+  }
+
+  async deleteEmployee(id: number, companyId: number): Promise<boolean> {
+    const result = await db.delete(employees)
+      .where(and(eq(employees.id, id), eq(employees.companyId, companyId)));
+    return result.rowCount > 0;
+  }
+
+  // Employee Attendance Management
+  async getAttendanceRecords(companyId: number, date?: string): Promise<any[]> {
+    let query = db.select({
+      id: employeeAttendance.id,
+      employeeId: employeeAttendance.employeeId,
+      employeeName: sql`CONCAT(${employees.firstName}, ' ', ${employees.lastName})`.as('employeeName'),
+      clockInTime: employeeAttendance.clockInTime,
+      clockOutTime: employeeAttendance.clockOutTime,
+      breakStartTime: employeeAttendance.breakStartTime,
+      breakEndTime: employeeAttendance.breakEndTime,
+      totalHours: employeeAttendance.totalHours,
+      overtimeHours: employeeAttendance.overtimeHours,
+      status: employeeAttendance.status,
+      notes: employeeAttendance.notes,
+      location: sql`CASE WHEN ${employeeAttendance.locationLat} IS NOT NULL THEN json_build_object('lat', ${employeeAttendance.locationLat}, 'lng', ${employeeAttendance.locationLng}) END`.as('location'),
+      createdAt: employeeAttendance.createdAt,
+    })
+    .from(employeeAttendance)
+    .innerJoin(employees, eq(employeeAttendance.employeeId, employees.id))
+    .where(eq(employeeAttendance.companyId, companyId));
+
+    if (date) {
+      query = query.where(and(
+        eq(employeeAttendance.companyId, companyId),
+        sql`DATE(${employeeAttendance.clockInTime}) = ${date}`
+      ));
+    }
+
+    return await query.orderBy(employeeAttendance.clockInTime);
+  }
+
+  async clockInEmployee(data: {
+    companyId: number;
+    employeeId: number;
+    timestamp: string;
+    notes?: string;
+    location?: { lat: number; lng: number };
+    ipAddress?: string;
+    deviceInfo?: string;
+  }): Promise<any> {
+    const [attendance] = await db.insert(employeeAttendance).values({
+      companyId: data.companyId,
+      employeeId: data.employeeId,
+      clockInTime: new Date(data.timestamp),
+      notes: data.notes,
+      locationLat: data.location?.lat?.toString(),
+      locationLng: data.location?.lng?.toString(),
+      ipAddress: data.ipAddress,
+      deviceInfo: data.deviceInfo,
+      status: 'present',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return attendance;
+  }
+
+  async clockOutEmployee(attendanceId: number, companyId: number, data: {
+    timestamp: string;
+    location?: { lat: number; lng: number };
+  }): Promise<any> {
+    const clockOutTime = new Date(data.timestamp);
+    
+    // Get the attendance record to calculate total hours
+    const [record] = await db.select()
+      .from(employeeAttendance)
+      .where(and(eq(employeeAttendance.id, attendanceId), eq(employeeAttendance.companyId, companyId)));
+    
+    if (!record) {
+      throw new Error('Attendance record not found');
+    }
+
+    // Calculate total hours
+    const clockInTime = new Date(record.clockInTime);
+    const totalHours = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
+    
+    // Calculate break time if any
+    let breakHours = 0;
+    if (record.breakStartTime && record.breakEndTime) {
+      const breakStart = new Date(record.breakStartTime);
+      const breakEnd = new Date(record.breakEndTime);
+      breakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+    }
+    
+    const workingHours = totalHours - breakHours;
+    const overtimeHours = workingHours > 8 ? workingHours - 8 : 0;
+
+    const [updatedRecord] = await db.update(employeeAttendance)
+      .set({
+        clockOutTime,
+        totalHours: workingHours.toString(),
+        overtimeHours: overtimeHours.toString(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(employeeAttendance.id, attendanceId), eq(employeeAttendance.companyId, companyId)))
+      .returning();
+
+    return updatedRecord;
+  }
+
+  async updateBreakTime(attendanceId: number, companyId: number, data: {
+    action: 'start' | 'end';
+    timestamp: string;
+  }): Promise<any> {
+    const timestamp = new Date(data.timestamp);
+    
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    if (data.action === 'start') {
+      updateData.breakStartTime = timestamp;
+    } else {
+      updateData.breakEndTime = timestamp;
+    }
+
+    const [updatedRecord] = await db.update(employeeAttendance)
+      .set(updateData)
+      .where(and(eq(employeeAttendance.id, attendanceId), eq(employeeAttendance.companyId, companyId)))
+      .returning();
+
+    return updatedRecord;
+  }
+
+  async getEmployeeByIdNumber(idNumber: string, companyId: number): Promise<Employee | undefined> {
+    const [employee] = await db.select()
+      .from(employees)
+      .where(and(eq(employees.idNumber, idNumber), eq(employees.companyId, companyId)));
+    return employee;
+  }
+
+  // Payroll Management
+  async getPayrollItems(companyId: number, period?: string): Promise<PayrollItem[]> {
+    const query = db.select()
+      .from(payrollItems)
+      .where(eq(payrollItems.companyId, companyId));
+    
+    if (period) {
+      query.where(and(eq(payrollItems.companyId, companyId), eq(payrollItems.payrollPeriod, period)));
+    }
+    
+    return await query.orderBy(payrollItems.payPeriodStart);
+  }
+
+  async getPayrollItem(id: number, companyId: number): Promise<PayrollItem | undefined> {
+    const [item] = await db.select()
+      .from(payrollItems)
+      .where(and(eq(payrollItems.id, id), eq(payrollItems.companyId, companyId)));
+    return item;
+  }
+
+  async createPayrollItem(data: InsertPayrollItem): Promise<PayrollItem> {
+    const [item] = await db.insert(payrollItems).values({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return item;
+  }
+
+  async updatePayrollItem(id: number, data: Partial<InsertPayrollItem>, companyId: number): Promise<PayrollItem | undefined> {
+    const [item] = await db.update(payrollItems)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(payrollItems.id, id), eq(payrollItems.companyId, companyId)))
+      .returning();
+    return item;
+  }
+
+  async deletePayrollItem(id: number, companyId: number): Promise<boolean> {
+    const result = await db.delete(payrollItems)
+      .where(and(eq(payrollItems.id, id), eq(payrollItems.companyId, companyId)));
+    return result.rowsAffected > 0;
+  }
+
+  async getEmployeePayrollHistory(employeeId: number, companyId: number): Promise<PayrollItem[]> {
+    return await db.select()
+      .from(payrollItems)
+      .where(and(
+        eq(payrollItems.employeeId, employeeId), 
+        eq(payrollItems.companyId, companyId)
+      ))
+      .orderBy(payrollItems.payPeriodStart);
+  }
+
+  async processPayroll(companyId: number, period: string): Promise<PayrollItem[]> {
+    // Get all active employees for the company
+    const activeEmployees = await db.select()
+      .from(employees)
+      .where(and(
+        eq(employees.companyId, companyId),
+        eq(employees.status, 'active'),
+        eq(employees.isActive, true)
+      ));
+
+    const payrollItems: PayrollItem[] = [];
+    
+    for (const employee of activeEmployees) {
+      // Check if payroll already exists for this period
+      const [existing] = await db.select()
+        .from(payrollItems)
+        .where(and(
+          eq(payrollItems.companyId, companyId),
+          eq(payrollItems.employeeId, employee.id),
+          eq(payrollItems.payrollPeriod, period)
+        ));
+
+      if (!existing) {
+        // Calculate payroll values
+        const basicSalary = parseFloat(employee.basicSalary);
+        const grossSalary = basicSalary; // For now, just basic salary
+        const payeTax = await this.calculatePayeTax(grossSalary, new Date().getFullYear());
+        const uifContribs = await this.calculateUifContribution(grossSalary);
+        const sdlContrib = await this.calculateSdlContribution(grossSalary);
+        
+        const totalDeductions = payeTax + uifContribs.employee;
+        const netSalary = grossSalary - totalDeductions;
+
+        // Create payroll period dates
+        const periodStart = new Date(period + '-01');
+        const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0);
+
+        const payrollData: InsertPayrollItem = {
+          companyId,
+          employeeId: employee.id,
+          payrollPeriod: period,
+          payPeriodStart: periodStart.toISOString().split('T')[0],
+          payPeriodEnd: periodEnd.toISOString().split('T')[0],
+          basicSalary: basicSalary.toFixed(2),
+          grossSalary: grossSalary.toFixed(2),
+          payeTax: payeTax.toFixed(2),
+          uifEmployee: uifContribs.employee.toFixed(2),
+          uifEmployer: uifContribs.employer.toFixed(2),
+          sdlContribution: sdlContrib.toFixed(2),
+          netSalary: netSalary.toFixed(2),
+          status: 'draft'
+        };
+
+        const [newPayrollItem] = await db.insert(payrollItems).values({
+          ...payrollData,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }).returning();
+        
+        payrollItems.push(newPayrollItem);
+      }
+    }
+
+    return payrollItems;
+  }
+
+  async approvePayroll(id: number, approvedBy: number, companyId: number): Promise<PayrollItem | undefined> {
+    const [item] = await db.update(payrollItems)
+      .set({ 
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(eq(payrollItems.id, id), eq(payrollItems.companyId, companyId)))
+      .returning();
+    return item;
+  }
+
+  // Employee Leave Management
+  async getEmployeeLeave(companyId: number, employeeId?: number): Promise<EmployeeLeave[]> {
+    const query = db.select()
+      .from(employeeLeave)
+      .where(eq(employeeLeave.companyId, companyId));
+    
+    if (employeeId) {
+      query.where(and(eq(employeeLeave.companyId, companyId), eq(employeeLeave.employeeId, employeeId)));
+    }
+    
+    return await query.orderBy(employeeLeave.startDate);
+  }
+
+  async createEmployeeLeave(data: InsertEmployeeLeave): Promise<EmployeeLeave> {
+    const [leave] = await db.insert(employeeLeave).values({
+      ...data,
+      appliedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return leave;
+  }
+
+  async updateEmployeeLeave(id: number, data: Partial<InsertEmployeeLeave>, companyId: number): Promise<EmployeeLeave | undefined> {
+    const [leave] = await db.update(employeeLeave)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(employeeLeave.id, id), eq(employeeLeave.companyId, companyId)))
+      .returning();
+    return leave;
+  }
+
+  async approveLeave(id: number, approvedBy: number, companyId: number): Promise<EmployeeLeave | undefined> {
+    const [leave] = await db.update(employeeLeave)
+      .set({ 
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(eq(employeeLeave.id, id), eq(employeeLeave.companyId, companyId)))
+      .returning();
+    return leave;
+  }
+
+  async rejectLeave(id: number, approvedBy: number, rejectionReason: string, companyId: number): Promise<EmployeeLeave | undefined> {
+    const [leave] = await db.update(employeeLeave)
+      .set({ 
+        status: 'rejected',
+        approvedBy,
+        approvedAt: new Date(),
+        rejectionReason,
+        updatedAt: new Date()
+      })
+      .where(and(eq(employeeLeave.id, id), eq(employeeLeave.companyId, companyId)))
+      .returning();
+    return leave;
+  }
+
+  // Payroll Tax Tables
+  async getPayrollTaxTables(taxYear: number): Promise<PayrollTaxTable[]> {
+    return await db.select()
+      .from(payrollTaxTables)
+      .where(and(eq(payrollTaxTables.taxYear, taxYear), eq(payrollTaxTables.isActive, true)))
+      .orderBy(payrollTaxTables.incomeFrom);
+  }
+
+  async calculatePayeTax(grossSalary: number, taxYear: number): Promise<number> {
+    // South African PAYE calculation for 2024/2025 tax year
+    const yearlyIncome = grossSalary * 12;
+    
+    // 2024/2025 tax brackets
+    if (yearlyIncome <= 95750) return 0;
+    if (yearlyIncome <= 237100) return ((yearlyIncome - 95750) * 0.18) / 12;
+    if (yearlyIncome <= 370500) return ((237100 - 95750) * 0.18 + (yearlyIncome - 237100) * 0.26) / 12;
+    if (yearlyIncome <= 512800) return ((237100 - 95750) * 0.18 + (370500 - 237100) * 0.26 + (yearlyIncome - 370500) * 0.31) / 12;
+    if (yearlyIncome <= 673000) return ((237100 - 95750) * 0.18 + (370500 - 237100) * 0.26 + (512800 - 370500) * 0.31 + (yearlyIncome - 512800) * 0.36) / 12;
+    if (yearlyIncome <= 857900) return ((237100 - 95750) * 0.18 + (370500 - 237100) * 0.26 + (512800 - 370500) * 0.31 + (673000 - 512800) * 0.36 + (yearlyIncome - 673000) * 0.39) / 12;
+    if (yearlyIncome <= 1817000) return ((237100 - 95750) * 0.18 + (370500 - 237100) * 0.26 + (512800 - 370500) * 0.31 + (673000 - 512800) * 0.36 + (857900 - 673000) * 0.39 + (yearlyIncome - 857900) * 0.41) / 12;
+    return ((237100 - 95750) * 0.18 + (370500 - 237100) * 0.26 + (512800 - 370500) * 0.31 + (673000 - 512800) * 0.36 + (857900 - 673000) * 0.39 + (1817000 - 857900) * 0.41 + (yearlyIncome - 1817000) * 0.45) / 12;
+  }
+
+  async calculateUifContribution(grossSalary: number): Promise<{ employee: number; employer: number }> {
+    // UIF is 1% employee + 1% employer, capped at R17,712 per month
+    const cappedSalary = Math.min(grossSalary, 17712);
+    const employee = cappedSalary * 0.01;
+    const employer = cappedSalary * 0.01;
+    return { employee, employer };
+  }
+
+  async calculateSdlContribution(grossSalary: number): Promise<number> {
+    // SDL is 1% of payroll for employer only
+    return grossSalary * 0.01;
+  }
+
+  // Gamified Tax Compliance Progress Tracker Methods
+  async createComplianceTracker(data: InsertComplianceTracker): Promise<ComplianceTracker> {
+    const [tracker] = await db.insert(complianceTracker).values(data).returning();
+    return tracker;
+  }
+
+  async getComplianceTracker(companyId: number): Promise<ComplianceTracker | undefined> {
+    const [tracker] = await db.select()
+      .from(complianceTracker)
+      .where(eq(complianceTracker.companyId, companyId))
+      .limit(1);
+    return tracker;
+  }
+
+  async updateComplianceTracker(companyId: number, data: Partial<InsertComplianceTracker>): Promise<ComplianceTracker | undefined> {
+    const [updated] = await db
+      .update(complianceTracker)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(complianceTracker.companyId, companyId))
+      .returning();
+    return updated;
+  }
+
+  async createComplianceAchievement(data: InsertComplianceAchievement): Promise<ComplianceAchievement> {
+    const [achievement] = await db.insert(complianceAchievements).values(data).returning();
+    return achievement;
+  }
+
+  async getAllComplianceAchievements(): Promise<ComplianceAchievement[]> {
+    return db.select()
+      .from(complianceAchievements)
+      .where(eq(complianceAchievements.isActive, true))
+      .orderBy(complianceAchievements.category, complianceAchievements.sortOrder);
+  }
+
+  async createUserAchievement(data: InsertComplianceUserAchievement): Promise<ComplianceUserAchievement> {
+    const [userAchievement] = await db.insert(complianceUserAchievements).values(data).returning();
+    return userAchievement;
+  }
+
+  async getUserAchievements(companyId: number, userId: number): Promise<ComplianceUserAchievement[]> {
+    return db.select()
+      .from(complianceUserAchievements)
+      .where(
+        and(
+          eq(complianceUserAchievements.companyId, companyId),
+          eq(complianceUserAchievements.userId, userId)
+        )
+      )
+      .orderBy(desc(complianceUserAchievements.unlockedAt));
+  }
+
+  async createComplianceMilestone(data: InsertComplianceMilestone): Promise<ComplianceMilestone> {
+    const [milestone] = await db.insert(complianceMilestones).values(data).returning();
+    return milestone;
+  }
+
+  async getAllComplianceMilestones(): Promise<ComplianceMilestone[]> {
+    return db.select()
+      .from(complianceMilestones)
+      .where(eq(complianceMilestones.isActive, true))
+      .orderBy(complianceMilestones.sortOrder);
+  }
+
+  async createUserMilestone(data: InsertComplianceUserMilestone): Promise<ComplianceUserMilestone> {
+    const [userMilestone] = await db.insert(complianceUserMilestones).values(data).returning();
+    return userMilestone;
+  }
+
+  async getUserMilestones(companyId: number, userId: number): Promise<ComplianceUserMilestone[]> {
+    return db.select()
+      .from(complianceUserMilestones)
+      .where(
+        and(
+          eq(complianceUserMilestones.companyId, companyId),
+          eq(complianceUserMilestones.userId, userId)
+        )
+      )
+      .orderBy(desc(complianceUserMilestones.achievedAt));
+  }
+
+  async createComplianceActivity(data: InsertComplianceActivity): Promise<ComplianceActivity> {
+    const [activity] = await db.insert(complianceActivities).values(data).returning();
+    return activity;
+  }
+
+  async getComplianceActivities(companyId: number, userId: number): Promise<ComplianceActivity[]> {
+    return db.select()
+      .from(complianceActivities)
+      .where(
+        and(
+          eq(complianceActivities.companyId, companyId),
+          eq(complianceActivities.userId, userId)
+        )
+      )
+      .orderBy(desc(complianceActivities.activityDate));
+  }
+
+  async getRecentComplianceActivities(companyId: number, userId: number, limit: number = 10): Promise<ComplianceActivity[]> {
+    return db.select()
+      .from(complianceActivities)
+      .where(
+        and(
+          eq(complianceActivities.companyId, companyId),
+          eq(complianceActivities.userId, userId)
+        )
+      )
+      .orderBy(desc(complianceActivities.activityDate))
+      .limit(limit);
   }
 }
 

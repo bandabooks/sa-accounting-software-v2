@@ -3,6 +3,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { formatCurrency } from "@/lib/utils-invoice";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 
 interface ProfitLossChartProps {
   data: Array<{
@@ -15,17 +19,130 @@ interface ProfitLossChartProps {
 
 export default function ProfitLossChart({ data }: ProfitLossChartProps) {
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
-  const [period, setPeriod] = useState('6months');
+  const [period, setPeriod] = useState('all');
+  const [customDateRange, setCustomDateRange] = useState<{from?: Date, to?: Date}>({});
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showFromCalendar, setShowFromCalendar] = useState(false);
+  const [showToCalendar, setShowToCalendar] = useState(false);
 
-  // Process and format chart data
-  const chartData = (data || []).map((item, index) => ({
-    month: new Date(item.month).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+  // Filter data based on selected period
+  const filterDataByPeriod = (data: Array<any>, period: string) => {
+    if (!data || data.length === 0) return data;
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    switch (period) {
+      case 'all':
+        return data; // Show all data
+      case 'custom': {
+        if (!customDateRange.from || !customDateRange.to) return data;
+        return data.filter(item => {
+          // Parse the date format "Aug 01" or "Jul 01" into proper dates
+          const [monthName, day] = item.month.split(' ');
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const monthIndex = monthNames.indexOf(monthName);
+          
+          // Set time boundaries for selected range
+          const fromDate = new Date(customDateRange.from!);
+          fromDate.setHours(0, 0, 0, 0);
+          const toDate = new Date(customDateRange.to!);
+          toDate.setHours(23, 59, 59, 999);
+          
+          // Check if the selected date range includes any part of this month
+          // For monthly data like "Aug 01", include it if the selected range overlaps with August
+          const monthStart = new Date(currentYear, monthIndex, 1);
+          const monthEnd = new Date(currentYear, monthIndex + 1, 0, 23, 59, 59, 999);
+          
+          // Include this month's data if the custom range overlaps with any part of the month
+          const rangeOverlapsMonth = (fromDate <= monthEnd) && (toDate >= monthStart);
+          
+          console.log('Custom date filtering:', {
+            itemMonth: item.month,
+            monthStart: monthStart.toDateString(),
+            monthEnd: monthEnd.toDateString(),
+            selectedFrom: fromDate.toDateString(),
+            selectedTo: toDate.toDateString(),
+            rangeOverlapsMonth: rangeOverlapsMonth
+          });
+          
+          return rangeOverlapsMonth;
+        });
+      }
+      case 'thismonth': {
+        // Parse the month string format like "Aug 01" and check if it's current month/year
+        return data.filter(item => {
+          const itemDate = new Date(`${item.month} ${currentYear}`);
+          return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+        });
+      }
+      case 'lastmonth': {
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        return data.filter(item => {
+          const itemDate = new Date(`${item.month} ${lastMonthYear}`);
+          return itemDate.getMonth() === lastMonth && itemDate.getFullYear() === lastMonthYear;
+        });
+      }
+      case '3months': {
+        const threeMonthsAgo = new Date(currentYear, currentMonth - 2, 1);
+        return data.filter(item => {
+          const itemDate = new Date(`${item.month} ${currentYear}`);
+          return itemDate >= threeMonthsAgo;
+        });
+      }
+      case '6months': {
+        const sixMonthsAgo = new Date(currentYear, currentMonth - 5, 1);
+        return data.filter(item => {
+          const itemDate = new Date(`${item.month} ${currentYear}`);
+          return itemDate >= sixMonthsAgo;
+        });
+      }
+      case '12months': {
+        const twelveMonthsAgo = new Date(currentYear, currentMonth - 11, 1);
+        return data.filter(item => {
+          const itemDate = new Date(`${item.month} ${currentYear}`);
+          return itemDate >= twelveMonthsAgo;
+        });
+      }
+      default:
+        return data;
+    }
+  };
+
+  // Process and format chart data with period filtering
+  const filteredData = filterDataByPeriod(data || [], period);
+  
+  // Format labels based on period type
+  const formatLabelForPeriod = (date: Date, period: string) => {
+    switch (period) {
+      case 'thisweek':
+      case 'lastweek':
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      case 'thismonth':
+      case 'lastmonth':
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      default:
+        return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    }
+  };
+  
+  const chartData = filteredData.length > 0 ? filteredData.map((item, index) => ({
+    month: formatLabelForPeriod(new Date(item.month), period),
     revenue: Number(item.revenue) || 0,
     expenses: Number(item.expenses) || 0,
     profit: Number(item.profit) || 0
-  })).reverse(); // Reverse to show chronological order
+  })).reverse() : []; // Reverse to show chronological order
   
-  console.log('Chart Data:', chartData); // Debug log
+  // Show summary metrics for current period
+  const totalRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
+  const totalExpenses = chartData.reduce((sum, item) => sum + item.expenses, 0);
+  const netProfit = totalRevenue - totalExpenses;
+  
+  console.log(`Chart Data for ${period}:`, chartData); // Debug log
+  console.log(`Original data received:`, data); // Debug original data
+  console.log(`Filtered data:`, filteredData); // Debug filtered data
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -37,15 +154,39 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
           </div>
           
           <div className="flex items-center space-x-3">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-32">
+            <Select value={period} onValueChange={(value) => {
+              setPeriod(value);
+              if (value === 'custom') {
+                setShowDatePicker(true);
+              }
+            }}>
+              <SelectTrigger className="w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="thismonth">This Month</SelectItem>
+                <SelectItem value="lastmonth">Last Month</SelectItem>
+                <SelectItem value="3months">3 Months</SelectItem>
                 <SelectItem value="6months">6 Months</SelectItem>
                 <SelectItem value="12months">12 Months</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
               </SelectContent>
             </Select>
+            
+            {period === 'custom' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDatePicker(!showDatePicker)}
+                className="text-xs"
+              >
+                {customDateRange.from && customDateRange.to 
+                  ? `${customDateRange.from.toLocaleDateString()} - ${customDateRange.to.toLocaleDateString()}`
+                  : 'Select Dates'
+                }
+              </Button>
+            )}
             
             <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <Button
@@ -70,9 +211,131 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
       </div>
       
       <div className="p-6">
+        {/* Custom Date Range Picker */}
+        {showDatePicker && period === 'custom' && (
+          <div className="mb-6 p-6 border border-gray-200 dark:border-gray-700 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-lg">
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Date Range</h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* From Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From Date</label>
+                <Popover open={showFromCalendar} onOpenChange={setShowFromCalendar}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateRange.from ? (
+                        format(customDateRange.from, "PPP")
+                      ) : (
+                        <span className="text-gray-500">Pick a start date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customDateRange.from}
+                      onSelect={(date) => {
+                        setCustomDateRange(prev => ({ ...prev, from: date }));
+                        setShowFromCalendar(false); // Close calendar after selection
+                      }}
+                      initialFocus
+                      className="rounded-md border"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* To Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To Date</label>
+                <Popover open={showToCalendar} onOpenChange={setShowToCalendar}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateRange.to ? (
+                        format(customDateRange.to, "PPP")
+                      ) : (
+                        <span className="text-gray-500">Pick an end date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customDateRange.to}
+                      onSelect={(date) => {
+                        setCustomDateRange(prev => ({ ...prev, to: date }));
+                        setShowToCalendar(false); // Close calendar after selection
+                      }}
+                      initialFocus
+                      className="rounded-md border"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCustomDateRange({});
+                  setShowDatePicker(false);
+                  setShowFromCalendar(false);
+                  setShowToCalendar(false);
+                  setPeriod('all');
+                }}
+                className="text-gray-600 dark:text-gray-400"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDatePicker(false);
+                  setShowFromCalendar(false);
+                  setShowToCalendar(false);
+                }}
+                disabled={!customDateRange.from || !customDateRange.to}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Apply Range
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Period Summary */}
+        {chartData.length > 0 && (
+          <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-600">{formatCurrency(totalRevenue.toString())}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Total Revenue</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-red-600">{formatCurrency(totalExpenses.toString())}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Total Expenses</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-lg font-semibold ${netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                {formatCurrency(netProfit.toString())}
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Net Profit</div>
+            </div>
+          </div>
+        )}
+        
         <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            {chartType === 'bar' ? (
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === 'bar' ? (
               <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-600" vertical={false} />
                 <XAxis 
@@ -188,6 +451,18 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
               </LineChart>
             )}
           </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <div className="text-4xl mb-3">📊</div>
+                <div className="text-lg font-medium mb-2">No data available</div>
+                <div className="text-sm">No transactions found for the selected period</div>
+                <div className="text-xs mt-2 text-gray-400">
+                  Try selecting a different time period or add some transactions
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Professional Legend */}

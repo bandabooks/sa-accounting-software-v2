@@ -20,7 +20,7 @@ const pageNames: Record<string, string> = {
   "/estimates": "Estimates", 
   "/customers": "Customers",
   "/reports": "Reports",
-  "/financial-reports": "Financial Reports",
+  "/advanced-analytics": "Advanced Analytics",
   "/expenses": "Expenses",
   "/suppliers": "Suppliers",
   "/purchase-orders": "Purchase Orders",

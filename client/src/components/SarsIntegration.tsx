@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ExternalLink, CheckCircle, XCircle, AlertTriangle, Settings } from "lucide-react";
+import { Loader2, ExternalLink, CheckCircle, XCircle, AlertTriangle, Settings, FileText, Users, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface SarsStatus {
@@ -16,8 +19,30 @@ interface SarsStatus {
   error: string | null;
 }
 
+interface PayrollSubmission {
+  id: string;
+  submissionType: 'EMP201' | 'EMP501';
+  periodMonth: number;
+  periodYear: number;
+  status: 'draft' | 'submitted' | 'accepted' | 'rejected' | 'error';
+  sarsReferenceNumber?: string;
+  submittedAt?: string;
+  error?: string;
+}
+
+interface IsvClientAccess {
+  id: string;
+  clientTaxNumber: string;
+  clientName: string;
+  accessLevel: 'full' | 'vat_only' | 'payroll_only';
+  status: 'active' | 'suspended' | 'revoked';
+  authorizedAt: string;
+  lastAccessAt?: string;
+}
+
 export function SarsIntegration() {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -27,16 +52,32 @@ export function SarsIntegration() {
     refetchInterval: 30000, // Check status every 30 seconds
   });
 
+  // Fetch payroll submissions
+  const { data: payrollSubmissions = [] } = useQuery<PayrollSubmission[]>({
+    queryKey: ["/api/sars/payroll/submissions"],
+    enabled: !!sarsStatus?.connected,
+  });
+
+  // Fetch ISV client access for tax practitioners
+  const { data: isvClients = [] } = useQuery<IsvClientAccess[]>({
+    queryKey: ["/api/sars/isv/access"],
+    enabled: !!sarsStatus?.connected,
+  });
+
   // Connect to SARS mutation
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("/api/sars/auth-url");
-      return response;
+      // For sandbox mode, create connection directly
+      await apiRequest("/api/sars/connect-sandbox", "POST");
+      return { success: true };
     },
-    onSuccess: (data) => {
-      setIsConnecting(true);
-      // Redirect to SARS OAuth
-      window.location.href = data.authUrl;
+    onSuccess: (data: any) => {
+      toast({
+        title: "Connected to SARS Sandbox",
+        description: "Sandbox connection established for testing",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/sars/status"] });
+      setIsConnecting(false);
     },
     onError: (error) => {
       setIsConnecting(false);
@@ -51,11 +92,9 @@ export function SarsIntegration() {
   // Test connection mutation
   const testMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/sars/test", {
-        method: "POST",
-      });
+      return await apiRequest("/api/sars/test", "POST");
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.success) {
         toast({
           title: "Connection Test Successful",
@@ -82,9 +121,7 @@ export function SarsIntegration() {
   // Disconnect mutation
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/sars/disconnect", {
-        method: "DELETE",
-      });
+      return await apiRequest("/api/sars/disconnect", "DELETE");
     },
     onSuccess: () => {
       toast({
@@ -201,14 +238,14 @@ export function SarsIntegration() {
             <div className="space-y-2">
               <div className="text-sm font-medium">Last Connection</div>
               <div className="text-sm text-muted-foreground">
-                {formatDate(sarsStatus?.linkedAt)}
+                {formatDate(sarsStatus?.linkedAt || null)}
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="text-sm font-medium">Last Sync</div>
               <div className="text-sm text-muted-foreground">
-                {formatDate(sarsStatus?.lastSyncAt)}
+                {formatDate(sarsStatus?.lastSyncAt || null)}
               </div>
             </div>
           </div>
@@ -271,27 +308,228 @@ export function SarsIntegration() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button 
+                onClick={() => setLocation('/vat-returns')}
+                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent hover:border-primary transition-colors cursor-pointer text-left"
+              >
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="font-medium">VAT201 Submissions</div>
+                  <div className="font-medium">VAT201 Returns</div>
                   <div className="text-sm text-muted-foreground">
                     Submit VAT returns directly to SARS
                   </div>
                 </div>
-              </div>
+              </button>
 
-              <div className="flex items-center gap-3 p-3 border rounded-lg">
+              <button 
+                onClick={() => setLocation('/emp201')}
+                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent hover:border-primary transition-colors cursor-pointer text-left"
+              >
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="font-medium">Status Tracking</div>
+                  <div className="font-medium">EMP201/EMP501</div>
                   <div className="text-sm text-muted-foreground">
-                    Track submission status and responses
+                    Submit payroll returns to SARS
                   </div>
                 </div>
-              </div>
+              </button>
+
+              <button 
+                onClick={() => {
+                  toast({
+                    title: "ITR12/ITR14 Returns",
+                    description: "Tax return submission coming soon. This feature is under development.",
+                  });
+                }}
+                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent hover:border-primary transition-colors cursor-pointer text-left"
+              >
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <div>
+                  <div className="font-medium">ITR12/ITR14</div>
+                  <div className="text-sm text-muted-foreground">
+                    Individual and company tax returns
+                  </div>
+                </div>
+              </button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {sarsStatus?.connected && (
+        <Card>
+          <CardHeader>
+            <CardTitle>SARS Services</CardTitle>
+            <CardDescription>
+              Manage your SARS submissions and client access
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="payroll" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="payroll">Payroll Returns</TabsTrigger>
+                <TabsTrigger value="isv">Client Access</TabsTrigger>
+                <TabsTrigger value="compliance">Compliance</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="payroll" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">EMP201/EMP501 Submissions</h3>
+                  <Button 
+                    size="sm"
+                    onClick={() => {
+                      toast({
+                        title: "New Payroll Submission",
+                        description: "Navigate to Employee Management > Payroll to generate EMP201/EMP501 returns",
+                      });
+                    }}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    New Submission
+                  </Button>
+                </div>
+                
+                {payrollSubmissions.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Period</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Reference</TableHead>
+                        <TableHead>Submitted</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payrollSubmissions.map((submission) => (
+                        <TableRow key={submission.id}>
+                          <TableCell className="font-medium">{submission.submissionType}</TableCell>
+                          <TableCell>{submission.periodMonth}/{submission.periodYear}</TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                submission.status === 'accepted' ? 'default' :
+                                submission.status === 'submitted' ? 'secondary' :
+                                submission.status === 'rejected' || submission.status === 'error' ? 'destructive' :
+                                'outline'
+                              }
+                            >
+                              {submission.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{submission.sarsReferenceNumber || '-'}</TableCell>
+                          <TableCell>
+                            {submission.submittedAt ? formatDate(submission.submittedAt) : '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No payroll submissions yet</p>
+                    <p className="text-sm">Create your first EMP201 or EMP501 submission</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="isv" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">ISV Client Access</h3>
+                  <Button 
+                    size="sm"
+                    onClick={() => {
+                      toast({
+                        title: "Add SARS Client Access",
+                        description: "Multi-client access for tax practitioners. Feature coming soon.",
+                      });
+                    }}
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Add Client
+                  </Button>
+                </div>
+                
+                {isvClients.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Client Name</TableHead>
+                        <TableHead>Tax Number</TableHead>
+                        <TableHead>Access Level</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Access</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isvClients.map((client) => (
+                        <TableRow key={client.id}>
+                          <TableCell className="font-medium">{client.clientName}</TableCell>
+                          <TableCell>{client.clientTaxNumber}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {client.accessLevel.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                client.status === 'active' ? 'default' :
+                                client.status === 'suspended' ? 'secondary' :
+                                'destructive'
+                              }
+                            >
+                              {client.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {client.lastAccessAt ? formatDate(client.lastAccessAt) : 'Never'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No client access configured</p>
+                    <p className="text-sm">For Tax Practitioners: Authorize access to client companies</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="compliance" className="space-y-4">
+                <h3 className="text-lg font-medium">Compliance Overview</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">VAT Returns</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Next Due</span>
+                        <Badge variant="outline">28 Feb 2025</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">EMP201 Returns</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Next Due</span>
+                        <Badge variant="outline">7 Feb 2025</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}

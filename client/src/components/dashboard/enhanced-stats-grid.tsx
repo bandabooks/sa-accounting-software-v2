@@ -57,7 +57,7 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       icon: ChartLine,
       iconBg: "bg-green-100 dark:bg-green-900/20",
       iconColor: "text-green-600 dark:text-green-400",
-      onClick: () => setLocation("/financial-reports?report=profit-loss")
+      onClick: () => setLocation("/advanced-analytics?report=profit-loss")
     },
     {
       title: "Outstanding Invoices", 
@@ -107,7 +107,7 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       icon: TrendingUp,
       iconBg: "bg-emerald-100 dark:bg-emerald-900/20",
       iconColor: "text-emerald-600 dark:text-emerald-400",
-      onClick: () => setLocation("/financial-reports?report=aged-receivables")
+      onClick: () => setLocation("/advanced-analytics?report=aged-receivables")
     });
   }
 
@@ -124,7 +124,7 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
       icon: TrendingDown,
       iconBg: "bg-orange-100 dark:bg-orange-900/20",
       iconColor: "text-orange-600 dark:text-orange-400",
-      onClick: () => setLocation("/financial-reports?report=aged-payables")
+      onClick: () => setLocation("/advanced-analytics?report=aged-payables")
     });
   }
 

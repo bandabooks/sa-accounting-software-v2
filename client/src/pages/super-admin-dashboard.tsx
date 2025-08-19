@@ -247,9 +247,10 @@ export default function SuperAdminDashboard() {
       </div>
 
       <Tabs defaultValue="analytics" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="plans">Subscription Plans</TabsTrigger>
+          <TabsTrigger value="monitoring">Subscription Monitoring</TabsTrigger>
           <TabsTrigger value="companies">Companies</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="settings">System Settings</TabsTrigger>
@@ -464,6 +465,36 @@ export default function SuperAdminDashboard() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="monitoring" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Subscription Monitoring
+              </CardTitle>
+              <CardDescription>
+                Access detailed trial users, active subscribers, and revenue analytics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <CreditCard className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Advanced Subscription Analytics</h3>
+                <p className="text-gray-600 mb-6">
+                  Monitor trial conversions, track revenue, and manage subscription health with dedicated tools.
+                </p>
+                <Button 
+                  size="lg"
+                  onClick={() => setLocation("/admin/subscriptions")}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Open Subscription Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="companies" className="space-y-6">

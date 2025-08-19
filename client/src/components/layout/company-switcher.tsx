@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { 
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Building2, ChevronDown, ArrowRight, Plus, Sparkles, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CompanyCreationForm from "@/components/forms/CompanyCreationForm";
 
 interface Company {
   id: number;
@@ -36,7 +37,9 @@ interface UserCompany {
 export default function CompanySwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { companyId, switchCompany, isLoading: companyLoading } = useCompany();
+  const queryClient = useQueryClient();
 
   // Get user's companies
   const { data: userCompanies = [], isLoading: companiesLoading } = useQuery<UserCompany[]>({
@@ -81,8 +84,13 @@ export default function CompanySwitcher() {
   const handleCreateCompanyClick = () => {
     setIsOpen(false); // Close the dropdown
     setSearchQuery(""); // Clear search
-    // Navigate to companies page where the main creation form exists with subscription dropdown
-    window.location.href = '/companies?create=true';
+    setIsCreateDialogOpen(true); // Open the creation dialog directly
+  };
+
+  const handleCreationSuccess = () => {
+    // Refresh companies list after successful creation
+    queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/companies/active"] });
   };
 
   const handleDropdownOpenChange = (open: boolean) => {
@@ -279,6 +287,13 @@ export default function CompanySwitcher() {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    {/* Company Creation Form Dialog */}
+    <CompanyCreationForm 
+      isOpen={isCreateDialogOpen}
+      onClose={() => setIsCreateDialogOpen(false)}
+      onSuccess={handleCreationSuccess}
+    />
   </>
   );
 }

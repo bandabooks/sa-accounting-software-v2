@@ -154,21 +154,32 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
     // EXACTLY MATCH REACT TABLE - Items Table with blue-700 header  
     const tableStartY = 90;
     
-    // Table header background - matching bg-blue-700 extending to payment box edge
-    pdf.setFillColor(29, 78, 216); // Blue-700 exactly
-    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F'); // Full width to match payment box alignment
+    // Table header background - properly aligned full width
+    pdf.setFillColor(29, 78, 216); // Blue-700
+    pdf.rect(20, tableStartY, pageWidth - 40, 10, 'F');
     
-    // Crystal white bold headers without Product/Service column
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold"); // Bold font for headers
-    pdf.setTextColor(255, 255, 255); // Crystal white text
-    pdf.text("#", 25, tableStartY + 6);
-    pdf.text("Description", 40, tableStartY + 6);
-    pdf.text("Qty", 108, tableStartY + 6, { align: 'center' });
-    pdf.text("Unit Price", 128, tableStartY + 6, { align: 'center' });
-    pdf.text("VAT Rate", 148, tableStartY + 6, { align: 'center' });
-    pdf.text("Line VAT", 168, tableStartY + 6, { align: 'center' });
-    pdf.text("Total", 188, tableStartY + 6, { align: 'center' });
+    // Properly spaced column headers with better alignment and smaller font
+    pdf.setFontSize(7); // Reduced font size for better spacing
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(255, 255, 255);
+    
+    // Calculate proper column positions with no gaps
+    const tableWidth = pageWidth - 40; // Available table width
+    const col1 = 25;  // # column
+    const col2 = 30;  // Description column (moved closer to # column to eliminate gap)
+    const col3 = 110; // Qty column  
+    const col4 = 125; // Unit Price column
+    const col5 = 145; // VAT Rate column
+    const col6 = 160; // Line VAT column (more space from VAT Rate)
+    const col7 = pageWidth - 22; // Total column (right-aligned with more margin)
+    
+    pdf.text("#", col1, tableStartY + 6);
+    pdf.text("Description", col2, tableStartY + 6);
+    pdf.text("Qty", col3, tableStartY + 6, { align: 'center' });
+    pdf.text("Price", col4, tableStartY + 6, { align: 'center' }); // Shortened for space
+    pdf.text("VAT%", col5, tableStartY + 6, { align: 'center' }); // Shortened for space
+    pdf.text("VAT", col6, tableStartY + 6, { align: 'center' }); // Shortened for clarity
+    pdf.text("Total", col7, tableStartY + 6, { align: 'right' });
 
     // Table rows with improved spacing and alignment
     pdf.setTextColor(0, 0, 0);
@@ -186,67 +197,170 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       pdf.setDrawColor(243, 244, 246); // Gray-100
       pdf.line(20, currentY + 6, pageWidth - 20, currentY + 6); // Full width to match header
       
-      pdf.setFontSize(8);
+      pdf.setFontSize(7); // Reduced font size for better spacing
       pdf.setFont("helvetica", "normal"); // Reset to normal font for data
       pdf.setTextColor(75, 85, 99); // Gray-600 for line numbers
-      pdf.text((index + 1).toString(), 25, currentY);
+      pdf.text((index + 1).toString(), col1, currentY);
       
-      // Description with full text display - up to 6 lines with expandable space
+      // Enhanced Item Display: Product Name (bold) + Description (normal)
       pdf.setTextColor(0, 0, 0);
-      let description = item.description || "N/A";
+      const maxDescriptionWidth = 65;
+      let totalLinesUsed = 0;
+      let currentTextY = currentY;
       
-      // Calculate available width for description (from position 35 to quantity column at 110)
-      const maxDescriptionWidth = 70; // Increased space for description column
+      // Extract product name and description from stored data
+      const description = item.description || "N/A";
       
-      // Split description into lines that fit within the available width
-      const words = description.split(' ');
-      const lines = [];
-      let currentLine = '';
+      // The form stores both product name and description together
+      // We need to intelligently separate them based on the actual invoice creation form structure
+      let productName = "";
+      let actualDescription = "";
       
-      for (let i = 0; i < words.length; i++) {
-        const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
-        if (pdf.getTextWidth(testLine) > maxDescriptionWidth && currentLine) {
-          lines.push(currentLine);
-          currentLine = words[i];
+      // Looking at the user's example: "Annual Financial Statements (AFS)" is the product name
+      // and "Preparation of basic annual financial statements..." is the description
+      
+      // Pattern 1: Product name in parentheses like "Product Name (CODE)"
+      const parenthesesMatch = description.match(/^([^(]+\([^)]+\))/);
+      if (parenthesesMatch) {
+        productName = parenthesesMatch[1].trim();
+        actualDescription = description.replace(parenthesesMatch[1], "").trim();
+      }
+      // Pattern 2: Check for common service names that end with specific keywords
+      else if (description.match(/^(.*(?:Services?|Statements?|Returns?|Filing|Fees?|Ownership|Annual|CIPC|VAT|Income|Tax)(?:\s*\([^)]+\))?)\s+(.+)/i)) {
+        const match = description.match(/^(.*(?:Services?|Statements?|Returns?|Filing|Fees?|Ownership|Annual|CIPC|VAT|Income|Tax)(?:\s*\([^)]+\))?)\s+(.+)/i);
+        if (match) {
+          productName = match[1].trim();
+          actualDescription = match[2].trim();
+        }
+      }
+      // Pattern 3: Traditional separators
+      else if (description.includes(" - ")) {
+        const parts = description.split(" - ");
+        productName = parts[0].trim();
+        actualDescription = parts.slice(1).join(" - ").trim();
+      } else if (description.includes(": ")) {
+        const parts = description.split(": ");
+        productName = parts[0].trim();
+        actualDescription = parts.slice(1).join(": ").trim();
+      }
+      // Pattern 4: Fallback - if description is very long, try to extract service name
+      else {
+        const words = description.split(' ');
+        if (words.length > 6) {
+          // Look for capitalized words at the beginning (likely service names)
+          let serviceNameWords = [];
+          for (let i = 0; i < Math.min(6, words.length); i++) {
+            const word = words[i];
+            // Stop at first lowercase word that's not a common service word
+            if (word[0] && word[0] === word[0].toLowerCase() && 
+                !['of', 'for', 'and', 'with', 'the'].includes(word.toLowerCase())) {
+              break;
+            }
+            serviceNameWords.push(word);
+          }
+          
+          if (serviceNameWords.length >= 2) {
+            productName = serviceNameWords.join(' ');
+            actualDescription = words.slice(serviceNameWords.length).join(' ');
+          } else {
+            // Short description - treat entire text as product name
+            productName = description;
+            actualDescription = "";
+          }
         } else {
-          currentLine = testLine;
+          // Short description - treat as product name only
+          productName = description;
+          actualDescription = "";
         }
       }
       
-      // Add the last line
-      if (currentLine) {
-        lines.push(currentLine);
+      // Display Product Name in BOLD (first line)
+      if (productName) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(7);
+        
+        // Split product name if too long
+        const productWords = productName.split(' ');
+        const productLines = [];
+        let currentProductLine = '';
+        
+        for (let i = 0; i < productWords.length; i++) {
+          const testLine = currentProductLine + (currentProductLine ? ' ' : '') + productWords[i];
+          if (pdf.getTextWidth(testLine) > maxDescriptionWidth && currentProductLine) {
+            productLines.push(currentProductLine);
+            currentProductLine = productWords[i];
+          } else {
+            currentProductLine = testLine;
+          }
+        }
+        if (currentProductLine) {
+          productLines.push(currentProductLine);
+        }
+        
+        // Display product name lines
+        productLines.forEach((line, lineIndex) => {
+          pdf.text(line, col2, currentTextY + (lineIndex * 4));
+        });
+        
+        totalLinesUsed += productLines.length;
+        currentTextY += productLines.length * 4;
       }
       
-      // Limit to 6 lines maximum and display all lines
-      const maxLines = 6;
-      const displayLines = lines.slice(0, maxLines);
-      
-      // Display each line with proper alignment
-      displayLines.forEach((line, lineIndex) => {
-        pdf.text(line, 35, currentY + (lineIndex * 4));
-      });
-      
-      // If we had more than 6 lines, add ellipsis to the last line
-      if (lines.length > maxLines) {
-        const lastLineIndex = maxLines - 1;
-        const lastLine = displayLines[lastLineIndex];
-        const ellipsisLine = lastLine.substring(0, lastLine.length - 3) + '...';
-        pdf.text(ellipsisLine, 35, currentY + (lastLineIndex * 4));
+      // Display Description in NORMAL text (below product name)
+      if (actualDescription) {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7);
+        
+        // Split description into lines
+        const descWords = actualDescription.split(' ');
+        const descLines = [];
+        let currentDescLine = '';
+        
+        for (let i = 0; i < descWords.length; i++) {
+          const testLine = currentDescLine + (currentDescLine ? ' ' : '') + descWords[i];
+          if (pdf.getTextWidth(testLine) > maxDescriptionWidth && currentDescLine) {
+            descLines.push(currentDescLine);
+            currentDescLine = descWords[i];
+          } else {
+            currentDescLine = testLine;
+          }
+        }
+        if (currentDescLine) {
+          descLines.push(currentDescLine);
+        }
+        
+        // Limit total lines to 6 (including product name)
+        const maxRemainingLines = Math.max(0, 6 - totalLinesUsed);
+        const displayDescLines = descLines.slice(0, maxRemainingLines);
+        
+        // Display description lines
+        displayDescLines.forEach((line, lineIndex) => {
+          pdf.text(line, col2, currentTextY + (lineIndex * 4));
+        });
+        
+        // Add ellipsis if we truncated
+        if (descLines.length > maxRemainingLines && maxRemainingLines > 0) {
+          const lastLineIndex = maxRemainingLines - 1;
+          const lastLine = displayDescLines[lastLineIndex];
+          const ellipsisLine = lastLine.substring(0, lastLine.length - 3) + '...';
+          pdf.text(ellipsisLine, col2, currentTextY + (lastLineIndex * 4));
+        }
+        
+        totalLinesUsed += Math.min(displayDescLines.length, maxRemainingLines);
       }
       
-      // Store the number of lines used for row spacing calculation
-      const descriptionLinesUsed = Math.min(displayLines.length, maxLines);
+      // If we only have product name, ensure minimum spacing
+      const descriptionLinesUsed = Math.max(1, totalLinesUsed);
       
-      // Professional data alignment matching optimized headers with adjusted positions
+      // Align data with the new column positions
       const qtyText = (item.quantity?.toString() || "1");
-      pdf.text(qtyText, 108, currentY, { align: 'center' });
+      pdf.text(qtyText, col3, currentY, { align: 'center' });
       
       const unitPriceText = formatCurrency(item.unitPrice || 0);
-      pdf.text(unitPriceText, 128, currentY, { align: 'center' });
+      pdf.text(unitPriceText, col4, currentY, { align: 'center' });
       
       const vatRateText = `${item.vatRate || 15}%`;
-      pdf.text(vatRateText, 148, currentY, { align: 'center' });
+      pdf.text(vatRateText, col5, currentY, { align: 'center' });
       
       // Calculate line total and VAT using the same logic as the UI (invoice-create.tsx)
       const quantity = parseFloat(item.quantity?.toString() || "1");
@@ -266,12 +380,12 @@ export async function generateInvoicePDF(invoice: InvoiceWithCustomer): Promise<
       }
       
       const lineVatText = formatCurrency(lineVatAmount);
-      pdf.text(lineVatText, 168, currentY, { align: 'center' });
+      pdf.text(lineVatText, col6, currentY, { align: 'center' });
       
       // CRITICAL FIX: Total should be the lineAmount for VAT-inclusive (not item.total)
       // This ensures PDF shows R10,000.00 matching the user input
       const totalText = formatCurrency(lineAmount);
-      pdf.text(totalText, 188, currentY, { align: 'center' });
+      pdf.text(totalText, col7, currentY, { align: 'right' });
       
       // Dynamic row spacing based on description length
       const rowExtraHeight = Math.max(0, (descriptionLinesUsed - 1) * 4);

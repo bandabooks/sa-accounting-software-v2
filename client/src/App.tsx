@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserActivity } from "@/hooks/useUserActivity";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
@@ -65,6 +66,7 @@ import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
 import SuperAdminAuditLogs from "@/pages/super-admin-audit-logs";
 import ProfessionalIdsManagement from "@/pages/admin/professional-ids";
 import Subscription from "@/pages/subscription";
+import AdminSubscriptions from "@/pages/admin-subscriptions";
 import SubscriptionSuccess from "@/pages/subscription-success";
 import SubscriptionCancel from "@/pages/subscription-cancel";
 import SubscriptionPayment from "@/pages/subscription-payment";
@@ -72,11 +74,14 @@ import PaymentSuccess from "@/pages/payment-success";
 import PaymentCancel from "@/pages/payment-cancel";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
+import AlertsPage from "@/pages/alerts";
 import TimeTracking from "@/pages/time-tracking";
 import VatManagement from "@/pages/vat-management";
 import VATSettings from "@/pages/vat-settings";
 import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
+import EMP201Returns from "@/pages/emp201";
+import VATTransactionAnalysis from "@/pages/vat-transaction-analysis";
 import VATReportsPage from "@/pages/vat-reports";
 import VATPreparation from "@/pages/vat-preparation";
 import VATHistory from "@/pages/vat-history";
@@ -103,6 +108,7 @@ import Onboarding from "@/pages/onboarding";
 import SpendingWizard from "@/pages/spending-wizard";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
 import ComplianceClients from "@/pages/compliance-clients";
+import ComplianceTracker from "@/pages/compliance-tracker";
 import CustomerLifecycle from "@/pages/customer-lifecycle";
 import CommunicationCenter from "@/pages/communication-center";
 import CustomerSegments from "@/pages/customer-segments";
@@ -120,6 +126,11 @@ import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
 import BulkCapture from "@/pages/bulk-capture";
+
+// Employee Management imports
+import EmployeesPage from "@/pages/employees";
+import PayrollPage from "@/pages/employees/payroll";
+import AttendancePage from "@/pages/employees/attendance";
 import SalesDashboard from "@/pages/sales-dashboard";
 import SalesOrders from "@/pages/sales-orders";
 import SalesOrderCreate from "@/pages/sales-order-create";
@@ -128,7 +139,7 @@ import CreditNoteCreate from "@/pages/credit-note-create";
 import CustomerPayments from "@/pages/customer-payments";
 import CustomerPaymentRecord from "@/pages/customer-payment-record";
 import Deliveries from "@/pages/deliveries";
-import Payments from "@/pages/payments";
+
 // import NewPayment from "@/pages/new-payment"; // Commented out - file doesn't exist
 import SalesReports from "@/pages/sales-reports";
 import PurchaseDashboard from "@/pages/purchase-dashboard";
@@ -159,6 +170,7 @@ import POSTerminals from "@/pages/pos-terminals";
 // import POSShiftManagement from "@/pages/pos-shift-management";
 import ProfessionalServices from "@/pages/professional-services";
 import FinancialReportsPage from "@/pages/reports/financial";
+import ProfitLossDetailedPage from "@/pages/reports/profit-loss-detailed";
 import AppLayout from "@/components/layout/app-layout";
 import { AIHealthBanner } from "@/components/ai-assistant/AIHealthBanner";
 import AIMonitorPage from "@/pages/ai-monitor";
@@ -212,9 +224,22 @@ const PERMISSIONS = {
   // Exception handling permissions
   EXCEPTIONS_VIEW: 'exceptions:view',
   EXCEPTIONS_MANAGE: 'exceptions:manage',
+  // Employee Management permissions
+  EMPLOYEES_VIEW: 'employees:view',
+  EMPLOYEES_CREATE: 'employees:create',
+  EMPLOYEES_UPDATE: 'employees:update',
+  EMPLOYEES_DELETE: 'employees:delete',
+  PAYROLL_VIEW: 'payroll:view',
+  PAYROLL_CREATE: 'payroll:create',
+  PAYROLL_APPROVE: 'payroll:approve',
+  ATTENDANCE_VIEW: 'attendance:view',
+  ATTENDANCE_MANAGE: 'attendance:manage',
 } as const;
 
 function AuthenticatedApp() {
+  // Track user activity for real-time monitoring
+  useUserActivity();
+  
   return (
     <CompanyProvider>
       <AppLayout>
@@ -363,11 +388,7 @@ function AuthenticatedApp() {
             <CreditNoteCreate />
           </ProtectedRoute>
         </Route>
-        <Route path="/payments">
-          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
-            <Payments />
-          </ProtectedRoute>
-        </Route>
+
         {/* Removed /payments/new route - component doesn't exist */}
         <Route path="/sales-reports">
           <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
@@ -430,6 +451,23 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
 
+        {/* Employee Management Routes */}
+        <Route path="/employees">
+          <ProtectedRoute permission={PERMISSIONS.EMPLOYEES_VIEW}>
+            <EmployeesPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/employees/payroll">
+          <ProtectedRoute permission={PERMISSIONS.PAYROLL_VIEW}>
+            <PayrollPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/employees/attendance">
+          <ProtectedRoute permission={PERMISSIONS.ATTENDANCE_VIEW}>
+            <AttendancePage />
+          </ProtectedRoute>
+        </Route>
+
         <Route path="/products">
           <Products />
         </Route>
@@ -452,7 +490,7 @@ function AuthenticatedApp() {
             <GeneralReports />
           </ProtectedRoute>
         </Route>
-        <Route path="/financial-reports">
+        <Route path="/advanced-analytics">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <FinancialReports />
           </ProtectedRoute>
@@ -460,6 +498,11 @@ function AuthenticatedApp() {
         <Route path="/reports/financial">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <FinancialReportsPage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/reports/profit-loss-detailed">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <ProfitLossDetailedPage />
           </ProtectedRoute>
         </Route>
         <Route path="/reports/aging">
@@ -502,6 +545,11 @@ function AuthenticatedApp() {
         <Route path="/activities">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <Activities />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/alerts">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <AlertsPage />
           </ProtectedRoute>
         </Route>
         <Route path="/alerts">
@@ -738,6 +786,16 @@ function AuthenticatedApp() {
             <VATHistory />
           </ProtectedRoute>
         </Route>
+        <Route path="/emp201">
+          <ProtectedRoute permission={PERMISSIONS.PAYROLL_VIEW}>
+            <EMP201Returns />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-transaction-analysis">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <VATTransactionAnalysis />
+          </ProtectedRoute>
+        </Route>
         <Route path="/enterprise-settings">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <EnterpriseSettings />
@@ -777,6 +835,11 @@ function AuthenticatedApp() {
         <Route path="/subscription">
           <ProtectedRoute>
             <Subscription />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/subscriptions">
+          <ProtectedRoute requiredRole="super_admin">
+            <AdminSubscriptions />
           </ProtectedRoute>
         </Route>
         <Route path="/subscription/payment/:planId/:period">
@@ -834,6 +897,11 @@ function AuthenticatedApp() {
         <Route path="/compliance/clients">
           <ProtectedRoute>
             <ComplianceClients />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/tracker">
+          <ProtectedRoute>
+            <ComplianceTracker />
           </ProtectedRoute>
         </Route>
 

@@ -1,0 +1,61 @@
+Task: Verify and Finalize Existing SARS Integration Module (Do NOT duplicate)
+
+Check existing module
+
+Confirm that the SARS Integration module already exists in /settings/integrations/sars (backend + frontend).
+
+Verify DB schema/table for SARS settings is present (integration_sars_settings or equivalent).
+
+Ensure role restriction (Super Admin + Admin only) is active (requireOwnerOrSuperAdmin or equivalent).
+
+Sandbox connectivity
+
+Configure and test the connection to SARS Sandbox API with current stored credentials (base URL, client ID, client secret, certificate).
+
+Run a basic auth handshake (/token or equivalent) and confirm last_verified is updated correctly in DB.
+
+Log results in audit trail (success/failure).
+
+Client-side setup flow
+
+Verify UI form fields (Base URL, Client ID, Client Secret [masked], Certificate Path/Alias, Environment switch [Sandbox/Prod], Callback URL, Scopes).
+
+Confirm Save persists securely (secret encryption + mask).
+
+Confirm Test Connection triggers API verification and updates last_verified.
+
+Confirm role restriction works: only Super Admin/Admin can view or change these fields.
+
+Self-use (Tech Practitioner scenario)
+
+Verify that our own company (using the system as a practitioner) can also configure its SARS integration under the same flow.
+
+Clarify this process in docs/integrations/sars.md so client-users know:
+
+Go to Settings → Integrations → SARS
+
+Enter credentials from SARS sandbox/production
+
+Save → Test Connection
+
+Once verified, integration is active
+
+QA Checklist
+
+Attempt update without secret (should keep existing secret).
+
+Verify secret masking/unmask works correctly.
+
+Confirm audit trail logs every change (mask secrets).
+
+Confirm subscription-level restriction: only Super Admin + Admin can access SARS settings.
+
+Ensure no duplicate module exists in codebase.
+
+Deliverables
+
+Verification report in PR/commit message: “Verified existing SARS Integration module, sandbox connection working, role restrictions applied, client setup clarified.”
+
+No duplicate code or tables.
+
+Updated docs in docs/integrations/sars.md.

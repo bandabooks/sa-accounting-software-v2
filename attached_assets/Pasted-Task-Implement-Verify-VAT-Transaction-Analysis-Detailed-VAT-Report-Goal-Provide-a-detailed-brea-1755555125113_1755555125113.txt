@@ -1,0 +1,84 @@
+Task: Implement/Verify VAT Transaction Analysis (Detailed VAT Report)
+
+Goal: Provide a detailed breakdown of all VAT-related transactions (sales and purchases) so that VAT Summary totals can be traced line by line.
+
+1. Data scope
+
+Query Invoices / Credit Notes / Receipts (Output VAT → sales).
+
+Query Bills / Supplier Invoices / Expenses / Payments (Input VAT → purchases).
+
+Apply date range filter (posting date or invoice date).
+
+Apply VetPilot filter so report shows only data for the selected pilot (or all if none selected).
+
+2. Fields required in the report
+For each transaction include:
+
+Transaction Type (Invoice, Credit Note, Bill, Expense, etc.)
+
+Transaction Number / Reference
+
+Date (invoice date or posting date)
+
+Customer (for sales) / Supplier (for purchases)
+
+Net Amount (before VAT)
+
+VAT Amount
+
+Gross Amount (net + VAT)
+
+VAT Code applied (e.g., Standard 15%, Zero-rated, Exempt)
+
+VetPilot / Company name (if multi-entity system)
+
+[Optional: GL account, captured by user, status = Posted/Draft]
+
+3. Report structure
+
+Two main sections:
+
+Output VAT (Sales) → list of all invoices with VAT.
+
+Input VAT (Purchases) → list of all expenses with VAT.
+
+At the bottom of each section, show section totals (Net, VAT, Gross).
+
+Totals from this report must equal VAT Summary totals.
+
+4. Export / output
+
+Provide table in the UI with pagination or scrolling.
+
+Add Export options (CSV, Excel, PDF).
+
+PDF should include company header, VAT period, VetPilot filter, and both sections with totals.
+
+5. Validation / tests
+
+Create sample data:
+
+Invoice: R8,500 with 15% VAT (VAT R1,275).
+
+Expense: R1,000 with 15% VAT (VAT R150).
+
+VAT Transaction Analysis should show both rows, totals: Output VAT = R1,275, Input VAT = R150.
+
+VAT Summary must equal the sum of VAT Transaction Analysis.
+
+6. Logging / QA
+
+Add debug logs: counts of invoices/expenses loaded, VAT totals before/after filters.
+
+Verify “VetPilot filter” reduces data correctly.
+
+7. Deliverables
+
+New/verified API endpoint: /api/reports/vat/transactions returning detailed VAT rows.
+
+Frontend page: VAT Transaction Analysis tab showing detailed rows in table with export options.
+
+Tests: Ensure detailed report totals = VAT Summary totals for the same date range + pilot.
+
+PR title: feat(vat): add VAT Transaction Analysis detailed report.

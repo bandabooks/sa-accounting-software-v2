@@ -1,0 +1,904 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { EnhancedTabs, EnhancedTabsContent, EnhancedTabsList, EnhancedTabsTrigger } from "@/components/ui/enhanced-tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { 
+  Calculator, 
+  Users, 
+  Building2, 
+  FileText, 
+  DollarSign, 
+  Calendar, 
+  Settings, 
+  AlertCircle, 
+  CheckCircle2, 
+  Clock, 
+  XCircle, 
+  RefreshCw,
+  Download,
+  Upload,
+  Eye,
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  Receipt,
+  Shield,
+  Archive,
+  Send,
+  Printer
+} from "lucide-react";
+import { format } from "date-fns";
+
+export default function Payroll() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedTab, setSelectedTab] = useState("overview");
+  const [taxCalculatorData, setTaxCalculatorData] = useState({
+    grossAnnualSalary: '',
+    employeeAge: ''
+  });
+  const [taxCalculationResult, setTaxCalculationResult] = useState<any>(null);
+  const [newPayrollPeriod, setNewPayrollPeriod] = useState({
+    periodName: "",
+    startDate: "",
+    endDate: "",
+    payDate: "",
+  });
+
+  // Fetch payroll periods
+  const { data: payrollPeriods = [], isLoading: periodsLoading } = useQuery({
+    queryKey: ["/api/payroll/periods"],
+  });
+
+  // Fetch employee payrolls for current period
+  const { data: employeePayrolls = [], isLoading: payrollsLoading } = useQuery({
+    queryKey: ["/api/payroll/employee-payrolls"],
+  });
+
+  // Fetch SARS tax brackets
+  const { data: taxBrackets = [], isLoading: taxBracketsLoading } = useQuery({
+    queryKey: ["/api/payroll/tax-brackets"],
+  });
+
+  // Fetch EMP201 returns
+  const { data: emp201Returns = [], isLoading: emp201Loading } = useQuery({
+    queryKey: ["/api/payroll/emp201-returns"],
+  });
+
+  // Fetch employees for dropdown
+  const { data: employees = [] } = useQuery({
+    queryKey: ["/api/employees"],
+  });
+
+  // Create payroll period mutation
+  const createPeriodMutation = useMutation({
+    mutationFn: (periodData: any) => apiRequest("POST", "/api/payroll/periods", periodData),
+    onSuccess: () => {
+      toast({
+        title: "Payroll Period Created",
+        description: "New payroll period has been created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll/periods"] });
+      setNewPayrollPeriod({
+        periodName: "",
+        startDate: "",
+        endDate: "",
+        payDate: "",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to create payroll period: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Process payroll mutation
+  const processPayrollMutation = useMutation({
+    mutationFn: (periodId: number) => apiRequest("POST", `/api/payroll/periods/${periodId}/process`, {}),
+    onSuccess: () => {
+      toast({
+        title: "Payroll Processed",
+        description: "Payroll has been processed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll/periods"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll/employee-payrolls"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to process payroll: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Generate EMP201 mutation
+  const generateEmp201Mutation = useMutation({
+    mutationFn: (periodData: any) => apiRequest("POST", "/api/payroll/emp201-generate", periodData),
+    onSuccess: () => {
+      toast({
+        title: "EMP201 Generated",
+        description: "EMP201 return has been generated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll/emp201-returns"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to generate EMP201: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // SARS Tax Calculation mutation
+  const taxCalculationMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/payroll/calculate-sars-tax", data),
+    onSuccess: (result: any) => {
+      setTaxCalculationResult(result);
+      toast({
+        title: "Tax Calculated",
+        description: "SARS-compliant tax calculation completed successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to calculate tax: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const calculateSARSTax = () => {
+    if (!taxCalculatorData.grossAnnualSalary || !taxCalculatorData.employeeAge) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both gross annual salary and employee age.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    taxCalculationMutation.mutate({
+      grossAnnualSalary: taxCalculatorData.grossAnnualSalary,
+      employeeAge: taxCalculatorData.employeeAge
+    });
+  };
+
+  const handleCreatePeriod = () => {
+    if (!newPayrollPeriod.periodName || !newPayrollPeriod.startDate || !newPayrollPeriod.endDate || !newPayrollPeriod.payDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createPeriodMutation.mutate(newPayrollPeriod);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { color: "bg-gray-500", icon: Clock, text: "Draft" },
+      processing: { color: "bg-yellow-500", icon: RefreshCw, text: "Processing" },
+      paid: { color: "bg-green-500", icon: CheckCircle2, text: "Paid" },
+      closed: { color: "bg-blue-500", icon: Archive, text: "Closed" },
+      submitted: { color: "bg-purple-500", icon: Send, text: "Submitted" }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    const IconComponent = config.icon;
+
+    return (
+      <Badge className={`${config.color} text-white flex items-center gap-1`}>
+        <IconComponent className="h-3 w-3" />
+        {config.text}
+      </Badge>
+    );
+  };
+
+  const calculateTotalGrossPay = () => {
+    return employeePayrolls.reduce((total: number, payroll: any) => total + parseFloat(payroll.grossPay || 0), 0);
+  };
+
+  const calculateTotalNetPay = () => {
+    return employeePayrolls.reduce((total: number, payroll: any) => total + parseFloat(payroll.netPay || 0), 0);
+  };
+
+  const calculateTotalTax = () => {
+    return employeePayrolls.reduce((total: number, payroll: any) => total + parseFloat(payroll.payeTax || 0), 0);
+  };
+
+  if (periodsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Calculator className="h-6 w-6 text-green-600" />
+            Payroll Management
+          </h1>
+          <p className="text-muted-foreground">
+            SARS-compliant payroll processing with EMP201/EMP501 returns
+          </p>
+        </div>
+        <Button onClick={() => setSelectedTab("new-period")}>
+          <Calendar className="h-4 w-4 mr-2" />
+          New Pay Period
+        </Button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active Employees</p>
+                <p className="text-2xl font-bold">{employees.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Gross Pay</p>
+                <p className="text-2xl font-bold">R{calculateTotalGrossPay().toLocaleString()}</p>
+              </div>
+              <DollarSign className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total PAYE Tax</p>
+                <p className="text-2xl font-bold">R{calculateTotalTax().toLocaleString()}</p>
+              </div>
+              <Receipt className="h-8 w-8 text-red-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Net Pay</p>
+                <p className="text-2xl font-bold">R{calculateTotalNetPay().toLocaleString()}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <EnhancedTabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
+        <EnhancedTabsList className="grid w-full grid-cols-7">
+          <EnhancedTabsTrigger value="overview">Overview</EnhancedTabsTrigger>
+          <EnhancedTabsTrigger value="periods">Pay Periods</EnhancedTabsTrigger>
+          <EnhancedTabsTrigger value="employees">Employee Payroll</EnhancedTabsTrigger>
+          <EnhancedTabsTrigger value="sars">SARS Returns</EnhancedTabsTrigger>
+          <EnhancedTabsTrigger value="tax-setup">Tax Setup</EnhancedTabsTrigger>
+          <EnhancedTabsTrigger value="sars-calculator">SARS Calculator</EnhancedTabsTrigger>
+          <EnhancedTabsTrigger value="new-period">New Period</EnhancedTabsTrigger>
+        </EnhancedTabsList>
+
+        {/* Overview Tab */}
+        <EnhancedTabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Pay Periods</CardTitle>
+                <CardDescription>Latest payroll processing activity</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Array.isArray(payrollPeriods) && payrollPeriods.slice(0, 5).map((period: any) => (
+                    <div key={period.id} className="flex items-center justify-between p-3 border rounded">
+                      <div>
+                        <p className="font-medium">{period.periodName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(period.payDate), 'dd MMM yyyy')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        {getStatusBadge(period.status)}
+                        <p className="text-sm text-muted-foreground mt-1">
+                          R{parseFloat(period.totalNetPay || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>SARS Compliance Status</CardTitle>
+                <CardDescription>Tax returns and submissions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span>EMP201 Returns</span>
+                    <Badge variant="outline">
+                      {emp201Returns.filter((r: any) => r.status === 'submitted').length} Submitted
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Tax Certificates</span>
+                    <Badge variant="outline">Ready</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>UIF Contributions</span>
+                    <Badge variant="outline">Up to Date</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>SDL Contributions</span>
+                    <Badge variant="outline">Up to Date</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payroll Analytics</CardTitle>
+              <CardDescription>Monthly payroll breakdown and trends</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <PieChart className="h-12 w-12 mx-auto text-blue-500 mb-2" />
+                  <p className="text-sm text-muted-foreground">Gross Pay Distribution</p>
+                  <p className="text-lg font-semibold">R{calculateTotalGrossPay().toLocaleString()}</p>
+                </div>
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                  <p className="text-sm text-muted-foreground">Tax Deductions</p>
+                  <p className="text-lg font-semibold">R{calculateTotalTax().toLocaleString()}</p>
+                </div>
+                <div className="text-center">
+                  <TrendingUp className="h-12 w-12 mx-auto text-purple-500 mb-2" />
+                  <p className="text-sm text-muted-foreground">Net Payments</p>
+                  <p className="text-lg font-semibold">R{calculateTotalNetPay().toLocaleString()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </EnhancedTabsContent>
+
+        {/* Pay Periods Tab */}
+        <EnhancedTabsContent value="periods" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payroll Periods</CardTitle>
+              <CardDescription>Manage and process payroll periods</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Pay Date</TableHead>
+                    <TableHead>Employees</TableHead>
+                    <TableHead>Gross Pay</TableHead>
+                    <TableHead>Net Pay</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(payrollPeriods) && payrollPeriods.length > 0 ? (
+                    payrollPeriods.map((period: any) => (
+                      <TableRow key={period.id}>
+                        <TableCell className="font-medium">{period.periodName}</TableCell>
+                        <TableCell>{format(new Date(period.payDate), 'dd MMM yyyy')}</TableCell>
+                        <TableCell>{period.totalEmployees || 0}</TableCell>
+                        <TableCell>R{parseFloat(period.totalGrossPay || 0).toLocaleString()}</TableCell>
+                        <TableCell>R{parseFloat(period.totalNetPay || 0).toLocaleString()}</TableCell>
+                        <TableCell>{getStatusBadge(period.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {period.status === 'draft' && (
+                              <Button
+                                size="sm"
+                                onClick={() => processPayrollMutation.mutate(period.id)}
+                                disabled={processPayrollMutation.isPending}
+                              >
+                                <Calculator className="h-3 w-3 mr-1" />
+                                Process
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Download className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No payroll periods found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </EnhancedTabsContent>
+
+        {/* Employee Payroll Tab */}
+        <EnhancedTabsContent value="employees" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee Payroll Records</CardTitle>
+              <CardDescription>Individual employee payroll details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Basic Salary</TableHead>
+                    <TableHead>Allowances</TableHead>
+                    <TableHead>Gross Pay</TableHead>
+                    <TableHead>PAYE Tax</TableHead>
+                    <TableHead>UIF</TableHead>
+                    <TableHead>Net Pay</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(employeePayrolls) && employeePayrolls.length > 0 ? (
+                    employeePayrolls.map((payroll: any) => (
+                      <TableRow key={payroll.id}>
+                        <TableCell className="font-medium">{payroll.employeeName}</TableCell>
+                        <TableCell>R{parseFloat(payroll.basicSalary || 0).toLocaleString()}</TableCell>
+                        <TableCell>R{parseFloat(payroll.totalAllowances || 0).toLocaleString()}</TableCell>
+                        <TableCell>R{parseFloat(payroll.grossPay || 0).toLocaleString()}</TableCell>
+                        <TableCell>R{parseFloat(payroll.payeTax || 0).toLocaleString()}</TableCell>
+                        <TableCell>R{parseFloat(payroll.uifEmployee || 0).toLocaleString()}</TableCell>
+                        <TableCell>R{parseFloat(payroll.netPay || 0).toLocaleString()}</TableCell>
+                        <TableCell>{getStatusBadge(payroll.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Printer className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        No employee payroll records found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </EnhancedTabsContent>
+
+        {/* SARS Returns Tab */}
+        <EnhancedTabsContent value="sars" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>EMP201 Returns (Monthly)</CardTitle>
+                <CardDescription>Monthly employer returns to SARS</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Button 
+                    onClick={() => generateEmp201Mutation.mutate({ returnPeriod: format(new Date(), 'yyyy-MM') })}
+                    disabled={generateEmp201Mutation.isPending}
+                    className="w-full"
+                  >
+                    {generateEmp201Mutation.isPending ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Generate EMP201
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="space-y-2">
+                    {Array.isArray(emp201Returns) && emp201Returns.slice(0, 5).map((empReturn: any) => (
+                      <div key={empReturn.id} className="flex items-center justify-between p-2 border rounded">
+                        <div>
+                          <p className="font-medium">{empReturn.returnPeriod}</p>
+                          <p className="text-sm text-muted-foreground">
+                            R{parseFloat(empReturn.totalLiability || 0).toLocaleString()}
+                          </p>
+                        </div>
+                        {getStatusBadge(empReturn.status)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>EMP501 Returns (Annual)</CardTitle>
+                <CardDescription>Annual employer returns and certificates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Button className="w-full" variant="outline">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Generate EMP501
+                  </Button>
+                  
+                  <Button className="w-full" variant="outline">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Generate IRP5 Certificates
+                  </Button>
+                  
+                  <Button className="w-full" variant="outline">
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Generate IT3a Certificates
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>SARS Submissions History</CardTitle>
+              <CardDescription>Track all submissions to SARS</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Return Type</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Submitted Date</TableHead>
+                    <TableHead>SARS Reference</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No SARS submissions found
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </EnhancedTabsContent>
+
+        {/* Tax Setup Tab */}
+        <EnhancedTabsContent value="tax-setup" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>SARS Tax Brackets</CardTitle>
+                <CardDescription>Current tax year brackets</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Income From</TableHead>
+                      <TableHead>Income To</TableHead>
+                      <TableHead>Tax Rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.isArray(taxBrackets) && taxBrackets.map((bracket: any) => (
+                      <TableRow key={bracket.id}>
+                        <TableCell>R{parseFloat(bracket.incomeFrom || 0).toLocaleString()}</TableCell>
+                        <TableCell>
+                          {bracket.incomeTo ? `R${parseFloat(bracket.incomeTo).toLocaleString()}` : 'No limit'}
+                        </TableCell>
+                        <TableCell>{(parseFloat(bracket.taxRate || 0) * 100).toFixed(1)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>UIF & SDL Rates</CardTitle>
+                <CardDescription>Current contribution rates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="border rounded p-3">
+                    <h4 className="font-medium">UIF Contributions</h4>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Employee Rate</p>
+                        <p className="font-semibold">1.0%</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Employer Rate</p>
+                        <p className="font-semibold">1.0%</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Maximum monthly income: R17,712
+                    </p>
+                  </div>
+
+                  <div className="border rounded p-3">
+                    <h4 className="font-medium">SDL Contributions</h4>
+                    <div className="mt-2">
+                      <p className="text-sm text-muted-foreground">Rate</p>
+                      <p className="font-semibold">1.0%</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Exemption threshold: R500,000 annually
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </EnhancedTabsContent>
+
+        {/* SARS Tax Calculator Tab */}
+        <EnhancedTabsContent value="sars-calculator" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>SARS-Compliant Tax Calculator</CardTitle>
+              <CardDescription>Calculate tax using current SARS 2024/2025 tax tables</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="grossSalary">Gross Annual Salary (R)</Label>
+                  <Input
+                    id="grossSalary"
+                    type="number"
+                    placeholder="e.g., 500000"
+                    value={taxCalculatorData.grossAnnualSalary}
+                    onChange={(e) => setTaxCalculatorData(prev => ({ 
+                      ...prev, 
+                      grossAnnualSalary: e.target.value 
+                    }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employeeAge">Employee Age</Label>
+                  <Input
+                    id="employeeAge"
+                    type="number"
+                    placeholder="e.g., 35"
+                    value={taxCalculatorData.employeeAge}
+                    onChange={(e) => setTaxCalculatorData(prev => ({ 
+                      ...prev, 
+                      employeeAge: e.target.value 
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <Button onClick={calculateSARSTax} disabled={taxCalculationMutation.isPending}>
+                {taxCalculationMutation.isPending ? "Calculating..." : "Calculate SARS Tax"}
+              </Button>
+
+              {taxCalculationResult && (
+                <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-semibold mb-3">Tax Calculation Results</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Gross Annual Salary:</span>
+                        <span className="font-medium">R{parseFloat(taxCalculationResult.grossAnnualSalary).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Monthly Gross:</span>
+                        <span className="font-medium">R{parseFloat(taxCalculationResult.monthlyGross).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Annual Tax (Before Rebates):</span>
+                        <span className="font-medium">R{parseFloat(taxCalculationResult.annualTaxBeforeRebates).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Tax Rebates:</span>
+                        <span className="font-medium text-green-600">-R{parseFloat(taxCalculationResult.totalRebates).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-sm font-semibold">Annual Tax (After Rebates):</span>
+                        <span className="font-semibold">R{parseFloat(taxCalculationResult.annualTaxAfterRebates).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold">Monthly PAYE:</span>
+                        <span className="font-semibold text-red-600">R{parseFloat(taxCalculationResult.monthlyPaye).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm">UIF Employee (1%):</span>
+                        <span className="font-medium text-red-600">R{parseFloat(taxCalculationResult.uifEmployeeContribution).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">UIF Employer (1%):</span>
+                        <span className="font-medium text-orange-600">R{parseFloat(taxCalculationResult.uifEmployerContribution).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">SDL Contribution:</span>
+                        <span className="font-medium text-orange-600">R{parseFloat(taxCalculationResult.sdlContribution).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-sm font-semibold">Monthly Net Pay:</span>
+                        <span className="font-semibold text-green-600">R{parseFloat(taxCalculationResult.monthlyNetPay).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-semibold">Total Employer Costs:</span>
+                        <span className="font-semibold text-orange-600">R{parseFloat(taxCalculationResult.employerCosts).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </EnhancedTabsContent>
+
+        {/* New Period Tab */}
+        <EnhancedTabsContent value="new-period" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Payroll Period</CardTitle>
+              <CardDescription>Set up a new payroll processing period</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="periodName">Period Name</Label>
+                  <Input
+                    id="periodName"
+                    placeholder="e.g., January 2024"
+                    value={newPayrollPeriod.periodName}
+                    onChange={(e) => setNewPayrollPeriod(prev => ({ 
+                      ...prev, 
+                      periodName: e.target.value 
+                    }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payDate">Pay Date</Label>
+                  <Input
+                    id="payDate"
+                    type="date"
+                    value={newPayrollPeriod.payDate}
+                    onChange={(e) => setNewPayrollPeriod(prev => ({ 
+                      ...prev, 
+                      payDate: e.target.value 
+                    }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Period Start Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={newPayrollPeriod.startDate}
+                    onChange={(e) => setNewPayrollPeriod(prev => ({ 
+                      ...prev, 
+                      startDate: e.target.value 
+                    }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">Period End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={newPayrollPeriod.endDate}
+                    onChange={(e) => setNewPayrollPeriod(prev => ({ 
+                      ...prev, 
+                      endDate: e.target.value 
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  This will create a new payroll period for all active employees
+                </div>
+                <Button 
+                  onClick={handleCreatePeriod}
+                  disabled={createPeriodMutation.isPending}
+                >
+                  {createPeriodMutation.isPending ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Create Period
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Ensure all employee salary information is up to date before creating a new payroll period.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </EnhancedTabsContent>
+      </EnhancedTabs>
+    </div>
+  );
+}

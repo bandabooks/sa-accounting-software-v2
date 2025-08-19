@@ -1862,10 +1862,10 @@ export default function FinancialReports() {
                   <div className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg">
                     <BarChart3 className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-purple-100 text-sm font-medium">Financial Reporting</span>
+                  <span className="text-purple-100 text-sm font-medium">Analytics & Insights</span>
                 </div>
                 <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
-                  Financial Reports
+                  Analytics Reports
                 </h1>
                 <p className="text-purple-100 text-sm">
                   Complete financial statements and analysis dashboard

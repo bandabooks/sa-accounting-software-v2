@@ -94,7 +94,7 @@ export const PERMISSIONS = {
   GENERAL_LEDGER_VIEW: 'general_ledger:view',
   TRIAL_BALANCE_VIEW: 'trial_balance:view',
   
-  // Banking & Cash Management
+  // Banking & Cash
   BANKING_VIEW: 'banking:view',
   BANKING_CREATE: 'banking:create',
   BANKING_UPDATE: 'banking:update',

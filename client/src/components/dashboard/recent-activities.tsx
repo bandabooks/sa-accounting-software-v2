@@ -2,7 +2,7 @@ import { FileText, CreditCard, Receipt, Clock, CheckCircle, Eye } from "lucide-r
 import { formatCurrency } from "@/lib/utils-invoice";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 
 interface Activity {
   id: number;
@@ -16,10 +16,24 @@ interface Activity {
 
 interface RecentActivitiesProps {
   activities: Activity[];
+  showMore?: boolean;
 }
 
-export default function RecentActivities({ activities }: RecentActivitiesProps) {
+export default function RecentActivities({ activities, showMore = false }: RecentActivitiesProps) {
   const [location, setLocation] = useLocation();
+  
+  const getNavigationPath = (activity: Activity) => {
+    switch (activity.type) {
+      case 'invoice':
+        return `/invoices/${activity.id}`;
+      case 'payment':
+        return `/payments/${activity.id}`;
+      case 'expense':
+        return `/expenses/${activity.id}`;
+      default:
+        return `/invoices/${activity.id}`;
+    }
+  };
   const getActivityIcon = (type: string, status: string) => {
     switch (type) {
       case 'invoice':
@@ -60,25 +74,34 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
 
   if (!activities || activities.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Business Activities</h3>
-        <div className="text-center py-8">
-          <Clock className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No recent activities</p>
-        </div>
+      <div className="text-center py-8">
+        <Clock className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          {showMore ? "No activities found" : "No recent activities"}
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          {showMore ? "Try adjusting your search terms" : "Your recent business activities will appear here"}
+        </p>
       </div>
     );
   }
 
+  const displayedActivities = showMore ? activities : activities.slice(0, 10);
+  
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-gray-500 dark:text-gray-400">Latest business updates</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          Latest business updates
+        </span>
+        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+          Showing {displayedActivities.length} of {activities.length}
+        </span>
       </div>
       
-      {/* Display all 10 activities without scrolling */}
+      {/* Display enhanced activities list with proper spacing */}
       <div className="space-y-2">
-        {activities.slice(0, 10).map((activity, index) => {
+        {displayedActivities.map((activity, index) => {
             const IconComponent = getActivityIcon(activity.type, activity.status);
             const iconColorClass = getActivityColor(activity.type, activity.status);
             
@@ -101,40 +124,41 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
             };
             
             return (
-              <div key={`${activity.type}-${activity.id || index}-${activity.date}`} 
-                   className={`group flex items-start space-x-3 p-3 rounded-lg border-l-4 ${getBorderColor()} ${getBackgroundColor()} hover:shadow-sm transition-all`}>
-                <div className={`flex-shrink-0 w-8 h-8 rounded flex items-center justify-center ${iconColorClass}`}>
-                  <IconComponent size={16} />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {activity.description}
-                    </p>
-                    <span className={`text-sm font-bold ${
-                      activity.amount.startsWith('-') 
-                        ? 'text-red-600 dark:text-red-400' 
-                        : 'text-green-600 dark:text-green-400'
-                    }`}>
-                      {formatCurrency(activity.amount.replace('-', ''))}
-                    </span>
+              <Link key={`${activity.type}-${activity.id || index}-${activity.date}`} href={getNavigationPath(activity)}>
+                <div className={`group flex items-start space-x-3 p-3 rounded-lg border-l-4 ${getBorderColor()} ${getBackgroundColor()} hover:shadow-md hover:scale-[1.02] transition-all duration-200 cursor-pointer`}>
+                  <div className={`flex-shrink-0 w-8 h-8 rounded flex items-center justify-center ${iconColorClass}`}>
+                    <IconComponent size={16} />
                   </div>
                   
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                      {activity.customerName && (
-                        <>
-                          <span className="truncate max-w-[100px]">{activity.customerName}</span>
-                          <span>•</span>
-                        </>
-                      )}
-                      <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: false })}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600">
+                        {activity.description}
+                      </p>
+                      <span className={`text-sm font-bold ${
+                        activity.amount.startsWith('-') 
+                          ? 'text-red-600 dark:text-red-400' 
+                          : 'text-green-600 dark:text-green-400'
+                      }`}>
+                        {formatCurrency(activity.amount.replace('-', ''))}
+                      </span>
                     </div>
-                    {getStatusBadge(activity.status)}
+                    
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                        {activity.customerName && (
+                          <>
+                            <span className="truncate max-w-[100px]">{activity.customerName}</span>
+                            <span>•</span>
+                          </>
+                        )}
+                        <span>{formatDistanceToNow(new Date(activity.date), { addSuffix: false })}</span>
+                      </div>
+                      {getStatusBadge(activity.status)}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
       </div>

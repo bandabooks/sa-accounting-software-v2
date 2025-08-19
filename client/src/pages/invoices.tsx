@@ -165,71 +165,43 @@ export default function Invoices() {
         
         {/* Enhanced Header Section */}
         <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-green-700 to-teal-800 rounded-3xl"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-green-700 to-teal-800 rounded-xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-xl"></div>
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
           
-          <div className="relative p-8 lg:p-12 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-              <div className="space-y-4 flex-1">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <FileText className="h-6 w-6 text-white" />
+          <div className="relative p-6 text-white">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg">
+                    <FileText className="h-4 w-4 text-white" />
                   </div>
-                  <span className="text-green-100 text-lg font-medium">Invoice Management</span>
+                  <span className="text-green-100 text-sm font-medium">Invoice Management</span>
                 </div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-white tracking-tight">
+                <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
                   Payment Hub
                 </h1>
-                <p className="text-green-100 text-xl font-medium">
+                <p className="text-green-100 text-base">
                   Track invoices and monitor payment status
                 </p>
               </div>
 
-              {/* Financial Overview */}
-              {stats && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:min-w-[400px]">
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">{stats.total}</div>
-                    <div className="text-green-100 text-sm">Total</div>
-                  </div>
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">{stats.paid}</div>
-                    <div className="text-green-100 text-sm">Paid</div>
-                  </div>
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">{stats.overdue}</div>
-                    <div className="text-green-100 text-sm">Overdue</div>
-                  </div>
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">
-                      {stats.total > 0 ? Math.round((stats.paid / stats.total) * 100) : 0}%
-                    </div>
-                    <div className="text-green-100 text-sm">Success Rate</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Action Bar */}
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button asChild className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link href="/invoices/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Invoice
-                </Link>
-              </Button>
-              <Button 
-                onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
-                className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                {viewMode === "grid" ? "Table View" : "Grid View"}
-              </Button>
-              <Button className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+              {/* Compact Action Buttons */}
+              <div className="flex gap-3">
+                <Button asChild className="h-8 px-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 text-sm">
+                  <Link href="/invoices/new">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    New Invoice
+                  </Link>
+                </Button>
+                <Button 
+                  onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
+                  className="h-8 px-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 text-sm"
+                >
+                  <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+                  {viewMode === "grid" ? "Table" : "Grid"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -355,16 +327,16 @@ export default function Invoices() {
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {agingBuckets.map((bucket, index) => (
-              <Card key={index} className={`border-0 shadow-xl bg-gradient-to-br ${bucket.color} text-white transform hover:scale-105 transition-all duration-300`}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold text-white opacity-90">{bucket.range}</CardTitle>
-                  <CardDescription className="text-white/80">{bucket.count} invoice{bucket.count !== 1 ? 's' : ''}</CardDescription>
+              <Card key={index} className={`border-0 shadow-xl bg-gradient-to-br ${bucket.color} text-white transform hover:scale-105 transition-all duration-300 h-24 flex flex-col justify-between`}>
+                <CardHeader className="pb-1 pt-3">
+                  <CardTitle className="text-sm font-semibold text-white opacity-90 leading-tight">{bucket.range}</CardTitle>
+                  <CardDescription className="text-white/80 text-xs leading-tight">{bucket.count} invoice{bucket.count !== 1 ? 's' : ''}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white mb-2">
+                <CardContent className="pt-0 pb-3">
+                  <div className="text-lg font-bold text-white leading-tight">
                     {formatCurrency(bucket.amount.toString())}
                   </div>
-                  <div className="text-sm text-white/80">
+                  <div className="text-xs text-white/80 leading-tight">
                     {totalOutstanding > 0 ? Math.round((bucket.amount / totalOutstanding) * 100) : 0}% of total
                   </div>
                 </CardContent>

@@ -4,7 +4,7 @@ import { eq, and, desc } from "drizzle-orm";
 
 export interface ICompanyStorage {
   // Company management
-  createCompany(company: InsertCompany): Promise<Company>;
+  createCompany(company: InsertCompany, userId?: number): Promise<Company>;
   getCompany(id: number): Promise<Company | undefined>;
   getCompanyBySlug(slug: string): Promise<Company | undefined>;
   getCompaniesByUser(userId: number): Promise<CompanyUser[]>;

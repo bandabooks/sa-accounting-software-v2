@@ -71,8 +71,9 @@ export default function Subscription() {
       }
       return failureCount < 3;
     },
-    refetchOnWindowFocus: false,
-    staleTime: 0, // Always fetch fresh data for debugging
+    refetchOnWindowFocus: true, // Enable refetch on window focus for real-time updates
+    refetchInterval: 30000, // Refetch every 30 seconds for subscription status changes
+    staleTime: 0, // Always fetch fresh data
   });
 
   // Fetch available plans

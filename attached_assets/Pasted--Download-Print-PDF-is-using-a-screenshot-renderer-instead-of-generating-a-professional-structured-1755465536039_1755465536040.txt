@@ -1,0 +1,79 @@
+“Download/Print PDF” is using a screenshot renderer, instead of generating a professional structured report. This applies to:
+
+📊 Trial Balance
+
+📈 Profit & Loss
+
+📒 Balance Sheet
+
+💵 Cash Flow
+
+(and any other financial reports/charts).
+
+Here’s the master prompt you can give your dev/agent so it fixes all reports in one go:
+
+Prompt (Fix PDF Export for All Financial Reports)
+
+Replace the current PDF export logic (which screenshots/prints the screen) with a true report generator.
+
+Apply this change to Trial Balance, Profit & Loss, Balance Sheet, and Cash Flow.
+
+The PDF must always render as a structured, professional document, not a screenshot.
+
+General Requirements:
+
+Header Section
+
+Company Name
+
+Report Title (e.g., “Trial Balance”)
+
+Date Range / Period
+
+Generated Date & Time
+
+Table Layout
+
+Columns must be properly aligned (not one merged column).
+
+Use clear headers:
+
+Trial Balance → Account Code | Account Name | Account Type | Debit | Credit
+
+Profit & Loss → Account Code | Account Name | Category | Amount
+
+Balance Sheet → Account Code | Account Name | Category | Amount
+
+Cash Flow → Category | Inflows | Outflows | Net Movement
+
+Totals row at bottom where applicable (e.g., Debit = Credit).
+
+Format numbers with thousand separators and 2 decimal places.
+
+Styling
+
+Use professional fonts (sans-serif like Arial/Roboto).
+
+Keep layout consistent across all reports.
+
+Avoid clutter (no screenshots, no unnecessary UI elements).
+
+Ensure all tables are page-break safe (do not cut rows mid-line).
+
+Export Settings
+
+File names should follow pattern:
+
+Trial_Balance_<Company>_<YYYYMMDD>.pdf
+
+Profit_Loss_<Company>_<YYYYMMDD>.pdf
+
+Balance_Sheet_<Company>_<YYYYMMDD>.pdf
+
+Cash_Flow_<Company>_<YYYYMMDD>.pdf
+
+Each PDF must be printable and importable into Draftworx or similar accounting software.
+
+No screenshots → real tabular data only.
+
+⚡ Summary: All reports must export as true structured PDFs, with proper headers, aligned columns, and totals, just like the Excel export — not as UI screenshots.

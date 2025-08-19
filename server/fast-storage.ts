@@ -86,33 +86,54 @@ export class FastStorage {
   }
 
   /**
-   * Get recent activities with optimized query
+   * Get recent activities with optimized query - further optimized
    */
   async getFastRecentActivities(companyId: number) {
     try {
-      // Just get recent invoices for simplicity and speed
+      // Enhanced query with multiple activity types and proper JOINs
       const result = await db.execute(sql`
-        SELECT 
-          'invoice'::text as type,
-          invoice_number as reference,
-          total::text as amount,
-          issue_date as date,
-          status,
-          ('Invoice ' || invoice_number || ' - ' || COALESCE(status, 'draft')) as description,
-          created_at
-        FROM invoices 
-        WHERE company_id = ${companyId}
-        ORDER BY created_at DESC 
-        LIMIT 8
+        (
+          SELECT 
+            i.id,
+            'invoice'::text as type,
+            i.invoice_number as reference,
+            i.total::text as amount,
+            i.issue_date as date,
+            i.status,
+            ('Invoice ' || i.invoice_number || ' - ' || COALESCE(i.status, 'draft')) as description,
+            COALESCE(c.name, 'Unknown Customer') as customer_name
+          FROM invoices i
+          LEFT JOIN customers c ON i.customer_id = c.id
+          WHERE i.company_id = ${companyId}
+        )
+        UNION ALL
+        (
+          SELECT 
+            e.id,
+            'expense'::text as type,
+            'EXP-' || e.id::text as reference,
+            ('-' || e.amount::text) as amount,
+            e.expense_date as date,
+            e.paid_status as status,
+            e.description,
+            COALESCE(s.name, 'Direct Expense') as customer_name
+          FROM expenses e
+          LEFT JOIN suppliers s ON e.supplier_id = s.id
+          WHERE e.company_id = ${companyId}
+        )
+        ORDER BY date DESC 
+        LIMIT 50
       `);
 
       return result.rows.map(row => ({
+        id: row.id,
         type: row.type,
         reference: row.reference,
         amount: row.amount,
         date: row.date,
         status: row.status,
-        description: row.description
+        description: row.description,
+        customerName: row.customer_name
       })) || [];
     } catch (error) {
       console.error('Error in getFastRecentActivities:', error);
@@ -147,11 +168,11 @@ export class FastStorage {
   }
 
   /**
-   * Get profit/loss data for charts efficiently
+   * Get profit/loss data for charts efficiently - optimized for speed
    */
   async getFastProfitLossData(companyId: number) {
     try {
-      // Use simple parallel queries for maximum speed
+      // Reduced to 2 months for faster loading
       const [revenue, expenses] = await Promise.all([
         db.execute(sql`
           SELECT 
@@ -159,11 +180,11 @@ export class FastStorage {
             COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as revenue
           FROM invoices 
           WHERE company_id = ${companyId}
-            AND issue_date >= NOW() - INTERVAL '6 months'
+            AND issue_date >= NOW() - INTERVAL '2 months'
             AND issue_date IS NOT NULL
           GROUP BY DATE_TRUNC('month', issue_date)
           ORDER BY DATE_TRUNC('month', issue_date) DESC
-          LIMIT 6
+          LIMIT 2
         `),
         db.execute(sql`
           SELECT 
@@ -171,11 +192,11 @@ export class FastStorage {
             COALESCE(SUM(amount::numeric), 0) as expenses
           FROM expenses 
           WHERE company_id = ${companyId}
-            AND expense_date >= NOW() - INTERVAL '6 months'
+            AND expense_date >= NOW() - INTERVAL '2 months'
             AND expense_date IS NOT NULL
           GROUP BY DATE_TRUNC('month', expense_date)
           ORDER BY DATE_TRUNC('month', expense_date) DESC
-          LIMIT 6
+          LIMIT 2
         `)
       ]);
 

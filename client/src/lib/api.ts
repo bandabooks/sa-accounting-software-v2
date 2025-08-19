@@ -18,6 +18,12 @@ export const dashboardApi = {
     apiRequest("/api/dashboard/stats", "GET").then(res => res.json()),
 };
 
+// User API
+export const userApi = {
+  getCurrentUser: () => 
+    apiRequest("/api/user/me", "GET").then(res => res.json()),
+};
+
 // Customers API
 export const customersApi = {
   getAll: (): Promise<Customer[]> => 

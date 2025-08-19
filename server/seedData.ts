@@ -146,6 +146,79 @@ export async function seedDatabase() {
       console.log("✓ Default product categories seeded");
     }
     
+    // Seed default subscription plans
+    const existingPlans = await storage.getActiveSubscriptionPlans();
+    if (existingPlans.length === 0) {
+      const DEFAULT_SUBSCRIPTION_PLANS = [
+        {
+          name: "trial",
+          displayName: "Free Trial",
+          description: "14-day free trial with basic features",
+          price: "0.00",
+          currency: "ZAR",
+          billingCycle: "monthly",
+          maxUsers: 2,
+          maxCompanies: 1,
+          features: ["basic_invoicing", "expense_tracking", "basic_reports"],
+          modules: ["dashboard", "sales", "expenses", "customers", "reports"],
+          isActive: true,
+          trialDays: 14,
+          sortOrder: 1
+        },
+        {
+          name: "starter",
+          displayName: "Starter Plan",
+          description: "Perfect for small businesses and freelancers",
+          price: "299.00",
+          currency: "ZAR",
+          billingCycle: "monthly",
+          maxUsers: 5,
+          maxCompanies: 1,
+          features: ["invoicing", "estimates", "expense_tracking", "basic_reports", "vat_management"],
+          modules: ["dashboard", "sales", "purchases", "expenses", "customers", "reports", "vat"],
+          isActive: true,
+          sortOrder: 2
+        },
+        {
+          name: "professional",
+          displayName: "Professional Plan",
+          description: "Complete business management for growing companies",
+          price: "699.00",
+          currency: "ZAR",
+          billingCycle: "monthly",
+          maxUsers: 25,
+          maxCompanies: 3,
+          features: ["full_invoicing", "inventory", "projects", "advanced_reports", "sars_integration", "pos"],
+          modules: ["dashboard", "sales", "purchases", "products", "customers", "accounting", "banking", "reports", "inventory", "vat", "compliance", "pos", "projects"],
+          isActive: true,
+          sortOrder: 3
+        },
+        {
+          name: "enterprise",
+          displayName: "Enterprise Plan",
+          description: "Advanced features for large organizations and accounting practices",
+          price: "1499.00",
+          currency: "ZAR",
+          billingCycle: "monthly",
+          maxUsers: -1, // Unlimited
+          maxCompanies: -1, // Unlimited
+          features: ["everything", "api_access", "custom_fields", "workflow_automation", "advanced_analytics", "multi_company"],
+          modules: ["dashboard", "sales", "purchases", "products", "customers", "accounting", "banking", "reports", "inventory", "vat", "compliance", "pos", "advanced_reports", "projects", "payroll", "advanced_analytics", "api_access", "custom_fields", "workflow_automation", "multi_company", "user_management", "settings", "audit"],
+          isActive: true,
+          sortOrder: 4
+        },
+      ];
+
+      for (const plan of DEFAULT_SUBSCRIPTION_PLANS) {
+        await storage.createSubscriptionPlan(plan);
+      }
+      console.log("✓ Default subscription plans created");
+    }
+
+    // Seed compliance gamification data
+    const { complianceGamification } = await import('./compliance-gamification.js');
+    await complianceGamification.seedDefaultData();
+
     console.log("Database seeding completed successfully!");
   } catch (error) {
     console.error("Error seeding database:", error);

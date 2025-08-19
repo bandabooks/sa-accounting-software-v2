@@ -1810,10 +1810,100 @@ export const companySarsLink = pgTable("company_sars_link", {
   uniqueCompany: unique().on(table.companyId),
 }));
 
+// SARS Payroll Submission Tables (EMP201/EMP501)
+export const sarsPayrollSubmissions = pgTable("sars_payroll_submissions", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  submissionType: varchar("submission_type", { length: 10 }).notNull(), // EMP201 | EMP501
+  periodMonth: integer("period_month").notNull(), // 1-12
+  periodYear: integer("period_year").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("draft"), // draft | submitted | accepted | rejected | error
+  sarsReferenceNumber: varchar("sars_reference_number", { length: 50 }),
+  submittedAt: timestamp("submitted_at"),
+  responseAt: timestamp("response_at"),
+  submissionData: jsonb("submission_data").notNull(), // EMP201/501 data
+  sarsResponse: jsonb("sars_response"), // SARS response data
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sars_payroll_submissions_company_idx").on(table.companyId),
+  periodIdx: index("sars_payroll_submissions_period_idx").on(table.periodYear, table.periodMonth),
+}));
+
+// ISV Client Access for Tax Practitioners
+export const isvClientAccess = pgTable("isv_client_access", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  practitionerId: integer("practitioner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  practitionerCompanyId: integer("practitioner_company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  clientCompanyId: integer("client_company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  clientTaxNumber: varchar("client_tax_number", { length: 20 }).notNull(),
+  clientName: varchar("client_name", { length: 255 }).notNull(),
+  accessLevel: varchar("access_level", { length: 20 }).notNull().default("full"), // full | vat_only | payroll_only
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active | suspended | revoked
+  authorizedAt: timestamp("authorized_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  lastAccessAt: timestamp("last_access_at"),
+  permissions: jsonb("permissions").notNull().default([]), // Array of specific permissions
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  practitionerIdx: index("isv_client_access_practitioner_idx").on(table.practitionerId),
+  clientIdx: index("isv_client_access_client_idx").on(table.clientCompanyId),
+  taxNumberIdx: index("isv_client_access_tax_number_idx").on(table.clientTaxNumber),
+}));
+
+// SARS Compliance Tracking (Enhanced for payroll)
+export const sarsCompliance = pgTable("sars_compliance", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  complianceType: varchar("compliance_type", { length: 20 }).notNull(), // VAT201 | EMP201 | EMP501 | ITR12 | ITR14
+  dueDate: timestamp("due_date").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | submitted | overdue | exempt
+  submissionId: varchar("submission_id"), // Reference to respective submission table
+  remindersSent: integer("reminders_sent").default(0),
+  lastReminderAt: timestamp("last_reminder_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sars_compliance_company_idx").on(table.companyId),
+  dueDateIdx: index("sars_compliance_due_date_idx").on(table.dueDate),
+  typeIdx: index("sars_compliance_type_idx").on(table.complianceType),
+}));
+
+// SARS Returns (Enhanced for all submission types)
+export const sarsReturns = pgTable("sars_returns", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  returnType: varchar("return_type", { length: 20 }).notNull(), // VAT201 | EMP201 | EMP501 | ITR12 | ITR14
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("draft"), // draft | submitted | accepted | rejected
+  submissionData: jsonb("submission_data").notNull(),
+  sarsResponse: jsonb("sars_response"),
+  submittedAt: timestamp("submitted_at"),
+  submittedBy: integer("submitted_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("sars_returns_company_idx").on(table.companyId),
+  periodIdx: index("sars_returns_period_idx").on(table.periodStart, table.periodEnd),
+  typeIdx: index("sars_returns_type_idx").on(table.returnType),
+}));
+
 export type SarsVendorConfig = typeof sarsVendorConfig.$inferSelect;
 export type InsertSarsVendorConfig = typeof sarsVendorConfig.$inferInsert;
 export type CompanySarsLink = typeof companySarsLink.$inferSelect;
 export type InsertCompanySarsLink = typeof companySarsLink.$inferInsert;
+export type SarsPayrollSubmission = typeof sarsPayrollSubmissions.$inferSelect;
+export type InsertSarsPayrollSubmission = typeof sarsPayrollSubmissions.$inferInsert;
+export type IsvClientAccess = typeof isvClientAccess.$inferSelect;
+export type InsertIsvClientAccess = typeof isvClientAccess.$inferInsert;
+export type SarsCompliance = typeof sarsCompliance.$inferSelect;
+export type InsertSarsCompliance = typeof sarsCompliance.$inferInsert;
+export type SarsReturn = typeof sarsReturns.$inferSelect;
+export type InsertSarsReturn = typeof sarsReturns.$inferInsert;
 
 export const recurringInvoices = pgTable("recurring_invoices", {
   id: serial("id").primaryKey(),
@@ -2646,6 +2736,180 @@ export type AiSettings = typeof aiSettings.$inferSelect;
 
 export type InsertNotificationSettings = z.infer<typeof insertNotificationSettingsSchema>;
 export type NotificationSettings = typeof notificationSettings.$inferSelect;
+
+// Gamified Tax Compliance Progress Tracker Tables
+export const complianceTracker = pgTable("compliance_tracker", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  
+  // Progress tracking
+  overallScore: integer("overall_score").default(0), // 0-100
+  level: integer("level").default(1), // User level 1-10
+  experiencePoints: integer("experience_points").default(0),
+  totalTasksCompleted: integer("total_tasks_completed").default(0),
+  currentStreak: integer("current_streak").default(0), // Days of consecutive compliance
+  longestStreak: integer("longest_streak").default(0),
+  
+  // Quarterly/Period tracking
+  currentPeriod: varchar("current_period", { length: 20 }).notNull(), // e.g., "2025-Q1"
+  periodStartDate: date("period_start_date").notNull(),
+  periodEndDate: date("period_end_date").notNull(),
+  periodScore: integer("period_score").default(0),
+  
+  // Task completion tracking
+  vatReturnStatus: varchar("vat_return_status", { length: 20 }).default("pending"), // pending, completed, overdue
+  vatReturnDueDate: date("vat_return_due_date"),
+  vatReturnCompletedDate: date("vat_return_completed_date"),
+  
+  payrollReturnStatus: varchar("payroll_return_status", { length: 20 }).default("pending"),
+  payrollReturnDueDate: date("payroll_return_due_date"),
+  payrollReturnCompletedDate: date("payroll_return_completed_date"),
+  
+  incomeReturnStatus: varchar("income_return_status", { length: 20 }).default("pending"),
+  incomeReturnDueDate: date("income_return_due_date"),
+  incomeReturnCompletedDate: date("income_return_completed_date"),
+  
+  // Achievement tracking
+  completedAchievements: jsonb("completed_achievements").default([]),
+  unlockedBadges: jsonb("unlocked_badges").default([]),
+  milestoneRewards: jsonb("milestone_rewards").default([]),
+  
+  // Streak tracking
+  lastActivityDate: date("last_activity_date"),
+  streakBroken: boolean("streak_broken").default(false),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("compliance_tracker_company_idx").on(table.companyId),
+  periodIdx: index("compliance_tracker_period_idx").on(table.currentPeriod),
+  scoreIdx: index("compliance_tracker_score_idx").on(table.overallScore),
+}));
+
+export const complianceAchievements = pgTable("compliance_achievements", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(), // first_vat_return, streak_hero, etc.
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description").notNull(),
+  category: varchar("category", { length: 30 }).notNull(), // vat, payroll, general, streak
+  
+  // Achievement criteria
+  criteria: jsonb("criteria").notNull(), // JSON defining completion requirements
+  pointsReward: integer("points_reward").default(0),
+  badgeIcon: varchar("badge_icon", { length: 50 }).default("trophy"), // lucide icon name
+  badgeColor: varchar("badge_color", { length: 20 }).default("gold"),
+  
+  // Achievement tiers
+  tier: varchar("tier", { length: 20 }).default("bronze"), // bronze, silver, gold, platinum
+  difficulty: integer("difficulty").default(1), // 1-5 difficulty level
+  isHidden: boolean("is_hidden").default(false), // Hidden achievements
+  
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  codeIdx: index("compliance_achievements_code_idx").on(table.code),
+  categoryIdx: index("compliance_achievements_category_idx").on(table.category),
+  tierIdx: index("compliance_achievements_tier_idx").on(table.tier),
+}));
+
+export const complianceUserAchievements = pgTable("compliance_user_achievements", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  achievementId: integer("achievement_id").notNull().references(() => complianceAchievements.id),
+  
+  unlockedAt: timestamp("unlocked_at").defaultNow(),
+  progress: jsonb("progress").default({}), // Current progress towards achievement
+  isCompleted: boolean("is_completed").default(false),
+  
+  // Notification tracking
+  notificationSent: boolean("notification_sent").default(false),
+  celebrationShown: boolean("celebration_shown").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyUserAchievementUnique: unique().on(table.companyId, table.userId, table.achievementId),
+  companyIdx: index("compliance_user_achievements_company_idx").on(table.companyId),
+  userIdx: index("compliance_user_achievements_user_idx").on(table.userId),
+  achievementIdx: index("compliance_user_achievements_achievement_idx").on(table.achievementId),
+}));
+
+export const complianceMilestones = pgTable("compliance_milestones", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description").notNull(),
+  
+  // Milestone requirements
+  requiredScore: integer("required_score").notNull(),
+  requiredLevel: integer("required_level").default(1),
+  requiredTasksCompleted: integer("required_tasks_completed").default(0),
+  requiredStreak: integer("required_streak").default(0),
+  
+  // Rewards
+  rewardPoints: integer("reward_points").default(0),
+  rewardBadge: varchar("reward_badge", { length: 50 }),
+  rewardTitle: varchar("reward_title", { length: 100 }),
+  
+  // Display
+  icon: varchar("icon", { length: 50 }).default("star"),
+  color: varchar("color", { length: 20 }).default("blue"),
+  celebrationMessage: text("celebration_message"),
+  
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  scoreIdx: index("compliance_milestones_score_idx").on(table.requiredScore),
+  levelIdx: index("compliance_milestones_level_idx").on(table.requiredLevel),
+}));
+
+export const complianceUserMilestones = pgTable("compliance_user_milestones", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  milestoneId: integer("milestone_id").notNull().references(() => complianceMilestones.id),
+  
+  achievedAt: timestamp("achieved_at").defaultNow(),
+  celebrationShown: boolean("celebration_shown").default(false),
+  notificationSent: boolean("notification_sent").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyUserMilestoneUnique: unique().on(table.companyId, table.userId, table.milestoneId),
+  companyIdx: index("compliance_user_milestones_company_idx").on(table.companyId),
+  userIdx: index("compliance_user_milestones_user_idx").on(table.userId),
+}));
+
+export const complianceActivities = pgTable("compliance_activities", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  
+  activityType: varchar("activity_type", { length: 50 }).notNull(), // vat_return_submitted, payroll_processed, etc.
+  activityName: varchar("activity_name", { length: 100 }).notNull(),
+  description: text("description"),
+  
+  pointsEarned: integer("points_earned").default(0),
+  experienceGained: integer("experience_gained").default(0),
+  
+  // Related record references
+  relatedRecordType: varchar("related_record_type", { length: 50 }), // vat_report, payroll_run, etc.
+  relatedRecordId: integer("related_record_id"),
+  
+  metadata: jsonb("metadata").default({}), // Additional activity-specific data
+  
+  activityDate: timestamp("activity_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("compliance_activities_company_idx").on(table.companyId),
+  userIdx: index("compliance_activities_user_idx").on(table.userId),
+  typeIdx: index("compliance_activities_type_idx").on(table.activityType),
+  dateIdx: index("compliance_activities_date_idx").on(table.activityDate),
+}));
 
 // VAT Types - South African Standard VAT Categories
 export const vatTypes = pgTable("vat_types", {
@@ -4930,48 +5194,7 @@ export const engagementLetters = pgTable("engagement_letters", {
   statusIdx: index("engagement_letters_status_idx").on(table.status),
 }));
 
-// SARS Compliance Module
-export const sarsCompliance = pgTable("sars_compliance", {
-  id: serial("id").primaryKey(),
-  clientId: integer("client_id").notNull(),
-  complianceType: text("compliance_type").notNull(), // income_tax, vat, paye, provisional_tax, customs
-  period: text("period").notNull(), // YYYY-MM or YYYY
-  dueDate: date("due_date").notNull(),
-  
-  // Status and Workflow
-  status: text("status").default("pending"), // pending, in_progress, filed, late, penalty
-  filedDate: date("filed_date"),
-  paymentDueDate: date("payment_due_date"),
-  paymentAmount: decimal("payment_amount", { precision: 12, scale: 2 }),
-  paymentStatus: text("payment_status").default("pending"), // pending, paid, overdue
-  
-  // E-Filing Integration
-  efilingReference: text("efiling_reference"),
-  efilingStatus: text("efiling_status"), // submitted, accepted, rejected
-  efilingResponse: jsonb("efiling_response"),
-  
-  // Documents
-  documents: text("documents").array(),
-  workpapers: text("workpapers").array(),
-  
-  // Compliance Details
-  assessmentAmount: decimal("assessment_amount", { precision: 12, scale: 2 }),
-  penaltyAmount: decimal("penalty_amount", { precision: 12, scale: 2 }),
-  interestAmount: decimal("interest_amount", { precision: 12, scale: 2 }),
-  
-  assignedTo: integer("assigned_to"),
-  reviewedBy: integer("reviewed_by"),
-  approvedBy: integer("approved_by"),
-  notes: text("notes"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  clientIdx: index("sars_compliance_client_idx").on(table.clientId),
-  typeIdx: index("sars_compliance_type_idx").on(table.complianceType),
-  statusIdx: index("sars_compliance_status_idx").on(table.status),
-  dueDateIdx: index("sars_compliance_due_date_idx").on(table.dueDate),
-}));
+
 
 // CIPC Compliance Module
 export const cipcCompliance = pgTable("cipc_compliance", {
@@ -5679,6 +5902,329 @@ export type InsertCustomerPriceList = z.infer<typeof insertCustomerPriceListSche
 // Extended types for API responses with relationships
 export type SalesLeadWithAssignedUser = SalesLead & { assignedUser?: User; convertedCustomer?: Customer };
 export type SalesOpportunityWithStage = SalesOpportunity & { stage: SalesPipelineStage; assignedUser?: User; customer?: Customer; lead?: SalesLead };
+
+// Employee Management & Payroll Tables
+export const departments = pgTable("departments", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  managerId: integer("manager_id").references(() => employees.id),
+  budget: decimal("budget", { precision: 15, scale: 2 }).default("0.00"),
+  location: text("location"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyDeptUnique: unique().on(table.companyId, table.name),
+  companyIdx: index("departments_company_idx").on(table.companyId),
+}));
+
+export const employees = pgTable("employees", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  employeeNumber: text("employee_number").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  idNumber: text("id_number").notNull().unique(),
+  passportNumber: text("passport_number"),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  position: text("position").notNull(),
+  department: text("department"),
+  departmentId: integer("department_id").references(() => departments.id),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"),
+  employmentType: text("employment_type").notNull().default("permanent"), // permanent, contract, temporary, part_time
+  status: text("status").notNull().default("active"), // active, inactive, terminated
+  basicSalary: decimal("basic_salary", { precision: 12, scale: 2 }).notNull(),
+  payrollFrequency: text("payroll_frequency").notNull().default("monthly"), // monthly, weekly, bi_weekly
+  taxNumber: text("tax_number"),
+  bankName: text("bank_name"),
+  bankAccountNumber: text("bank_account_number"),
+  bankBranchCode: text("bank_branch_code"),
+  uifNumber: text("uif_number"),
+  medicalAidNumber: text("medical_aid_number"),
+  medicalAidScheme: text("medical_aid_scheme"),
+  pensionFundNumber: text("pension_fund_number"),
+  emergencyContact: jsonb("emergency_contact").default({}),
+  profileImageUrl: text("profile_image_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyEmployeeUnique: unique().on(table.companyId, table.employeeNumber),
+  companyIdx: index("employees_company_idx").on(table.companyId),
+  statusIdx: index("employees_status_idx").on(table.status),
+}));
+
+export const payrollItems = pgTable("payroll_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  employeeId: integer("employee_id").notNull(),
+  payrollPeriod: text("payroll_period").notNull(), // YYYY-MM format
+  payPeriodStart: date("pay_period_start").notNull(),
+  payPeriodEnd: date("pay_period_end").notNull(),
+  basicSalary: decimal("basic_salary", { precision: 12, scale: 2 }).notNull(),
+  overtime: decimal("overtime", { precision: 12, scale: 2 }).default("0.00"),
+  bonuses: decimal("bonuses", { precision: 12, scale: 2 }).default("0.00"),
+  allowances: decimal("allowances", { precision: 12, scale: 2 }).default("0.00"),
+  grossSalary: decimal("gross_salary", { precision: 12, scale: 2 }).notNull(),
+  payeTax: decimal("paye_tax", { precision: 12, scale: 2 }).notNull(),
+  uifEmployee: decimal("uif_employee", { precision: 12, scale: 2 }).notNull(),
+  uifEmployer: decimal("uif_employer", { precision: 12, scale: 2 }).notNull(),
+  sdlContribution: decimal("sdl_contribution", { precision: 12, scale: 2 }).notNull(),
+  medicalAid: decimal("medical_aid", { precision: 12, scale: 2 }).default("0.00"),
+  pensionContribution: decimal("pension_contribution", { precision: 12, scale: 2 }).default("0.00"),
+  otherDeductions: decimal("other_deductions", { precision: 12, scale: 2 }).default("0.00"),
+  netSalary: decimal("net_salary", { precision: 12, scale: 2 }).notNull(),
+  status: text("status").notNull().default("draft"), // draft, approved, paid
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  paymentDate: date("payment_date"),
+  paymentReference: text("payment_reference"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyPeriodUnique: unique().on(table.companyId, table.employeeId, table.payrollPeriod),
+  companyIdx: index("payroll_items_company_idx").on(table.companyId),
+  employeeIdx: index("payroll_items_employee_idx").on(table.employeeId),
+  periodIdx: index("payroll_items_period_idx").on(table.payrollPeriod),
+}));
+
+// Enhanced SARS-Compliant Payroll Management Tables
+export const payrollPeriods = pgTable("payroll_periods", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  periodName: text("period_name").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  payDate: date("pay_date").notNull(),
+  status: text("status").default("draft"), // draft, processing, paid, submitted
+  totalEmployees: integer("total_employees").default(0),
+  totalGrossPay: decimal("total_gross_pay", { precision: 12, scale: 2 }).default("0"),
+  totalNetPay: decimal("total_net_pay", { precision: 12, scale: 2 }).default("0"),
+  totalPAYE: decimal("total_paye", { precision: 12, scale: 2 }).default("0"),
+  totalUIF: decimal("total_uif", { precision: 12, scale: 2 }).default("0"),
+  totalSDL: decimal("total_sdl", { precision: 12, scale: 2 }).default("0"),
+  totalEmployerUIF: decimal("total_employer_uif", { precision: 12, scale: 2 }).default("0"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+  updatedBy: integer("updated_by").references(() => users.id),
+}, (table) => ({
+  periodCompanyIdx: index("payroll_periods_company_idx").on(table.companyId),
+  periodDateIdx: index("payroll_periods_date_idx").on(table.startDate, table.endDate),
+}));
+
+export const employeePayrolls = pgTable("employee_payrolls", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  periodId: integer("period_id").notNull().references(() => payrollPeriods.id),
+  employeeId: integer("employee_id").notNull().references(() => employees.id),
+  employeeName: text("employee_name").notNull(),
+  employeeNumber: text("employee_number").notNull(),
+  // Basic pay components
+  basicSalary: decimal("basic_salary", { precision: 12, scale: 2 }).default("0"),
+  allowances: decimal("allowances", { precision: 12, scale: 2 }).default("0"),
+  overtime: decimal("overtime", { precision: 12, scale: 2 }).default("0"),
+  commissions: decimal("commissions", { precision: 12, scale: 2 }).default("0"),
+  bonuses: decimal("bonuses", { precision: 12, scale: 2 }).default("0"),
+  grossPay: decimal("gross_pay", { precision: 12, scale: 2 }).default("0"),
+  // Deductions
+  payeTax: decimal("paye_tax", { precision: 12, scale: 2 }).default("0"),
+  uifEmployee: decimal("uif_employee", { precision: 12, scale: 2 }).default("0"),
+  medicalAidEmployee: decimal("medical_aid_employee", { precision: 12, scale: 2 }).default("0"),
+  retirementFund: decimal("retirement_fund", { precision: 12, scale: 2 }).default("0"),
+  otherDeductions: decimal("other_deductions", { precision: 12, scale: 2 }).default("0"),
+  totalDeductions: decimal("total_deductions", { precision: 12, scale: 2 }).default("0"),
+  // Employer contributions
+  uifEmployer: decimal("uif_employer", { precision: 12, scale: 2 }).default("0"),
+  sdl: decimal("sdl", { precision: 12, scale: 2 }).default("0"),
+  medicalAidEmployer: decimal("medical_aid_employer", { precision: 12, scale: 2 }).default("0"),
+  workmanComp: decimal("workman_comp", { precision: 12, scale: 2 }).default("0"),
+  totalEmployerContributions: decimal("total_employer_contributions", { precision: 12, scale: 2 }).default("0"),
+  // Final amounts
+  netPay: decimal("net_pay", { precision: 12, scale: 2 }).default("0"),
+  taxableIncome: decimal("taxable_income", { precision: 12, scale: 2 }).default("0"),
+  // Status and processing
+  status: text("status").default("draft"), // draft, processed, paid, exported
+  paymentMethod: text("payment_method").default("bank_transfer"), // bank_transfer, cash, cheque
+  paymentReference: text("payment_reference"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  payrollEmployeeIdx: index("employee_payrolls_employee_idx").on(table.employeeId),
+  payrollPeriodIdx: index("employee_payrolls_period_idx").on(table.periodId),
+  payrollCompanyIdx: index("employee_payrolls_company_idx").on(table.companyId),
+}));
+
+
+
+export const payrollSettings = pgTable("payroll_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  // SARS Registration Details
+  sarsRegistrationNumber: text("sars_registration_number"),
+  payeReference: text("paye_reference"),
+  uifReference: text("uif_reference"),
+  sdlReference: text("sdl_reference"),
+  workmanCompReference: text("workman_comp_reference"),
+  // Tax Settings
+  defaultTaxDirective: boolean("default_tax_directive").default(false),
+  uifContributionRate: decimal("uif_contribution_rate", { precision: 5, scale: 4 }).default("0.0100"), // 1%
+  sdlContributionRate: decimal("sdl_contribution_rate", { precision: 5, scale: 4 }).default("0.0100"), // 1%
+  workmanCompRate: decimal("workman_comp_rate", { precision: 5, scale: 4 }).default("0.0000"), // Variable by industry
+  // Payroll Processing Settings
+  defaultPayPeriod: text("default_pay_period").default("monthly"), // weekly, bi-weekly, monthly
+  defaultPayDay: integer("default_pay_day").default(25), // Day of month
+  autoProcessPayroll: boolean("auto_process_payroll").default(false),
+  autoSubmitReturns: boolean("auto_submit_returns").default(false),
+  // Email and Notification Settings
+  payslipEmailTemplate: text("payslip_email_template"),
+  reminderSettings: jsonb("reminder_settings").default({}),
+  // Bank Details for Bulk Payments
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  branchCode: text("branch_code"),
+  accountHolder: text("account_holder"),
+  // Integration Settings
+  sarsApiCredentials: jsonb("sars_api_credentials").default({}),
+  bankingIntegration: jsonb("banking_integration").default({}),
+  settings: jsonb("settings").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  payrollSettingsCompanyIdx: unique().on(table.companyId), // One settings record per company
+}));
+
+export const employeeLeave = pgTable("employee_leave", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  employeeId: integer("employee_id").notNull(),
+  leaveType: text("leave_type").notNull(), // annual, sick, maternity, paternity, study, unpaid
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  days: integer("days").notNull(),
+  reason: text("reason"),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected, cancelled
+  appliedAt: timestamp("applied_at").defaultNow(),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("employee_leave_company_idx").on(table.companyId),
+  employeeIdx: index("employee_leave_employee_idx").on(table.employeeId),
+  statusIdx: index("employee_leave_status_idx").on(table.status),
+}));
+
+export const payrollTaxTables = pgTable("payroll_tax_tables", {
+  id: serial("id").primaryKey(),
+  taxYear: integer("tax_year").notNull(), // 2024, 2025, etc.
+  incomeFrom: decimal("income_from", { precision: 12, scale: 2 }).notNull(),
+  incomeTo: decimal("income_to", { precision: 12, scale: 2 }),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).notNull(), // 0.1800 for 18%
+  baseTax: decimal("base_tax", { precision: 12, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  taxYearIdx: index("payroll_tax_tables_year_idx").on(table.taxYear),
+  incomeRangeIdx: index("payroll_tax_tables_income_idx").on(table.incomeFrom, table.incomeTo),
+}));
+
+export const employeeAttendance = pgTable("employee_attendance", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  employeeId: integer("employee_id").notNull(),
+  clockInTime: timestamp("clock_in_time").notNull(),
+  clockOutTime: timestamp("clock_out_time"),
+  breakStartTime: timestamp("break_start_time"),
+  breakEndTime: timestamp("break_end_time"),
+  totalHours: decimal("total_hours", { precision: 5, scale: 2 }),
+  overtimeHours: decimal("overtime_hours", { precision: 5, scale: 2 }).default("0.00"),
+  status: text("status").notNull().default("present"), // present, absent, late, early_departure
+  notes: text("notes"),
+  locationLat: decimal("location_lat", { precision: 10, scale: 8 }),
+  locationLng: decimal("location_lng", { precision: 11, scale: 8 }),
+  ipAddress: text("ip_address"),
+  deviceInfo: text("device_info"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("employee_attendance_company_idx").on(table.companyId),
+  employeeIdx: index("employee_attendance_employee_idx").on(table.employeeId),
+  dateIdx: index("employee_attendance_date_idx").on(table.clockInTime),
+}));
+
+// Employee Relations
+export const employeesRelations = relations(employees, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [employees.companyId],
+    references: [companies.id],
+  }),
+  payrollItems: many(payrollItems),
+  leaveApplications: many(employeeLeave),
+  attendanceRecords: many(employeeAttendance),
+}));
+
+export const payrollItemsRelations = relations(payrollItems, ({ one }) => ({
+  company: one(companies, {
+    fields: [payrollItems.companyId],
+    references: [companies.id],
+  }),
+  employee: one(employees, {
+    fields: [payrollItems.employeeId],
+    references: [employees.id],
+  }),
+  approver: one(users, {
+    fields: [payrollItems.approvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const employeeLeaveRelations = relations(employeeLeave, ({ one }) => ({
+  company: one(companies, {
+    fields: [employeeLeave.companyId],
+    references: [companies.id],
+  }),
+  employee: one(employees, {
+    fields: [employeeLeave.employeeId],
+    references: [employees.id],
+  }),
+  approver: one(users, {
+    fields: [employeeLeave.approvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const employeeAttendanceRelations = relations(employeeAttendance, ({ one }) => ({
+  company: one(companies, {
+    fields: [employeeAttendance.companyId],
+    references: [companies.id],
+  }),
+  employee: one(employees, {
+    fields: [employeeAttendance.employeeId],
+    references: [employees.id],
+  }),
+}));
+
+// Employee Management Types
+export type InsertEmployee = typeof employees.$inferInsert;
+export type Employee = typeof employees.$inferSelect;
+export type InsertPayrollItem = typeof payrollItems.$inferInsert;
+export type PayrollItem = typeof payrollItems.$inferSelect;
+export type InsertEmployeeLeave = typeof employeeLeave.$inferInsert;
+export type EmployeeLeave = typeof employeeLeave.$inferSelect;
+export type InsertEmployeeAttendance = typeof employeeAttendance.$inferInsert;
+export type EmployeeAttendance = typeof employeeAttendance.$inferSelect;
+export type PayrollTaxTable = typeof payrollTaxTables.$inferSelect;
 export type EstimateWithAnalytics = Estimate & { analytics: QuoteAnalytics[]; signatures: DigitalSignature[] };
 export type ProductWithPricing = Product & { customerPriceLists: CustomerPriceList[]; pricingRules: PricingRule[] };
 
@@ -5798,6 +6344,59 @@ export const insertComplianceCheckSchema = createInsertSchema(complianceChecks).
   updatedAt: true,
 });
 
+// Insert schemas for compliance tracker tables
+export const insertComplianceTrackerSchema = createInsertSchema(complianceTracker).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertComplianceAchievementSchema = createInsertSchema(complianceAchievements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertComplianceUserAchievementSchema = createInsertSchema(complianceUserAchievements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertComplianceMilestoneSchema = createInsertSchema(complianceMilestones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertComplianceUserMilestoneSchema = createInsertSchema(complianceUserMilestones).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertComplianceActivitySchema = createInsertSchema(complianceActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports for compliance tracker
+export type ComplianceTracker = typeof complianceTracker.$inferSelect;
+export type InsertComplianceTracker = z.infer<typeof insertComplianceTrackerSchema>;
+
+export type ComplianceAchievement = typeof complianceAchievements.$inferSelect;
+export type InsertComplianceAchievement = z.infer<typeof insertComplianceAchievementSchema>;
+
+export type ComplianceUserAchievement = typeof complianceUserAchievements.$inferSelect;
+export type InsertComplianceUserAchievement = z.infer<typeof insertComplianceUserAchievementSchema>;
+
+export type ComplianceMilestone = typeof complianceMilestones.$inferSelect;
+export type InsertComplianceMilestone = z.infer<typeof insertComplianceMilestoneSchema>;
+
+export type ComplianceUserMilestone = typeof complianceUserMilestones.$inferSelect;
+export type InsertComplianceUserMilestone = z.infer<typeof insertComplianceUserMilestoneSchema>;
+
+export type ComplianceActivity = typeof complianceActivities.$inferSelect;
+export type InsertComplianceActivity = z.infer<typeof insertComplianceActivitySchema>;
+
 export const insertSecurityAlertSchema = createInsertSchema(securityAlerts).omit({
   id: true,
   createdAt: true,
@@ -5822,3 +6421,8 @@ export type InsertSecurityAlert = z.infer<typeof insertSecurityAlertSchema>;
 
 export type SecurityPolicy = typeof securityPolicies.$inferSelect;
 export type InsertSecurityPolicy = z.infer<typeof insertSecurityPolicySchema>;
+
+// Department and Employee types
+export type Department = typeof departments.$inferSelect;
+export type Employee = typeof employees.$inferSelect;
+export type EmployeeAttendance = typeof employeeAttendance.$inferSelect;

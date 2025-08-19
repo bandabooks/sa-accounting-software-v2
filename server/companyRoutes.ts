@@ -38,8 +38,34 @@ export function registerCompanyRoutes(app: Express) {
       const userId = req.user.id;
       const companyData = insertCompanySchema.parse(req.body);
       
-      // Create company with user ID for proper initialization
-      const company = await companyStorage.createCompany(companyData, userId);
+      // Generate company ID using the ID generator
+      const { ProfessionalIdGenerator } = await import('./idGenerator.js');
+      const companyId = await ProfessionalIdGenerator.generateCompanyId();
+      
+      // Generate a unique slug from company name if not provided
+      let slug = companyData.slug;
+      if (!slug && companyData.name) {
+        slug = companyData.name.toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '')
+          .replace(/\s+/g, '-')
+          .trim();
+        
+        // Ensure slug is unique
+        let uniqueSlug = slug;
+        let counter = 1;
+        while (await companyStorage.getCompanyBySlug(uniqueSlug)) {
+          uniqueSlug = `${slug}-${counter}`;
+          counter++;
+        }
+        slug = uniqueSlug;
+      }
+      
+      // Create company with user ID for proper initialization  
+      const company = await companyStorage.createCompany({
+        ...companyData,
+        companyId,
+        slug: slug || `company-${companyId}`
+      }, userId);
       
       // Add creator as owner
       await companyStorage.addUserToCompany({
@@ -53,7 +79,23 @@ export function registerCompanyRoutes(app: Express) {
       res.status(201).json(company);
     } catch (error) {
       console.error("Error creating company:", error);
-      res.status(500).json({ message: "Failed to create company" });
+      
+      // Handle validation errors specifically
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation failed",
+          errors: error.errors 
+        });
+      }
+      
+      // Handle database constraint violations
+      if ((error as any).code === '23505') { // Unique constraint violation
+        return res.status(409).json({ 
+          message: "Company with this name or email already exists" 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to create company", error: (error as Error).message });
     }
   });
 
