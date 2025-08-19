@@ -42,4 +42,4 @@ tmp/
 
 # Deployment files
 .vercel
-.netlify
+.netlify.env
