@@ -64,6 +64,15 @@ export default function ComplianceTasks() {
   // Edit form
   const editForm = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      taskType: "compliance",
+      priority: "medium",
+      complianceType: "",
+      notes: "",
+      dueDate: "",
+    },
   });
 
   // Create mutation
