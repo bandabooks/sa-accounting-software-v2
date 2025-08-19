@@ -231,13 +231,22 @@ export default function ExpensesStandalone() {
               </div>
             </div>
           </div>
-          <Button 
-            onClick={() => setIsAddModalOpen(true)} 
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
-          >
-            <Plus className="h-5 w-5" />
-            Add New Expense
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => setIsAddModalOpen(true)} 
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
+            >
+              <Plus className="h-5 w-5" />
+              Add New Expense
+            </Button>
+            <Button 
+              variant="outline"
+              className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 text-green-700 border-green-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
+            >
+              <CreditCard className="h-5 w-5" />
+              Pay Expenses
+            </Button>
+          </div>
         </div>
 
         {/* Enhanced Metrics Cards */}
@@ -473,6 +482,14 @@ export default function ExpensesStandalone() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {expense.paidStatus === "Unpaid" && (
+                            <DropdownMenuItem
+                              className="flex items-center gap-2 text-green-600"
+                            >
+                              <CreditCard className="h-4 w-4" />
+                              Pay Expense
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => handleEditExpense(expense)}
                             className="flex items-center gap-2"
