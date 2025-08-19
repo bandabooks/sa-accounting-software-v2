@@ -1,125 +1,404 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter, Edit, Trash2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { ComplianceTask, InsertComplianceTask } from "@shared/schema";
 
-// Task interface for type safety
-interface ComplianceTask {
-  id: string;
-  title: string;
-  client: string;
-  type: 'SARS' | 'CIPC' | 'Labour';
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
-  dueDate: string;
-  assignedTo: string;
-}
+// Form validation schema
+const taskFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  taskType: z.string().min(1, "Task type is required"),
+  priority: z.string().default("medium"),
+  complianceType: z.string().optional(),
+  assignedTo: z.number().optional(),
+  dueDate: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.string().optional(),
+  completedAt: z.string().optional(),
+});
 
-// Real compliance tasks will be loaded from API - no mock data
-const tasks: ComplianceTask[] = [];
+type TaskFormData = z.infer<typeof taskFormSchema>;
 
 export default function ComplianceTasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<ComplianceTask | null>(null);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch tasks
+  const { data: tasks = [], isLoading } = useQuery<ComplianceTask[]>({
+    queryKey: ["/api/compliance/tasks"],
+  });
+
+  // Create form
+  const createForm = useForm<TaskFormData>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      taskType: "compliance",
+      priority: "medium",
+      complianceType: "",
+      notes: "",
+    },
+  });
+
+  // Edit form
+  const editForm = useForm<TaskFormData>({
+    resolver: zodResolver(taskFormSchema),
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (data: TaskFormData) => 
+      fetch(`/api/compliance/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).then(res => {
+        if (!res.ok) throw new Error("Failed to create task");
+        return res.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/compliance/tasks"] });
+      setIsCreateDialogOpen(false);
+      createForm.reset();
+      toast({
+        title: "Success",
+        description: "Task created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<TaskFormData> }) => 
+      fetch(`/api/compliance/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).then(res => {
+        if (!res.ok) throw new Error("Failed to update task");
+        return res.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/compliance/tasks"] });
+      setIsEditDialogOpen(false);
+      setEditingTask(null);
+      editForm.reset();
+      toast({
+        title: "Success", 
+        description: "Task updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800";
-      case "in_progress": return "bg-blue-100 text-blue-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "overdue": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "completed": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "in_progress": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "overdue": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "bg-red-100 text-red-800";
-      case "medium": return "bg-yellow-100 text-yellow-800";
-      case "low": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "high": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "medium": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "low": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "SARS": return "bg-blue-100 text-blue-800";
-      case "CIPC": return "bg-purple-100 text-purple-800";
-      case "Labour": return "bg-orange-100 text-orange-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "sars": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "cipc": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "labour": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
 
+  const handleCreateTask = (data: TaskFormData) => {
+    createMutation.mutate(data);
+  };
+
+  const handleEditTask = (data: TaskFormData) => {
+    if (editingTask) {
+      updateMutation.mutate({ id: editingTask.id, data });
+    }
+  };
+
+  const handleEditClick = (task: ComplianceTask) => {
+    setEditingTask(task);
+    editForm.reset({
+      title: task.title,
+      description: task.description || "",
+      taskType: task.taskType,
+      priority: task.priority || "medium",
+      complianceType: task.complianceType || "",
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+      notes: task.notes || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
   const filteredTasks = tasks.filter((task: ComplianceTask) => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.client.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !selectedType || selectedType === "all" || task.type === selectedType;
+    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = !selectedType || selectedType === "all" || task.complianceType === selectedType;
     const matchesStatus = !selectedStatus || selectedStatus === "all" || task.status === selectedStatus;
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  // Calculate stats
+  const totalTasks = tasks.length;
+  const inProgressTasks = tasks.filter(task => task.status === "in_progress").length;
+  const completedTasks = tasks.filter(task => task.status === "completed").length;
+  const overdueTasks = tasks.filter(task => {
+    if (!task.dueDate) return false;
+    return new Date(task.dueDate) < new Date() && task.status !== "completed";
+  }).length;
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Task Management</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Task Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Track and manage all compliance tasks and deadlines
           </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
-          New Task
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              New Task
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Create New Task</DialogTitle>
+              <DialogDescription>
+                Add a new compliance task to track and manage.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...createForm}>
+              <form onSubmit={createForm.handleSubmit(handleCreateTask)} className="space-y-4">
+                <FormField
+                  control={createForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Task title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Task description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="taskType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Task Type</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="compliance">Compliance</SelectItem>
+                            <SelectItem value="review">Review</SelectItem>
+                            <SelectItem value="follow_up">Follow Up</SelectItem>
+                            <SelectItem value="document_request">Document Request</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Priority</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="urgent">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="complianceType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Compliance Type</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="sars">SARS</SelectItem>
+                            <SelectItem value="cipc">CIPC</SelectItem>
+                            <SelectItem value="labour">Labour</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={createForm.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Additional notes" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? "Creating..." : "Create Task"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="flex items-center">
-              <CheckSquare className="h-5 w-5 text-blue-600 mr-2" />
+              <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Tasks</p>
-                <p className="text-xl font-bold text-blue-900">45</p>
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Tasks</p>
+                <p className="text-xl font-bold text-blue-900 dark:text-blue-100">{totalTasks}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-yellow-50 border-yellow-200">
+        <Card className="bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800">
           <CardContent className="p-4">
             <div className="flex items-center">
-              <Clock className="h-5 w-5 text-yellow-600 mr-2" />
+              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-2" />
               <div>
-                <p className="text-sm font-medium text-yellow-700">In Progress</p>
-                <p className="text-xl font-bold text-yellow-900">12</p>
+                <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">In Progress</p>
+                <p className="text-xl font-bold text-yellow-900 dark:text-yellow-100">{inProgressTasks}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
           <CardContent className="p-4">
             <div className="flex items-center">
-              <CheckSquare className="h-5 w-5 text-green-600 mr-2" />
+              <CheckSquare className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
               <div>
-                <p className="text-sm font-medium text-green-700">Completed</p>
-                <p className="text-xl font-bold text-green-900">28</p>
+                <p className="text-sm font-medium text-green-700 dark:text-green-300">Completed</p>
+                <p className="text-xl font-bold text-green-900 dark:text-green-100">{completedTasks}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-red-50 border-red-200">
+        <Card className="bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800">
           <CardContent className="p-4">
             <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
               <div>
-                <p className="text-sm font-medium text-red-700">Overdue</p>
-                <p className="text-xl font-bold text-red-900">5</p>
+                <p className="text-sm font-medium text-red-700 dark:text-red-300">Overdue</p>
+                <p className="text-xl font-bold text-red-900 dark:text-red-100">{overdueTasks}</p>
               </div>
             </div>
           </CardContent>
@@ -147,9 +426,9 @@ export default function ComplianceTasks() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="SARS">SARS</SelectItem>
-                <SelectItem value="CIPC">CIPC</SelectItem>
-                <SelectItem value="Labour">Labour</SelectItem>
+                <SelectItem value="sars">SARS</SelectItem>
+                <SelectItem value="cipc">CIPC</SelectItem>
+                <SelectItem value="labour">Labour</SelectItem>
               </SelectContent>
             </Select>
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -170,30 +449,81 @@ export default function ComplianceTasks() {
 
       {/* Tasks List */}
       <div className="space-y-4">
-        {filteredTasks.length > 0 ? (
+        {isLoading ? (
+          <div className="grid gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredTasks.length > 0 ? (
           filteredTasks.map((task: ComplianceTask) => (
             <Card key={task.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{task.title}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{task.title}</h3>
                       <div className="flex space-x-2">
-                        <Badge className={getTypeColor(task.type)}>{task.type}</Badge>
-                        <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                        <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
+                        {task.complianceType && (
+                          <Badge className={getTypeColor(task.complianceType)}>
+                            {task.complianceType.toUpperCase()}
+                          </Badge>
+                        )}
+                        <Badge className={getPriorityColor(task.priority || "medium")}>
+                          {task.priority || "medium"}
+                        </Badge>
+                        <Badge className={getStatusColor(task.status || "pending")}>
+                          {task.status || "pending"}
+                        </Badge>
                       </div>
                     </div>
-                    <p className="text-gray-600 mb-2">{task.client}</p>
-                    <div className="flex items-center text-sm text-gray-500 space-x-4">
-                      <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                      <span>•</span>
-                      <span>Assigned to: {task.assignedTo}</span>
+                    {task.description && (
+                      <p className="text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
+                    )}
+                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
+                      {task.dueDate && (
+                        <>
+                          <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                          <span>•</span>
+                        </>
+                      )}
+                      <span>Task Type: {task.taskType}</span>
+                      {task.assignedTo && (
+                        <>
+                          <span>•</span>
+                          <span>Assigned to: User {task.assignedTo}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">View Details</Button>
-                    <Button size="sm">Update Status</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleEditClick(task)}>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        const newStatus = task.status === "completed" ? "pending" : "completed";
+                        updateMutation.mutate({ 
+                          id: task.id, 
+                          data: { 
+                            status: newStatus,
+                            completedAt: newStatus === "completed" ? new Date().toISOString() : undefined
+                          } 
+                        });
+                      }}
+                    >
+                      {task.status === "completed" ? "Reopen" : "Complete"}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -203,11 +533,14 @@ export default function ComplianceTasks() {
           <Card>
             <CardContent className="p-12 text-center">
               <CheckSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Tasks Found</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Tasks Found</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
                 You haven't created any compliance tasks yet, or no tasks match your current filters.
               </p>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Task
               </Button>
@@ -215,6 +548,154 @@ export default function ComplianceTasks() {
           </Card>
         )}
       </div>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Update the task details below.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleEditTask)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Task title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Task description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="taskType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Task Type</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="compliance">Compliance</SelectItem>
+                          <SelectItem value="review">Review</SelectItem>
+                          <SelectItem value="follow_up">Follow Up</SelectItem>
+                          <SelectItem value="document_request">Document Request</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="complianceType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Compliance Type</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="sars">SARS</SelectItem>
+                          <SelectItem value="cipc">CIPC</SelectItem>
+                          <SelectItem value="labour">Labour</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Additional notes" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Updating..." : "Update Task"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
