@@ -41,6 +41,7 @@ interface ExpenseFormData {
   amount: string;
   vatTypeId?: number;
   vatType: string; // For backward compatibility
+  vatCalculationMethod: "inclusive" | "exclusive";
   vatRate: string;
   vatAmount: string;
   expenseDate: string;
@@ -623,7 +624,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                       <SelectValue placeholder="Select VAT type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No VAT</SelectItem>
+                      <SelectItem value="0">No VAT</SelectItem>
                       {(vatTypes as any)?.map((vatType: any) => (
                         <SelectItem key={vatType.id} value={vatType.id.toString()}>
                           {vatType.name} ({vatType.rate}%)

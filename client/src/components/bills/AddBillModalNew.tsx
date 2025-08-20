@@ -36,6 +36,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
     notes: "",
     paymentTerms: 30,
     immediateConsumption: false,
+    vatCalculationMethod: "exclusive" as "inclusive" | "exclusive", // Same as invoices
     createdBy: user?.id || 0,
   });
 
@@ -142,14 +143,28 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
         if (item.id === id) {
           const updatedItem = { ...item, [field]: value };
           
-          // Recalculate VAT when amount or VAT code changes
+          // Recalculate VAT when amount or VAT code changes (using same logic as invoices)
           if (field === 'amount' || field === 'vatCodeId') {
             const amount = parseFloat(field === 'amount' ? value : updatedItem.amount);
             const vatCode = (vatCodes as any)?.find((vat: any) => vat.id === updatedItem.vatCodeId);
             if (vatCode) {
               const vatRate = parseFloat(vatCode.rate || '0');
               updatedItem.vatRate = vatRate;
-              updatedItem.vatAmount = (amount * (vatRate / 100)).toFixed(2);
+              
+              if (vatRate === 0) {
+                updatedItem.vatAmount = "0.00";
+              } else {
+                // Use the same VAT calculation logic as invoices
+                let calculatedVAT = 0;
+                if (billData.vatCalculationMethod === 'inclusive') {
+                  // For inclusive method: VAT = amount * (rate / (100 + rate))
+                  calculatedVAT = amount * (vatRate / (100 + vatRate));
+                } else {
+                  // For exclusive method: VAT = amount * (rate / 100)
+                  calculatedVAT = amount * (vatRate / 100);
+                }
+                updatedItem.vatAmount = calculatedVAT.toFixed(2);
+              }
             } else {
               updatedItem.vatRate = 0;
               updatedItem.vatAmount = "0.00";
@@ -451,6 +466,25 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Enter bill description"
                 />
+              </div>
+
+              {/* VAT Calculation Method - Same as invoices */}
+              <div className="space-y-2">
+                <Label htmlFor="vatCalculationMethod">VAT Calculation Method</Label>
+                <Select
+                  value={billData.vatCalculationMethod}
+                  onValueChange={(value: "inclusive" | "exclusive") => 
+                    handleInputChange('vatCalculationMethod', value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="exclusive">Exclusive (Add VAT)</SelectItem>
+                    <SelectItem value="inclusive">Inclusive (VAT included)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center space-x-2">

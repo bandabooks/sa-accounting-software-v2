@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { DollarSign, FileText, Filter, Plus, Search, Calendar, TrendingDown, Receipt, CreditCard, Edit, Trash2, MoreHorizontal } from "lucide-react";
-import AddExpenseModal from "@/components/expenses/AddExpenseModal";
+import AddExpenseModalVAT from "@/components/expenses/AddExpenseModalVAT";
 import { format } from "date-fns";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { useLocation } from "wouter";
@@ -483,14 +483,14 @@ export default function ExpensesStandalone() {
       </Card>
 
         {/* Add Expense Modal */}
-        <AddExpenseModal
+        <AddExpenseModalVAT
           open={isAddModalOpen}
           onOpenChange={setIsAddModalOpen}
         />
 
         {/* Edit Expense Modal */}
         {editingExpense && (
-          <AddExpenseModal
+          <AddExpenseModalVAT
             open={!!editingExpense}
             onOpenChange={(open) => !open && setEditingExpense(null)}
             editingExpense={editingExpense}
