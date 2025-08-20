@@ -25,7 +25,8 @@ interface LineItem {
   quantity: number;
   unitPrice: string;
   amount: string;
-  vatType: "Inclusive" | "Exclusive" | "No VAT";
+  vatTypeId?: number;
+  vatType: string; // For backward compatibility
   vatRate: string;
   vatAmount: string;
 }
@@ -38,7 +39,8 @@ interface ExpenseFormData {
   categoryId?: number;
   category: string;
   amount: string;
-  vatType: "Inclusive" | "Exclusive" | "No VAT";
+  vatTypeId?: number;
+  vatType: string; // For backward compatibility
   vatRate: string;
   vatAmount: string;
   expenseDate: string;
@@ -71,6 +73,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
     bankAccountId: 0, // Will be set when bank accounts are loaded
     description: "",
     amount: "",
+    vatTypeId: undefined,
     vatType: "No VAT",
     vatRate: "15.00",
     vatAmount: "0.00",
@@ -129,6 +132,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
         categoryId: editingExpense.categoryId,
         category: editingExpense.categoryName || "",
         amount: editingExpense.amount,
+        vatTypeId: editingExpense.vatTypeId,
         vatType: editingExpense.vatType,
         vatRate: editingExpense.vatRate,
         vatAmount: editingExpense.vatAmount,
@@ -183,26 +187,49 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
     enabled: open,
   });
 
-  // Calculate VAT amounts whenever amount or VAT type changes
+  // Fetch VAT Types (Global VAT system - same as invoices)
+  const { data: vatTypes } = useQuery({
+    queryKey: ['/api/vat-types'],
+    enabled: open,
+  });
+
+  // Calculate VAT amounts whenever amount or VAT type changes (using global VAT system)
   useEffect(() => {
     calculateVAT();
-  }, [formData.amount, formData.vatType, formData.vatRate]);
+  }, [formData.amount, formData.vatTypeId, vatTypes]);
 
   const calculateVAT = () => {
     const amount = parseFloat(formData.amount) || 0;
-    const vatRate = parseFloat(formData.vatRate) || 0;
 
-    if (formData.vatType === "No VAT") {
+    if (!formData.vatTypeId || !vatTypes) {
+      // No VAT selected
+      setNetAmount(amount.toFixed(2));
+      setGrossAmount(amount.toFixed(2));
+      setFormData(prev => ({ ...prev, vatAmount: "0.00", vatRate: "0.00" }));
+      return;
+    }
+
+    // Find VAT type from global VAT system
+    const vatType = (vatTypes as any)?.find((type: any) => type.id === formData.vatTypeId);
+    if (!vatType) {
+      setNetAmount(amount.toFixed(2));
+      setGrossAmount(amount.toFixed(2));
+      setFormData(prev => ({ ...prev, vatAmount: "0.00", vatRate: "0.00" }));
+      return;
+    }
+
+    const vatRate = parseFloat(vatType.rate || "0");
+    
+    // Update VAT rate in form data
+    setFormData(prev => ({ ...prev, vatRate: vatRate.toFixed(2) }));
+
+    if (vatRate === 0) {
+      // Zero-rated or exempt VAT
       setNetAmount(amount.toFixed(2));
       setGrossAmount(amount.toFixed(2));
       setFormData(prev => ({ ...prev, vatAmount: "0.00" }));
-    } else if (formData.vatType === "Inclusive") {
-      const net = amount / (1 + vatRate / 100);
-      const vatAmount = amount - net;
-      setNetAmount(net.toFixed(2));
-      setGrossAmount(amount.toFixed(2));
-      setFormData(prev => ({ ...prev, vatAmount: vatAmount.toFixed(2) }));
-    } else { // Exclusive
+    } else {
+      // Standard VAT calculation (exclusive method for expenses)
       const vatAmount = (amount * vatRate) / 100;
       const gross = amount + vatAmount;
       setNetAmount(amount.toFixed(2));
@@ -581,18 +608,27 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                 <div className="space-y-2">
                   <Label htmlFor="vatType">VAT Type</Label>
                   <Select
-                    value={formData.vatType}
-                    onValueChange={(value: "Inclusive" | "Exclusive" | "No VAT") => 
-                      setFormData(prev => ({ ...prev, vatType: value }))
-                    }
+                    value={formData.vatTypeId?.toString() || ""}
+                    onValueChange={(value) => {
+                      const vatTypeId = value ? parseInt(value) : undefined;
+                      const vatType = (vatTypes as any)?.find((type: any) => type.id === vatTypeId);
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        vatTypeId,
+                        vatType: vatType ? `${vatType.name} (${vatType.rate}%)` : "No VAT"
+                      }));
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select VAT type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Exclusive">Exclusive</SelectItem>
-                      <SelectItem value="Inclusive">Inclusive</SelectItem>
-                      <SelectItem value="No VAT">No VAT</SelectItem>
+                      <SelectItem value="">No VAT</SelectItem>
+                      {(vatTypes as any)?.map((vatType: any) => (
+                        <SelectItem key={vatType.id} value={vatType.id.toString()}>
+                          {vatType.name} ({vatType.rate}%)
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
