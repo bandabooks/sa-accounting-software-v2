@@ -29,7 +29,12 @@ export default function BillsPage() {
     enabled: !!user?.companyId,
   });
 
-
+  useLoadingStates({
+    loadingStates: [
+      { isLoading, message: 'Loading bills...' },
+    ],
+    progressSteps: ['Fetching bills', 'Processing data'],
+  });
 
   useLoadingStates({
     loadingStates: [
@@ -190,7 +195,7 @@ export default function BillsPage() {
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <span className="bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                Bills & Accounts Payable (Coming Soon)
+                Bills & Accounts Payable
               </span>
             </CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
@@ -198,21 +203,56 @@ export default function BillsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center h-48 text-gray-500 dark:text-gray-400">
-              <div className="p-4 bg-gradient-to-r from-orange-100 to-red-200 dark:from-orange-700 dark:to-red-800 rounded-2xl mb-4">
-                <FileText className="h-16 w-16" />
+            {bills && bills.length > 0 ? (
+              <div className="space-y-4">
+                {/* Bills Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3">Bill Number</th>
+                        <th className="text-left p-3">Supplier</th>
+                        <th className="text-left p-3">Date</th>
+                        <th className="text-left p-3">Due Date</th>
+                        <th className="text-left p-3">Amount</th>
+                        <th className="text-left p-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bills.map((bill: any) => (
+                        <tr key={bill.id} className="border-b hover:bg-gray-50">
+                          <td className="p-3 font-medium">{bill.billNumber}</td>
+                          <td className="p-3">{bill.supplierName || `Supplier ${bill.supplierId}`}</td>
+                          <td className="p-3">{new Date(bill.billDate).toLocaleDateString()}</td>
+                          <td className="p-3">{new Date(bill.dueDate).toLocaleDateString()}</td>
+                          <td className="p-3">{formatCurrency(bill.total)}</td>
+                          <td className="p-3">
+                            <Badge variant={bill.status === 'paid' ? 'default' : 'secondary'}>
+                              {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Bills Module Coming Soon</h3>
-              <p className="text-sm text-center max-w-md">
-                The Bills & Accounts Payable module will allow you to manage unpaid supplier invoices 
-                and track due dates. For now, use the Expenses module for immediate payments.
-              </p>
-              <div className="mt-4">
-                <Badge variant="outline" className="px-4 py-2">
-                  Under Development
-                </Badge>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-48 text-gray-500 dark:text-gray-400">
+                <div className="p-4 bg-gradient-to-r from-blue-100 to-purple-200 dark:from-blue-700 dark:to-purple-800 rounded-2xl mb-4">
+                  <FileText className="h-16 w-16" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">No Bills Found</h3>
+                <p className="text-sm text-center max-w-md">
+                  You haven't created any bills yet. Click "Add New Bill" to create your first bill with proper GL account validation and accounting workflows.
+                </p>
+                <div className="mt-4">
+                  <Badge variant="outline" className="px-4 py-2">
+                    Ready to Use
+                  </Badge>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 

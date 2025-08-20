@@ -503,13 +503,14 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
                     <div className="space-y-2">
                       <Label>GL Account *</Label>
                       <Select 
-                        value={item.glAccountId.toString()} 
+                        value={item.glAccountId.toString() || '0'} 
                         onValueChange={(value) => updateLineItem(item.id, 'glAccountId', parseInt(value))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select GL account" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="0">Select GL Account</SelectItem>
                           {glAccounts?.filter((account: any) => {
                             const accountType = account.accountType?.toLowerCase() || '';
                             const accountName = account.accountName?.toLowerCase() || '';
@@ -528,14 +529,14 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
                     <div className="space-y-2">
                       <Label>VAT Code</Label>
                       <Select 
-                        value={item.vatCodeId?.toString() || ''} 
-                        onValueChange={(value) => updateLineItem(item.id, 'vatCodeId', value ? parseInt(value) : null)}
+                        value={item.vatCodeId?.toString() || '0'} 
+                        onValueChange={(value) => updateLineItem(item.id, 'vatCodeId', value === '0' ? null : parseInt(value))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select VAT code" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No VAT</SelectItem>
+                          <SelectItem value="0">No VAT</SelectItem>
                           {vatCodes?.map((vat: any) => (
                             <SelectItem key={vat.id} value={vat.id.toString()}>
                               {vat.name} ({vat.rate}%)
