@@ -67,6 +67,7 @@ export default function ExpensesStandalone() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("all_suppliers");
   const [selectedCategory, setSelectedCategory] = useState("all_categories");
@@ -183,12 +184,46 @@ export default function ExpensesStandalone() {
     },
   });
 
+  // Pay expense mutation
+  const payExpenseMutation = useMutation({
+    mutationFn: async (expenseId: number) => {
+      const response = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ paidStatus: 'Paid' }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to process expense payment');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/expenses/metrics/${selectedPeriod}`] });
+      toast({
+        title: "Success",
+        description: "Expense payment processed successfully",
+      });
+      setPayingExpense(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process expense payment",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Use loading states for comprehensive loading feedback including mutations - MUST be after ALL mutations
   useLoadingStates({
     loadingStates: [
       { isLoading, message: 'Loading expenses...' },
       { isLoading: deleteExpenseMutation.isPending, message: 'Deleting expense...' },
       { isLoading: updateExpenseMutation.isPending, message: 'Updating expense...' },
+      { isLoading: payExpenseMutation.isPending, message: 'Processing payment...' },
     ],
     progressSteps: ['Fetching expenses', 'Loading suppliers', 'Processing filters'],
   });
@@ -209,6 +244,16 @@ export default function ExpensesStandalone() {
 
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
+  };
+
+  const handlePayExpense = (expense: Expense) => {
+    setPayingExpense(expense);
+  };
+
+  const confirmPayExpense = () => {
+    if (payingExpense) {
+      payExpenseMutation.mutate(payingExpense.id);
+    }
   };
 
   return (
@@ -484,6 +529,7 @@ export default function ExpensesStandalone() {
                         <DropdownMenuContent align="end">
                           {expense.paidStatus === "Unpaid" && (
                             <DropdownMenuItem
+                              onClick={() => handlePayExpense(expense)}
                               className="flex items-center gap-2 text-green-600"
                             >
                               <CreditCard className="h-4 w-4" />
@@ -550,6 +596,31 @@ export default function ExpensesStandalone() {
                 disabled={deleteExpenseMutation.isPending}
               >
                 {deleteExpenseMutation.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Payment Confirmation Dialog */}
+        <AlertDialog open={!!payingExpense} onOpenChange={(open) => !open && setPayingExpense(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Pay Expense</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to mark the expense "{payingExpense?.description}" as paid? 
+                The expense amount is {payingExpense && formatCurrency(payingExpense.amount)}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPayingExpense(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmPayExpense}
+                className="bg-green-600 text-white hover:bg-green-700"
+                disabled={payExpenseMutation.isPending}
+              >
+                {payExpenseMutation.isPending ? "Processing..." : "Confirm Payment"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
