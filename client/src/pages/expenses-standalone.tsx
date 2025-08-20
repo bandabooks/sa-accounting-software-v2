@@ -67,8 +67,6 @@ export default function ExpensesStandalone() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
-  const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("all_suppliers");
   const [selectedCategory, setSelectedCategory] = useState("all_categories");
@@ -96,12 +94,6 @@ export default function ExpensesStandalone() {
   // Fetch chart of accounts for category filter
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
     queryKey: ['/api/chart-of-accounts'],
-    enabled: !!user,
-  });
-
-  // Fetch bank accounts for payment selection
-  const { data: bankAccounts = [] } = useQuery<any[]>({
-    queryKey: ['/api/bank-accounts'],
     enabled: !!user,
   });
 
@@ -191,51 +183,12 @@ export default function ExpensesStandalone() {
     },
   });
 
-  // Pay expense mutation
-  const payExpenseMutation = useMutation({
-    mutationFn: async ({ expenseId, bankAccountId, paidStatus }: { expenseId: number; bankAccountId: string; paidStatus: string }) => {
-      const response = await fetch(`/api/expenses/${expenseId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          paidStatus, 
-          bankAccountId: parseInt(bankAccountId),
-          paymentDate: new Date().toISOString()
-        }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to process expense payment');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/expenses/metrics/${selectedPeriod}`] });
-      toast({
-        title: "Success",
-        description: "Expense payment processed successfully",
-      });
-      setPayingExpense(null);
-      setSelectedBankAccount("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process expense payment",
-        variant: "destructive",
-      });
-    },
-  });
-
   // Use loading states for comprehensive loading feedback including mutations - MUST be after ALL mutations
   useLoadingStates({
     loadingStates: [
       { isLoading, message: 'Loading expenses...' },
       { isLoading: deleteExpenseMutation.isPending, message: 'Deleting expense...' },
       { isLoading: updateExpenseMutation.isPending, message: 'Updating expense...' },
-      { isLoading: payExpenseMutation.isPending, message: 'Processing payment...' },
     ],
     progressSteps: ['Fetching expenses', 'Loading suppliers', 'Processing filters'],
   });
@@ -256,50 +209,6 @@ export default function ExpensesStandalone() {
 
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
-  };
-
-  const handlePayExpense = (expense: Expense) => {
-    setPayingExpense(expense);
-    setSelectedBankAccount(""); // Reset bank account selection
-  };
-
-  const confirmPayExpense = () => {
-    if (!payingExpense) return;
-    
-    if (!selectedBankAccount) {
-      toast({
-        title: "Bank Account Required",
-        description: "Please select a bank account to process the payment",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Include bank account in the payment data
-    payExpenseMutation.mutate({
-      expenseId: payingExpense.id,
-      bankAccountId: selectedBankAccount,
-      paidStatus: 'Paid'
-    });
-  };
-
-  const handleBulkPayExpenses = () => {
-    // Find all unpaid expenses
-    const unpaidExpenses = filteredExpenses.filter(expense => expense.paidStatus === "Unpaid");
-    
-    if (unpaidExpenses.length === 0) {
-      toast({
-        title: "No Unpaid Expenses",
-        description: "All expenses are already paid",
-      });
-      return;
-    }
-
-    // For now, show a simple confirmation for bulk payment
-    toast({
-      title: "Bulk Payment",
-      description: `Found ${unpaidExpenses.length} unpaid expenses. Individual payment processing available in dropdown menus.`,
-    });
   };
 
   return (
@@ -331,7 +240,6 @@ export default function ExpensesStandalone() {
               Add New Expense
             </Button>
             <Button 
-              onClick={handleBulkPayExpenses}
               variant="outline"
               className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 text-green-700 border-green-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
             >
@@ -576,7 +484,6 @@ export default function ExpensesStandalone() {
                         <DropdownMenuContent align="end">
                           {expense.paidStatus === "Unpaid" && (
                             <DropdownMenuItem
-                              onClick={() => handlePayExpense(expense)}
                               className="flex items-center gap-2 text-green-600"
                             >
                               <CreditCard className="h-4 w-4" />
@@ -643,61 +550,6 @@ export default function ExpensesStandalone() {
                 disabled={deleteExpenseMutation.isPending}
               >
                 {deleteExpenseMutation.isPending ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Payment Confirmation Dialog */}
-        <AlertDialog open={!!payingExpense} onOpenChange={(open) => !open && setPayingExpense(null)}>
-          <AlertDialogContent className="max-w-md">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Pay Expense</AlertDialogTitle>
-              <AlertDialogDescription>
-                Processing payment for "{payingExpense?.description}" 
-                <br />Amount: {payingExpense && formatCurrency(payingExpense.amount)}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            
-            <div className="space-y-4 my-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Select Payment Account <span className="text-red-500">*</span>
-                </label>
-                <Select value={selectedBankAccount} onValueChange={setSelectedBankAccount}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose bank account for payment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bankAccounts.map((account: any) => (
-                      <SelectItem key={account.id} value={account.id.toString()}>
-                        {account.accountName} - {account.accountNumber}
-                        {account.balance && ` (Balance: ${formatCurrency(account.balance)})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!selectedBankAccount && (
-                  <p className="text-sm text-red-500 mt-1">
-                    Please select a bank account to process the payment
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => {
-                setPayingExpense(null);
-                setSelectedBankAccount("");
-              }}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmPayExpense}
-                className="bg-green-600 text-white hover:bg-green-700"
-                disabled={payExpenseMutation.isPending || !selectedBankAccount}
-              >
-                {payExpenseMutation.isPending ? "Processing..." : "Confirm Payment"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
