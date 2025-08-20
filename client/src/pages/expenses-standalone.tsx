@@ -417,10 +417,11 @@ export default function ExpensesStandalone() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {filteredExpenses.map((expense) => (
-                <Card key={expense.id} className="p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl">
-                  <div className="flex items-center justify-between">
+                <Card key={expense.id} className="p-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl">
+                  {/* Header Section */}
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{expense.description}</h3>
@@ -436,17 +437,23 @@ export default function ExpensesStandalone() {
                         {expense.supplierInvoiceNumber && (
                           <span>Invoice: {expense.supplierInvoiceNumber}</span>
                         )}
-                        <span>{expense.supplierName || "No Supplier"}</span>
+                        <span className="font-medium text-blue-600 dark:text-blue-400">
+                          {expense.supplierName || "Direct Expense"}
+                        </span>
                         <span>{format(new Date(expense.expenseDate), "dd MMM yyyy")}</span>
-                        <span className="text-blue-600 dark:text-blue-400">
+                        <span className="text-green-600 dark:text-green-400">
                           • Paid from: {expense.bankAccountName || 'Bank Account'}
                         </span>
                       </div>
                     </div>
+                    
+                    {/* Amount and Actions Section */}
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <div className="text-lg font-bold">{formatCurrency(expense.amount)}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">
+                          {formatCurrency(expense.amount)}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
                           VAT: {formatCurrency(expense.vatAmount)}
                         </div>
                       </div>
@@ -473,6 +480,38 @@ export default function ExpensesStandalone() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                    </div>
+                  </div>
+                  
+                  {/* Additional Details Section */}
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block">Category</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {expense.category || "General"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block">Reference</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {expense.internalExpenseRef}
+                        </span>
+                      </div>
+                      {expense.supplierInvoiceNumber && (
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400 block">Supplier Invoice</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {expense.supplierInvoiceNumber}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block">Total Amount</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {formatCurrency(parseFloat(expense.amount) + parseFloat(expense.vatAmount || '0'))}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </Card>

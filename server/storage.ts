@@ -3537,6 +3537,8 @@ export class DatabaseStorage implements IStorage {
     
     return result.map(row => ({
       ...row.expense,
+      supplierName: row.supplier?.name || null,
+      categoryName: row.category?.accountName || null,
       supplier: row.supplier,
       category: row.category
     }));
