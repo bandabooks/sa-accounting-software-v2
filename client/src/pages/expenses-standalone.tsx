@@ -240,7 +240,10 @@ export default function ExpensesStandalone() {
             </Button>
             <Button 
               variant="outline"
-              onClick={() => {/* Navigate to Bills module for unpaid bills */}}
+              onClick={() => {
+                // Navigate to Bills page when it's created
+                window.location.href = '/bills';
+              }}
               className="flex items-center gap-2 bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 text-orange-700 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
             >
               <FileText className="h-5 w-5" />

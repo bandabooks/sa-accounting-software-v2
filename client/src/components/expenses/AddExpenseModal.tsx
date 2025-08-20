@@ -68,7 +68,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
   
   const [formData, setFormData] = useState<ExpenseFormData>({
     companyId: (user as any)?.companyId || 0,
-    bankAccountId: 25, // Default to first available bank account - will be populated from API
+    bankAccountId: 0, // Will be set when bank accounts are loaded
     description: "",
     amount: "",
     vatType: "No VAT",
@@ -95,6 +95,16 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
   const [totalNetAmount, setTotalNetAmount] = useState("0.00");
   const [totalVatAmount, setTotalVatAmount] = useState("0.00");
   const [totalGrossAmount, setTotalGrossAmount] = useState("0.00");
+
+  // Effect to set default bank account when bank accounts are loaded
+  useEffect(() => {
+    if (bankAccounts && (bankAccounts as any).length > 0 && !editingExpense && formData.bankAccountId === 0) {
+      setFormData(prev => ({
+        ...prev,
+        bankAccountId: (bankAccounts as any)[0].id
+      }));
+    }
+  }, [bankAccounts, editingExpense, formData.bankAccountId]);
 
   // Effect to populate form when editing
   useEffect(() => {
@@ -126,7 +136,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
       // Reset form for new expense
       setFormData({
         companyId: (user as any)?.companyId || 0,
-        bankAccountId: 25, // Default bank account
+        bankAccountId: (bankAccounts as any)?.[0]?.id || 0, // First available bank account
         description: "",
         amount: "",
         vatType: "No VAT",
@@ -641,7 +651,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                     value={formData.bankAccountId?.toString() || ""}
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
-                      bankAccountId: value ? parseInt(value) : 25 
+                      bankAccountId: value ? parseInt(value) : 0 
                     }))}
                     required
                   >
