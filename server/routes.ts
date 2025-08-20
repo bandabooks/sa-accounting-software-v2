@@ -2973,17 +2973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Company ID is required" });
       }
 
-      // Mock metrics for demonstration
-      const metrics = {
-        totalOutstanding: "25847.50",
-        overdueAmount: "4250.00",
-        thisMonthBills: "18500.00",
-        pendingApproval: "12750.00",
-        billCount: 15,
-        averageBill: "1723.17",
-        daysPayableOutstanding: 32
-      };
-
+      const metrics = await storage.getBillsMetrics(companyId);
       res.json(metrics);
     } catch (error) {
       console.error("Failed to fetch bills metrics:", error);
@@ -2999,35 +2989,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Company ID is required" });
       }
 
-      // Mock bills data for demonstration
-      const bills = [
-        {
-          id: 1,
-          companyId: companyId,
-          billNumber: "BILL-2025-001",
-          supplierId: 1,
-          supplierName: "Office Supplies Co",
-          supplierInvoiceNumber: "INV-12345",
-          billDate: "2025-01-15",
-          dueDate: "2025-02-15",
-          description: "Monthly office supplies",
-          subtotal: "2850.00",
-          vatAmount: "427.50",
-          total: "3277.50",
-          paidAmount: "0.00",
-          status: "pending_approval",
-          approvalStatus: "pending",
-          paymentTerms: 30,
-          urgency: "normal",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
-
+      const bills = await storage.getBills(companyId);
       res.json(bills);
     } catch (error) {
       console.error("Failed to fetch bills:", error);
       res.status(500).json({ message: "Failed to fetch bills" });
+    }
+  });
+
+  // Create a new bill
+  app.post("/api/bills", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      const billData = { 
+        ...req.body, 
+        companyId,
+        createdBy: req.user.id 
+      };
+
+      const newBill = await storage.createBill(billData);
+      await logAudit(req.user.id, 'CREATE', 'bill', newBill.id, null, billData);
+      res.status(201).json(newBill);
+    } catch (error) {
+      console.error("Failed to create bill:", error);
+      res.status(500).json({ message: "Failed to create bill" });
     }
   });
 

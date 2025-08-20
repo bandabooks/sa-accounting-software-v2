@@ -15,6 +15,8 @@ import {
   permissionAuditLog,
   payments,
   expenses,
+  bills,
+  billItems,
   vatReturns,
   suppliers,
   purchaseOrders,
@@ -967,6 +969,17 @@ export interface IStorage {
   createPermissionAuditLog(log: InsertPermissionAuditLog): Promise<PermissionAuditLog>;
   getPermissionAuditLogs(companyId: number, limit?: number): Promise<PermissionAuditLog[]>;
   getUserPermissionAuditLogs(userId: number, companyId: number, limit?: number): Promise<PermissionAuditLog[]>;
+
+  // Bills & Accounts Payable
+  getBills(companyId: number): Promise<Bill[]>;
+  getBill(id: number, companyId: number): Promise<Bill | undefined>;
+  createBill(bill: InsertBill): Promise<Bill>;
+  updateBill(id: number, bill: Partial<InsertBill>, companyId: number): Promise<Bill | undefined>;
+  deleteBill(id: number, companyId: number): Promise<boolean>;
+  approveBill(id: number, approvedBy: number, companyId: number): Promise<Bill | undefined>;
+  rejectBill(id: number, rejectedBy: number, rejectionReason: string, companyId: number): Promise<Bill | undefined>;
+  getBillsByStatus(companyId: number, status: string): Promise<Bill[]>;
+  getBillsMetrics(companyId: number): Promise<{ totalUnpaid: string; billsCount: number; overdueBills: number; vatOnBills: string }>;
 
   // Exception Handling System
   createPaymentException(exception: InsertPaymentException): Promise<PaymentException>;
@@ -16604,6 +16617,108 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(complianceActivities.activityDate))
       .limit(limit);
+  }
+
+  // Bills & Accounts Payable
+  async getBills(companyId: number): Promise<Bill[]> {
+    return await db.select()
+      .from(bills)
+      .where(eq(bills.companyId, companyId))
+      .orderBy(desc(bills.createdAt));
+  }
+
+  async getBill(id: number, companyId: number): Promise<Bill | undefined> {
+    const [bill] = await db.select()
+      .from(bills)
+      .where(and(eq(bills.id, id), eq(bills.companyId, companyId)));
+    return bill || undefined;
+  }
+
+  async createBill(bill: InsertBill): Promise<Bill> {
+    // Generate bill number if not provided
+    if (!bill.billNumber) {
+      bill.billNumber = await this.getNextDocumentNumber(bill.companyId, 'bill', 'BILL-');
+    }
+
+    const [newBill] = await db.insert(bills).values(bill).returning();
+    return newBill;
+  }
+
+  async updateBill(id: number, bill: Partial<InsertBill>, companyId: number): Promise<Bill | undefined> {
+    const [updated] = await db
+      .update(bills)
+      .set({ ...bill, updatedAt: new Date() })
+      .where(and(eq(bills.id, id), eq(bills.companyId, companyId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteBill(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(bills)
+      .where(and(eq(bills.id, id), eq(bills.companyId, companyId)));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async approveBill(id: number, approvedBy: number, companyId: number): Promise<Bill | undefined> {
+    const [approved] = await db
+      .update(bills)
+      .set({
+        approvalStatus: 'approved',
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(eq(bills.id, id), eq(bills.companyId, companyId)))
+      .returning();
+    return approved || undefined;
+  }
+
+  async rejectBill(id: number, rejectedBy: number, rejectionReason: string, companyId: number): Promise<Bill | undefined> {
+    const [rejected] = await db
+      .update(bills)
+      .set({
+        approvalStatus: 'rejected',
+        status: 'rejected',
+        rejectedBy,
+        rejectedAt: new Date(),
+        rejectionReason,
+        updatedAt: new Date()
+      })
+      .where(and(eq(bills.id, id), eq(bills.companyId, companyId)))
+      .returning();
+    return rejected || undefined;
+  }
+
+  async getBillsByStatus(companyId: number, status: string): Promise<Bill[]> {
+    return await db.select()
+      .from(bills)
+      .where(and(eq(bills.companyId, companyId), eq(bills.status, status)))
+      .orderBy(desc(bills.createdAt));
+  }
+
+  async getBillsMetrics(companyId: number): Promise<{ totalUnpaid: string; billsCount: number; overdueBills: number; vatOnBills: string }> {
+    const result = await db
+      .select({
+        totalUnpaid: sum(sql`${bills.total} - ${bills.paidAmount}`).mapWith(Number),
+        billsCount: count(bills.id).mapWith(Number),
+        overdueBills: count(sql`CASE WHEN ${bills.dueDate} < CURRENT_DATE AND ${bills.status} != 'paid' THEN 1 END`).mapWith(Number),
+        vatOnBills: sum(bills.vatAmount).mapWith(Number)
+      })
+      .from(bills)
+      .where(and(
+        eq(bills.companyId, companyId),
+        ne(bills.status, 'paid')
+      ));
+
+    const metrics = result[0];
+    return {
+      totalUnpaid: (metrics.totalUnpaid || 0).toFixed(2),
+      billsCount: metrics.billsCount || 0,
+      overdueBills: metrics.overdueBills || 0,
+      vatOnBills: (metrics.vatOnBills || 0).toFixed(2)
+    };
   }
 }
 

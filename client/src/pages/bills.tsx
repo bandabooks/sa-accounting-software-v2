@@ -9,19 +9,27 @@ import { useAuth } from "@/hooks/useAuth";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { useLocation } from "wouter";
+import AddBillModal from "@/components/bills/AddBillModal";
 
 export default function BillsPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [, navigate] = useLocation();
+  const [showAddBillModal, setShowAddBillModal] = useState(false);
 
-  // For now, we'll show a placeholder page since Bills table doesn't exist yet
-  // This will be fully implemented once the Bills schema is created
-
+  // Fetch bills data
   const { data: bills = [], isLoading } = useQuery({
     queryKey: ['/api/bills'],
-    enabled: false, // Disable until Bills API is implemented
+    enabled: !!user?.companyId,
   });
+
+  // Fetch bills metrics
+  const { data: billsMetrics } = useQuery({
+    queryKey: ['/api/bills/metrics'],
+    enabled: !!user?.companyId,
+  });
+
+
 
   useLoadingStates({
     loadingStates: [
@@ -56,10 +64,7 @@ export default function BillsPage() {
           </div>
           <div className="flex gap-3">
             <Button 
-              onClick={() => {
-                // Show coming soon message for now
-                alert('Add Bill functionality will be available once the Bills module is fully implemented. For now, use Expenses for immediate payments.');
-              }}
+              onClick={() => setShowAddBillModal(true)}
               className="flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
             >
               <Plus className="h-5 w-5" />
@@ -210,6 +215,12 @@ export default function BillsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Add Bill Modal */}
+        <AddBillModal
+          open={showAddBillModal}
+          onOpenChange={setShowAddBillModal}
+        />
       </div>
     </div>
   );
