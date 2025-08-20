@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, X, Calculator } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Plus, X, Calculator, AlertTriangle, CheckCircle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -35,11 +37,26 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
     total: "0.00",
     paymentTerms: 30,
     notes: "",
+    immediateConsumption: false,
     createdBy: user?.id || 0,
+    lineItems: [] as any[],
   });
 
-  const [netAmount, setNetAmount] = useState("0.00");
-  const [grossAmount, setGrossAmount] = useState("0.00");
+  const [lineItems, setLineItems] = useState([{
+    id: 1,
+    description: "",
+    quantity: 1,
+    unitPrice: "0.00",
+    lineTotal: "0.00",
+    glAccountId: 0,
+    vatCodeId: null,
+    vatRate: 0,
+    vatAmount: "0.00",
+    isInventoryItem: false,
+    productId: null,
+  }]);
+
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Fetch suppliers
   const { data: suppliers } = useQuery({
@@ -47,21 +64,116 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
     enabled: open,
   });
 
-  // Calculate VAT and totals
+  // Fetch GL accounts (filtered for bill line items)
+  const { data: glAccounts } = useQuery({
+    queryKey: ['/api/chart-of-accounts'],
+    enabled: open,
+  });
+
+  // Fetch VAT codes
+  const { data: vatCodes } = useQuery({
+    queryKey: ['/api/vat-types'],
+    enabled: open,
+  });
+
+  // Validate GL account selection
+  const validateGLAccountMutation = useMutation({
+    mutationFn: (glAccountId: number) => apiRequest('/api/bills/validate-gl-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ glAccountId }),
+    }),
+  });
+
+  // Calculate totals from line items
   useEffect(() => {
-    const subtotal = parseFloat(formData.subtotal) || 0;
-    const vatRate = 15; // Standard SA VAT rate
-    const vatAmount = subtotal * (vatRate / 100);
-    const total = subtotal + vatAmount;
+    const lineSubtotal = lineItems.reduce((sum, item) => sum + parseFloat(item.lineTotal || '0'), 0);
+    const lineVATTotal = lineItems.reduce((sum, item) => sum + parseFloat(item.vatAmount || '0'), 0);
+    const total = lineSubtotal + lineVATTotal;
 
     setFormData(prev => ({
       ...prev,
-      vatAmount: vatAmount.toFixed(2),
-      total: total.toFixed(2)
+      subtotal: lineSubtotal.toFixed(2),
+      vatAmount: lineVATTotal.toFixed(2),
+      total: total.toFixed(2),
+      lineItems: lineItems
     }));
-    setNetAmount(subtotal.toFixed(2));
-    setGrossAmount(total.toFixed(2));
-  }, [formData.subtotal]);
+  }, [lineItems]);
+
+  // Add new line item
+  const addLineItem = () => {
+    const newItem = {
+      id: Math.max(...lineItems.map(item => item.id), 0) + 1,
+      description: "",
+      quantity: 1,
+      unitPrice: "0.00",
+      lineTotal: "0.00",
+      glAccountId: 0,
+      vatCodeId: null,
+      vatRate: 0,
+      vatAmount: "0.00",
+      isInventoryItem: false,
+      productId: null,
+    };
+    setLineItems([...lineItems, newItem]);
+  };
+
+  // Remove line item
+  const removeLineItem = (id: number) => {
+    if (lineItems.length > 1) {
+      setLineItems(lineItems.filter(item => item.id !== id));
+    }
+  };
+
+  // Update line item
+  const updateLineItem = (id: number, field: string, value: any) => {
+    setLineItems(items => 
+      items.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          
+          // Recalculate line total when quantity or unit price changes
+          if (field === 'quantity' || field === 'unitPrice') {
+            const quantity = parseFloat(field === 'quantity' ? value : updatedItem.quantity);
+            const unitPrice = parseFloat(field === 'unitPrice' ? value : updatedItem.unitPrice);
+            updatedItem.lineTotal = (quantity * unitPrice).toFixed(2);
+          }
+
+          // Recalculate VAT when line total or VAT code changes
+          if (field === 'lineTotal' || field === 'vatCodeId') {
+            const lineTotal = parseFloat(updatedItem.lineTotal || '0');
+            const vatCode = vatCodes?.find((vat: any) => vat.id === updatedItem.vatCodeId);
+            if (vatCode) {
+              const vatRate = parseFloat(vatCode.rate || '0');
+              updatedItem.vatRate = vatRate;
+              updatedItem.vatAmount = (lineTotal * (vatRate / 100)).toFixed(2);
+            } else {
+              updatedItem.vatRate = 0;
+              updatedItem.vatAmount = "0.00";
+            }
+          }
+
+          // Validate GL account when changed
+          if (field === 'glAccountId' && value) {
+            validateGLAccountMutation.mutate(value, {
+              onSuccess: (result) => {
+                if (!result.isValid) {
+                  toast({
+                    title: "Invalid GL Account",
+                    description: result.error,
+                    variant: "destructive",
+                  });
+                }
+              }
+            });
+          }
+
+          return updatedItem;
+        }
+        return item;
+      })
+    );
+  };
 
   // Create bill mutation
   const createBillMutation = useMutation({
@@ -82,11 +194,22 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
     },
     onError: (error: any) => {
       console.error('Bill creation error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create bill",
-        variant: "destructive",
-      });
+      
+      // Handle validation errors
+      if (error.status === 422 && error.errors) {
+        setValidationErrors(error.errors);
+        toast({
+          title: "Validation Failed",
+          description: `${error.errors.length} validation error(s) found`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create bill",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -103,10 +226,24 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
       total: "0.00",
       paymentTerms: 30,
       notes: "",
+      immediateConsumption: false,
       createdBy: user?.id || 0,
+      lineItems: [],
     });
-    setNetAmount("0.00");
-    setGrossAmount("0.00");
+    setLineItems([{
+      id: 1,
+      description: "",
+      quantity: 1,
+      unitPrice: "0.00",
+      lineTotal: "0.00",
+      glAccountId: 0,
+      vatCodeId: null,
+      vatRate: 0,
+      vatAmount: "0.00",
+      isInventoryItem: false,
+      productId: null,
+    }]);
+    setValidationErrors([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -139,10 +276,19 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
       return;
     }
 
-    if (parseFloat(formData.subtotal) <= 0) {
+    if (lineItems.length === 0) {
       toast({
         title: "Error",
-        description: "Please enter a valid subtotal amount",
+        description: "Please add at least one line item",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (lineItems.some(item => !item.glAccountId || parseFloat(item.lineTotal) <= 0)) {
+      toast({
+        title: "Error",
+        description: "All line items must have a valid GL account and amount",
         variant: "destructive",
       });
       return;
@@ -254,7 +400,7 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
           <Card>
             <CardHeader>
               <CardTitle>Bill Details</CardTitle>
-              <CardDescription>Enter the bill description and amounts</CardDescription>
+              <CardDescription>Enter the bill description and options</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -267,41 +413,17 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="subtotal">Subtotal (Excl. VAT) *</Label>
-                  <Input
-                    id="subtotal"
-                    type="number"
-                    step="0.01"
-                    value={formData.subtotal}
-                    onChange={(e) => handleInputChange('subtotal', e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="vatAmount">VAT Amount (15%)</Label>
-                  <Input
-                    id="vatAmount"
-                    type="number"
-                    step="0.01"
-                    value={formData.vatAmount}
-                    readOnly
-                    className="bg-gray-50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="total">Total Amount</Label>
-                  <Input
-                    id="total"
-                    type="number"
-                    step="0.01"
-                    value={formData.total}
-                    readOnly
-                    className="bg-gray-50 font-semibold"
-                  />
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="immediateConsumption"
+                  checked={formData.immediateConsumption}
+                  onCheckedChange={(checked) => handleInputChange('immediateConsumption', checked)}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="immediateConsumption">Immediate Consumption</Label>
+                  <p className="text-sm text-gray-600">
+                    Enable for inventory items that should be posted to COGS instead of inventory accounts
+                  </p>
                 </div>
               </div>
 
@@ -318,6 +440,171 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
             </CardContent>
           </Card>
 
+          {/* Line Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Line Items *
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addLineItem}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Line
+                </Button>
+              </CardTitle>
+              <CardDescription>Add line items with GL account allocation</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {validationErrors.length > 0 && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <span className="font-medium text-red-800">Validation Errors:</span>
+                  </div>
+                  <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                    {validationErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {lineItems.map((item, index) => (
+                <div key={item.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Line {index + 1}</h4>
+                    {lineItems.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeLineItem(item.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="md:col-span-2 space-y-2">
+                      <Label>Description *</Label>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                        placeholder="Line item description"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>GL Account *</Label>
+                      <Select 
+                        value={item.glAccountId.toString()} 
+                        onValueChange={(value) => updateLineItem(item.id, 'glAccountId', parseInt(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select GL account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {glAccounts?.filter((account: any) => {
+                            const accountType = account.accountType?.toLowerCase() || '';
+                            const accountName = account.accountName?.toLowerCase() || '';
+                            // Filter out disallowed account types
+                            const disallowed = ['bank', 'cash', 'accounts payable', 'accounts receivable', 'vat control', 'vat input', 'vat output'];
+                            return !disallowed.some(type => accountType.includes(type) || accountName.includes(type));
+                          }).map((account: any) => (
+                            <SelectItem key={account.id} value={account.id.toString()}>
+                              {account.accountCode} - {account.accountName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>VAT Code</Label>
+                      <Select 
+                        value={item.vatCodeId?.toString() || ''} 
+                        onValueChange={(value) => updateLineItem(item.id, 'vatCodeId', value ? parseInt(value) : null)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select VAT code" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No VAT</SelectItem>
+                          {vatCodes?.map((vat: any) => (
+                            <SelectItem key={vat.id} value={vat.id.toString()}>
+                              {vat.name} ({vat.rate}%)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Quantity</Label>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        value={item.quantity}
+                        onChange={(e) => updateLineItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                        placeholder="1"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Unit Price</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.unitPrice}
+                        onChange={(e) => updateLineItem(item.id, 'unitPrice', e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Line Total</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.lineTotal}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>VAT Amount</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.vatAmount}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={`inventory-${item.id}`}
+                        checked={item.isInventoryItem}
+                        onCheckedChange={(checked) => updateLineItem(item.id, 'isInventoryItem', checked)}
+                      />
+                      <Label htmlFor={`inventory-${item.id}`} className="text-sm">
+                        Inventory Item
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
           {/* Summary */}
           <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
             <CardHeader>
@@ -330,19 +617,19 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div>
                   <p className="text-sm text-gray-600">Net Amount</p>
-                  <p className="text-lg font-semibold">R {netAmount}</p>
+                  <p className="text-lg font-semibold">R {formData.subtotal}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">VAT (15%)</p>
+                  <p className="text-sm text-gray-600">VAT Amount</p>
                   <p className="text-lg font-semibold">R {formData.vatAmount}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Total Amount</p>
-                  <p className="text-xl font-bold text-blue-600">R {grossAmount}</p>
+                  <p className="text-xl font-bold text-blue-600">R {formData.total}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Status</p>
-                  <p className="text-lg font-semibold text-orange-600">Pending Approval</p>
+                  <p className="text-sm text-gray-600">Line Items</p>
+                  <p className="text-lg font-semibold text-purple-600">{lineItems.length}</p>
                 </div>
               </div>
             </CardContent>

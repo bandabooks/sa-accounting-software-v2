@@ -2997,12 +2997,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new bill
+  // Create a new bill with enhanced validation
   app.post("/api/bills", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user.companyId;
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      const { BillValidationService } = await import('./services/billValidationService');
+
+      // Validate bill data
+      const validation = await BillValidationService.validateBill(companyId, req.body);
+      if (!validation.isValid) {
+        return res.status(422).json({ 
+          message: "Bill validation failed", 
+          errors: validation.errors 
+        });
       }
 
       const billData = { 
@@ -3016,7 +3027,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newBill);
     } catch (error) {
       console.error("Failed to create bill:", error);
+      
+      // Handle validation errors
+      if ((error as any).statusCode === 422) {
+        return res.status(422).json({ 
+          message: (error as Error).message,
+          errors: (error as any).validationErrors || []
+        });
+      }
+      
       res.status(500).json({ message: "Failed to create bill" });
+    }
+  });
+
+  // Validate GL account for bills
+  app.post("/api/bills/validate-gl-account", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      const { glAccountId } = req.body;
+      if (!glAccountId) {
+        return res.status(400).json({ message: "GL Account ID is required" });
+      }
+
+      const { BillValidationService } = await import('./services/billValidationService');
+      const validation = await BillValidationService.validateGLAccount(companyId, glAccountId);
+      
+      res.json(validation);
+    } catch (error) {
+      console.error("Failed to validate GL account:", error);
+      res.status(500).json({ message: "Failed to validate GL account" });
+    }
+  });
+
+  // Pay a bill (separate payment workflow)
+  app.post("/api/bills/:id/pay", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const billId = parseInt(req.params.id);
+      const companyId = req.user.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      // Validate bank account (must be Bank/Cash type)
+      const { bankAccountId, amount, paymentDate, reference, notes } = req.body;
+      
+      if (!bankAccountId || !amount || !paymentDate) {
+        return res.status(400).json({ message: "Bank account, amount, and payment date are required" });
+      }
+
+      const paymentData = {
+        amount: parseFloat(amount),
+        bankAccountId,
+        paymentDate,
+        reference,
+        notes,
+        createdBy: req.user.id
+      };
+
+      const payment = await storage.payBill(billId, paymentData);
+      await logAudit(req.user.id, 'PAYMENT', 'bill', billId, null, paymentData);
+      
+      res.json(payment);
+    } catch (error) {
+      console.error("Failed to process bill payment:", error);
+      res.status(500).json({ message: "Failed to process bill payment" });
     }
   });
 

@@ -895,7 +895,7 @@ export const expenses = pgTable("expenses", {
   referenceIdx: index("expenses_reference_idx").on(table.reference),
 }));
 
-// Bills/Accounts Payable - Formal supplier invoices requiring approval
+// Bills/Accounts Payable - Formal supplier invoices requiring approval with enhanced validation
 export const bills = pgTable("bills", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
@@ -909,7 +909,7 @@ export const bills = pgTable("bills", {
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull(),
   paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default("0.00"),
-  status: text("status").notNull().default("draft"), // draft, pending_approval, approved, rejected, paid, overdue
+  status: text("status").notNull().default("unpaid"), // unpaid, partially_paid, paid
   approvalStatus: text("approval_status").notNull().default("pending"), // pending, approved, rejected
   approvedBy: integer("approved_by").references(() => users.id),
   approvedAt: timestamp("approved_at"),
@@ -921,6 +921,8 @@ export const bills = pgTable("bills", {
   paymentTerms: integer("payment_terms").default(30), // Days
   attachmentUrl: text("attachment_url"), // Supplier invoice attachment
   notes: text("notes"),
+  immediateConsumption: boolean("immediate_consumption").notNull().default(false), // For COGS vs Inventory decision
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id), // Link to posted journal entry
   createdBy: integer("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -935,25 +937,49 @@ export const bills = pgTable("bills", {
   purchaseOrderIdx: index("bills_purchase_order_idx").on(table.purchaseOrderId),
 }));
 
-// Bill Line Items - Detailed breakdown of bills
+// Bill Line Items - Enhanced with GL validation and accounting rules
 export const billItems = pgTable("bill_items", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
-  billId: integer("bill_id").notNull().references(() => bills.id),
+  billId: integer("bill_id").notNull().references(() => bills.id, { onDelete: 'cascade' }),
   description: text("description").notNull(),
-  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default("1.00"),
+  quantity: decimal("quantity", { precision: 10, scale: 4 }).notNull().default("1.0000"),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
-  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
-  vatType: text("vat_type").notNull().default("Inclusive"), // Inclusive, Exclusive, No VAT
-  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   lineTotal: decimal("line_total", { precision: 10, scale: 2 }).notNull(),
-  expenseCategoryId: integer("expense_category_id"), // Chart of Accounts reference
+  glAccountId: integer("gl_account_id").notNull().references(() => chartOfAccounts.id), // Must be valid GL account
+  vatCodeId: integer("vat_code_id").references(() => vatTypes.id),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  isInventoryItem: boolean("is_inventory_item").notNull().default(false),
+  productId: integer("product_id").references(() => products.id), // Link to inventory product
   projectId: integer("project_id"), // For project cost allocation
   departmentId: integer("department_id"), // For department cost allocation
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyIdx: index("bill_items_company_idx").on(table.companyId),
   billIdx: index("bill_items_bill_idx").on(table.billId),
+  glAccountIdx: index("bill_items_gl_account_idx").on(table.glAccountId),
+  productIdx: index("bill_items_product_idx").on(table.productId),
+}));
+
+// Bill Payments - Separate payment workflow (Dr A/P, Cr Bank)
+export const billPayments = pgTable("bill_payments", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  billId: integer("bill_id").notNull().references(() => bills.id),
+  paymentDate: date("payment_date").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  bankAccountId: integer("bank_account_id").notNull().references(() => chartOfAccounts.id),
+  reference: text("reference"),
+  notes: text("notes"),
+  journalEntryId: integer("journal_entry_id").references(() => journalEntries.id),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("bill_payments_company_idx").on(table.companyId),
+  billIdx: index("bill_payments_bill_idx").on(table.billId),
+  paymentDateIdx: index("bill_payments_date_idx").on(table.paymentDate),
 }));
 
 // Recurring Expenses - Templates for automated expense creation
