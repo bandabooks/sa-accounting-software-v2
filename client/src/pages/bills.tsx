@@ -8,10 +8,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
+import { useLocation } from "wouter";
 
 export default function BillsPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [, navigate] = useLocation();
 
   // For now, we'll show a placeholder page since Bills table doesn't exist yet
   // This will be fully implemented once the Bills schema is created
@@ -54,7 +56,10 @@ export default function BillsPage() {
           </div>
           <div className="flex gap-3">
             <Button 
-              onClick={() => {/* Open Add Bill Modal */}}
+              onClick={() => {
+                // Show coming soon message for now
+                alert('Add Bill functionality will be available once the Bills module is fully implemented. For now, use Expenses for immediate payments.');
+              }}
               className="flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
             >
               <Plus className="h-5 w-5" />
@@ -62,10 +67,7 @@ export default function BillsPage() {
             </Button>
             <Button 
               variant="outline"
-              onClick={() => {
-                // Navigate back to Expenses
-                window.location.href = '/expenses';
-              }}
+              onClick={() => navigate('/expenses')}
               className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
             >
               <DollarSign className="h-5 w-5" />
