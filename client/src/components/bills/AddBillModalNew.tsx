@@ -145,7 +145,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
           // Recalculate VAT when amount or VAT code changes
           if (field === 'amount' || field === 'vatCodeId') {
             const amount = parseFloat(field === 'amount' ? value : updatedItem.amount);
-            const vatCode = vatCodes?.find((vat: any) => vat.id === updatedItem.vatCodeId);
+            const vatCode = (vatCodes as any)?.find((vat: any) => vat.id === updatedItem.vatCodeId);
             if (vatCode) {
               const vatRate = parseFloat(vatCode.rate || '0');
               updatedItem.vatRate = vatRate;
@@ -195,7 +195,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
           
           // Auto-populate from product selection
           if (field === 'productId' && value) {
-            const product = products?.find((p: any) => p.id === value);
+            const product = (products as any)?.find((p: any) => p.id === value);
             if (product) {
               updatedItem.description = product.name;
               updatedItem.unitPrice = product.price || "0.00";
@@ -217,7 +217,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
           if (field === 'lineTotal' || field === 'vatCodeId' || 
               field === 'quantity' || field === 'unitPrice' || field === 'discount') {
             const lineTotal = parseFloat(updatedItem.lineTotal || '0');
-            const vatCode = vatCodes?.find((vat: any) => vat.id === updatedItem.vatCodeId);
+            const vatCode = (vatCodes as any)?.find((vat: any) => vat.id === updatedItem.vatCodeId);
             if (vatCode) {
               const vatRate = parseFloat(vatCode.rate || '0');
               updatedItem.vatRate = vatRate;
@@ -356,7 +356,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Bill</DialogTitle>
           <DialogDescription>
@@ -368,11 +368,11 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
           {/* Bill Header */}
           <Card>
             <CardHeader>
-              <CardTitle>Bill Information</CardTitle>
-              <CardDescription>Enter supplier and bill details</CardDescription>
+              <CardTitle>Supplier & Invoice Details</CardTitle>
+              <CardDescription>Enter the supplier information and their invoice details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="supplier">Supplier *</Label>
                   <Select 
@@ -384,7 +384,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">Select Supplier</SelectItem>
-                      {suppliers?.map((supplier: any) => (
+                      {(suppliers as any)?.map((supplier: any) => (
                         <SelectItem key={supplier.id} value={supplier.id.toString()}>
                           {supplier.name}
                         </SelectItem>
@@ -394,7 +394,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="supplierInvoiceNumber">Supplier Invoice Number</Label>
+                  <Label htmlFor="supplierInvoiceNumber">Supplier Invoice Number *</Label>
                   <Input
                     id="supplierInvoiceNumber"
                     value={billData.supplierInvoiceNumber}
@@ -414,7 +414,26 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date *</Label>
+                  <Label htmlFor="paymentTerms">Payment Terms (Days)</Label>
+                  <Select 
+                    value={billData.paymentTerms.toString()} 
+                    onValueChange={(value) => handleInputChange('paymentTerms', parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment terms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">7 Days</SelectItem>
+                      <SelectItem value="14">14 Days</SelectItem>
+                      <SelectItem value="30">30 Days</SelectItem>
+                      <SelectItem value="60">60 Days</SelectItem>
+                      <SelectItem value="90">90 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate">Due Date</Label>
                   <Input
                     id="dueDate"
                     type="date"
@@ -512,103 +531,112 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
                     </div>
                   )}
 
-                  {expenseAllocations.map((allocation, index) => (
-                    <div key={allocation.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Allocation {index + 1}</h4>
-                        {expenseAllocations.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeExpenseAllocation(allocation.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="md:col-span-2 space-y-2">
-                          <Label>Description *</Label>
-                          <Input
-                            value={allocation.description}
-                            onChange={(e) => updateExpenseAllocation(allocation.id, 'description', e.target.value)}
-                            placeholder="Expense description"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>GL Account *</Label>
-                          <Select 
-                            value={allocation.glAccountId.toString() || '0'} 
-                            onValueChange={(value) => updateExpenseAllocation(allocation.id, 'glAccountId', parseInt(value))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select GL account" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">Select GL Account</SelectItem>
-                              {glAccounts?.filter((account: any) => {
-                                const accountType = account.accountType?.toLowerCase() || '';
-                                const accountName = account.accountName?.toLowerCase() || '';
-                                // Filter out control accounts
-                                const disallowed = ['bank', 'cash', 'accounts payable', 'accounts receivable', 'vat control', 'vat input', 'vat output'];
-                                return !disallowed.some(type => accountType.includes(type) || accountName.includes(type));
-                              }).map((account: any) => (
-                                <SelectItem key={account.id} value={account.id.toString()}>
-                                  {account.accountCode} - {account.accountName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>VAT Code</Label>
-                          <Select 
-                            value={allocation.vatCodeId?.toString() || '0'} 
-                            onValueChange={(value) => updateExpenseAllocation(allocation.id, 'vatCodeId', value === '0' ? null : parseInt(value))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select VAT code" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">No VAT</SelectItem>
-                              {vatCodes?.map((vat: any) => (
-                                <SelectItem key={vat.id} value={vat.id.toString()}>
-                                  {vat.name} ({vat.rate}%)
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Amount (Excl. VAT)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={allocation.amount}
-                            onChange={(e) => updateExpenseAllocation(allocation.id, 'amount', e.target.value)}
-                            placeholder="0.00"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>VAT Amount</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={allocation.vatAmount}
-                            readOnly
-                            className="bg-gray-50"
-                          />
-                        </div>
+                  {/* Professional table-style expense allocations */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b">
+                      <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                        <div className="col-span-4">Description</div>
+                        <div className="col-span-3">GL Account</div>
+                        <div className="col-span-2">VAT Code</div>
+                        <div className="col-span-2">Amount (Excl. VAT)</div>
+                        <div className="col-span-1">Actions</div>
                       </div>
                     </div>
-                  ))}
+                    
+                    {expenseAllocations.map((allocation, index) => (
+                      <div key={allocation.id} className="border-b last:border-b-0">
+                        <div className="px-4 py-3">
+                          <div className="grid grid-cols-12 gap-4 items-center">
+                            {/* Description */}
+                            <div className="col-span-4">
+                              <Input
+                                value={allocation.description}
+                                onChange={(e) => updateExpenseAllocation(allocation.id, 'description', e.target.value)}
+                                placeholder="Expense description"
+                                className="h-9"
+                              />
+                            </div>
+
+                            {/* GL Account */}
+                            <div className="col-span-3">
+                              <Select 
+                                value={allocation.glAccountId.toString() || '0'} 
+                                onValueChange={(value) => updateExpenseAllocation(allocation.id, 'glAccountId', parseInt(value))}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Select GL account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">Select GL Account</SelectItem>
+                                  {(glAccounts as any)?.filter((account: any) => {
+                                    const accountType = account.accountType?.toLowerCase() || '';
+                                    const accountName = account.accountName?.toLowerCase() || '';
+                                    // Filter out control accounts
+                                    const disallowed = ['bank', 'cash', 'accounts payable', 'accounts receivable', 'vat control', 'vat input', 'vat output'];
+                                    return !disallowed.some(type => accountType.includes(type) || accountName.includes(type));
+                                  }).map((account: any) => (
+                                    <SelectItem key={account.id} value={account.id.toString()}>
+                                      {account.accountCode} - {account.accountName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* VAT Code */}
+                            <div className="col-span-2">
+                              <Select 
+                                value={allocation.vatCodeId?.toString() || '0'} 
+                                onValueChange={(value) => updateExpenseAllocation(allocation.id, 'vatCodeId', value === '0' ? null : parseInt(value))}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="VAT" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">No VAT</SelectItem>
+                                  {(vatCodes as any)?.map((vat: any) => (
+                                    <SelectItem key={vat.id} value={vat.id.toString()}>
+                                      {vat.name} ({vat.rate}%)
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Amount */}
+                            <div className="col-span-2">
+                              <div className="space-y-1">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={allocation.amount}
+                                  onChange={(e) => updateExpenseAllocation(allocation.id, 'amount', e.target.value)}
+                                  placeholder="0.00"
+                                  className="h-9"
+                                />
+                                <div className="text-xs text-gray-500">VAT: R {allocation.vatAmount}</div>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="col-span-1 flex justify-center">
+                              {expenseAllocations.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeExpenseAllocation(allocation.id)}
+                                  className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -633,141 +661,147 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
                   <CardDescription>Add products/services with quantities and pricing</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {lineItems.map((item, index) => (
-                    <div key={item.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Item {index + 1}</h4>
-                        {lineItems.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeLineItem(item.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="space-y-2">
-                          <Label>Product/Service</Label>
-                          <Select 
-                            value={item.productId?.toString() || '0'} 
-                            onValueChange={(value) => updateLineItem(item.id, 'productId', value === '0' ? null : parseInt(value))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select item" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">Manual Entry</SelectItem>
-                              {products?.map((product: any) => (
-                                <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="md:col-span-2 space-y-2">
-                          <Label>Description</Label>
-                          <Input
-                            value={item.description}
-                            onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
-                            placeholder="Item description"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Quantity</Label>
-                          <Input
-                            type="number"
-                            step="0.0001"
-                            value={item.quantity}
-                            onChange={(e) => updateLineItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                            placeholder="1"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Unit Price</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.unitPrice}
-                            onChange={(e) => updateLineItem(item.id, 'unitPrice', e.target.value)}
-                            placeholder="0.00"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Discount</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.discount}
-                            onChange={(e) => updateLineItem(item.id, 'discount', e.target.value)}
-                            placeholder="0.00"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>VAT Code</Label>
-                          <Select 
-                            value={item.vatCodeId?.toString() || '0'} 
-                            onValueChange={(value) => updateLineItem(item.id, 'vatCodeId', value === '0' ? null : parseInt(value))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select VAT code" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">No VAT</SelectItem>
-                              {vatCodes?.map((vat: any) => (
-                                <SelectItem key={vat.id} value={vat.id.toString()}>
-                                  {vat.name} ({vat.rate}%)
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Line Total</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.lineTotal}
-                            readOnly
-                            className="bg-gray-50"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>VAT Amount</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.vatAmount}
-                            readOnly
-                            className="bg-gray-50"
-                          />
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={`immediate-${item.id}`}
-                            checked={item.immediateConsumption}
-                            onCheckedChange={(checked) => updateLineItem(item.id, 'immediateConsumption', checked)}
-                          />
-                          <Label htmlFor={`immediate-${item.id}`} className="text-sm">
-                            Immediate Consumption
-                          </Label>
-                        </div>
+                  {/* Professional table-style line items */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b">
+                      <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                        <div className="col-span-3">Item/Description</div>
+                        <div className="col-span-1">Qty</div>
+                        <div className="col-span-2">Unit Price</div>
+                        <div className="col-span-1">Disc.</div>
+                        <div className="col-span-2">VAT Code</div>
+                        <div className="col-span-2">Line Total</div>
+                        <div className="col-span-1">Actions</div>
                       </div>
                     </div>
-                  ))}
+                    
+                    {lineItems.map((item, index) => (
+                      <div key={item.id} className="border-b last:border-b-0">
+                        <div className="px-4 py-3">
+                          <div className="grid grid-cols-12 gap-4 items-center">
+                            {/* Item/Description */}
+                            <div className="col-span-3 space-y-2">
+                              <Select 
+                                value={item.productId?.toString() || '0'} 
+                                onValueChange={(value) => updateLineItem(item.id, 'productId', value === '0' ? null : parseInt(value))}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Select item" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">Manual Entry</SelectItem>
+                                  {(products as any)?.map((product: any) => (
+                                    <SelectItem key={product.id} value={product.id.toString()}>
+                                      {product.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                value={item.description}
+                                onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                                placeholder="Item description"
+                                className="h-9 text-sm"
+                              />
+                            </div>
+
+                            {/* Quantity */}
+                            <div className="col-span-1">
+                              <Input
+                                type="number"
+                                step="0.0001"
+                                value={item.quantity}
+                                onChange={(e) => updateLineItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                                placeholder="1"
+                                className="h-9 text-center"
+                              />
+                            </div>
+
+                            {/* Unit Price */}
+                            <div className="col-span-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.unitPrice}
+                                onChange={(e) => updateLineItem(item.id, 'unitPrice', e.target.value)}
+                                placeholder="0.00"
+                                className="h-9"
+                              />
+                            </div>
+
+                            {/* Discount */}
+                            <div className="col-span-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.discount}
+                                onChange={(e) => updateLineItem(item.id, 'discount', e.target.value)}
+                                placeholder="0.00"
+                                className="h-9"
+                              />
+                            </div>
+
+                            {/* VAT Code */}
+                            <div className="col-span-2">
+                              <Select 
+                                value={item.vatCodeId?.toString() || '0'} 
+                                onValueChange={(value) => updateLineItem(item.id, 'vatCodeId', value === '0' ? null : parseInt(value))}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="VAT" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">No VAT</SelectItem>
+                                  {(vatCodes as any)?.map((vat: any) => (
+                                    <SelectItem key={vat.id} value={vat.id.toString()}>
+                                      {vat.name} ({vat.rate}%)
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Line Total */}
+                            <div className="col-span-2">
+                              <div className="text-right">
+                                <div className="font-medium">R {item.lineTotal}</div>
+                                <div className="text-xs text-gray-500">VAT: R {item.vatAmount}</div>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="col-span-1 flex justify-center">
+                              {lineItems.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeLineItem(item.id)}
+                                  className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Additional options row */}
+                          <div className="mt-2 flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id={`immediate-${item.id}`}
+                                checked={item.immediateConsumption}
+                                onCheckedChange={(checked) => updateLineItem(item.id, 'immediateConsumption', checked)}
+                              />
+                              <Label htmlFor={`immediate-${item.id}`} className="text-xs text-gray-600">
+                                Immediate Consumption
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
