@@ -68,6 +68,7 @@ export default function ExpensesStandalone() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("all_suppliers");
   const [selectedCategory, setSelectedCategory] = useState("all_categories");
@@ -95,6 +96,12 @@ export default function ExpensesStandalone() {
   // Fetch chart of accounts for category filter
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
     queryKey: ['/api/chart-of-accounts'],
+    enabled: !!user,
+  });
+
+  // Fetch bank accounts for payment selection
+  const { data: bankAccounts = [] } = useQuery<any[]>({
+    queryKey: ['/api/bank-accounts'],
     enabled: !!user,
   });
 
@@ -186,13 +193,17 @@ export default function ExpensesStandalone() {
 
   // Pay expense mutation
   const payExpenseMutation = useMutation({
-    mutationFn: async (expenseId: number) => {
+    mutationFn: async ({ expenseId, bankAccountId, paidStatus }: { expenseId: number; bankAccountId: string; paidStatus: string }) => {
       const response = await fetch(`/api/expenses/${expenseId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ paidStatus: 'Paid' }),
+        body: JSON.stringify({ 
+          paidStatus, 
+          bankAccountId: parseInt(bankAccountId),
+          paymentDate: new Date().toISOString()
+        }),
       });
       if (!response.ok) {
         throw new Error('Failed to process expense payment');
@@ -207,6 +218,7 @@ export default function ExpensesStandalone() {
         description: "Expense payment processed successfully",
       });
       setPayingExpense(null);
+      setSelectedBankAccount("");
     },
     onError: (error: any) => {
       toast({
@@ -248,12 +260,27 @@ export default function ExpensesStandalone() {
 
   const handlePayExpense = (expense: Expense) => {
     setPayingExpense(expense);
+    setSelectedBankAccount(""); // Reset bank account selection
   };
 
   const confirmPayExpense = () => {
-    if (payingExpense) {
-      payExpenseMutation.mutate(payingExpense.id);
+    if (!payingExpense) return;
+    
+    if (!selectedBankAccount) {
+      toast({
+        title: "Bank Account Required",
+        description: "Please select a bank account to process the payment",
+        variant: "destructive",
+      });
+      return;
     }
+
+    // Include bank account in the payment data
+    payExpenseMutation.mutate({
+      expenseId: payingExpense.id,
+      bankAccountId: selectedBankAccount,
+      paidStatus: 'Paid'
+    });
   };
 
   const handleBulkPayExpenses = () => {
@@ -623,22 +650,52 @@ export default function ExpensesStandalone() {
 
         {/* Payment Confirmation Dialog */}
         <AlertDialog open={!!payingExpense} onOpenChange={(open) => !open && setPayingExpense(null)}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-md">
             <AlertDialogHeader>
               <AlertDialogTitle>Pay Expense</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to mark the expense "{payingExpense?.description}" as paid? 
-                The expense amount is {payingExpense && formatCurrency(payingExpense.amount)}.
+                Processing payment for "{payingExpense?.description}" 
+                <br />Amount: {payingExpense && formatCurrency(payingExpense.amount)}
               </AlertDialogDescription>
             </AlertDialogHeader>
+            
+            <div className="space-y-4 my-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Select Payment Account <span className="text-red-500">*</span>
+                </label>
+                <Select value={selectedBankAccount} onValueChange={setSelectedBankAccount}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose bank account for payment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account: any) => (
+                      <SelectItem key={account.id} value={account.id.toString()}>
+                        {account.accountName} - {account.accountNumber}
+                        {account.balance && ` (Balance: ${formatCurrency(account.balance)})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!selectedBankAccount && (
+                  <p className="text-sm text-red-500 mt-1">
+                    Please select a bank account to process the payment
+                  </p>
+                )}
+              </div>
+            </div>
+
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPayingExpense(null)}>
+              <AlertDialogCancel onClick={() => {
+                setPayingExpense(null);
+                setSelectedBankAccount("");
+              }}>
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmPayExpense}
                 className="bg-green-600 text-white hover:bg-green-700"
-                disabled={payExpenseMutation.isPending}
+                disabled={payExpenseMutation.isPending || !selectedBankAccount}
               >
                 {payExpenseMutation.isPending ? "Processing..." : "Confirm Payment"}
               </AlertDialogAction>
