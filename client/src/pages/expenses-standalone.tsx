@@ -31,7 +31,7 @@ interface Expense {
   vatRate: string;
   vatAmount: string;
   expenseDate: string;
-  paidStatus: "Paid" | "Unpaid" | "Partially Paid";
+  paidStatus: "Paid"; // Expenses are always paid
   supplierInvoiceNumber?: string;
   internalExpenseRef: string;
   attachmentUrl?: string;
@@ -67,11 +67,11 @@ export default function ExpensesStandalone() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("all_suppliers");
   const [selectedCategory, setSelectedCategory] = useState("all_categories");
-  const [selectedStatus, setSelectedStatus] = useState("all");
+
   const [selectedPeriod, setSelectedPeriod] = useState("current_month");
 
   // Fetch expense metrics
@@ -82,7 +82,7 @@ export default function ExpensesStandalone() {
 
   // Fetch expenses list
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
-    queryKey: [`/api/expenses/${selectedPeriod}/${selectedStatus}/${selectedSupplier}/${selectedCategory}`],
+    queryKey: [`/api/expenses/${selectedPeriod}/Paid/${selectedSupplier}/${selectedCategory}`],
     enabled: !!user,
   });
 
@@ -106,14 +106,7 @@ export default function ExpensesStandalone() {
     expense.supplierInvoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "Paid": return "default";
-      case "Unpaid": return "destructive";
-      case "Partially Paid": return "secondary";
-      default: return "outline";
-    }
-  };
+
 
   const formatCurrency = (amount: string) => {
     return `R ${Number(amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`;
@@ -184,38 +177,7 @@ export default function ExpensesStandalone() {
     },
   });
 
-  // Pay expense mutation
-  const payExpenseMutation = useMutation({
-    mutationFn: async (expenseId: number) => {
-      const response = await fetch(`/api/expenses/${expenseId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ paidStatus: 'Paid' }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to process expense payment');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/expenses/metrics/${selectedPeriod}`] });
-      toast({
-        title: "Success",
-        description: "Expense payment processed successfully",
-      });
-      setPayingExpense(null);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process expense payment",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   // Use loading states for comprehensive loading feedback including mutations - MUST be after ALL mutations
   useLoadingStates({
@@ -223,7 +185,7 @@ export default function ExpensesStandalone() {
       { isLoading, message: 'Loading expenses...' },
       { isLoading: deleteExpenseMutation.isPending, message: 'Deleting expense...' },
       { isLoading: updateExpenseMutation.isPending, message: 'Updating expense...' },
-      { isLoading: payExpenseMutation.isPending, message: 'Processing payment...' },
+
     ],
     progressSteps: ['Fetching expenses', 'Loading suppliers', 'Processing filters'],
   });
@@ -246,15 +208,7 @@ export default function ExpensesStandalone() {
     setEditingExpense(expense);
   };
 
-  const handlePayExpense = (expense: Expense) => {
-    setPayingExpense(expense);
-  };
 
-  const confirmPayExpense = () => {
-    if (payingExpense) {
-      payExpenseMutation.mutate(payingExpense.id);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900">
@@ -286,16 +240,17 @@ export default function ExpensesStandalone() {
             </Button>
             <Button 
               variant="outline"
-              className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 text-green-700 border-green-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
+              onClick={() => {/* Navigate to Bills module for unpaid bills */}}
+              className="flex items-center gap-2 bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 text-orange-700 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
             >
-              <CreditCard className="h-5 w-5" />
-              Pay Expenses
+              <FileText className="h-5 w-5" />
+              Manage Bills
             </Button>
           </div>
         </div>
 
         {/* Enhanced Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Expenses</CardTitle>
@@ -315,34 +270,17 @@ export default function ExpensesStandalone() {
 
           <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Paid Expenses</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Expense Count</CardTitle>
               <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg">
                 <Calendar className="h-4 w-4 text-white" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                {formatCurrency(metrics?.paidExpenses || "0.00")}
+                {metrics?.expenseCount || 0}
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                Paid expenses
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-0 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Unpaid Expenses</CardTitle>
-              <div className="p-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg">
-                <CreditCard className="h-4 w-4 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                {formatCurrency(metrics?.unpaidExpenses || "0.00")}
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                Outstanding payments
+                Total expenses recorded
               </p>
             </CardContent>
           </Card>
@@ -378,7 +316,7 @@ export default function ExpensesStandalone() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Search</label>
               <div className="relative">
@@ -441,20 +379,7 @@ export default function ExpensesStandalone() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Status</label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Paid">Paid</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid</SelectItem>
-                  <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
           </div>
         </CardContent>
       </Card>
@@ -498,10 +423,10 @@ export default function ExpensesStandalone() {
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{expense.description}</h3>
                         <Badge 
-                          variant={getStatusBadgeVariant(expense.paidStatus)}
-                          className="px-3 py-1 text-xs font-medium rounded-full"
+                          variant="default"
+                          className="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                         >
-                          {expense.paidStatus}
+                          Paid
                         </Badge>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -511,6 +436,9 @@ export default function ExpensesStandalone() {
                         )}
                         <span>{expense.supplierName || "No Supplier"}</span>
                         <span>{format(new Date(expense.expenseDate), "dd MMM yyyy")}</span>
+                        <span className="text-blue-600 dark:text-blue-400">
+                          • Paid from: {expense.bankAccountName || 'Bank Account'}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -527,15 +455,6 @@ export default function ExpensesStandalone() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {expense.paidStatus === "Unpaid" && (
-                            <DropdownMenuItem
-                              onClick={() => handlePayExpense(expense)}
-                              className="flex items-center gap-2 text-green-600"
-                            >
-                              <CreditCard className="h-4 w-4" />
-                              Pay Expense
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuItem
                             onClick={() => handleEditExpense(expense)}
                             className="flex items-center gap-2"
@@ -601,30 +520,7 @@ export default function ExpensesStandalone() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Payment Confirmation Dialog */}
-        <AlertDialog open={!!payingExpense} onOpenChange={(open) => !open && setPayingExpense(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Pay Expense</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to mark the expense "{payingExpense?.description}" as paid? 
-                The expense amount is {payingExpense && formatCurrency(payingExpense.amount)}.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPayingExpense(null)}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmPayExpense}
-                className="bg-green-600 text-white hover:bg-green-700"
-                disabled={payExpenseMutation.isPending}
-              >
-                {payExpenseMutation.isPending ? "Processing..." : "Confirm Payment"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+
       </div>
     </div>
   );

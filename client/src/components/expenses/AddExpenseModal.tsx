@@ -33,7 +33,7 @@ interface LineItem {
 interface ExpenseFormData {
   companyId: number;
   supplierId?: number;
-  bankAccountId?: number;
+  bankAccountId: number; // Required payment account
   description: string;
   categoryId?: number;
   category: string;
@@ -42,7 +42,7 @@ interface ExpenseFormData {
   vatRate: string;
   vatAmount: string;
   expenseDate: string;
-  paidStatus: "Paid" | "Unpaid" | "Partially Paid";
+  paidStatus: "Paid"; // Expenses are always paid on creation
   supplierInvoiceNumber?: string;
   attachmentUrl?: string;
   createdBy: number;
@@ -68,13 +68,14 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
   
   const [formData, setFormData] = useState<ExpenseFormData>({
     companyId: (user as any)?.companyId || 0,
+    bankAccountId: 25, // Default to first available bank account - will be populated from API
     description: "",
     amount: "",
     vatType: "No VAT",
     vatRate: "15.00",
     vatAmount: "0.00",
     expenseDate: new Date().toISOString().split('T')[0],
-    paidStatus: "Unpaid",
+    paidStatus: "Paid", // Expenses are always paid on creation
     supplierInvoiceNumber: "",
     categoryId: undefined,
     category: "",
@@ -125,13 +126,14 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
       // Reset form for new expense
       setFormData({
         companyId: (user as any)?.companyId || 0,
+        bankAccountId: 25, // Default bank account
         description: "",
         amount: "",
         vatType: "No VAT",
         vatRate: "15.00",
         vatAmount: "0.00",
         expenseDate: new Date().toISOString().split('T')[0],
-        paidStatus: "Unpaid",
+        paidStatus: "Paid", // Expenses are always paid on creation
         supplierInvoiceNumber: "",
         categoryId: undefined,
         category: "",
@@ -272,11 +274,11 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
       return;
     }
 
-    // Validate bank account is required for paid expenses
-    if ((formData.paidStatus === "Paid" || formData.paidStatus === "Partially Paid") && !formData.bankAccountId) {
+    // Validate bank account is required for all expenses
+    if (!formData.bankAccountId) {
       toast({
-        title: "Bank Account Required",
-        description: "Please select a bank account for paid expenses",
+        title: "Payment Account Required",
+        description: "Please select a payment account for this expense",
         variant: "destructive",
       });
       return;
@@ -621,7 +623,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                 </CardContent>
               </Card>
 
-              {/* Date and Status */}
+              {/* Date and Payment Account */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="expenseDate">Date of Expense *</Label>
@@ -634,38 +636,17 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="paidStatus">Paid Status</Label>
-                  <Select
-                    value={formData.paidStatus}
-                    onValueChange={(value: "Paid" | "Unpaid" | "Partially Paid") => 
-                      setFormData(prev => ({ ...prev, paidStatus: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                      <SelectItem value="Unpaid">Unpaid</SelectItem>
-                      <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Bank Account (Required for Paid Status) */}
-              {(formData.paidStatus === "Paid" || formData.paidStatus === "Partially Paid") && (
-                <div className="space-y-2">
-                  <Label htmlFor="bankAccount">Bank Account *</Label>
+                  <Label htmlFor="bankAccount">Payment Account *</Label>
                   <Select
                     value={formData.bankAccountId?.toString() || ""}
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
-                      bankAccountId: value ? parseInt(value) : undefined 
+                      bankAccountId: value ? parseInt(value) : 25 
                     }))}
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select bank account" />
+                      <SelectValue placeholder="Select payment account" />
                     </SelectTrigger>
                     <SelectContent>
                       {(bankAccounts as any)?.map((account: any) => (
@@ -675,8 +656,9 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-gray-500">The bank or cash account used for this payment</p>
                 </div>
-              )}
+              </div>
 
               {/* Tax Deductible removed - VAT logic and category determine deductibility */}
 

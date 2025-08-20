@@ -843,7 +843,7 @@ export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(), // Client/Company reference
   supplierId: integer("supplier_id"), // Reference to supplier
-  bankAccountId: integer("bank_account_id").references(() => bankAccounts.id), // Reference to bank account used for payment
+  bankAccountId: integer("bank_account_id").notNull().references(() => bankAccounts.id), // Required payment account (Bank/Cash) used for payment
   description: text("description").notNull(),
   category: text("category").notNull(), // Category name from Chart of Accounts (legacy field for DB compatibility)
   categoryId: integer("category_id"), // Reference to Chart of Accounts
@@ -852,7 +852,7 @@ export const expenses = pgTable("expenses", {
   vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
   expenseDate: date("expense_date").notNull(),
-  paidStatus: text("paid_status").notNull().default("Unpaid"), // 'Paid', 'Unpaid', 'Partially Paid'
+  paidStatus: text("paid_status").notNull().default("Paid"), // Always 'Paid' for expenses - they represent immediate payments
   attachmentUrl: text("attachment_url"), // File upload URL
   // Professional Expense Management Fields
   reference: text("reference"), // Supplier invoice/reference number (normalized for uniqueness)
