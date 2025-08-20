@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { useLocation } from "wouter";
-import AddBillModal from "@/components/bills/AddBillModal";
+import AddBillModal from "@/components/bills/AddBillModalNew";
 
 export default function BillsPage() {
   const { user } = useAuth();
@@ -27,13 +27,6 @@ export default function BillsPage() {
   const { data: billsMetrics } = useQuery({
     queryKey: ['/api/bills/metrics'],
     enabled: !!user?.companyId,
-  });
-
-  useLoadingStates({
-    loadingStates: [
-      { isLoading, message: 'Loading bills...' },
-    ],
-    progressSteps: ['Fetching bills', 'Processing data'],
   });
 
   useLoadingStates({

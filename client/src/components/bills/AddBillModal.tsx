@@ -78,11 +78,8 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
 
   // Validate GL account selection
   const validateGLAccountMutation = useMutation({
-    mutationFn: (glAccountId: number) => apiRequest('/api/bills/validate-gl-account', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ glAccountId }),
-    }),
+    mutationFn: (glAccountId: number) => 
+      apiRequest('/api/bills/validate-gl-account', 'POST', { glAccountId }),
   });
 
   // Calculate totals from line items
@@ -177,11 +174,7 @@ export default function AddBillModal({ open, onOpenChange, editingBill }: AddBil
 
   // Create bill mutation
   const createBillMutation = useMutation({
-    mutationFn: (billData: any) => apiRequest('/api/bills', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(billData),
-    }),
+    mutationFn: (billData: any) => apiRequest('/api/bills', 'POST', billData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/bills'] });
       queryClient.invalidateQueries({ queryKey: ['/api/bills/metrics'] });

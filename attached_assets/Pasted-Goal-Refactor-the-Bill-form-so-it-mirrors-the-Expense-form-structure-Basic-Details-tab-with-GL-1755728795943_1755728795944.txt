@@ -1,0 +1,52 @@
+Goal
+Refactor the Bill form so it mirrors the Expense form structure: 
+- Basic Details tab with GL allocations (no quantity).
+- Line Items tab for catalog items (with quantity).
+- Remove illogical mixing (e.g., quantity on GL accounts).
+
+Changes
+
+1) Bill Details (Header)
+- Fields: Supplier, Bill Date, Due Date, Reference/Invoice No, Notes.
+- Expense Allocations (same as Expense form Basic Details):
+  - Columns: Description, GL Account (dropdown), VAT Code, Amount (Incl/Excl).
+  - NO Quantity/Unit Price on GL accounts.
+  - Disallow control accounts (Bank, A/P, A/R, VAT control) in GL dropdown.
+
+2) Line Items (Catalog Tab)
+- Reuse the same Line Item component from the Expense form (not Invoice).
+- Item source = Products/Services catalog with default GL + VAT mappings.
+- Columns: Item, Description, Quantity, Unit Price, Discount, VAT Code, Line Total.
+- Posting:
+  - Inventory items → Inventory GL (or COGS if Immediate Consumption = ON).
+  - Service items → Expense GL.
+  - Asset items → Fixed Asset GL.
+
+3) Totals & VAT
+- Subtotal = Expense Allocations + Line Items (net).
+- VAT Total = sum of line VAT.
+- Gross Total = Subtotal + VAT.
+- Auto-calculate, do not allow VAT control account as line.
+
+4) Posting (unchanged A/P logic)
+- On Save Bill:
+  Dr Expense/COGS/Inventory/Assets (per line net)
+  Dr Input VAT
+  Cr Accounts Payable (gross)
+- Bill status = UNPAID until Payment (Dr A/P, Cr Bank).
+
+5) Validation
+- If user enters Quantity/Unit Price in GL allocation → block.
+- If control GL is selected in allocation → block.
+- If item line is Inventory and Immediate Consumption OFF → post to Inventory; if ON → post to COGS.
+
+6) API/Model
+- Bill payload:
+  - basicDetails: supplierId, billDate, dueDate, ref, notes
+  - expenseAllocations[]: { description, glAccountId, vatCode, amount }
+  - lineItems[]: { itemId, description, qty, unitPrice, discount?, vatCode, immediateConsumption? }
+- Compute totals server-side.
+
+7) UI
+- Tabs: Basic Details | Line Items | Recurring Options
+- Same user experience as “Add New Expense”.
