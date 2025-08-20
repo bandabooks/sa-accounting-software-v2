@@ -2798,19 +2798,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check for duplicate supplier invoice number if provided and not empty (legacy field)
-      if (req.body.supplierInvoiceNumber && req.body.supplierInvoiceNumber.trim() !== "") {
-        const existingExpense = await storage.getExpenseBySupplierInvoiceNumber(
-          req.user.companyId, 
-          req.body.supplierInvoiceNumber
-        );
-        if (existingExpense) {
-          return res.status(400).json({ 
-            message: "Supplier invoice number already exists",
-            details: `Invoice number "${req.body.supplierInvoiceNumber}" is already used for this company.`,
-            field: "supplierInvoiceNumber"
-          });
-        }
+      // Mandatory supplier invoice number validation with duplicate check
+      const { BillValidationService } = await import('./services/billValidationService');
+      const supplierInvoiceValidation = await BillValidationService.validateSupplierInvoiceNumber(
+        req.user.companyId, 
+        req.body.supplierInvoiceNumber
+      );
+      if (!supplierInvoiceValidation.isValid) {
+        return res.status(400).json({ 
+          message: supplierInvoiceValidation.error,
+          field: "supplierInvoiceNumber"
+        });
       }
 
       // Generate internal expense reference number
@@ -3006,6 +3004,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { BillValidationService } = await import('./services/billValidationService');
+
+      // Validate supplier invoice number for duplicates
+      const supplierInvoiceValidation = await BillValidationService.validateSupplierInvoiceNumber(
+        companyId, 
+        req.body.supplierInvoiceNumber
+      );
+      if (!supplierInvoiceValidation.isValid) {
+        return res.status(400).json({ 
+          message: supplierInvoiceValidation.error,
+          field: "supplierInvoiceNumber"
+        });
+      }
 
       // Validate bill data
       const validation = await BillValidationService.validateBill(companyId, req.body);

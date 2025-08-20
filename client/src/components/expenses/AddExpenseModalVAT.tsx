@@ -147,10 +147,21 @@ export default function AddExpenseModalVAT({ open, onOpenChange, editingExpense 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Mandatory validation for all required fields including supplier invoice number
     if (!formData.description || !formData.amount || !formData.categoryId || !formData.bankAccountId) {
       toast({
-        title: "Validation Error",
+        title: "Validation Error", 
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Mandatory supplier invoice number validation
+    if (!formData.supplierInvoiceNumber || formData.supplierInvoiceNumber.trim() === "") {
+      toast({
+        title: "Validation Error",
+        description: "Supplier Invoice Number is mandatory and cannot be empty.",
         variant: "destructive",
       });
       return;
@@ -401,14 +412,15 @@ export default function AddExpenseModalVAT({ open, onOpenChange, editingExpense 
                   </div>
                 )}
 
-                {/* Supplier Invoice Number */}
+                {/* Supplier Invoice Number - MANDATORY */}
                 <div className="space-y-2">
-                  <Label htmlFor="supplierInvoiceNumber">Supplier Invoice Number</Label>
+                  <Label htmlFor="supplierInvoiceNumber">Supplier Invoice Number *</Label>
                   <Input
                     id="supplierInvoiceNumber"
-                    value={formData.supplierInvoiceNumber}
+                    value={formData.supplierInvoiceNumber || ""}
                     onChange={(e) => setFormData(prev => ({ ...prev, supplierInvoiceNumber: e.target.value }))}
-                    placeholder="Optional supplier invoice reference"
+                    placeholder="Enter supplier invoice number (required)"
+                    required
                   />
                 </div>
               </CardContent>

@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { chartOfAccounts, billItems, vatTypes } from '../../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { chartOfAccounts, billItems, vatTypes, bills, expenses } from '../../shared/schema';
+import { eq, and, ne } from 'drizzle-orm';
 
 export class BillValidationService {
   /**
@@ -71,6 +71,76 @@ export class BillValidationService {
     } catch (error) {
       console.error('GL account validation error:', error);
       return { isValid: false, error: 'Failed to validate GL account' };
+    }
+  }
+
+  /**
+   * Validates supplier invoice number for uniqueness across bills and expenses
+   * Prevents duplicate supplier invoice numbers within the same company
+   */
+  static async validateSupplierInvoiceNumber(
+    companyId: number, 
+    supplierInvoiceNumber: string, 
+    excludeBillId?: number,
+    excludeExpenseId?: number
+  ): Promise<{ isValid: boolean; error?: string }> {
+    try {
+      if (!supplierInvoiceNumber || supplierInvoiceNumber.trim() === '') {
+        return { isValid: false, error: 'Supplier invoice number is mandatory and cannot be empty' };
+      }
+
+      const trimmedNumber = supplierInvoiceNumber.trim();
+
+      // Check for duplicates in bills table
+      let billWhereConditions = [
+        eq(bills.companyId, companyId),
+        eq(bills.supplierInvoiceNumber, trimmedNumber)
+      ];
+
+      if (excludeBillId) {
+        billWhereConditions.push(ne(bills.id, excludeBillId));
+      }
+
+      const existingBill = await db
+        .select()
+        .from(bills)
+        .where(and(...billWhereConditions))
+        .limit(1);
+
+      if (existingBill.length > 0) {
+        return { 
+          isValid: false, 
+          error: `Supplier invoice number "${trimmedNumber}" already exists in bills. Duplicate supplier invoice numbers are not allowed.` 
+        };
+      }
+
+      // Check for duplicates in expenses table
+      let expenseWhereConditions = [
+        eq(expenses.companyId, companyId),
+        eq(expenses.supplierInvoiceNumber, trimmedNumber)
+      ];
+
+      if (excludeExpenseId) {
+        expenseWhereConditions.push(ne(expenses.id, excludeExpenseId));
+      }
+
+      const existingExpense = await db
+        .select()
+        .from(expenses)
+        .where(and(...expenseWhereConditions))
+        .limit(1);
+
+      if (existingExpense.length > 0) {
+        return { 
+          isValid: false, 
+          error: `Supplier invoice number "${trimmedNumber}" already exists in expenses. Duplicate supplier invoice numbers are not allowed.` 
+        };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      console.error('Supplier invoice number validation error:', error);
+      return { isValid: false, error: 'Failed to validate supplier invoice number' };
     }
   }
 

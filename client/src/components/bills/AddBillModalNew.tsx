@@ -299,6 +299,16 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
       return;
     }
 
+    // Mandatory supplier invoice number validation
+    if (!billData.supplierInvoiceNumber || billData.supplierInvoiceNumber.trim() === "") {
+      toast({
+        title: "Validation Error",
+        description: "Supplier Invoice Number is mandatory and cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate expense allocations
     const validExpenseAllocations = expenseAllocations.filter(item => 
       item.glAccountId && parseFloat(item.amount) > 0
@@ -341,6 +351,7 @@ export default function AddBillModal({ open, onOpenChange }: AddBillModalProps) 
       notes: "",
       paymentTerms: 30,
       immediateConsumption: false,
+      vatCalculationMethod: "exclusive" as "inclusive" | "exclusive", // Reset to default
       createdBy: user?.id || 0,
     });
     setExpenseAllocations([{
