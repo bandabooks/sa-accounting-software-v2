@@ -256,6 +256,25 @@ export default function ExpensesStandalone() {
     }
   };
 
+  const handleBulkPayExpenses = () => {
+    // Find all unpaid expenses
+    const unpaidExpenses = filteredExpenses.filter(expense => expense.paidStatus === "Unpaid");
+    
+    if (unpaidExpenses.length === 0) {
+      toast({
+        title: "No Unpaid Expenses",
+        description: "All expenses are already paid",
+      });
+      return;
+    }
+
+    // For now, show a simple confirmation for bulk payment
+    toast({
+      title: "Bulk Payment",
+      description: `Found ${unpaidExpenses.length} unpaid expenses. Individual payment processing available in dropdown menus.`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900">
       <div className="space-y-8 p-6">
@@ -285,6 +304,7 @@ export default function ExpensesStandalone() {
               Add New Expense
             </Button>
             <Button 
+              onClick={handleBulkPayExpenses}
               variant="outline"
               className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 text-green-700 border-green-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
             >
