@@ -96,6 +96,18 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
   const [totalVatAmount, setTotalVatAmount] = useState("0.00");
   const [totalGrossAmount, setTotalGrossAmount] = useState("0.00");
 
+  // Fetch suppliers
+  const { data: suppliers } = useQuery({
+    queryKey: ['/api/suppliers'],
+    enabled: open,
+  });
+
+  // Fetch bank accounts
+  const { data: bankAccounts } = useQuery({
+    queryKey: ['/api/bank-accounts'],
+    enabled: open,
+  });
+
   // Effect to set default bank account when bank accounts are loaded
   useEffect(() => {
     if (bankAccounts && (bankAccounts as any).length > 0 && !editingExpense && formData.bankAccountId === 0) {
@@ -121,7 +133,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
         vatRate: editingExpense.vatRate,
         vatAmount: editingExpense.vatAmount,
         expenseDate: editingExpense.expenseDate.split('T')[0],
-        paidStatus: editingExpense.paidStatus,
+        paidStatus: "Paid", // Always "Paid" for expenses
         supplierInvoiceNumber: editingExpense.supplierInvoiceNumber || "",
         createdBy: editingExpense.createdBy,
         isRecurring: false,
@@ -136,7 +148,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
       // Reset form for new expense
       setFormData({
         companyId: (user as any)?.companyId || 0,
-        bankAccountId: (bankAccounts as any)?.[0]?.id || 0, // First available bank account
+        bankAccountId: 0, // Will be set by useEffect when accounts load
         description: "",
         amount: "",
         vatType: "No VAT",
@@ -157,19 +169,7 @@ export default function AddExpenseModal({ open, onOpenChange, editingExpense }: 
       setNetAmount("0.00");
       setGrossAmount("0.00");
     }
-  }, [editingExpense, user]);
-
-  // Fetch suppliers
-  const { data: suppliers } = useQuery({
-    queryKey: ['/api/suppliers'],
-    enabled: open,
-  });
-
-  // Fetch bank accounts
-  const { data: bankAccounts } = useQuery({
-    queryKey: ['/api/bank-accounts'],
-    enabled: open,
-  });
+  }, [editingExpense, user, bankAccounts]);
 
   // Fetch Chart of Accounts (expense categories only)
   const { data: accounts } = useQuery({
