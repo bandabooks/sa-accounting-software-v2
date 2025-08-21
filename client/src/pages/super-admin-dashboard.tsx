@@ -90,6 +90,7 @@ export default function SuperAdminDashboard() {
   // Module selection state for create plan dialog
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [selectedLimits, setSelectedLimits] = useState<Record<string, any>>({});
+  const [createPlanTab, setCreatePlanTab] = useState("basic");
   
   // Login As User confirmation modal
   const [loginAsUserModalOpen, setLoginAsUserModalOpen] = useState(false);
@@ -236,7 +237,16 @@ export default function SuperAdminDashboard() {
       monthlyPrice: parseFloat(formData.get('monthlyPrice') as string),
       annualPrice: parseFloat(formData.get('annualPrice') as string),
       features: JSON.parse(formData.get('features') as string || '[]'),
-      limits: JSON.parse(formData.get('limits') as string || '{}'),
+      limits: {
+        users: parseInt(formData.get('maxUsers') as string || '5'),
+        companies: parseInt(formData.get('maxCompanies') as string || '1'),
+        customers: parseInt(formData.get('maxCustomers') as string || '100'),
+        suppliers: parseInt(formData.get('maxSuppliers') as string || '50'),
+        invoices_per_month: parseInt(formData.get('monthlyInvoiceLimit') as string || '50'),
+        estimates_per_month: parseInt(formData.get('monthlyEstimateLimit') as string || '25'),
+        storage_gb: parseFloat(formData.get('storageLimit') as string || '1'),
+        api_calls_per_month: parseInt(formData.get('apiCallsLimit') as string || '1000')
+      },
       sortOrder: parseInt(formData.get('sortOrder') as string || '0'),
     };
     createPlanMutation.mutate(planData);
@@ -352,6 +362,7 @@ export default function SuperAdminDashboard() {
                 // Reset module selection when dialog closes
                 setSelectedFeatures([]);
                 setSelectedLimits({});
+                setCreatePlanTab("basic");
               }
             }}>
               <DialogTrigger asChild>
@@ -360,44 +371,68 @@ export default function SuperAdminDashboard() {
                   Create Plan
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Subscription Plan</DialogTitle>
                   <DialogDescription>
                     Create a new subscription plan for companies to subscribe to.
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  handleCreatePlan(formData);
-                }}>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Plan Name</Label>
-                      <Input id="name" name="name" placeholder="e.g., basic" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="displayName">Display Name</Label>
-                      <Input id="displayName" name="displayName" placeholder="e.g., Basic Plan" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" name="description" placeholder="Plan description..." />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="monthlyPrice">Monthly Price (R)</Label>
-                        <Input id="monthlyPrice" name="monthlyPrice" type="number" step="0.01" required />
-                      </div>
-                      <div>
-                        <Label htmlFor="annualPrice">Annual Price (R)</Label>
-                        <Input id="annualPrice" name="annualPrice" type="number" step="0.01" required />
-                      </div>
-                    </div>
-                    {/* Module Selection Interface */}
-                    <div className="space-y-4">
-                      <Label>Module Selection & Permissions</Label>
+                
+                <Tabs value={createPlanTab} onValueChange={setCreatePlanTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="basic">Basic Details</TabsTrigger>
+                    <TabsTrigger value="modules">Modules & Permissions</TabsTrigger>
+                    <TabsTrigger value="limits">Limits & Features</TabsTrigger>
+                  </TabsList>
+
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleCreatePlan(formData);
+                  }}>
+                    
+                    <TabsContent value="basic" className="space-y-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Plan Information</CardTitle>
+                          <CardDescription>Basic subscription plan details and pricing</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="name">Plan Name (Internal)</Label>
+                              <Input id="name" name="name" placeholder="e.g., basic" required />
+                              <p className="text-xs text-muted-foreground mt-1">Used internally, no spaces or special characters</p>
+                            </div>
+                            <div>
+                              <Label htmlFor="displayName">Display Name</Label>
+                              <Input id="displayName" name="displayName" placeholder="e.g., Basic Plan" required />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="description">Description</Label>
+                            <Textarea id="description" name="description" placeholder="Plan description..." rows={3} />
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div>
+                              <Label htmlFor="monthlyPrice">Monthly Price (R)</Label>
+                              <Input id="monthlyPrice" name="monthlyPrice" type="number" step="0.01" required />
+                            </div>
+                            <div>
+                              <Label htmlFor="annualPrice">Annual Price (R)</Label>
+                              <Input id="annualPrice" name="annualPrice" type="number" step="0.01" required />
+                            </div>
+                            <div>
+                              <Label htmlFor="sortOrder">Sort Order</Label>
+                              <Input id="sortOrder" name="sortOrder" type="number" defaultValue="0" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="modules" className="space-y-6">
                       <ModulePermissionSelector
                         selectedFeatures={selectedFeatures}
                         selectedLimits={selectedLimits}
@@ -405,30 +440,129 @@ export default function SuperAdminDashboard() {
                         onLimitsChange={setSelectedLimits}
                         planName="New Plan"
                       />
-                      {/* Hidden inputs for form submission */}
-                      <input
-                        type="hidden"
-                        name="features"
-                        value={JSON.stringify({
-                          modules: selectedFeatures,
-                          permissions: selectedLimits
-                        })}
-                      />
-                      <input
-                        type="hidden"
-                        name="limits"
-                        value="{}"
-                      />
+                    </TabsContent>
+
+                    <TabsContent value="limits" className="space-y-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Subscription Limits & Features</CardTitle>
+                          <CardDescription>Configure usage limits and feature availability for the subscription plan</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          
+                          {/* Access & Users */}
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                              <h3 className="text-lg font-semibold">Access & Users</h3>
+                              <Badge variant="secondary">2 limits</Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 ml-5">
+                              <div>
+                                <Label htmlFor="maxUsers">Maximum Users</Label>
+                                <Input id="maxUsers" name="maxUsers" type="number" defaultValue="5" />
+                                <p className="text-xs text-muted-foreground mt-1">Total number of users allowed per company</p>
+                              </div>
+                              <div>
+                                <Label htmlFor="maxCompanies">Maximum Companies</Label>
+                                <Input id="maxCompanies" name="maxCompanies" type="number" defaultValue="1" />
+                                <p className="text-xs text-muted-foreground mt-1">Number of companies/businesses user can manage</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Transactions */}
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                              <h3 className="text-lg font-semibold">Transactions</h3>
+                              <Badge variant="secondary">4 limits</Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 ml-5">
+                              <div>
+                                <Label htmlFor="monthlyInvoiceLimit">Monthly Invoice Limit</Label>
+                                <Input id="monthlyInvoiceLimit" name="monthlyInvoiceLimit" type="number" defaultValue="50" />
+                                <p className="text-xs text-muted-foreground mt-1">Maximum invoices that can be created per month</p>
+                              </div>
+                              <div>
+                                <Label htmlFor="monthlyEstimateLimit">Monthly Estimate Limit</Label>
+                                <Input id="monthlyEstimateLimit" name="monthlyEstimateLimit" type="number" defaultValue="25" />
+                                <p className="text-xs text-muted-foreground mt-1">Maximum estimates that can be created per month</p>
+                              </div>
+                              <div>
+                                <Label htmlFor="maxCustomers">Maximum Customers</Label>
+                                <Input id="maxCustomers" name="maxCustomers" type="number" defaultValue="100" />
+                                <p className="text-xs text-muted-foreground mt-1">Total number of customers allowed</p>
+                              </div>
+                              <div>
+                                <Label htmlFor="maxSuppliers">Maximum Suppliers</Label>
+                                <Input id="maxSuppliers" name="maxSuppliers" type="number" defaultValue="50" />
+                                <p className="text-xs text-muted-foreground mt-1">Total number of suppliers allowed</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Storage & Data */}
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                              <h3 className="text-lg font-semibold">Storage & Data</h3>
+                              <Badge variant="secondary">2 limits</Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 ml-5">
+                              <div>
+                                <Label htmlFor="storageLimit">Storage Limit (GB)</Label>
+                                <Input id="storageLimit" name="storageLimit" type="number" step="0.1" defaultValue="1" />
+                                <p className="text-xs text-muted-foreground mt-1">Maximum file storage allowed</p>
+                              </div>
+                              <div>
+                                <Label htmlFor="apiCallsLimit">API Calls Limit (per month)</Label>
+                                <Input id="apiCallsLimit" name="apiCallsLimit" type="number" defaultValue="1000" />
+                                <p className="text-xs text-muted-foreground mt-1">Maximum API requests per month</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    {/* Hidden inputs for form submission */}
+                    <input
+                      type="hidden"
+                      name="features"
+                      value={JSON.stringify({
+                        modules: selectedFeatures,
+                        permissions: selectedLimits
+                      })}
+                    />
+                    <input
+                      type="hidden"
+                      name="limits"
+                      value={JSON.stringify({
+                        users: 5,
+                        companies: 1,
+                        customers: 100,
+                        suppliers: 50,
+                        invoices_per_month: 50,
+                        estimates_per_month: 25,
+                        storage_gb: 1,
+                        api_calls_per_month: 1000
+                      })}
+                    />
+
+                    <div className="flex justify-end space-x-2 mt-6 pt-4 border-t">
+                      <Button type="button" variant="outline" onClick={() => setIsCreatePlanDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createPlanMutation.isPending}>
+                        {createPlanMutation.isPending ? "Creating..." : "Create Plan"}
+                      </Button>
                     </div>
-                    <div>
-                      <Label htmlFor="sortOrder">Sort Order</Label>
-                      <Input id="sortOrder" name="sortOrder" type="number" defaultValue="0" />
-                    </div>
-                    <Button type="submit" disabled={createPlanMutation.isPending}>
-                      {createPlanMutation.isPending ? "Creating..." : "Create Plan"}
-                    </Button>
-                  </div>
-                </form>
+                  </form>
+                </Tabs>
               </DialogContent>
             </Dialog>
           </div>

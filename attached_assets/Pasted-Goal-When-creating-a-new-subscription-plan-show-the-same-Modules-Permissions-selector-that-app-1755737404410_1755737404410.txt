@@ -1,0 +1,50 @@
+Goal: When creating a new subscription plan, show the same "Modules & Permissions" selector that appears in Edit Plan. Allow selecting modules before first save, or in one POST.
+
+Frontend
+1) Reuse the EditPlan form component for create:
+   - Export <PlanForm mode="create|edit"> with tabs: Basic Details | Modules & Permissions | Limits & Features.
+   - In CreatePlanModal (or /plans/new), render <PlanForm mode="create">, not a stripped-down form.
+
+2) Fetch modules on open:
+   - useEffect on modal open -> GET /api/modules (or /api/modules?active=1).
+   - Keep state: modules[], selectedModuleIds[].
+   - If modules[].length === 0, show empty-state message + retry.
+
+3) One-shot submit:
+   - On Create, POST /api/plans with payload:
+     {
+       name, displayName, description,
+       monthlyPrice, annualPrice,
+       features: string[],            // from Features JSON textarea or builder
+       limits: Record<string, any>,   // from Limits JSON
+       moduleIds: selectedModuleIds   // NEW
+     }
+   - If backend cannot accept moduleIds on create, do:
+     a) POST /api/plans (basic), get planId
+     b) POST /api/plans/:id/modules { moduleIds }
+     c) Redirect to /plans/:id/edit?tab=modules
+
+4) UI guards:
+   - Keep “Create Plan” disabled until name + at least 1 module selected.
+   - Show the same accordion/toggles used in Edit Plan.
+   - Persist selections if user switches tabs.
+
+Backend
+5) Add/confirm endpoints:
+   - POST /api/plans accepts moduleIds[] and persists plan_modules pivot in one transaction.
+   - Or add POST /api/plans/:id/modules to upsert mappings.
+
+6) Validation:
+   - 400 if moduleIds invalid or disabled.
+   - Default plan sortOrder to next integer if blank.
+
+7) Regression fix:
+   - Check feature flag/route guard that might hide the Modules tab for mode='create'.
+   - Ensure RBAC allows read:modules for the user creating plans.
+
+Tests
+8) Verify:
+   - Opening Create Plan shows Modules & Permissions tab with data.
+   - Creating a plan with selected modules saves pivot rows.
+   - After create, Edit Plan loads with the same modules pre-selected.
+   - Creating with no modules -> blocked with clear error.
