@@ -436,7 +436,9 @@ export default function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent className="relative">
-                <div className="text-2xl font-bold text-white mb-2">R 45,320.00</div>
+                <div className="text-2xl font-bold text-white mb-2">
+                  {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
+                </div>
                 <div className="flex items-center text-sm text-amber-100">
                   <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
                     <AlertTriangle className="h-3 w-3" />

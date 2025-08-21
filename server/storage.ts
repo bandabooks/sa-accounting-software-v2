@@ -3019,7 +3019,7 @@ export class DatabaseStorage implements IStorage {
 
       pendingPOs.forEach(po => {
         const deliveryDate = new Date(po.deliveryDate);
-        const amount = parseFloat(po.totalAmount);
+        const amount = parseFloat(po.total || "0");
         
         if (deliveryDate >= thirtyDaysAgo) {
           days0to30 += amount;
