@@ -249,7 +249,7 @@ export default function ModulePermissionSelector({
 }: ModulePermissionSelectorProps) {
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [modulePermissions, setModulePermissions] = useState<Record<string, string[]>>({});
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(["core", "sales", "accounting"]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(["core", "sales", "accounting", "compliance"]);
   const [currentTab, setCurrentTab] = useState("modules");
 
   // Initialize from existing features
