@@ -343,12 +343,38 @@ export default function ModulePermissionSelector({
   }, [selectedFeatures]);
 
   const toggleModule = (moduleId: string) => {
-    const newModules = selectedModules.includes(moduleId)
+    const isCurrentlySelected = selectedModules.includes(moduleId);
+    const newModules = isCurrentlySelected
       ? selectedModules.filter(id => id !== moduleId)
       : [...selectedModules, moduleId];
     
+    const newPermissions = { ...modulePermissions };
+    
+    // If enabling a module, automatically enable essential permissions
+    if (!isCurrentlySelected) {
+      const module = AVAILABLE_MODULES[moduleId];
+      if (module) {
+        // Auto-enable essential permissions: view, create, edit, delete
+        const essentialPermissions = ['view', 'create', 'edit', 'delete'];
+        const availablePermissions = module.permissions || [];
+        const autoPermissions = essentialPermissions.filter(perm => 
+          availablePermissions.includes(perm)
+        );
+        
+        if (autoPermissions.length > 0) {
+          newPermissions[moduleId] = [...(newPermissions[moduleId] || []), ...autoPermissions];
+          // Remove duplicates
+          newPermissions[moduleId] = Array.from(new Set(newPermissions[moduleId]));
+        }
+      }
+    } else {
+      // If disabling a module, remove its permissions
+      delete newPermissions[moduleId];
+    }
+    
     setSelectedModules(newModules);
-    updateFeatures(newModules, modulePermissions);
+    setModulePermissions(newPermissions);
+    updateFeatures(newModules, newPermissions);
   };
 
   const togglePermission = (moduleId: string, permission: string) => {
