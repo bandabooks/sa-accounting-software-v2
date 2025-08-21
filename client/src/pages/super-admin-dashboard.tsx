@@ -230,17 +230,36 @@ export default function SuperAdminDashboard() {
 
 
   const handleCreatePlan = (formData: FormData) => {
+    // Get form values with fallbacks
+    const name = formData.get('name') as string || '';
+    const displayName = formData.get('displayName') as string || '';
+    const description = formData.get('description') as string || '';
+    const monthlyPrice = formData.get('monthlyPrice') as string || '0';
+    const annualPrice = formData.get('annualPrice') as string || '0';
+    const sortOrder = formData.get('sortOrder') as string || '0';
+
+    // Validate required fields
+    if (!name || !displayName || !monthlyPrice || !annualPrice) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields in the Basic Details tab",
+        variant: "destructive",
+      });
+      setCreatePlanTab("basic");
+      return;
+    }
+
     // Create user-friendly feature names from selected modules
     const moduleFeatures = selectedFeatures.map(moduleId => 
       moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     );
 
     const planData = {
-      name: formData.get('name') as string,
-      displayName: formData.get('displayName') as string,
-      description: formData.get('description') as string,
-      monthlyPrice: parseFloat(formData.get('monthlyPrice') as string),
-      annualPrice: parseFloat(formData.get('annualPrice') as string),
+      name,
+      displayName,
+      description,
+      monthlyPrice: parseFloat(monthlyPrice),
+      annualPrice: parseFloat(annualPrice),
       features: {
         core_features: moduleFeatures,
         included_modules: selectedFeatures,
@@ -256,8 +275,10 @@ export default function SuperAdminDashboard() {
         storage_gb: formData.get('storageLimit') === 'unlimited' ? -1 : parseFloat(formData.get('storageLimit') as string || '1'),
         api_calls_per_month: formData.get('apiCallsLimit') === 'unlimited' ? -1 : parseInt(formData.get('apiCallsLimit') as string || '1000')
       },
-      sortOrder: parseInt(formData.get('sortOrder') as string || '0'),
+      sortOrder: parseInt(sortOrder),
     };
+    
+    console.log('Creating plan with data:', planData);
     createPlanMutation.mutate(planData);
   };
 
@@ -395,7 +416,7 @@ export default function SuperAdminDashboard() {
                     <TabsTrigger value="limits">Limits & Features</TabsTrigger>
                   </TabsList>
 
-                  <form onSubmit={(e) => {
+                  <form id="createPlanForm" onSubmit={(e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
                     handleCreatePlan(formData);
@@ -662,15 +683,20 @@ export default function SuperAdminDashboard() {
                       })}
                     />
 
-                    <div className="flex justify-end space-x-2 mt-6 pt-4 border-t">
-                      <Button type="button" variant="outline" onClick={() => setIsCreatePlanDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createPlanMutation.isPending}>
-                        {createPlanMutation.isPending ? "Creating..." : "Create Plan"}
-                      </Button>
-                    </div>
                   </form>
+                  
+                  <div className="flex justify-end space-x-2 mt-6 pt-4 border-t">
+                    <Button type="button" variant="outline" onClick={() => setIsCreatePlanDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      form="createPlanForm"
+                      disabled={createPlanMutation.isPending}
+                    >
+                      {createPlanMutation.isPending ? "Creating..." : "Create Plan"}
+                    </Button>
+                  </div>
                 </Tabs>
               </DialogContent>
             </Dialog>
