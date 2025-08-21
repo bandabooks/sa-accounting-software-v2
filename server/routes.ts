@@ -1486,8 +1486,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set('Cache-Control', 'private, max-age=30'); // 30 seconds cache
       res.set('ETag', `dashboard-${companyId}-${Date.now()}`);
       
-      // Use cached queries with short TTL for performance
-      const cacheKey = `dashboard-stats-${companyId}`;
+      // Use cached queries with short TTL for performance - force refresh for debugging
+      const cacheKey = `dashboard-stats-${companyId}-${Date.now()}`;
       const dashboardData = await withCache(cacheKey, async () => {
         const [fastStats, recentActivities, bankBalances, profitLossData, auditStats, recentInvoices, receivablesAging, payablesAging, cashFlowSummary] = await Promise.all([
           fastStorage.getFastDashboardStats(companyId),
