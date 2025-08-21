@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import ModulePermissionSelector from "@/components/subscription/ModulePermissionSelector";
 
 interface SystemAnalytics {
   totalCompanies: number;
@@ -85,6 +86,10 @@ export default function SuperAdminDashboard() {
   const [, setLocation] = useLocation();
   const [isCreatePlanDialogOpen, setIsCreatePlanDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  
+  // Module selection state for create plan dialog
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
+  const [modulePermissions, setModulePermissions] = useState<Record<string, string[]>>({});
   
   // Login As User confirmation modal
   const [loginAsUserModalOpen, setLoginAsUserModalOpen] = useState(false);
@@ -341,14 +346,21 @@ export default function SuperAdminDashboard() {
         <TabsContent value="plans" className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Subscription Plans</h2>
-            <Dialog open={isCreatePlanDialogOpen} onOpenChange={setIsCreatePlanDialogOpen}>
+            <Dialog open={isCreatePlanDialogOpen} onOpenChange={(open) => {
+              setIsCreatePlanDialogOpen(open);
+              if (!open) {
+                // Reset module selection when dialog closes
+                setSelectedModules([]);
+                setModulePermissions({});
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Plan
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Subscription Plan</DialogTitle>
                   <DialogDescription>
@@ -379,22 +391,29 @@ export default function SuperAdminDashboard() {
                         <Input id="annualPrice" name="annualPrice" type="number" step="0.01" required />
                       </div>
                     </div>
-                    <div>
-                      <Label htmlFor="features">Features (JSON Array)</Label>
-                      <Textarea 
-                        id="features" 
-                        name="features" 
-                        placeholder='["Feature 1", "Feature 2"]'
-                        defaultValue='[]'
+                    {/* Module Selection Interface */}
+                    <div className="space-y-4">
+                      <Label>Module Selection & Permissions</Label>
+                      <ModulePermissionSelector
+                        selectedModules={selectedModules}
+                        onModulesChange={setSelectedModules}
+                        modulePermissions={modulePermissions}
+                        onPermissionsChange={setModulePermissions}
+                        planName="New Plan"
                       />
-                    </div>
-                    <div>
-                      <Label htmlFor="limits">Limits (JSON Object)</Label>
-                      <Textarea 
-                        id="limits" 
-                        name="limits" 
-                        placeholder='{"users": 5, "invoices": 100}'
-                        defaultValue='{}'
+                      {/* Hidden inputs for form submission */}
+                      <input
+                        type="hidden"
+                        name="features"
+                        value={JSON.stringify({
+                          modules: selectedModules,
+                          permissions: modulePermissions
+                        })}
+                      />
+                      <input
+                        type="hidden"
+                        name="limits"
+                        value="{}"
                       />
                     </div>
                     <div>
