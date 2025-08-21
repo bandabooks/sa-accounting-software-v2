@@ -174,6 +174,9 @@ export default function SuperAdminDashboard() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/subscription-plans"] });
       setIsCreatePlanDialogOpen(false);
+      setSelectedFeatures([]);
+      setSelectedLimits({});
+      setCreatePlanTab("basic");
     },
     onError: () => {
       toast({
@@ -230,36 +233,17 @@ export default function SuperAdminDashboard() {
 
 
   const handleCreatePlan = (formData: FormData) => {
-    // Get form values with fallbacks
-    const name = formData.get('name') as string || '';
-    const displayName = formData.get('displayName') as string || '';
-    const description = formData.get('description') as string || '';
-    const monthlyPrice = formData.get('monthlyPrice') as string || '0';
-    const annualPrice = formData.get('annualPrice') as string || '0';
-    const sortOrder = formData.get('sortOrder') as string || '0';
-
-    // Validate required fields
-    if (!name || !displayName || !monthlyPrice || !annualPrice) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields in the Basic Details tab",
-        variant: "destructive",
-      });
-      setCreatePlanTab("basic");
-      return;
-    }
-
     // Create user-friendly feature names from selected modules
     const moduleFeatures = selectedFeatures.map(moduleId => 
       moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     );
 
     const planData = {
-      name,
-      displayName,
-      description,
-      monthlyPrice: parseFloat(monthlyPrice),
-      annualPrice: parseFloat(annualPrice),
+      name: formData.get('name') as string,
+      displayName: formData.get('displayName') as string,
+      description: formData.get('description') as string,
+      monthlyPrice: parseFloat(formData.get('monthlyPrice') as string),
+      annualPrice: parseFloat(formData.get('annualPrice') as string),
       features: {
         core_features: moduleFeatures,
         included_modules: selectedFeatures,
@@ -275,10 +259,9 @@ export default function SuperAdminDashboard() {
         storage_gb: formData.get('storageLimit') === 'unlimited' ? -1 : parseFloat(formData.get('storageLimit') as string || '1'),
         api_calls_per_month: formData.get('apiCallsLimit') === 'unlimited' ? -1 : parseInt(formData.get('apiCallsLimit') as string || '1000')
       },
-      sortOrder: parseInt(sortOrder),
+      sortOrder: parseInt(formData.get('sortOrder') as string || '0'),
     };
     
-    console.log('Creating plan with data:', planData);
     createPlanMutation.mutate(planData);
   };
 
