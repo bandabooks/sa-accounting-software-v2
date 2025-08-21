@@ -531,47 +531,34 @@ export default function BusinessReports() {
     setSelectedReport(reportId);
     console.log(`Opening business report: ${reportId}`);
     
-    // Navigate to appropriate existing report pages
+    // Navigate to appropriate report page based on report ID
     switch(reportId) {
       case 'sales-by-product':
-      case 'sales-by-category':
-      case 'sales-by-region':
-      case 'sales-by-rep':
-      case 'sales-trends':
-      case 'sales-pipeline':
-        setLocation('/advanced-analytics');
+        setLocation('/financial-reports?tab=sales&report=products');
         break;
-      case 'top-customers':
+      case 'sales-by-category':
+        setLocation('/financial-reports?tab=sales&report=categories');
+        break;
+      case 'sales-by-region':
+        setLocation('/financial-reports?tab=sales&report=regions');
+        break;
+      case 'sales-by-rep':
+        setLocation('/financial-reports?tab=sales&report=representatives');
+        break;
       case 'customer-acquisition':
-      case 'customer-retention':
-      case 'customer-segments':
-        setLocation('/customers');
+        setLocation('/customers?view=analytics');
         break;
       case 'inventory-turnover':
-      case 'stock-analysis':
-      case 'product-performance':
-        setLocation('/inventory');
+        setLocation('/inventory?view=reports');
         break;
       case 'profit-loss':
-      case 'balance-sheet':
+        setLocation('/financial-reports?tab=statements&report=profit-loss');
+        break;
       case 'cash-flow':
-      case 'financial-ratios':
-        setLocation('/reports/financial');
-        break;
-      case 'aging-analysis':
-      case 'collections-report':
-        setLocation('/reports/aging');
-        break;
-      case 'expense-analysis':
-      case 'cost-analysis':
-        setLocation('/expenses');
-        break;
-      case 'purchase-analysis':
-      case 'supplier-performance':
-        setLocation('/purchase-reports');
+        setLocation('/financial-reports?tab=statements&report=cash-flow');
         break;
       default:
-        setLocation('/reports');
+        setLocation('/financial-reports');
     }
   };
 
