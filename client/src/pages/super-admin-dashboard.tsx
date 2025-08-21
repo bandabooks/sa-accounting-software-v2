@@ -88,8 +88,8 @@ export default function SuperAdminDashboard() {
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
   
   // Module selection state for create plan dialog
-  const [selectedModules, setSelectedModules] = useState<string[]>([]);
-  const [modulePermissions, setModulePermissions] = useState<Record<string, string[]>>({});
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [selectedLimits, setSelectedLimits] = useState<Record<string, any>>({});
   
   // Login As User confirmation modal
   const [loginAsUserModalOpen, setLoginAsUserModalOpen] = useState(false);
@@ -350,8 +350,8 @@ export default function SuperAdminDashboard() {
               setIsCreatePlanDialogOpen(open);
               if (!open) {
                 // Reset module selection when dialog closes
-                setSelectedModules([]);
-                setModulePermissions({});
+                setSelectedFeatures([]);
+                setSelectedLimits({});
               }
             }}>
               <DialogTrigger asChild>
@@ -395,10 +395,10 @@ export default function SuperAdminDashboard() {
                     <div className="space-y-4">
                       <Label>Module Selection & Permissions</Label>
                       <ModulePermissionSelector
-                        selectedModules={selectedModules}
-                        onModulesChange={setSelectedModules}
-                        modulePermissions={modulePermissions}
-                        onPermissionsChange={setModulePermissions}
+                        selectedFeatures={selectedFeatures}
+                        selectedLimits={selectedLimits}
+                        onFeaturesChange={setSelectedFeatures}
+                        onLimitsChange={setSelectedLimits}
                         planName="New Plan"
                       />
                       {/* Hidden inputs for form submission */}
@@ -406,8 +406,8 @@ export default function SuperAdminDashboard() {
                         type="hidden"
                         name="features"
                         value={JSON.stringify({
-                          modules: selectedModules,
-                          permissions: modulePermissions
+                          modules: selectedFeatures,
+                          permissions: selectedLimits
                         })}
                       />
                       <input
