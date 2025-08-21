@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { format, subDays } from "date-fns";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -35,9 +37,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function BusinessReports() {
+  const [location, setLocation] = useLocation();
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
+
+  // Fetch real sales data
+  const { data: salesData } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+  });
+
+  // Fetch real product sales data
+  const { data: productData } = useQuery({
+    queryKey: ["/api/pos/products"],
+  });
+
+  // Fetch invoices data
+  const { data: invoicesData } = useQuery({
+    queryKey: ["/api/invoices"],
+  });
 
   const reportCategories = [
     {
@@ -511,9 +529,44 @@ export default function BusinessReports() {
 
   const handleReportClick = (reportId: string) => {
     setSelectedReport(reportId);
-    // Navigate to specific report based on ID
     console.log(`Opening business report: ${reportId}`);
-    // Implementation would route to specific business report pages
+    
+    // Navigate to appropriate report page based on report ID
+    switch(reportId) {
+      case 'sales-by-product':
+        setLocation('/financial-reports?tab=sales&report=products');
+        break;
+      case 'sales-by-category':
+        setLocation('/financial-reports?tab=sales&report=categories');
+        break;
+      case 'sales-by-region':
+        setLocation('/financial-reports?tab=sales&report=regions');
+        break;
+      case 'sales-by-rep':
+        setLocation('/financial-reports?tab=sales&report=representatives');
+        break;
+      case 'customer-acquisition':
+        setLocation('/customers?view=analytics');
+        break;
+      case 'inventory-turnover':
+        setLocation('/inventory?view=reports');
+        break;
+      case 'profit-loss':
+        setLocation('/financial-reports?tab=statements&report=profit-loss');
+        break;
+      case 'cash-flow':
+        setLocation('/financial-reports?tab=statements&report=cash-flow');
+        break;
+      default:
+        setLocation('/financial-reports');
+    }
+  };
+
+  const handleEyeClick = (reportId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the parent onClick
+    // Show quick preview or modal with report data
+    console.log(`Quick preview for report: ${reportId}`);
+    handleReportClick(reportId); // For now, navigate to full report
   };
 
   return (
@@ -645,8 +698,14 @@ export default function BusinessReports() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Eye className="h-4 w-4" />
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 opacity-70 group-hover:opacity-100 transition-opacity hover:bg-blue-100" 
+                              onClick={(e) => handleEyeClick(report.id, e)}
+                              title="Quick Preview"
+                            >
+                              <Eye className="h-4 w-4 text-blue-600" />
                             </Button>
                             <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
                           </div>
@@ -666,20 +725,26 @@ export default function BusinessReports() {
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">46</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {reportCategories.reduce((total, category) => total + category.reports.length, 0)}
+              </div>
               <div className="text-sm text-gray-600">Total Reports</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">9</div>
+              <div className="text-2xl font-bold text-green-600">{reportCategories.length}</div>
               <div className="text-sm text-gray-600">Report Categories</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">Real-time</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {salesData ? 'Live' : 'Real-time'}
+              </div>
               <div className="text-sm text-gray-600">Data Updates</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">Custom</div>
-              <div className="text-sm text-gray-600">Report Builder</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {invoicesData ? invoicesData.length : 0}
+              </div>
+              <div className="text-sm text-gray-600">Active Invoices</div>
             </div>
           </div>
         </CardContent>
