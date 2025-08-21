@@ -2205,7 +2205,7 @@ export const insertCompanySchema = createInsertSchema(companies).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  subscriptionPlan: z.enum(["trial", "starter", "professional", "enterprise"]).default("trial"),
+  subscriptionPlan: z.string().min(1, "Subscription plan is required").default("trial"),
   subscriptionStatus: z.enum(["active", "suspended", "cancelled", "pending"]).default("active"),
 });
 
