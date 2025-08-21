@@ -34,8 +34,28 @@ import {
   Zap
 } from "lucide-react";
 
+// Define sub-module interface
+interface SubModule {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
+// Define module interface
+interface Module {
+  id: string;
+  name: string;
+  description: string;
+  icon: any;
+  category: string;
+  permissions: string[];
+  essential: boolean;
+  subModules?: SubModule[];
+}
+
 // Define available modules with comprehensive details
-export const AVAILABLE_MODULES = {
+export const AVAILABLE_MODULES: Record<string, Module> = {
   dashboard: {
     id: "dashboard",
     name: "Dashboard & Analytics",
@@ -169,7 +189,51 @@ export const AVAILABLE_MODULES = {
     icon: Shield,
     category: "compliance",
     permissions: ["view", "create", "edit", "track", "assign", "report", "calendar", "documents"],
-    essential: true
+    essential: true,
+    subModules: [
+      {
+        id: "compliance_dashboard",
+        name: "Compliance Dashboard",
+        description: "Overview dashboard with compliance metrics and KPIs",
+        permissions: ["view", "export"]
+      },
+      {
+        id: "compliance_clients",
+        name: "Client Management",
+        description: "Professional client database and compliance tracking",
+        permissions: ["view", "create", "edit", "delete"]
+      },
+      {
+        id: "cipc_compliance",
+        name: "CIPC Compliance",
+        description: "Companies and Intellectual Property Commission requirements",
+        permissions: ["view", "file", "track", "report"]
+      },
+      {
+        id: "labour_compliance",
+        name: "Labour Compliance",
+        description: "Department of Employment and Labour compliance management",
+        permissions: ["view", "file", "track", "report"]
+      },
+      {
+        id: "compliance_tasks",
+        name: "Task Management",
+        description: "Compliance task assignment and deadline tracking",
+        permissions: ["view", "create", "assign", "complete"]
+      },
+      {
+        id: "compliance_calendar",
+        name: "Compliance Calendar",
+        description: "Deadline calendar and important dates tracking",
+        permissions: ["view", "schedule", "notify"]
+      },
+      {
+        id: "compliance_documents",
+        name: "Document Library",
+        description: "Compliance document storage and management",
+        permissions: ["view", "upload", "download", "organize"]
+      }
+    ]
   },
   payroll: {
     id: "payroll",
@@ -443,23 +507,78 @@ export default function ModulePermissionSelector({
 
                               {/* Permission Selection */}
                               {isSelected && (
-                                <div className="ml-8 pt-3 border-t">
-                                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                                    Module Permissions
-                                  </Label>
-                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    {module.permissions.map((permission) => (
-                                      <div key={permission} className="flex items-center space-x-2">
-                                        <Switch
-                                          checked={modulePerms.includes(permission)}
-                                          onCheckedChange={() => togglePermission(module.id, permission)}
-                                        />
-                                        <Label className="text-sm capitalize">
-                                          {permission.replace("_", " ")}
-                                        </Label>
-                                      </div>
-                                    ))}
+                                <div className="ml-8 pt-3 border-t space-y-4">
+                                  {/* Basic Module Permissions */}
+                                  <div>
+                                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                                      Module Permissions
+                                    </Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                      {module.permissions.map((permission) => (
+                                        <div key={permission} className="flex items-center space-x-2">
+                                          <Switch
+                                            checked={modulePerms.includes(permission)}
+                                            onCheckedChange={() => togglePermission(module.id, permission)}
+                                          />
+                                          <Label className="text-sm capitalize">
+                                            {permission.replace("_", " ")}
+                                          </Label>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
+
+                                  {/* Sub-modules (for compliance_management) */}
+                                  {module.subModules && (
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                                        Sub-Features
+                                      </Label>
+                                      <div className="space-y-3">
+                                        {module.subModules.map((subModule: SubModule) => {
+                                          const subModulePerms = modulePermissions[subModule.id] || [];
+                                          const isSubModuleSelected = selectedModules.includes(subModule.id);
+                                          
+                                          return (
+                                            <div key={subModule.id} className="border rounded-lg p-3 bg-gray-50">
+                                              <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center space-x-2">
+                                                  <Switch
+                                                    checked={isSubModuleSelected}
+                                                    onCheckedChange={() => toggleModule(subModule.id)}
+                                                  />
+                                                  <div>
+                                                    <Label className="text-sm font-medium">{subModule.name}</Label>
+                                                    <p className="text-xs text-gray-600">{subModule.description}</p>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Sub-module permissions */}
+                                              {isSubModuleSelected && (
+                                                <div className="ml-6 pt-2 border-t border-gray-200">
+                                                  <div className="grid grid-cols-2 gap-1">
+                                                    {subModule.permissions.map((permission: string) => (
+                                                      <div key={permission} className="flex items-center space-x-1">
+                                                        <Switch
+                                                          checked={subModulePerms.includes(permission)}
+                                                          onCheckedChange={() => togglePermission(subModule.id, permission)}
+
+                                                        />
+                                                        <Label className="text-xs capitalize">
+                                                          {permission.replace("_", " ")}
+                                                        </Label>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
