@@ -367,7 +367,11 @@ export default function SuperAdminDashboard() {
                     Create a new subscription plan for companies to subscribe to.
                   </DialogDescription>
                 </DialogHeader>
-                <form action={handleCreatePlan}>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  handleCreatePlan(formData);
+                }}>
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="name">Plan Name</Label>
