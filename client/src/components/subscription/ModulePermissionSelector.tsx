@@ -155,11 +155,20 @@ export const AVAILABLE_MODULES = {
   },
   vat_management: {
     id: "vat_management",
-    name: "VAT & Compliance",
+    name: "VAT & Tax Compliance",
     description: "South African VAT returns, SARS integration, and tax compliance",
     icon: FileCheck,
     category: "compliance",
     permissions: ["view", "prepare", "submit", "export"],
+    essential: true
+  },
+  compliance_management: {
+    id: "compliance_management",
+    name: "Compliance Management",
+    description: "Professional compliance tracking, client management, and regulatory requirements for tax practitioners",
+    icon: Shield,
+    category: "compliance",
+    permissions: ["view", "create", "edit", "track", "assign", "report", "calendar", "documents"],
     essential: true
   },
   payroll: {
