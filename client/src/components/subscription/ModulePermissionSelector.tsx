@@ -318,8 +318,14 @@ export default function ModulePermissionSelector({
 
   // Initialize from existing features
   useEffect(() => {
+    // Include both main modules and sub-modules
+    const allSubModuleIds = Object.values(AVAILABLE_MODULES)
+      .filter(module => module.subModules)
+      .flatMap(module => module.subModules?.map(sub => sub.id) || []);
+    
     const modules = selectedFeatures.filter(feature => 
-      Object.keys(AVAILABLE_MODULES).includes(feature)
+      Object.keys(AVAILABLE_MODULES).includes(feature) || 
+      allSubModuleIds.includes(feature)
     );
     setSelectedModules(modules);
 
@@ -369,6 +375,7 @@ export default function ModulePermissionSelector({
       });
     });
 
+    console.log('Updating features:', features); // Debug log
     onFeaturesChange(features);
   };
 
@@ -545,7 +552,10 @@ export default function ModulePermissionSelector({
                                                 <div className="flex items-center space-x-2">
                                                   <Switch
                                                     checked={isSubModuleSelected}
-                                                    onCheckedChange={() => toggleModule(subModule.id)}
+                                                    onCheckedChange={() => {
+                                                      console.log('Toggling sub-module:', subModule.id, 'current state:', isSubModuleSelected);
+                                                      toggleModule(subModule.id);
+                                                    }}
                                                   />
                                                   <div>
                                                     <Label className="text-sm font-medium">{subModule.name}</Label>
