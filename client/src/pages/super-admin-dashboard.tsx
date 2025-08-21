@@ -230,22 +230,31 @@ export default function SuperAdminDashboard() {
 
 
   const handleCreatePlan = (formData: FormData) => {
+    // Create user-friendly feature names from selected modules
+    const moduleFeatures = selectedFeatures.map(moduleId => 
+      moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    );
+
     const planData = {
       name: formData.get('name') as string,
       displayName: formData.get('displayName') as string,
       description: formData.get('description') as string,
       monthlyPrice: parseFloat(formData.get('monthlyPrice') as string),
       annualPrice: parseFloat(formData.get('annualPrice') as string),
-      features: JSON.parse(formData.get('features') as string || '[]'),
+      features: {
+        core_features: moduleFeatures,
+        included_modules: selectedFeatures,
+        permissions: selectedLimits
+      },
       limits: {
-        users: parseInt(formData.get('maxUsers') as string || '5'),
-        companies: parseInt(formData.get('maxCompanies') as string || '1'),
-        customers: parseInt(formData.get('maxCustomers') as string || '100'),
-        suppliers: parseInt(formData.get('maxSuppliers') as string || '50'),
-        invoices_per_month: parseInt(formData.get('monthlyInvoiceLimit') as string || '50'),
-        estimates_per_month: parseInt(formData.get('monthlyEstimateLimit') as string || '25'),
-        storage_gb: parseFloat(formData.get('storageLimit') as string || '1'),
-        api_calls_per_month: parseInt(formData.get('apiCallsLimit') as string || '1000')
+        users: formData.get('maxUsers') === 'unlimited' ? -1 : parseInt(formData.get('maxUsers') as string || '5'),
+        companies: formData.get('maxCompanies') === 'unlimited' ? -1 : parseInt(formData.get('maxCompanies') as string || '1'),
+        customers: formData.get('maxCustomers') === 'unlimited' ? -1 : parseInt(formData.get('maxCustomers') as string || '100'),
+        suppliers: formData.get('maxSuppliers') === 'unlimited' ? -1 : parseInt(formData.get('maxSuppliers') as string || '50'),
+        invoices_per_month: formData.get('monthlyInvoiceLimit') === 'unlimited' ? -1 : parseInt(formData.get('monthlyInvoiceLimit') as string || '50'),
+        estimates_per_month: formData.get('monthlyEstimateLimit') === 'unlimited' ? -1 : parseInt(formData.get('monthlyEstimateLimit') as string || '25'),
+        storage_gb: formData.get('storageLimit') === 'unlimited' ? -1 : parseFloat(formData.get('storageLimit') as string || '1'),
+        api_calls_per_month: formData.get('apiCallsLimit') === 'unlimited' ? -1 : parseInt(formData.get('apiCallsLimit') as string || '1000')
       },
       sortOrder: parseInt(formData.get('sortOrder') as string || '0'),
     };
@@ -461,12 +470,36 @@ export default function SuperAdminDashboard() {
                             <div className="grid grid-cols-2 gap-4 ml-5">
                               <div>
                                 <Label htmlFor="maxUsers">Maximum Users</Label>
-                                <Input id="maxUsers" name="maxUsers" type="number" defaultValue="5" />
+                                <Select name="maxUsers" defaultValue="5">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select user limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1">1 user</SelectItem>
+                                    <SelectItem value="2">2 users</SelectItem>
+                                    <SelectItem value="5">5 users</SelectItem>
+                                    <SelectItem value="10">10 users</SelectItem>
+                                    <SelectItem value="25">25 users</SelectItem>
+                                    <SelectItem value="50">50 users</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Total number of users allowed per company</p>
                               </div>
                               <div>
                                 <Label htmlFor="maxCompanies">Maximum Companies</Label>
-                                <Input id="maxCompanies" name="maxCompanies" type="number" defaultValue="1" />
+                                <Select name="maxCompanies" defaultValue="1">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select company limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1">1 company</SelectItem>
+                                    <SelectItem value="3">3 companies</SelectItem>
+                                    <SelectItem value="5">5 companies</SelectItem>
+                                    <SelectItem value="10">10 companies</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Number of companies/businesses user can manage</p>
                               </div>
                             </div>
@@ -483,22 +516,71 @@ export default function SuperAdminDashboard() {
                             <div className="grid grid-cols-2 gap-4 ml-5">
                               <div>
                                 <Label htmlFor="monthlyInvoiceLimit">Monthly Invoice Limit</Label>
-                                <Input id="monthlyInvoiceLimit" name="monthlyInvoiceLimit" type="number" defaultValue="50" />
+                                <Select name="monthlyInvoiceLimit" defaultValue="50">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select invoice limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="10">10 invoices/month</SelectItem>
+                                    <SelectItem value="25">25 invoices/month</SelectItem>
+                                    <SelectItem value="50">50 invoices/month</SelectItem>
+                                    <SelectItem value="100">100 invoices/month</SelectItem>
+                                    <SelectItem value="250">250 invoices/month</SelectItem>
+                                    <SelectItem value="500">500 invoices/month</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Maximum invoices that can be created per month</p>
                               </div>
                               <div>
                                 <Label htmlFor="monthlyEstimateLimit">Monthly Estimate Limit</Label>
-                                <Input id="monthlyEstimateLimit" name="monthlyEstimateLimit" type="number" defaultValue="25" />
+                                <Select name="monthlyEstimateLimit" defaultValue="25">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select estimate limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="5">5 estimates/month</SelectItem>
+                                    <SelectItem value="15">15 estimates/month</SelectItem>
+                                    <SelectItem value="25">25 estimates/month</SelectItem>
+                                    <SelectItem value="50">50 estimates/month</SelectItem>
+                                    <SelectItem value="100">100 estimates/month</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Maximum estimates that can be created per month</p>
                               </div>
                               <div>
                                 <Label htmlFor="maxCustomers">Maximum Customers</Label>
-                                <Input id="maxCustomers" name="maxCustomers" type="number" defaultValue="100" />
+                                <Select name="maxCustomers" defaultValue="100">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select customer limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="25">25 customers</SelectItem>
+                                    <SelectItem value="50">50 customers</SelectItem>
+                                    <SelectItem value="100">100 customers</SelectItem>
+                                    <SelectItem value="250">250 customers</SelectItem>
+                                    <SelectItem value="500">500 customers</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Total number of customers allowed</p>
                               </div>
                               <div>
                                 <Label htmlFor="maxSuppliers">Maximum Suppliers</Label>
-                                <Input id="maxSuppliers" name="maxSuppliers" type="number" defaultValue="50" />
+                                <Select name="maxSuppliers" defaultValue="50">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select supplier limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="10">10 suppliers</SelectItem>
+                                    <SelectItem value="25">25 suppliers</SelectItem>
+                                    <SelectItem value="50">50 suppliers</SelectItem>
+                                    <SelectItem value="100">100 suppliers</SelectItem>
+                                    <SelectItem value="250">250 suppliers</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Total number of suppliers allowed</p>
                               </div>
                             </div>
@@ -515,12 +597,39 @@ export default function SuperAdminDashboard() {
                             <div className="grid grid-cols-2 gap-4 ml-5">
                               <div>
                                 <Label htmlFor="storageLimit">Storage Limit (GB)</Label>
-                                <Input id="storageLimit" name="storageLimit" type="number" step="0.1" defaultValue="1" />
+                                <Select name="storageLimit" defaultValue="1">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select storage limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0.5">0.5 GB</SelectItem>
+                                    <SelectItem value="1">1 GB</SelectItem>
+                                    <SelectItem value="2">2 GB</SelectItem>
+                                    <SelectItem value="5">5 GB</SelectItem>
+                                    <SelectItem value="10">10 GB</SelectItem>
+                                    <SelectItem value="25">25 GB</SelectItem>
+                                    <SelectItem value="50">50 GB</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Maximum file storage allowed</p>
                               </div>
                               <div>
                                 <Label htmlFor="apiCallsLimit">API Calls Limit (per month)</Label>
-                                <Input id="apiCallsLimit" name="apiCallsLimit" type="number" defaultValue="1000" />
+                                <Select name="apiCallsLimit" defaultValue="1000">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select API limit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="500">500 calls/month</SelectItem>
+                                    <SelectItem value="1000">1,000 calls/month</SelectItem>
+                                    <SelectItem value="2500">2,500 calls/month</SelectItem>
+                                    <SelectItem value="5000">5,000 calls/month</SelectItem>
+                                    <SelectItem value="10000">10,000 calls/month</SelectItem>
+                                    <SelectItem value="25000">25,000 calls/month</SelectItem>
+                                    <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <p className="text-xs text-muted-foreground mt-1">Maximum API requests per month</p>
                               </div>
                             </div>
