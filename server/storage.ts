@@ -3055,35 +3055,16 @@ export class DatabaseStorage implements IStorage {
 
   async getCashFlowSummary(companyId: number): Promise<any> {
     try {
-      console.log(`=== Getting cash flow summary for company ${companyId} ===`);
-      
-      // For Default Company (company_id = 2), return known correct values
-      if (companyId === 2) {
-        console.log(`Using hardcoded values for Default Company`);
-        return {
-          currentCashPosition: "219718.75", // Sum of bank balances
-          todayInflow: "119159.60", // 70% of R170,228 invoices
-          todayOutflow: "14665.00", // Total expenses
-          netCashFlow: "104494.60" // Inflow minus outflow
-        };
-      }
-      
-      // For other companies, continue with dynamic calculation
       const currentCash = await this.getCurrentCashPosition(companyId);
       const todayInflow = await this.getTodayCashInflow(companyId);
       const todayOutflow = await this.getTodayCashOutflow(companyId);
       
-      console.log(`Current cash: ${currentCash}, Inflow: ${todayInflow}, Outflow: ${todayOutflow}`);
-      
-      const result = {
+      return {
         currentCashPosition: currentCash.toFixed(2),
         todayInflow: todayInflow.toFixed(2),
         todayOutflow: todayOutflow.toFixed(2),
         netCashFlow: (todayInflow - todayOutflow).toFixed(2)
       };
-      
-      console.log(`Cash flow summary result:`, result);
-      return result;
     } catch (error) {
       console.error("Error getting cash flow summary:", error);
       return {
@@ -14277,57 +14258,39 @@ export class DatabaseStorage implements IStorage {
 
   // Additional helper methods
   async getTodayCashInflow(companyId: number): Promise<number> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
-    
+    const today = new Date().toISOString().split('T')[0];
     try {
-      // Get total invoices (as potential inflow) - simplified for reliability
-      const invoicesResult = await db
+      const [result] = await db
         .select({
-          total: sql<string>`COALESCE(SUM(${invoices.total}), 0)`
+          total: sql<string>`COALESCE(SUM(${payments.amount}), 0)`
         })
-        .from(invoices)
+        .from(payments)
         .where(and(
-          eq(invoices.companyId, companyId),
-          sql`${invoices.status} IN ('paid', 'sent')`
+          eq(payments.companyId, companyId),
+          eq(sql`DATE(${payments.paymentDate})`, today)
         ));
       
-      const invoicesTotal = parseFloat(invoicesResult[0]?.total || '0');
-      const result = invoicesTotal * 0.7;
-      
-      console.log(`Cash inflow calculation for company ${companyId}: invoices=${invoicesTotal}, result=${result}`);
-      
-      // Return 70% of total invoices as estimated inflow for meaningful display
-      return result;
+      return parseFloat(result?.total || '0');
     } catch (error) {
-      console.error("Error getting cash inflow:", error);
       return 0;
     }
   }
 
   async getTodayCashOutflow(companyId: number): Promise<number> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
-    
+    const today = new Date().toISOString().split('T')[0];
     try {
-      // Get total expenses for meaningful display
-      const totalExpensesResult = await db
+      const [result] = await db
         .select({
           total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`
         })
         .from(expenses)
-        .where(eq(expenses.companyId, companyId));
+        .where(and(
+          eq(expenses.companyId, companyId),
+          eq(sql`DATE(${expenses.expenseDate})`, today)
+        ));
       
-      const totalExpenses = parseFloat(totalExpensesResult[0]?.total || '0');
-      
-      console.log(`Cash outflow calculation for company ${companyId}: totalExpenses=${totalExpenses}`);
-      
-      // Return total expenses for meaningful display
-      return totalExpenses;
+      return parseFloat(result?.total || '0');
     } catch (error) {
-      console.error("Error getting cash outflow:", error);
       return 0;
     }
   }

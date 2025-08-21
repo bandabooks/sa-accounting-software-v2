@@ -1486,10 +1486,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set('Cache-Control', 'private, max-age=30'); // 30 seconds cache
       res.set('ETag', `dashboard-${companyId}-${Date.now()}`);
       
-      // Use cached queries with short TTL for performance - force refresh for debugging
-      const cacheKey = `dashboard-stats-${companyId}-${Date.now()}`;
+      // Use cached queries with short TTL for performance
+      const cacheKey = `dashboard-stats-${companyId}`;
       const dashboardData = await withCache(cacheKey, async () => {
-        const [fastStats, recentActivities, bankBalances, profitLossData, auditStats, recentInvoices, receivablesAging, payablesAging, cashFlowSummary] = await Promise.all([
+        const [fastStats, recentActivities, bankBalances, profitLossData, auditStats, recentInvoices, receivablesAging, payablesAging] = await Promise.all([
           fastStorage.getFastDashboardStats(companyId),
           fastStorage.getFastRecentActivities(companyId),
           fastStorage.getFastBankBalances(companyId),
@@ -1497,8 +1497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           storage.getAuditTrailStats(companyId),
           storage.getRecentInvoices(companyId, 5), // Get 5 most recent invoices
           storage.getReceivablesAging(companyId),
-          storage.getPayablesAging(companyId),
-          storage.getCashFlowSummary(companyId) // Use working storage method
+          storage.getPayablesAging(companyId)
         ]);
 
         return {
@@ -1514,11 +1513,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recentInvoices: recentInvoices || [],
           receivablesAging: receivablesAging || [],
           payablesAging: payablesAging || [],
-          cashFlowSummary: cashFlowSummary || {
-            currentCashPosition: "0.00",
-            todayInflow: "0.00", 
-            todayOutflow: "0.00",
-            netCashFlow: "0.00"
+          cashFlowSummary: {
+            currentCashPosition: fastStats.bank_balance || "0.00",
+            todayInflow: fastStats.today_inflow || "0.00",
+            todayOutflow: fastStats.today_outflow || "0.00", 
+            netCashFlow: (parseFloat(fastStats.today_inflow || "0") - parseFloat(fastStats.today_outflow || "0")).toFixed(2)
           },
           bankBalances,
           profitLossData,
