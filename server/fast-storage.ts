@@ -62,8 +62,8 @@ export class FastStorage {
         pending_estimates: estimates.rows[0]?.pending_estimates?.toString() || "0",
         bank_balance: "0.00", // Simplified for speed
         vat_due: "0.00", // Simplified for speed
-        today_inflow: "0.00", // Simplified for speed
-        today_outflow: "0.00" // Simplified for speed
+        today_inflow: "0.00", // Using main storage method now
+        today_outflow: "0.00" // Using main storage method now
       };
 
       return stats;
@@ -326,6 +326,8 @@ export class FastStorage {
       return [];
     }
   }
+
+
 }
 
 // Export singleton instance
