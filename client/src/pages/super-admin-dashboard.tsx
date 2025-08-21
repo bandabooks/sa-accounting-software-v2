@@ -232,36 +232,59 @@ export default function SuperAdminDashboard() {
 
 
 
-  const handleCreatePlan = (formData: FormData) => {
+  const handleCreatePlan = () => {
+    // Get values from form elements directly
+    const form = document.getElementById('createPlanForm') as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    // Get all form elements by name to ensure we capture data from all tabs
+    const nameInput = form.querySelector('[name="name"]') as HTMLInputElement;
+    const displayNameInput = form.querySelector('[name="displayName"]') as HTMLInputElement;
+    const descriptionInput = form.querySelector('[name="description"]') as HTMLTextAreaElement;
+    const monthlyPriceInput = form.querySelector('[name="monthlyPrice"]') as HTMLInputElement;
+    const annualPriceInput = form.querySelector('[name="annualPrice"]') as HTMLInputElement;
+    const sortOrderInput = form.querySelector('[name="sortOrder"]') as HTMLInputElement;
+    
+    // Get select values directly
+    const maxUsersSelect = form.querySelector('[name="maxUsers"]') as HTMLSelectElement;
+    const maxCompaniesSelect = form.querySelector('[name="maxCompanies"]') as HTMLSelectElement;
+    const maxCustomersSelect = form.querySelector('[name="maxCustomers"]') as HTMLSelectElement;
+    const maxSuppliersSelect = form.querySelector('[name="maxSuppliers"]') as HTMLSelectElement;
+    const monthlyInvoiceLimitSelect = form.querySelector('[name="monthlyInvoiceLimit"]') as HTMLSelectElement;
+    const monthlyEstimateLimitSelect = form.querySelector('[name="monthlyEstimateLimit"]') as HTMLSelectElement;
+    const storageLimitSelect = form.querySelector('[name="storageLimit"]') as HTMLSelectElement;
+    const apiCallsLimitSelect = form.querySelector('[name="apiCallsLimit"]') as HTMLSelectElement;
+
     // Create user-friendly feature names from selected modules
     const moduleFeatures = selectedFeatures.map(moduleId => 
       moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
     );
 
     const planData = {
-      name: formData.get('name') as string,
-      displayName: formData.get('displayName') as string,
-      description: formData.get('description') as string,
-      monthlyPrice: parseFloat(formData.get('monthlyPrice') as string),
-      annualPrice: parseFloat(formData.get('annualPrice') as string),
+      name: nameInput?.value || '',
+      displayName: displayNameInput?.value || '',
+      description: descriptionInput?.value || '',
+      monthlyPrice: parseFloat(monthlyPriceInput?.value || '0'),
+      annualPrice: parseFloat(annualPriceInput?.value || '0'),
       features: {
         core_features: moduleFeatures,
         included_modules: selectedFeatures,
         permissions: selectedLimits
       },
       limits: {
-        users: formData.get('maxUsers') === 'unlimited' ? -1 : parseInt(formData.get('maxUsers') as string || '5'),
-        companies: formData.get('maxCompanies') === 'unlimited' ? -1 : parseInt(formData.get('maxCompanies') as string || '1'),
-        customers: formData.get('maxCustomers') === 'unlimited' ? -1 : parseInt(formData.get('maxCustomers') as string || '100'),
-        suppliers: formData.get('maxSuppliers') === 'unlimited' ? -1 : parseInt(formData.get('maxSuppliers') as string || '50'),
-        invoices_per_month: formData.get('monthlyInvoiceLimit') === 'unlimited' ? -1 : parseInt(formData.get('monthlyInvoiceLimit') as string || '50'),
-        estimates_per_month: formData.get('monthlyEstimateLimit') === 'unlimited' ? -1 : parseInt(formData.get('monthlyEstimateLimit') as string || '25'),
-        storage_gb: formData.get('storageLimit') === 'unlimited' ? -1 : parseFloat(formData.get('storageLimit') as string || '1'),
-        api_calls_per_month: formData.get('apiCallsLimit') === 'unlimited' ? -1 : parseInt(formData.get('apiCallsLimit') as string || '1000')
+        users: maxUsersSelect?.value === 'unlimited' ? -1 : parseInt(maxUsersSelect?.value || '5'),
+        companies: maxCompaniesSelect?.value === 'unlimited' ? -1 : parseInt(maxCompaniesSelect?.value || '1'),
+        customers: maxCustomersSelect?.value === 'unlimited' ? -1 : parseInt(maxCustomersSelect?.value || '100'),
+        suppliers: maxSuppliersSelect?.value === 'unlimited' ? -1 : parseInt(maxSuppliersSelect?.value || '50'),
+        invoices_per_month: monthlyInvoiceLimitSelect?.value === 'unlimited' ? -1 : parseInt(monthlyInvoiceLimitSelect?.value || '50'),
+        estimates_per_month: monthlyEstimateLimitSelect?.value === 'unlimited' ? -1 : parseInt(monthlyEstimateLimitSelect?.value || '25'),
+        storage_gb: storageLimitSelect?.value === 'unlimited' ? -1 : parseFloat(storageLimitSelect?.value || '1'),
+        api_calls_per_month: apiCallsLimitSelect?.value === 'unlimited' ? -1 : parseInt(apiCallsLimitSelect?.value || '1000')
       },
-      sortOrder: parseInt(formData.get('sortOrder') as string || '0'),
+      sortOrder: parseInt(sortOrderInput?.value || '0'),
     };
     
+    console.log('Creating plan with data:', planData);
     createPlanMutation.mutate(planData);
   };
 
@@ -401,8 +424,7 @@ export default function SuperAdminDashboard() {
 
                   <form id="createPlanForm" onSubmit={(e) => {
                     e.preventDefault();
-                    const formData = new FormData(e.currentTarget);
-                    handleCreatePlan(formData);
+                    handleCreatePlan();
                   }}>
                     
                     <TabsContent value="basic" className="space-y-6">
