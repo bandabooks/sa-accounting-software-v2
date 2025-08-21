@@ -531,34 +531,47 @@ export default function BusinessReports() {
     setSelectedReport(reportId);
     console.log(`Opening business report: ${reportId}`);
     
-    // Navigate to appropriate report page based on report ID
+    // Navigate to appropriate existing report pages
     switch(reportId) {
       case 'sales-by-product':
-        setLocation('/financial-reports?tab=sales&report=products');
-        break;
       case 'sales-by-category':
-        setLocation('/financial-reports?tab=sales&report=categories');
-        break;
       case 'sales-by-region':
-        setLocation('/financial-reports?tab=sales&report=regions');
-        break;
       case 'sales-by-rep':
-        setLocation('/financial-reports?tab=sales&report=representatives');
+      case 'sales-trends':
+      case 'sales-pipeline':
+        setLocation('/advanced-analytics');
         break;
+      case 'top-customers':
       case 'customer-acquisition':
-        setLocation('/customers?view=analytics');
+      case 'customer-retention':
+      case 'customer-segments':
+        setLocation('/customers');
         break;
       case 'inventory-turnover':
-        setLocation('/inventory?view=reports');
+      case 'stock-analysis':
+      case 'product-performance':
+        setLocation('/inventory');
         break;
       case 'profit-loss':
-        setLocation('/financial-reports?tab=statements&report=profit-loss');
-        break;
+      case 'balance-sheet':
       case 'cash-flow':
-        setLocation('/financial-reports?tab=statements&report=cash-flow');
+      case 'financial-ratios':
+        setLocation('/reports/financial');
+        break;
+      case 'aging-analysis':
+      case 'collections-report':
+        setLocation('/reports/aging');
+        break;
+      case 'expense-analysis':
+      case 'cost-analysis':
+        setLocation('/expenses');
+        break;
+      case 'purchase-analysis':
+      case 'supplier-performance':
+        setLocation('/purchase-reports');
         break;
       default:
-        setLocation('/financial-reports');
+        setLocation('/reports');
     }
   };
 
