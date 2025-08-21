@@ -230,13 +230,45 @@ export default function SuperAdminDashboard() {
 
 
   const handleCreatePlan = (formData: FormData) => {
+    // Parse the feature data from module selector
+    const featuresData = JSON.parse(formData.get('features') as string || '{"modules": [], "permissions": {}}');
+    
+    // Transform selected modules to match existing plan format with proper feature names
+    const moduleToFeatureMap: Record<string, string> = {
+      'dashboard': 'Dashboard & Analytics',
+      'customer_management': 'Customer Management', 
+      'invoices': 'Advanced Invoicing',
+      'estimates': 'Estimates & Quotes',
+      'expenses': 'Expense Tracking',
+      'inventory': 'Inventory Management',
+      'financial_reports': 'Financial Reports',
+      'vat_management': 'VAT Management',
+      'chart_of_accounts': 'Chart of Accounts',
+      'suppliers': 'Supplier Management',
+      'purchase_orders': 'Purchase Orders',
+      'pos': 'Point of Sale',
+      'payroll': 'Payroll Management',
+      'compliance': 'Compliance Management',
+      'api_access': 'API Access',
+      'multi_company': 'Multi-Company'
+    };
+
+    // Convert selected modules to human-readable features
+    const selectedFeatures = (featuresData.modules || []).map((moduleId: string) => 
+      moduleToFeatureMap[moduleId] || moduleId.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+    );
+
     const planData = {
       name: formData.get('name') as string,
       displayName: formData.get('displayName') as string,
       description: formData.get('description') as string,
       monthlyPrice: parseFloat(formData.get('monthlyPrice') as string),
       annualPrice: parseFloat(formData.get('annualPrice') as string),
-      features: JSON.parse(formData.get('features') as string || '[]'),
+      features: {
+        core_features: selectedFeatures,
+        included_modules: featuresData.modules || [],
+        permissions: featuresData.permissions || {}
+      },
       limits: {
         users: parseInt(formData.get('maxUsers') as string || '5'),
         companies: parseInt(formData.get('maxCompanies') as string || '1'),
@@ -249,6 +281,8 @@ export default function SuperAdminDashboard() {
       },
       sortOrder: parseInt(formData.get('sortOrder') as string || '0'),
     };
+    
+    console.log('Creating plan with features:', planData.features);
     createPlanMutation.mutate(planData);
   };
 
