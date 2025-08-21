@@ -590,14 +590,34 @@ export default function SuperAdminDashboard() {
                     <div>
                       <h4 className="font-medium mb-2">Features:</h4>
                       <ul className="text-sm space-y-1">
-                        {Array.isArray(plan.features) 
-                          ? plan.features.map((feature, index) => (
+                        {(() => {
+                          // Handle different feature formats
+                          if (Array.isArray(plan.features)) {
+                            return plan.features.map((feature, index) => (
                               <li key={index}>• {feature}</li>
-                            ))
-                          : plan.features?.core_features?.map((feature, index) => (
+                            ));
+                          } else if (plan.features?.modules && Array.isArray(plan.features.modules)) {
+                            // New format from module selector
+                            return plan.features.modules.map((moduleId, index) => (
+                              <li key={index}>• {moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</li>
+                            ));
+                          } else if (plan.features?.core_features) {
+                            // Existing format
+                            return plan.features.core_features.map((feature, index) => (
                               <li key={index}>• {feature}</li>
-                            )) || [<li key="no-features">No features configured</li>]
-                        }
+                            ));
+                          } else if (plan.features?.included_modules) {
+                            // Another existing format
+                            const modules = plan.features.included_modules.filter(module => 
+                              !module.includes(':') // Filter out permission strings
+                            );
+                            return modules.map((module, index) => (
+                              <li key={index}>• {module.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</li>
+                            ));
+                          } else {
+                            return [<li key="no-features">No features configured</li>];
+                          }
+                        })()}
                       </ul>
                     </div>
                     <div className="flex space-x-2">
