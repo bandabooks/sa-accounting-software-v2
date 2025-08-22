@@ -6561,14 +6561,18 @@ export class DatabaseStorage implements IStorage {
 
   // Chart of Accounts Implementation
   async getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
-    // Use the new method that properly handles company-specific activation
-    const accountsWithActivation = await this.getCompanyChartOfAccounts(companyId);
+    // Get all accounts for this company directly
+    const accounts = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(eq(chartOfAccounts.companyId, companyId))
+      .orderBy(chartOfAccounts.accountCode);
     
-    return await Promise.all(accountsWithActivation.map(async (account) => ({
+    return await Promise.all(accounts.map(async (account) => ({
       ...account,
       currentBalance: await this.calculateAccountBalance(account.id),
-      // Ensure isActive field reflects the company-specific activation state  
-      isActive: account.isActivated,
+      // Use the direct isActive field from the chart_of_accounts table
+      isActive: account.isActive,
     })));
   }
 
