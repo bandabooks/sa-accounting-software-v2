@@ -6678,10 +6678,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Activate essential business accounts that every business needs
-  async activateEssentialBusinessAccounts(companyId: number): Promise<void> {
-    // Define essential account codes that should be active by default
-    const essentialAccountCodes = [
+  // Helper method to get essential account codes
+  getEssentialAccountCodes(): string[] {
+    return [
       // Cash and Banking (Essential for all businesses)
       '1000', '1001', '1002', '1004', // Cash, Petty Cash, Bank Savings, Foreign Currency
       '1100', '1101', '1102', '1103', // Bank Current, Bank Savings, Credit Card, Money Market
@@ -6723,11 +6722,19 @@ export class DatabaseStorage implements IStorage {
       // Depreciation (Common for businesses with assets)
       '6800', '6801', '6804', '6805' // Depreciation, Depreciation Buildings, Computer Equipment, Motor Vehicles
     ];
+  }
 
-    // Get all accounts for this company that match essential codes
-    const accountsToActivate = await db
-      .select()
-      .from(chartOfAccounts)
+  // Activate essential business accounts that every business needs
+  async activateEssentialBusinessAccounts(companyId: number): Promise<void> {
+    const essentialAccountCodes = this.getEssentialAccountCodes();
+
+    // Directly activate accounts in the chart_of_accounts table
+    const result = await db
+      .update(chartOfAccounts)
+      .set({ 
+        isActive: true, 
+        updatedAt: new Date() 
+      })
       .where(
         and(
           eq(chartOfAccounts.companyId, companyId),
@@ -6735,29 +6742,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Activate each essential account in the company activation table
-    for (const account of accountsToActivate) {
-      await db
-        .insert(companyChartOfAccounts)
-        .values({
-          companyId,
-          accountId: account.id,
-          isActive: true,
-          activatedBy: 1, // System activation
-        })
-        .onConflictDoUpdate({
-          target: [companyChartOfAccounts.companyId, companyChartOfAccounts.accountId],
-          set: {
-            isActive: true,
-            activatedAt: sql`now()`,
-            activatedBy: 1,
-            deactivatedAt: null,
-            deactivatedBy: null,
-          },
-        });
-    }
-
-    console.log(`✓ Activated ${accountsToActivate.length} essential business accounts for company ${companyId}`);
+    console.log(`✓ Activated ${essentialAccountCodes.length} essential business accounts for company ${companyId}`);
   }
 
   async seedDefaultSouthAfricanBanks(companyId: number): Promise<void> {
@@ -8608,52 +8593,77 @@ export class DatabaseStorage implements IStorage {
 
   // Industry-specific Chart of Accounts activation
   async activateIndustryChartOfAccounts(companyId: number, industryCode: string, userId: number): Promise<void> {
-    // Get the industry template
-    const [template] = await db
-      .select()
-      .from(industryTemplates)
-      .where(eq(industryTemplates.industryCode, industryCode));
+    // Define industry-specific essential accounts based on business type
+    const industryAccountMappings: Record<string, string[]> = {
+      'professional_services': [
+        // All essential business accounts plus professional-specific
+        ...this.getEssentialAccountCodes(),
+        '4003', '4004', '4005', // Consulting, Legal, Accounting Fees
+        '1300', '1301', // Work in Progress, Unbilled Receivables
+        '6203', '6204', // Professional Indemnity, Continuing Education
+      ],
+      'retail_wholesale': [
+        // All essential plus retail-specific
+        ...this.getEssentialAccountCodes(),
+        '1400', '1401', '1402', // Inventory, Finished Goods, Raw Materials
+        '5001', '5002', // Purchase Returns, Stock Adjustments
+        '6303', '6304', // Point of Sale, Merchant Fees
+      ],
+      'manufacturing': [
+        // All essential plus manufacturing-specific
+        ...this.getEssentialAccountCodes(),
+        '1400', '1401', '1402', '1403', // Inventory accounts
+        '5003', '5004', '5005', // Direct Labor, Manufacturing Overhead, Work in Progress
+        '1601', '1602', '1603', // Machinery, Production Equipment, Tools
+      ],
+      'construction': [
+        // All essential plus construction-specific
+        ...this.getEssentialAccountCodes(),
+        '1300', '1301', // Contracts in Progress, Retention Receivable
+        '5006', '5007', // Subcontractor Costs, Materials
+        '1603', '1604', // Construction Equipment, Vehicles
+      ],
+      'technology': [
+        // All essential plus tech-specific
+        ...this.getEssentialAccountCodes(),
+        '1700', '1701', // Software, Development Costs
+        '4006', '4007', // Software Licenses, Support Revenue
+        '6305', '6306', // Cloud Services, Development Tools
+      ],
+      'agriculture': [
+        // All essential plus agriculture-specific
+        ...this.getEssentialAccountCodes(),
+        '1403', '1404', // Livestock, Crops/Produce
+        '5008', '5009', // Feed Costs, Seed/Fertilizer
+        '1605', '1606', // Farm Equipment, Land Improvements
+      ],
+      'transport_logistics': [
+        // All essential plus transport-specific
+        ...this.getEssentialAccountCodes(),
+        '6500', '6501', '6502', '6503', '6504', // Vehicle expenses
+        '4008', '4009', // Freight Revenue, Logistics Services
+        '1607', '1608', // Fleet Vehicles, GPS Equipment
+      ]
+    };
 
-    if (!template) {
-      // Fallback to enhanced basic accounts if template not found
-      await this.activateEssentialBusinessAccounts(companyId);
-      return;
-    }
-
-    // Get account codes from template
-    const accountCodes = template.accountCodes as string[];
+    // Get account codes for this industry, fallback to essential accounts
+    const accountCodes = industryAccountMappings[industryCode] || this.getEssentialAccountCodes();
     
-    // Get all Chart of Accounts that match the industry template
-    const accountsToActivate = await db
-      .select()
-      .from(chartOfAccounts)
-      .where(inArray(chartOfAccounts.accountCode, accountCodes));
+    // Directly activate accounts in the chart_of_accounts table
+    const activatedCount = await db
+      .update(chartOfAccounts)
+      .set({ 
+        isActive: true, 
+        updatedAt: new Date() 
+      })
+      .where(
+        and(
+          eq(chartOfAccounts.companyId, companyId),
+          inArray(chartOfAccounts.accountCode, accountCodes)
+        )
+      );
 
-    // Activate accounts for the company
-    const companyAccounts = accountsToActivate.map(account => ({
-      companyId,
-      accountId: account.id,
-      isActive: true,
-      activatedBy: userId,
-    }));
-
-    if (companyAccounts.length > 0) {
-      await db
-        .insert(companyChartOfAccounts)
-        .values(companyAccounts)
-        .onConflictDoUpdate({
-          target: [companyChartOfAccounts.companyId, companyChartOfAccounts.accountId],
-          set: {
-            isActive: true,
-            activatedAt: sql`now()`,
-            activatedBy: userId,
-            deactivatedAt: null,
-            deactivatedBy: null,
-          },
-        });
-    }
-
-    console.log(`✓ Activated ${companyAccounts.length} industry-specific accounts for company ${companyId} (${industryCode})`);
+    console.log(`✓ Activated ${accountCodes.length} industry-specific accounts for company ${companyId} (${industryCode})`);
   }
 
   async activateBasicChartOfAccounts(companyId: number, userId: number): Promise<void> {

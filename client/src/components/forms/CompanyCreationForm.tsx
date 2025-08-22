@@ -18,18 +18,42 @@ interface CompanyCreationFormProps {
   onSuccess?: () => void;
 }
 
-// Industry options
+// Comprehensive South African Industry Options (33 major business sectors)
 const industryOptions = [
   { value: "general", label: "General Business" },
-  { value: "professional_services", label: "Professional Services" },
-  { value: "retail_wholesale", label: "Retail & Wholesale" },
-  { value: "manufacturing", label: "Manufacturing" },
-  { value: "construction", label: "Construction" },
-  { value: "technology", label: "Technology" },
-  { value: "healthcare", label: "Healthcare" },
+  { value: "professional_services", label: "Professional Services (Accounting, Legal, Consulting)" },
+  { value: "retail_wholesale", label: "Retail & Wholesale Trade" },
+  { value: "manufacturing", label: "Manufacturing & Production" },
+  { value: "construction", label: "Construction & Building" },
+  { value: "technology", label: "Information Technology & Software" },
+  { value: "healthcare", label: "Healthcare & Medical Services" },
   { value: "hospitality_tourism", label: "Hospitality & Tourism" },
+  { value: "agriculture", label: "Agriculture & Farming" },
+  { value: "mining", label: "Mining & Mineral Extraction" },
+  { value: "automotive", label: "Automotive & Motor Trade" },
+  { value: "financial_services", label: "Financial Services & Banking" },
+  { value: "transport_logistics", label: "Transport & Logistics" },
+  { value: "education", label: "Education & Training" },
+  { value: "real_estate", label: "Real Estate & Property" },
+  { value: "telecommunications", label: "Telecommunications" },
+  { value: "energy_utilities", label: "Energy & Utilities" },
+  { value: "food_beverage", label: "Food & Beverage" },
+  { value: "textile_clothing", label: "Textile & Clothing" },
+  { value: "media_entertainment", label: "Media & Entertainment" },
+  { value: "security_services", label: "Security Services" },
+  { value: "cleaning_maintenance", label: "Cleaning & Maintenance" },
+  { value: "beauty_wellness", label: "Beauty & Wellness" },
+  { value: "sports_recreation", label: "Sports & Recreation" },
+  { value: "funeral_services", label: "Funeral Services" },
+  { value: "insurance", label: "Insurance Services" },
+  { value: "import_export", label: "Import & Export" },
+  { value: "packaging", label: "Packaging & Materials" },
+  { value: "printing_publishing", label: "Printing & Publishing" },
+  { value: "waste_management", label: "Waste Management & Recycling" },
   { value: "nonprofit", label: "Non-Profit Organization" },
-  { value: "other", label: "Other" }
+  { value: "government", label: "Government & Public Sector" },
+  { value: "cooperative", label: "Cooperative & Community Enterprise" },
+  { value: "other", label: "Other (Please Specify)" }
 ];
 
 export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: CompanyCreationFormProps) {
@@ -50,6 +74,7 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
     vatNumber: '',
     registrationNumber: '',
     industry: 'general',
+    customIndustry: '', // For "Other" option
     subscriptionPlan: ''
   });
 
@@ -146,6 +171,7 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
       vatNumber: '',
       registrationNumber: '',
       industry: 'general',
+      customIndustry: '',
       subscriptionPlan: ''
     });
     setManuallyEdited({ displayName: false, slug: false });
@@ -155,11 +181,21 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Enhanced validation with subscription plan requirement
+    // Enhanced validation with custom industry check
     if (!slugValidation.isValid || !formData.name || !formData.email || !formData.subscriptionPlan) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields including subscription plan selection.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate custom industry if "other" is selected
+    if (formData.industry === 'other' && !formData.customIndustry.trim()) {
+      toast({
+        title: "Industry Required",
+        description: "Please specify your industry when 'Other' is selected.",
         variant: "destructive",
       });
       return;
@@ -170,6 +206,8 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
     
     const submissionData = {
       ...formData,
+      // Use custom industry text if "other" is selected
+      industry: formData.industry === 'other' ? formData.customIndustry.trim() : formData.industry,
       subscriptionPlan: formData.subscriptionPlan as any, // Handle dynamic plan names from API
       subscriptionStatus: 'active' as const,
     };
@@ -356,7 +394,13 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
               <Label htmlFor="industry">Industry</Label>
               <Select 
                 value={formData.industry}
-                onValueChange={(value) => handleInputChange('industry', value)}
+                onValueChange={(value) => {
+                  handleInputChange('industry', value);
+                  // Clear custom industry if not "other"
+                  if (value !== 'other') {
+                    handleInputChange('customIndustry', '');
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -370,6 +414,31 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Custom Industry Input - Shows when "Other" is selected */}
+            {formData.industry === 'other' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <Label htmlFor="customIndustry" className="text-base font-medium text-amber-900">
+                  Please specify your industry *
+                </Label>
+                <p className="text-sm text-amber-700 mb-3">
+                  Describe your business industry or sector in a few words
+                </p>
+                <Input 
+                  id="customIndustry" 
+                  value={formData.customIndustry}
+                  onChange={(e) => handleInputChange('customIndustry', e.target.value)}
+                  placeholder="e.g., Custom Software Development, Event Planning, etc."
+                  required={formData.industry === 'other'}
+                  className="bg-white border-amber-300"
+                />
+                {formData.industry === 'other' && !formData.customIndustry && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <span>⚠️</span> Please specify your industry
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Subscription Plan Selection - Enhanced with validation */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -450,7 +519,8 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
                 !slugValidation.isValid || 
                 !formData.name || 
                 !formData.email || 
-                !formData.subscriptionPlan
+                !formData.subscriptionPlan ||
+                (formData.industry === 'other' && !formData.customIndustry.trim())
               }
               className="flex items-center gap-2"
             >
