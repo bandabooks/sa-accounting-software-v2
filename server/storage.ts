@@ -7143,14 +7143,14 @@ export class DatabaseStorage implements IStorage {
   // Banking Implementation - Get bank accounts from Chart of Accounts
   async getBankAccountsFromChartOfAccounts(companyId: number): Promise<any[]> {
     try {
-      // Get bank accounts from Chart of Accounts (Asset type, codes 1110-1199)
+      // Get bank accounts from Chart of Accounts (Asset type, codes 1100-1199 to include all bank accounts)
       const bankAccounts = await db.select()
         .from(chartOfAccounts)
         .where(
           and(
             eq(chartOfAccounts.companyId, companyId),
             eq(chartOfAccounts.accountType, "Asset"),
-            gte(chartOfAccounts.accountCode, "1110"),
+            gte(chartOfAccounts.accountCode, "1100"),
             lte(chartOfAccounts.accountCode, "1199"),
             eq(chartOfAccounts.isActive, true)
           )
