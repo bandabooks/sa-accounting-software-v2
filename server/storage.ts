@@ -3411,19 +3411,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
+  async createPayment(insertPayment: InsertPayment, chartAccountId?: number): Promise<Payment> {
     const [payment] = await db
       .insert(payments)
       .values(insertPayment)
       .returning();
     
-    // Update bank account balance if bankAccountId is provided
-    if (insertPayment.bankAccountId && insertPayment.status === 'completed') {
-      await this.updateBankAccountBalance(
-        insertPayment.bankAccountId, 
-        parseFloat(insertPayment.amount)
-      );
-    }
+    // Skip bank account balance update since we're using Chart of Accounts directly
+    // Bank balances are tracked through journal entries automatically
     
     // Update invoice status and amount based on payments
     if (insertPayment.invoiceId) {
@@ -3431,7 +3426,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Create journal entry for payment
-    await this.createPaymentJournalEntry(payment.id);
+    await this.createPaymentJournalEntry(payment.id, chartAccountId);
     
     return payment;
   }
@@ -8300,21 +8295,24 @@ export class DatabaseStorage implements IStorage {
     return this.createJournalEntry(entry, lines);
   }
 
-  async createPaymentJournalEntry(paymentId: number): Promise<JournalEntryWithLines> {
+  async createPaymentJournalEntry(paymentId: number, bankAccountChartId?: number): Promise<JournalEntryWithLines> {
     const payment = await db.select().from(payments)
       .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
       .innerJoin(customers, eq(invoices.customerId, customers.id))
-      .leftJoin(bankAccounts, eq(payments.bankAccountId, bankAccounts.id))
-      .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
       .where(eq(payments.id, paymentId));
 
     if (!payment.length) throw new Error("Payment not found");
 
     const paymentData = payment[0];
     
-    // Use the specific bank account selected for the payment, or default to Bank Account - Current
-    const bankAccount = paymentData.chart_of_accounts || 
-      await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1100"); // Bank Account - Current as fallback
+    // Use the provided Chart of Accounts ID for the bank account, or default to Bank Account - Current
+    let bankAccount;
+    if (bankAccountChartId) {
+      bankAccount = await this.getChartOfAccount(bankAccountChartId);
+    } else {
+      bankAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1100"); // Bank Account - Current as fallback
+    }
+    
     const receivablesAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1150"); // Accounts Receivable
 
     if (!bankAccount || !receivablesAccount) {
