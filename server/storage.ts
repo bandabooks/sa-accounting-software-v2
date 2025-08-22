@@ -7279,6 +7279,26 @@ export class DatabaseStorage implements IStorage {
     return { ...account, transactions, chartAccount };
   }
 
+  async getBankAccounts(companyId: number): Promise<BankAccountWithTransactions[]> {
+    const accounts = await db.select().from(bankAccounts)
+      .where(eq(bankAccounts.companyId, companyId))
+      .orderBy(bankAccounts.createdAt);
+
+    return await Promise.all(accounts.map(async (account) => {
+      const transactions = await db.select().from(bankTransactions)
+        .where(eq(bankTransactions.bankAccountId, account.id))
+        .orderBy(desc(bankTransactions.transactionDate))
+        .limit(10); // Only get recent transactions for performance
+
+      let chartAccount;
+      if (account.chartAccountId) {
+        chartAccount = await this.getChartOfAccount(account.chartAccountId);
+      }
+
+      return { ...account, transactions, chartAccount };
+    }));
+  }
+
   async createBankAccount(account: InsertBankAccount): Promise<BankAccount> {
     const [newAccount] = await db.insert(bankAccounts).values(account).returning();
     return newAccount;

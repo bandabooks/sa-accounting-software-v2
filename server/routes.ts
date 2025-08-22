@@ -8130,7 +8130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const accounts = await withCache(
         CacheKeys.bankAccounts(companyId),
-        () => storage.getBankAccountsFromChartOfAccounts(companyId),
+        () => storage.getBankAccounts(companyId),
         120000 // 2 minutes cache
       );
       
