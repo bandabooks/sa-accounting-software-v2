@@ -8418,8 +8418,8 @@ export class DatabaseStorage implements IStorage {
       
       // Assign the company creator as the company owner with full access
       if (userId) {
-        await this.addUserToCompany(userId, company.id, 'company_owner');
-        console.log(`✓ Assigned user ${userId} as company_owner for company ${company.id}`);
+        await this.addUserToCompany(userId, company.id, 'company_administrator');
+        console.log(`✓ Assigned user ${userId} as company_administrator for company ${company.id}`);
       }
       
       // Load professional services templates only for professional plan users AND accounting practices
@@ -8772,8 +8772,8 @@ export class DatabaseStorage implements IStorage {
           logo: null,
         });
         
-        // Add user to the new company with proper company_owner role  
-        await this.addUserToCompany(userId, defaultCompany.id, 'company_owner');
+        // Add user to the new company with proper company_administrator role  
+        await this.addUserToCompany(userId, defaultCompany.id, 'company_administrator');
         await this.setUserActiveCompany(userId, defaultCompany.id);
         
         console.log(`→ Created default company ${defaultCompany.id} for user ${userId}`);
@@ -13498,7 +13498,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(companyUsers.companyId, companyId),
-          eq(companyUsers.role, 'company_owner')
+          eq(companyUsers.role, 'company_administrator')
         )
       );
 
