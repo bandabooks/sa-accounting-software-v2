@@ -1926,8 +1926,6 @@ export type SarsPayrollSubmission = typeof sarsPayrollSubmissions.$inferSelect;
 export type InsertSarsPayrollSubmission = typeof sarsPayrollSubmissions.$inferInsert;
 export type IsvClientAccess = typeof isvClientAccess.$inferSelect;
 export type InsertIsvClientAccess = typeof isvClientAccess.$inferInsert;
-export type SarsCompliance = typeof sarsCompliance.$inferSelect;
-export type InsertSarsCompliance = typeof sarsCompliance.$inferInsert;
 export type SarsReturn = typeof sarsReturns.$inferSelect;
 export type InsertSarsReturn = typeof sarsReturns.$inferInsert;
 
@@ -6243,13 +6241,11 @@ export const employeeAttendanceRelations = relations(employeeAttendance, ({ one 
 
 // Employee Management Types
 export type InsertEmployee = typeof employees.$inferInsert;
-export type Employee = typeof employees.$inferSelect;
 export type InsertPayrollItem = typeof payrollItems.$inferInsert;
 export type PayrollItem = typeof payrollItems.$inferSelect;
 export type InsertEmployeeLeave = typeof employeeLeave.$inferInsert;
 export type EmployeeLeave = typeof employeeLeave.$inferSelect;
 export type InsertEmployeeAttendance = typeof employeeAttendance.$inferInsert;
-export type EmployeeAttendance = typeof employeeAttendance.$inferSelect;
 export type PayrollTaxTable = typeof payrollTaxTables.$inferSelect;
 export type EstimateWithAnalytics = Estimate & { analytics: QuoteAnalytics[]; signatures: DigitalSignature[] };
 export type ProductWithPricing = Product & { customerPriceLists: CustomerPriceList[]; pricingRules: PricingRule[] };
