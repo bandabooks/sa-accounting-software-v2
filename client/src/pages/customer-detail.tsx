@@ -86,11 +86,28 @@ export default function CustomerDetail() {
     if (!customer || !invoices) return;
     
     try {
-      const pdf = await generateCustomerStatement(customer, invoices);
-      pdf.save(`statement-${customer.name.replace(/\s+/g, '-')}.pdf`);
+      // Prepare enhanced statement data
+      const statementData = {
+        customer,
+        company: {
+          displayName: 'THINK MYBIZ ACCOUNTING',
+          email: 'accounts@thinkmybiz.com',
+          phone: '+27 66 210 5631'
+        },
+        invoices,
+        periodStart: invoices.length > 0 ? invoices[invoices.length - 1].issueDate : undefined,
+        periodEnd: new Date().toISOString().split('T')[0],
+        includePayments: true,
+        includePendingInvoices: true
+      };
+      
+      const pdf = await generateCustomerStatement(statementData);
+      const fileName = `Statement_${customer.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
       toast({
-        title: "Statement Generated",
-        description: "Customer statement has been downloaded successfully.",
+        title: "Professional Statement Generated",
+        description: "Enhanced customer statement has been downloaded successfully.",
       });
     } catch (error) {
       console.error("Error generating statement:", error);
