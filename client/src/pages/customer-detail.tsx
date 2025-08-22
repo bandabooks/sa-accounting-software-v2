@@ -87,12 +87,10 @@ export default function CustomerDetail() {
     
     try {
       const pdf = await generateCustomerStatement(customer, invoices);
-      const fileName = `Statement_${customer.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
-      
+      pdf.save(`statement-${customer.name.replace(/\s+/g, '-')}.pdf`);
       toast({
-        title: "Professional Statement Generated",
-        description: "Enhanced customer statement has been downloaded successfully.",
+        title: "Statement Generated",
+        description: "Customer statement has been downloaded successfully.",
       });
     } catch (error) {
       console.error("Error generating statement:", error);
