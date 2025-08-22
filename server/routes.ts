@@ -162,8 +162,18 @@ import { z } from "zod";
 import { createPayFastService } from "./payfast";
 import { emailService } from "./services/emailService";
 import { db } from "./db";
-import { sql, eq, and, like, isNotNull, desc, gte, lte } from "drizzle-orm";
-import { journalEntries, invoices, expenses, customers } from "@shared/schema";
+import { sql, eq, and, like, isNotNull, desc, gte, lte, gt, lt, or, isNull } from "drizzle-orm";
+import { 
+  journalEntries, 
+  invoices, 
+  invoiceItems,
+  expenses, 
+  customers,
+  products,
+  productCategories,
+  suppliers,
+  purchaseOrders
+} from "@shared/schema";
 
 // Validation middleware
 function validateRequest(schema: { body?: z.ZodSchema }) {
@@ -15875,10 +15885,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // Business Reports Data Routes
-  app.get("/api/business-reports/sales-analytics/:reportId", requireAuth, async (req, res) => {
+  app.get("/api/business-reports/sales-analytics/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { reportId } = req.params;
-      const { companyId } = req.user;
+      const companyId = req.user!.companyId;
       
       switch(reportId) {
         case 'sales-by-product': {
@@ -15961,10 +15971,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.get("/api/business-reports/customer-analytics/:reportId", requireAuth, async (req, res) => {
+  app.get("/api/business-reports/customer-analytics/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { reportId } = req.params;
-      const { companyId } = req.user;
+      const companyId = req.user!.companyId;
       
       switch(reportId) {
         case 'top-customers': {
@@ -16025,10 +16035,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.get("/api/business-reports/inventory-analytics/:reportId", requireAuth, async (req, res) => {
+  app.get("/api/business-reports/inventory-analytics/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { reportId } = req.params;
-      const { companyId } = req.user;
+      const companyId = req.user!.companyId;
       
       switch(reportId) {
         case 'inventory-valuation': {
@@ -16097,10 +16107,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.get("/api/business-reports/supplier-analytics/:reportId", requireAuth, async (req, res) => {
+  app.get("/api/business-reports/supplier-analytics/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { reportId } = req.params;
-      const { companyId } = req.user;
+      const companyId = req.user!.companyId;
       
       switch(reportId) {
         case 'supplier-performance': {
@@ -16136,10 +16146,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.get("/api/business-reports/profitability/:reportId", requireAuth, async (req, res) => {
+  app.get("/api/business-reports/profitability/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { reportId } = req.params;
-      const { companyId } = req.user;
+      const companyId = req.user!.companyId;
       
       switch(reportId) {
         case 'profit-by-product': {
