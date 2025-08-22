@@ -149,7 +149,7 @@ const UPGRADE_PROMPTS = {
 };
 
 export function useSubscriptionNavigation() {
-  const { subscription, hasFeature, isLoading } = useCompanySubscription();
+  const { subscription, isModuleAvailable, isLoading } = useCompanySubscription();
   
   // Check if a navigation path is accessible
   const canAccessPath = useMemo(() => {
@@ -160,25 +160,25 @@ export function useSubscriptionNavigation() {
       const cleanPath = path.replace(/^\//, '');
       
       // Get feature key for this path
-      const featureKey = FEATURE_KEYS[cleanPath];
+      const featureKey = FEATURE_KEYS[cleanPath as keyof typeof FEATURE_KEYS];
       
       // If no feature key mapped, allow access (for basic pages)
       if (!featureKey) return true;
       
       // Check if user has access to this feature
-      return hasFeature(featureKey);
+      return isModuleAvailable(featureKey);
     };
-  }, [hasFeature, isLoading]);
+  }, [isModuleAvailable, isLoading]);
   
   // Get upgrade info for a disabled feature
   const getUpgradeInfo = useMemo(() => {
     return (path: string) => {
       const cleanPath = path.replace(/^\//, '');
-      const featureKey = FEATURE_KEYS[cleanPath];
+      const featureKey = FEATURE_KEYS[cleanPath as keyof typeof FEATURE_KEYS];
       
       if (!featureKey) return null;
       
-      return UPGRADE_PROMPTS[featureKey] || {
+      return UPGRADE_PROMPTS[featureKey as keyof typeof UPGRADE_PROMPTS] || {
         title: 'Premium Feature',
         description: 'This feature requires a plan upgrade to access.',
         cta: 'Upgrade Plan'
@@ -214,7 +214,7 @@ export function useSubscriptionNavigation() {
     filterNavigationItems,
     isGroupVisible,
     subscription,
-    hasFeature,
+    isModuleAvailable,
     isLoading
   };
 }
