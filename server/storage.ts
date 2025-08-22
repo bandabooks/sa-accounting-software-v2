@@ -1904,8 +1904,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoices
-  async getAllInvoices(companyId?: number): Promise<InvoiceWithCustomer[]> {
-    let query = db
+  async getAllInvoices(companyId: number): Promise<InvoiceWithCustomer[]> {
+    if (!companyId) {
+      throw new Error('Company ID is required for data isolation');
+    }
+
+    const query = db
       .select({
         invoice: {
           ...invoices,
@@ -1918,12 +1922,9 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(payments, and(
         eq(payments.invoiceId, invoices.id),
         eq(payments.status, 'completed')
-      ));
-
-    // Apply company filtering if companyId is provided
-    if (companyId) {
-      query = query.where(eq(invoices.companyId, companyId));
-    }
+      ))
+      // MANDATORY company filtering for security
+      .where(eq(invoices.companyId, companyId))
 
     const result = await query
       .groupBy(invoices.id, customers.id)

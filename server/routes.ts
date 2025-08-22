@@ -3673,8 +3673,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Financial Reports
-  app.get("/api/reports/financial-summary", async (req, res) => {
+  app.get("/api/reports/financial-summary", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      const companyId = req.user!.companyId;
       const { startDate, endDate } = req.query;
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "startDate and endDate are required" });
@@ -3682,7 +3683,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const summary = await storage.getFinancialSummary(
         new Date(startDate as string),
-        new Date(endDate as string)
+        new Date(endDate as string),
+        companyId
       );
       res.json(summary);
     } catch (error) {
@@ -3690,10 +3692,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/profit-loss/:from/:to", authenticate, async (req, res) => {
+  // Add the missing /api/reports/summary endpoint with proper company isolation
+  app.get("/api/reports/summary", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user!.companyId;
+      const { from, to } = req.query;
+      
+      if (!from || !to) {
+        return res.status(400).json({ message: "from and to dates are required" });
+      }
+      
+      const summary = await storage.getFinancialSummary(
+        new Date(from as string),
+        new Date(to as string),
+        companyId
+      );
+      res.json(summary);
+    } catch (error) {
+      console.error("Error generating financial summary:", error);
+      res.status(500).json({ message: "Failed to generate financial summary" });
+    }
+  });
+
+  app.get("/api/reports/profit-loss/:from/:to", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { from, to } = req.params;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = req.user!.companyId;
       
       const fromDate = new Date(from);
       const toDate = new Date(to);
@@ -3708,10 +3732,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Detailed Profit & Loss Report with account-level breakdown
-  app.get("/api/reports/profit-loss-detailed", authenticate, async (req, res) => {
+  app.get("/api/reports/profit-loss-detailed", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { period = 'all' } = req.query;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       // Calculate date range based on period
       let fromDate: Date;
