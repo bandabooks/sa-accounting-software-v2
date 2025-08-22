@@ -2322,11 +2322,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store the original Chart of Accounts ID before setting bankAccountId to null
       const chartAccountId = req.body.bankAccountId;
       
-      // For now, we'll set bankAccountId to null since we're using Chart of Accounts directly
+      // For now, we'll set bankAccountId to undefined since we're using Chart of Accounts directly
       // The bank account information is tracked through journal entries
       const paymentData = {
         ...req.body,
-        bankAccountId: null, // Set to null as we're using Chart of Accounts directly
+        bankAccountId: undefined, // Set to undefined as we're using Chart of Accounts directly
         companyId
       };
       
