@@ -8416,12 +8416,6 @@ export class DatabaseStorage implements IStorage {
       // Initialize company with clean data and essential setup
       await this.initializeNewCompany(company.id, company.industry || 'general', userId || 1);
       
-      // Assign the company creator as the company owner with full access
-      if (userId) {
-        await this.addUserToCompany(userId, company.id, 'company_owner');
-        console.log(`✓ Assigned user ${userId} as company_owner for company ${company.id}`);
-      }
-      
       // Load professional services templates only for professional plan users AND accounting practices
       if (insertCompany.subscriptionPlan === 'professional' && insertCompany.industry === 'professional_services') {
         await this.loadProfessionalServicesTemplates(company.id);
@@ -8772,8 +8766,8 @@ export class DatabaseStorage implements IStorage {
           logo: null,
         });
         
-        // Add user to the new company
-        await this.addUserToCompany(userId, defaultCompany.id, 'owner');
+        // Add user to the new company with proper company_owner role
+        await this.addUserToCompany(userId, defaultCompany.id, 'company_owner');
         await this.setUserActiveCompany(userId, defaultCompany.id);
         
         console.log(`→ Created default company ${defaultCompany.id} for user ${userId}`);
