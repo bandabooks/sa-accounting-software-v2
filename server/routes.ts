@@ -7591,12 +7591,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req as AuthenticatedRequest;
       const companyId = user.user?.companyId || 2;
-      const showAll = req.query.showAll === 'true';
       
-      // By default, show only active accounts. Use showAll=true to see all accounts
-      const accounts = showAll 
-        ? await storage.getAllChartOfAccounts(companyId)
-        : await storage.getActiveChartOfAccounts(companyId);
+      // Get company-specific Chart of Accounts with calculated balances
+      const accounts = await storage.getAllChartOfAccounts(companyId);
       
       res.json(accounts);
     } catch (error) {
