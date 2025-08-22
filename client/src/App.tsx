@@ -24,7 +24,7 @@ import EstimateCreate from "@/pages/estimate-create";
 import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
-import BusinessReports from "@/pages/business-reports";
+import BusinessReports from "@/pages/BusinessReports";
 import GeneralReports from "@/pages/general-reports";
 import ExpensesStandalone from "@/pages/expenses-standalone";
 import BillsManagement from "@/pages/bills-management";
