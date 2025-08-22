@@ -2,20 +2,6 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatCurrency, formatDate } from './utils-invoice';
 
-// Professional color palette
-const COLORS = {
-  primary: '#1a365d',      // Deep blue
-  secondary: '#2d3748',    // Dark gray
-  accent: '#3182ce',       // Blue
-  success: '#38a169',      // Green
-  warning: '#d69e2e',      // Amber
-  danger: '#e53e3e',       // Red
-  light: '#f7fafc',        // Light gray
-  border: '#e2e8f0',       // Border gray
-  text: '#2d3748',         // Text gray
-  muted: '#718096'         // Muted text
-};
-
 interface StatementData {
   customer: any;
   company?: any;
@@ -36,7 +22,7 @@ export async function generateCustomerStatement(statementData: StatementData) {
   // Helper functions for consistent spacing and styling
   const addHeader = () => {
     // Company branding header with modern design
-    pdf.setFillColor(COLORS.primary);
+    pdf.setFillColor(26, 54, 93); // Deep blue
     pdf.rect(0, 0, pageWidth, 45, 'F');
     
     // Company logo area (placeholder for future logo implementation)
@@ -76,23 +62,23 @@ export async function generateCustomerStatement(statementData: StatementData) {
   };
   
   const addCustomerInfoSection = (startY: number) => {
-    pdf.setTextColor(COLORS.text);
+    pdf.setTextColor(45, 55, 72); // Dark gray
     
     // Customer information card with modern styling
-    pdf.setFillColor(COLORS.light);
+    pdf.setFillColor(247, 250, 252); // Light gray
     pdf.roundedRect(15, startY, (pageWidth - 40) / 2, 45, 3, 3, 'F');
     
-    pdf.setDrawColor(COLORS.border);
+    pdf.setDrawColor(226, 232, 240); // Border gray
     pdf.setLineWidth(0.5);
     pdf.roundedRect(15, startY, (pageWidth - 40) / 2, 45, 3, 3, 'S');
     
     // Customer info header
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(COLORS.primary);
+    pdf.setTextColor(26, 54, 93); // Deep blue
     pdf.text('BILL TO', 20, startY + 8);
     
-    pdf.setTextColor(COLORS.text);
+    pdf.setTextColor(45, 55, 72); // Dark gray
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     pdf.text(customer.name || 'N/A', 20, startY + 16);
@@ -124,15 +110,15 @@ export async function generateCustomerStatement(statementData: StatementData) {
     
     // Account summary card
     const summaryX = 15 + (pageWidth - 40) / 2 + 10;
-    pdf.setFillColor(COLORS.light);
+    pdf.setFillColor(247, 250, 252); // Light gray
     pdf.roundedRect(summaryX, startY, (pageWidth - 40) / 2, 45, 3, 3, 'F');
     
-    pdf.setDrawColor(COLORS.border);
+    pdf.setDrawColor(226, 232, 240); // Border gray
     pdf.roundedRect(summaryX, startY, (pageWidth - 40) / 2, 45, 3, 3, 'S');
     
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(COLORS.primary);
+    pdf.setTextColor(26, 54, 93); // Deep blue
     pdf.text('ACCOUNT SUMMARY', summaryX + 5, startY + 8);
     
     return startY + 50;
@@ -155,17 +141,17 @@ export async function generateCustomerStatement(statementData: StatementData) {
     const cardSpacing = 5;
     
     const summaryItems = [
-      { label: 'Total Invoices', value: totalInvoices.toString(), color: COLORS.primary },
-      { label: 'Total Amount', value: formatCurrency(totalAmount), color: COLORS.secondary },
-      { label: 'Outstanding', value: formatCurrency(outstandingAmount), color: outstandingAmount > 0 ? COLORS.warning : COLORS.success },
-      { label: 'Overdue', value: formatCurrency(overdueAmount), color: overdueAmount > 0 ? COLORS.danger : COLORS.success }
+      { label: 'Total Invoices', value: totalInvoices.toString(), r: 26, g: 54, b: 93 },
+      { label: 'Total Amount', value: formatCurrency(totalAmount), r: 45, g: 55, b: 72 },
+      { label: 'Outstanding', value: formatCurrency(outstandingAmount), r: outstandingAmount > 0 ? 214 : 56, g: outstandingAmount > 0 ? 158 : 161, b: outstandingAmount > 0 ? 46 : 105 },
+      { label: 'Overdue', value: formatCurrency(overdueAmount), r: overdueAmount > 0 ? 229 : 56, g: overdueAmount > 0 ? 62 : 161, b: overdueAmount > 0 ? 62 : 105 }
     ];
     
     summaryItems.forEach((item, index) => {
       const x = 15 + index * (cardWidth + cardSpacing);
       
       // Card background
-      pdf.setFillColor(item.color);
+      pdf.setFillColor(item.r, item.g, item.b);
       pdf.roundedRect(x, startY, cardWidth, cardHeight, 2, 2, 'F');
       
       // Card content
@@ -183,18 +169,18 @@ export async function generateCustomerStatement(statementData: StatementData) {
   };
   
   const addInvoiceTable = (startY: number) => {
-    pdf.setTextColor(COLORS.text);
+    pdf.setTextColor(45, 55, 72); // Dark gray
     
     // Section header
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(COLORS.primary);
+    pdf.setTextColor(26, 54, 93); // Deep blue
     pdf.text('TRANSACTION DETAILS', 15, startY);
     
     if (periodStart && periodEnd) {
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(COLORS.muted);
+      pdf.setTextColor(113, 128, 150); // Muted gray
       pdf.text(`Period: ${formatDate(periodStart)} to ${formatDate(periodEnd)}`, 15, startY + 7);
     }
     
@@ -242,20 +228,20 @@ export async function generateCustomerStatement(statementData: StatementData) {
       styles: {
         fontSize: 9,
         cellPadding: 3,
-        textColor: COLORS.text,
-        lineColor: COLORS.border,
+        textColor: [45, 55, 72],
+        lineColor: [226, 232, 240],
         lineWidth: 0.1
       },
       headStyles: {
-        fillColor: COLORS.primary,
-        textColor: 255,
+        fillColor: [26, 54, 93],
+        textColor: [255, 255, 255],
         fontSize: 9,
         fontStyle: 'bold',
         halign: 'center'
       },
       bodyStyles: {
         alternateRowStyles: {
-          fillColor: COLORS.light
+          fillColor: [247, 250, 252]
         }
       },
       columnStyles: {
@@ -272,20 +258,20 @@ export async function generateCustomerStatement(statementData: StatementData) {
         if (data.column.index === 5) {
           const status = data.cell.raw;
           if (status === 'PAID') {
-            data.cell.styles.textColor = COLORS.success;
+            data.cell.styles.textColor = [56, 161, 105]; // Green
             data.cell.styles.fontStyle = 'bold';
           } else if (status === 'OVERDUE') {
-            data.cell.styles.textColor = COLORS.danger;
+            data.cell.styles.textColor = [229, 62, 62]; // Red
             data.cell.styles.fontStyle = 'bold';
           } else if (status === 'PENDING') {
-            data.cell.styles.textColor = COLORS.warning;
+            data.cell.styles.textColor = [214, 158, 46]; // Amber
             data.cell.styles.fontStyle = 'bold';
           }
         }
         
         // Highlight overdue days
         if (data.column.index === 6 && parseInt(data.cell.raw) > 0) {
-          data.cell.styles.textColor = COLORS.danger;
+          data.cell.styles.textColor = [229, 62, 62]; // Red
           data.cell.styles.fontStyle = 'bold';
         }
       },
@@ -318,7 +304,7 @@ export async function generateCustomerStatement(statementData: StatementData) {
     if (totalOutstanding > 0) {
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(COLORS.primary);
+      pdf.setTextColor(26, 54, 93); // Deep blue
       pdf.text('AGING ANALYSIS', 15, startY);
       
       const agingData = [
@@ -336,11 +322,11 @@ export async function generateCustomerStatement(statementData: StatementData) {
         styles: {
           fontSize: 9,
           cellPadding: 3,
-          textColor: COLORS.text
+          textColor: [45, 55, 72]
         },
         headStyles: {
-          fillColor: COLORS.secondary,
-          textColor: 255,
+          fillColor: [45, 55, 72],
+          textColor: [255, 255, 255],
           fontStyle: 'bold'
         },
         columnStyles: {
@@ -361,14 +347,14 @@ export async function generateCustomerStatement(statementData: StatementData) {
     const footerY = pageHeight - 25;
     
     // Footer separator line
-    pdf.setDrawColor(COLORS.border);
+    pdf.setDrawColor(226, 232, 240); // Border gray
     pdf.setLineWidth(0.5);
     pdf.line(15, footerY - 5, pageWidth - 15, footerY - 5);
     
     // Payment terms and contact information
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(COLORS.muted);
+    pdf.setTextColor(113, 128, 150); // Muted gray
     
     const paymentTerms = customer.paymentTerms ? `Payment Terms: ${customer.paymentTerms} days` : 'Payment Terms: 30 days';
     pdf.text(paymentTerms, 15, footerY);
@@ -380,7 +366,7 @@ export async function generateCustomerStatement(statementData: StatementData) {
     pdf.text(`Page ${pageNum}`, pageWidth - 15, footerY, { align: 'right' });
     
     // Professional closing
-    pdf.setTextColor(COLORS.primary);
+    pdf.setTextColor(26, 54, 93); // Deep blue
     pdf.setFont('helvetica', 'italic');
     pdf.text('Thank you for your continued business partnership', pageWidth / 2, footerY + 10, { align: 'center' });
   };

@@ -95,7 +95,11 @@ export default function CustomerDetail() {
           phone: '+27 66 210 5631'
         },
         invoices,
-        periodStart: invoices.length > 0 ? invoices[invoices.length - 1].issueDate : undefined,
+        periodStart: invoices.length > 0 ? 
+          (typeof invoices[invoices.length - 1].issueDate === 'string' 
+            ? invoices[invoices.length - 1].issueDate 
+            : invoices[invoices.length - 1].issueDate.toISOString().split('T')[0]) 
+          : undefined,
         periodEnd: new Date().toISOString().split('T')[0],
         includePayments: true,
         includePendingInvoices: true
