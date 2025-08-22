@@ -279,6 +279,70 @@ export const AVAILABLE_MODULES: Record<string, Module> = {
     category: "admin",
     permissions: ["view", "create", "edit", "deactivate", "assign_roles"],
     essential: false
+  },
+  // Compliance sub-modules (to fix the 27 of 20 count issue)
+  compliance_dashboard: {
+    id: "compliance_dashboard",
+    name: "Compliance Dashboard",
+    description: "Overview dashboard with compliance metrics and KPIs",
+    icon: Shield,
+    category: "compliance",
+    permissions: ["view", "export"],
+    essential: false
+  },
+  compliance_clients: {
+    id: "compliance_clients",
+    name: "Client Management",
+    description: "Professional client database and compliance tracking",
+    icon: Users,
+    category: "compliance",
+    permissions: ["view", "create", "edit", "delete"],
+    essential: false
+  },
+  cipc_compliance: {
+    id: "cipc_compliance",
+    name: "CIPC Compliance",
+    description: "Companies and Intellectual Property Commission requirements",
+    icon: FileCheck,
+    category: "compliance",
+    permissions: ["view", "file", "track", "report"],
+    essential: false
+  },
+  labour_compliance: {
+    id: "labour_compliance",
+    name: "Labour Compliance",
+    description: "Department of Employment and Labour compliance management",
+    icon: UserCog,
+    category: "compliance",
+    permissions: ["view", "file", "track", "report"],
+    essential: false
+  },
+  compliance_tasks: {
+    id: "compliance_tasks",
+    name: "Task Management",
+    description: "Compliance task assignment and deadline tracking",
+    icon: Calendar,
+    category: "compliance",
+    permissions: ["view", "create", "assign", "complete"],
+    essential: false
+  },
+  compliance_calendar: {
+    id: "compliance_calendar",
+    name: "Compliance Calendar",
+    description: "Deadline calendar and important dates tracking",
+    icon: Calendar,
+    category: "compliance",
+    permissions: ["view", "schedule", "notify"],
+    essential: false
+  },
+  compliance_documents: {
+    id: "compliance_documents",
+    name: "Document Library",
+    description: "Compliance document storage and management",
+    icon: FileText,
+    category: "compliance",
+    permissions: ["view", "upload", "download", "organize"],
+    essential: false
   }
 };
 
