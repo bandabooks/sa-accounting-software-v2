@@ -225,229 +225,278 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-blue-600" />
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[900px] max-h-[95vh] overflow-y-auto">
+        <DialogHeader className="space-y-3 pb-6 border-b border-gray-100 dark:border-gray-800">
+          <DialogTitle className="flex items-center gap-3 text-xl font-semibold">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
             Create New Company
           </DialogTitle>
-          <DialogDescription>
-            Set up your new company quickly. All essential configurations will be initialized automatically.
+          <DialogDescription className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+            Set up your new company quickly with our streamlined process. All essential configurations, 
+            chart of accounts, and industry-specific settings will be initialized automatically based on your selection.
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Company Name *</Label>
-              <Input 
-                id="name" 
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="My Business"
-                required 
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="displayName" className="flex items-center gap-2">
-                Display Name *
-                {!manuallyEdited.displayName && formData.name && (
-                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Auto-filled</span>
-                )}
-              </Label>
-              <Input 
-                id="displayName" 
-                value={formData.displayName}
-                onChange={(e) => handleInputChange('displayName', e.target.value)}
-                placeholder="My Business"
-                required 
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="slug" className="flex items-center gap-2">
-                URL Slug *
-                {!manuallyEdited.slug && formData.name && (
-                  <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Auto-generated</span>
-                )}
-              </Label>
-              <Input 
-                id="slug" 
-                value={formData.slug}
-                onChange={(e) => handleInputChange('slug', e.target.value)}
-                placeholder="my-company"
-                required 
-                className="w-full"
-              />
-              {slugValidation.message && (
-                <p className={`text-xs mt-1 ${slugValidation.isValid ? 'text-green-600' : 'text-red-600'}`}>
-                  {slugValidation.message}
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6 pt-6">
+          <div className="space-y-6">
+            {/* Company Identity Section */}
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 space-y-5">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Company Identity</h3>
+              
               <div>
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="name" className="text-sm font-medium">Company Name *</Label>
                 <Input 
-                  id="email" 
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="contact@mycompany.com"
+                  id="name" 
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter your company name"
                   required 
-                  className="w-full"
+                  className="mt-1.5 h-11"
+                  data-testid="input-company-name"
                 />
               </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input 
-                  id="phone" 
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="+27 123 456 7890"
-                  className="w-full"
-                />
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Textarea 
-                id="address" 
-                value={formData.address}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                placeholder="123 Business Street"
-                className="w-full"
-                rows={2}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="city">City</Label>
-                <Input 
-                  id="city" 
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  placeholder="Cape Town"
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <Label htmlFor="postalCode">Postal Code</Label>
-                <Input 
-                  id="postalCode" 
-                  value={formData.postalCode}
-                  onChange={(e) => handleInputChange('postalCode', e.target.value)}
-                  placeholder="8001"
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <Select 
-                  value={formData.country}
-                  onValueChange={(value) => handleInputChange('country', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="South Africa">South Africa</SelectItem>
-                    <SelectItem value="United States">United States</SelectItem>
-                    <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                    <SelectItem value="Canada">Canada</SelectItem>
-                    <SelectItem value="Australia">Australia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="vatNumber">VAT Number</Label>
-                <Input 
-                  id="vatNumber" 
-                  value={formData.vatNumber}
-                  onChange={(e) => handleInputChange('vatNumber', e.target.value)}
-                  placeholder="4123456789"
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <Label htmlFor="registrationNumber">Registration Number</Label>
-                <Input 
-                  id="registrationNumber" 
-                  value={formData.registrationNumber}
-                  onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
-                  placeholder="2023/123456/07"
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="industry">Industry</Label>
-              <Select 
-                value={formData.industry}
-                onValueChange={(value) => {
-                  handleInputChange('industry', value);
-                  // Clear custom industry if not "other"
-                  if (value !== 'other') {
-                    handleInputChange('customIndustry', '');
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {industryOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom Industry Input - Shows when "Other" is selected */}
-            {formData.industry === 'other' && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <Label htmlFor="customIndustry" className="text-base font-medium text-amber-900">
-                  Please specify your industry *
+                <Label htmlFor="displayName" className="text-sm font-medium flex items-center gap-2">
+                  Display Name *
+                  {!manuallyEdited.displayName && formData.name && (
+                    <span className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900 px-2 py-1 rounded-full">Auto-filled</span>
+                  )}
                 </Label>
-                <p className="text-sm text-amber-700 mb-3">
-                  Describe your business industry or sector in a few words
-                </p>
                 <Input 
-                  id="customIndustry" 
-                  value={formData.customIndustry}
-                  onChange={(e) => handleInputChange('customIndustry', e.target.value)}
-                  placeholder="e.g., Custom Software Development, Event Planning, etc."
-                  required={formData.industry === 'other'}
-                  className="bg-white border-amber-300"
+                  id="displayName" 
+                  value={formData.displayName}
+                  onChange={(e) => handleInputChange('displayName', e.target.value)}
+                  placeholder="How your company name will appear"
+                  required 
+                  className="mt-1.5 h-11"
+                  data-testid="input-display-name"
                 />
-                {formData.industry === 'other' && !formData.customIndustry && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <span>⚠️</span> Please specify your industry
+              </div>
+
+              <div>
+                <Label htmlFor="slug" className="text-sm font-medium flex items-center gap-2">
+                  URL Slug *
+                  {!manuallyEdited.slug && formData.name && (
+                    <span className="text-xs text-green-600 bg-green-50 dark:bg-green-900 px-2 py-1 rounded-full">Auto-generated</span>
+                  )}
+                </Label>
+                <Input 
+                  id="slug" 
+                  value={formData.slug}
+                  onChange={(e) => handleInputChange('slug', e.target.value)}
+                  placeholder="company-url-slug"
+                  required 
+                  className="mt-1.5 h-11"
+                  data-testid="input-url-slug"
+                />
+                {slugValidation.message && (
+                  <p className={`text-xs mt-2 ${slugValidation.isValid ? 'text-green-600' : 'text-red-600'}`}>
+                    {slugValidation.message}
                   </p>
                 )}
               </div>
-            )}
+            </div>
 
-            {/* Subscription Plan Selection - Enhanced with validation */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <Label htmlFor="subscriptionPlan" className="text-base font-medium text-blue-900">
-                Select Subscription Plan *
-              </Label>
-              <p className="text-sm text-blue-700 mb-3">
-                Choose the plan that best fits your business needs. This will determine your feature access and billing.
-              </p>
+            {/* Contact Information Section */}
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 space-y-5">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Contact Information</h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium">Email Address *</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="contact@mycompany.com"
+                    required 
+                    className="mt-1.5 h-11"
+                    data-testid="input-email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
+                  <Input 
+                    id="phone" 
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    placeholder="+27 123 456 7890"
+                    className="mt-1.5 h-11"
+                    data-testid="input-phone"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Business Address Section */}
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 space-y-5">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Business Address</h3>
+              
+              <div>
+                <Label htmlFor="address" className="text-sm font-medium">Street Address</Label>
+                <Textarea 
+                  id="address" 
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  placeholder="123 Business Street, Suite 100"
+                  className="mt-1.5 min-h-[90px] resize-none"
+                  rows={3}
+                  data-testid="input-address"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                  <Label htmlFor="city" className="text-sm font-medium">City</Label>
+                  <Input 
+                    id="city" 
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    placeholder="Cape Town"
+                    className="mt-1.5 h-11"
+                    data-testid="input-city"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="postalCode" className="text-sm font-medium">Postal Code</Label>
+                  <Input 
+                    id="postalCode" 
+                    value={formData.postalCode}
+                    onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                    placeholder="8001"
+                    className="mt-1.5 h-11"
+                    data-testid="input-postal-code"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="country" className="text-sm font-medium">Country</Label>
+                  <Select 
+                    value={formData.country}
+                    onValueChange={(value) => handleInputChange('country', value)}
+                  >
+                    <SelectTrigger className="mt-1.5 h-11" data-testid="select-country">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="South Africa">South Africa</SelectItem>
+                      <SelectItem value="United States">United States</SelectItem>
+                      <SelectItem value="United Kingdom">United Kingdom</SelectItem>
+                      <SelectItem value="Canada">Canada</SelectItem>
+                      <SelectItem value="Australia">Australia</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Registration Details Section */}
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 space-y-5">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Registration Details</h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div>
+                  <Label htmlFor="vatNumber" className="text-sm font-medium">VAT Number</Label>
+                  <Input 
+                    id="vatNumber" 
+                    value={formData.vatNumber}
+                    onChange={(e) => handleInputChange('vatNumber', e.target.value)}
+                    placeholder="4123456789"
+                    className="mt-1.5 h-11"
+                    data-testid="input-vat-number"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">South African VAT registration number (optional)</p>
+                </div>
+                <div>
+                  <Label htmlFor="registrationNumber" className="text-sm font-medium">Company Registration Number</Label>
+                  <Input 
+                    id="registrationNumber" 
+                    value={formData.registrationNumber}
+                    onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
+                    placeholder="2023/123456/07"
+                    className="mt-1.5 h-11"
+                    data-testid="input-registration-number"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">CIPC registration number (optional)</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Industry Selection Section */}
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 space-y-5">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Business Industry</h3>
+              
+              <div>
+                <Label htmlFor="industry" className="text-sm font-medium">Select your industry *</Label>
+                <Select 
+                  value={formData.industry}
+                  onValueChange={(value) => {
+                    handleInputChange('industry', value);
+                    // Clear custom industry if not "other"
+                    if (value !== 'other') {
+                      handleInputChange('customIndustry', '');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="mt-1.5 h-11" data-testid="select-industry">
+                    <SelectValue placeholder="Choose your business industry" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {industryOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">This will determine your initial chart of accounts setup</p>
+              </div>
+
+              {/* Custom Industry Input - Shows when "Other" is selected */}
+              {formData.industry === 'other' && (
+                <div className="bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+                  <Label htmlFor="customIndustry" className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    Please specify your industry *
+                  </Label>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mb-3 mt-1">
+                    Describe your business industry or sector in a few words
+                  </p>
+                  <Input 
+                    id="customIndustry" 
+                    value={formData.customIndustry}
+                    onChange={(e) => handleInputChange('customIndustry', e.target.value)}
+                    placeholder="e.g., Custom Software Development, Event Planning, etc."
+                    required={formData.industry === 'other'}
+                    className="bg-white dark:bg-gray-800 border-amber-300 dark:border-amber-600 h-11"
+                    data-testid="input-custom-industry"
+                  />
+                  {formData.industry === 'other' && !formData.customIndustry && (
+                    <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                      <span>⚠️</span> Please specify your industry
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Subscription Plan Selection */}
+            <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                  <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100">
+                    Subscription Plan *
+                  </h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Choose the plan that best fits your business needs and budget
+                  </p>
+                </div>
+              </div>
               
               <Select 
                 value={formData.subscriptionPlan}
@@ -461,18 +510,23 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
                   }
                 }}
               >
-                <SelectTrigger className={`bg-white ${!formData.subscriptionPlan ? 'border-red-300' : 'border-blue-300'}`}>
+                <SelectTrigger 
+                  className={`bg-white dark:bg-gray-800 h-12 ${!formData.subscriptionPlan ? 'border-red-300' : 'border-blue-300'}`}
+                  data-testid="select-subscription-plan"
+                >
                   <SelectValue placeholder="Choose your subscription plan" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                   {plansLoading ? (
                     <SelectItem value="loading" disabled>Loading plans...</SelectItem>
                   ) : subscriptionPlans && Array.isArray(subscriptionPlans) && subscriptionPlans.length > 0 ? (
                     subscriptionPlans.map((plan: any) => (
-                      <SelectItem key={plan.id} value={plan.name}>
-                        <div className="flex flex-col">
+                      <SelectItem key={plan.id} value={plan.name} className="p-3">
+                        <div className="flex flex-col space-y-1">
                           <span className="font-medium">{plan.displayName}</span>
-                          <span className="text-sm text-gray-600">R{plan.monthlyPrice}/month • {plan.description}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            R{plan.monthlyPrice}/month • {plan.description}
+                          </span>
                         </div>
                       </SelectItem>
                     ))
@@ -483,32 +537,36 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
               </Select>
               
               {!formData.subscriptionPlan && (
-                <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <p className="text-xs text-red-600 mt-3 flex items-center gap-1">
                   <span>⚠️</span> Please select a subscription plan to continue
                 </p>
               )}
               
               {formData.subscriptionPlan && (
-                <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
-                  <span>✅</span> Selected: {(() => {
-                    const plan = Array.isArray(subscriptionPlans) ? subscriptionPlans.find((p: any) => p.name === formData.subscriptionPlan) : null;
-                    return plan ? `${plan.displayName} (${formData.subscriptionPlan})` : formData.subscriptionPlan;
-                  })()}
-                </p>
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded-lg">
+                  <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+                    <span>✅</span> Selected: {(() => {
+                      const plan = Array.isArray(subscriptionPlans) ? subscriptionPlans.find((p: any) => p.name === formData.subscriptionPlan) : null;
+                      return plan ? `${plan.displayName}` : formData.subscriptionPlan;
+                    })()}
+                  </p>
+                </div>
               )}
               
-              <p className="text-xs text-blue-600 mt-2">
-                💡 You can upgrade or downgrade your subscription plan anytime from company settings
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-3 flex items-center gap-1">
+                <span>💡</span> You can upgrade or downgrade your subscription plan anytime from company settings
               </p>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-4 pt-8 border-t border-gray-200 dark:border-gray-700">
             <Button 
               type="button" 
               variant="outline" 
               onClick={handleClose}
               disabled={createCompanyMutation.isPending}
+              className="px-6 py-2.5 h-11"
+              data-testid="button-cancel"
             >
               Cancel
             </Button>
@@ -522,12 +580,13 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
                 !formData.subscriptionPlan ||
                 (formData.industry === 'other' && !formData.customIndustry.trim())
               }
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 px-6 py-2.5 h-11 bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="button-create-company"
             >
               {createCompanyMutation.isPending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Creating...
+                  Creating Company...
                 </>
               ) : (
                 <>
