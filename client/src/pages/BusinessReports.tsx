@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, ChevronDown, ChevronRight, Calendar, TrendingUp, Users, ShoppingCart, Package, BarChart3, Target, PieChart, Settings, Sparkles } from 'lucide-react';
+import { Eye, ChevronDown, ChevronRight, Calendar, TrendingUp, Users, ShoppingCart, Package, BarChart3, Target, PieChart, Settings, Sparkles, DollarSign, TrendingDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ReportItem {
   id: string;
@@ -488,52 +490,329 @@ const BusinessReports = () => {
     }
   ];
 
-  const ReportModal = ({ report }: { report: ReportItem }) => (
-    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <report.icon className="h-5 w-5" />
-          {report.name}
-        </DialogTitle>
-        <DialogDescription>{report.description}</DialogDescription>
-      </DialogHeader>
-      <div className="space-y-4">
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            Last Updated: {report.lastUpdated}
+  const getReportApiEndpoint = (reportId: string) => {
+    if (['sales-by-product', 'sales-by-category', 'sales-by-region', 'sales-by-rep', 'sales-trends', 'sales-pipeline', 'quote-to-sale', 'seasonal-sales'].includes(reportId)) {
+      return `/api/business-reports/sales-analytics/${reportId}`;
+    }
+    if (['top-customers', 'customer-sales', 'customer-ar', 'customer-lifetime', 'customer-acquisition', 'customer-retention'].includes(reportId)) {
+      return `/api/business-reports/customer-analytics/${reportId}`;
+    }
+    if (['inventory-valuation', 'slow-moving', 'stock-movement', 'stock-levels', 'inventory-turnover'].includes(reportId)) {
+      return `/api/business-reports/inventory-analytics/${reportId}`;
+    }
+    if (['supplier-performance', 'purchase-analysis', 'supplier-ap', 'cost-analysis'].includes(reportId)) {
+      return `/api/business-reports/supplier-analytics/${reportId}`;
+    }
+    if (['profit-by-product', 'profit-by-customer', 'profit-by-segment', 'gross-margin', 'roi-performance'].includes(reportId)) {
+      return `/api/business-reports/profitability/${reportId}`;
+    }
+    return null;
+  };
+
+  const ReportModal = ({ report }: { report: ReportItem }) => {
+    const apiEndpoint = getReportApiEndpoint(report.id);
+    
+    const { data: reportData, isLoading, error } = useQuery({
+      queryKey: ['business-report', report.id],
+      queryFn: async () => {
+        if (!apiEndpoint) return null;
+        const response = await fetch(apiEndpoint);
+        if (!response.ok) throw new Error('Failed to fetch report data');
+        return response.json();
+      },
+      enabled: !!apiEndpoint,
+    });
+
+    const renderReportData = () => {
+      if (isLoading) {
+        return (
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full" />
+            <div className="grid grid-cols-2 gap-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
           </div>
-          <Badge variant="outline">{report.frequency}</Badge>
-        </div>
-        
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <div className="text-center text-gray-500">
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+            <p className="text-red-600 font-medium">Error loading report data</p>
+            <p className="text-red-500 text-sm">Please try again later</p>
+          </div>
+        );
+      }
+
+      if (!reportData?.data || reportData.data.length === 0) {
+        return (
+          <div className="bg-gray-50 p-6 rounded-lg text-center">
             <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p className="font-medium">Report Analytics</p>
-            <p className="text-sm">
-              {report.data ? `${Object.keys(report.data).length} data points available` : 'Real-time data visualization would appear here'}
-            </p>
-            {report.data && (
-              <div className="mt-4 grid grid-cols-3 gap-4 text-left">
-                {Object.entries(report.data).map(([key, value]) => (
-                  <div key={key} className="bg-white p-3 rounded border">
-                    <p className="text-xs text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                    <p className="font-semibold">{value}</p>
-                  </div>
-                ))}
+            <p className="font-medium text-gray-600">No data available</p>
+            <p className="text-sm text-gray-500">There's no data for this report yet</p>
+          </div>
+        );
+      }
+
+      const data = reportData.data;
+      const reportType = reportData.reportType;
+
+      // Render different visualizations based on report type
+      switch (reportType) {
+        case 'sales-by-product':
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-blue-50 p-3 rounded border">
+                  <p className="text-xs text-blue-600 uppercase font-medium">Total Revenue</p>
+                  <p className="text-lg font-bold text-blue-800">R{data.reduce((sum: number, item: any) => sum + parseFloat(item.totalRevenue || 0), 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded border">
+                  <p className="text-xs text-green-600 uppercase font-medium">Products Sold</p>
+                  <p className="text-lg font-bold text-green-800">{data.length}</p>
+                </div>
+                <div className="bg-orange-50 p-3 rounded border">
+                  <p className="text-xs text-orange-600 uppercase font-medium">Avg Order Value</p>
+                  <p className="text-lg font-bold text-orange-800">R{(data.reduce((sum: number, item: any) => sum + parseFloat(item.avgPrice || 0), 0) / data.length).toLocaleString()}</p>
+                </div>
               </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {data.slice(0, 10).map((item: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                      <div>
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-gray-500">{item.totalQuantity} units sold</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">R{parseFloat(item.totalRevenue).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{item.invoiceCount} invoices</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+
+        case 'top-customers':
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-blue-50 p-3 rounded border">
+                  <p className="text-xs text-blue-600 uppercase font-medium">Total Revenue</p>
+                  <p className="text-lg font-bold text-blue-800">R{data.reduce((sum: number, item: any) => sum + parseFloat(item.totalRevenue || 0), 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded border">
+                  <p className="text-xs text-green-600 uppercase font-medium">Active Customers</p>
+                  <p className="text-lg font-bold text-green-800">{data.length}</p>
+                </div>
+                <div className="bg-orange-50 p-3 rounded border">
+                  <p className="text-xs text-orange-600 uppercase font-medium">Avg Customer Value</p>
+                  <p className="text-lg font-bold text-orange-800">R{(data.reduce((sum: number, item: any) => sum + parseFloat(item.avgInvoiceValue || 0), 0) / data.length).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {data.slice(0, 15).map((item: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                      <div>
+                        <p className="font-medium">{item.customerName}</p>
+                        <p className="text-sm text-gray-500">{item.customerEmail}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">R{parseFloat(item.totalRevenue).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{item.invoiceCount} invoices</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+
+        case 'inventory-valuation':
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-blue-50 p-3 rounded border">
+                  <p className="text-xs text-blue-600 uppercase font-medium">Total Stock Value</p>
+                  <p className="text-lg font-bold text-blue-800">R{data.reduce((sum: number, item: any) => sum + parseFloat(item.totalValue || 0), 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded border">
+                  <p className="text-xs text-green-600 uppercase font-medium">Total Products</p>
+                  <p className="text-lg font-bold text-green-800">{data.length}</p>
+                </div>
+                <div className="bg-orange-50 p-3 rounded border">
+                  <p className="text-xs text-orange-600 uppercase font-medium">Potential Revenue</p>
+                  <p className="text-lg font-bold text-orange-800">R{data.reduce((sum: number, item: any) => sum + parseFloat(item.potentialRevenue || 0), 0).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {data.slice(0, 10).map((item: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                      <div>
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-gray-500">{item.categoryName || 'No category'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-blue-600">R{parseFloat(item.totalValue).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{item.currentStock} units @ R{parseFloat(item.costPrice).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+
+        case 'slow-moving':
+          return (
+            <div className="space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-4">
+                <p className="text-yellow-800 font-medium">⚠️ Slow-Moving Stock Alert</p>
+                <p className="text-yellow-700 text-sm">Products with no sales in the last 90+ days</p>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {data.slice(0, 10).map((item: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                      <div>
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-gray-500">{item.categoryName || 'No category'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-red-600">R{parseFloat(item.totalValue).toLocaleString()}</p>
+                        <p className="text-sm text-red-500">
+                          {item.daysSinceLastSale ? `${Math.floor(item.daysSinceLastSale)} days since last sale` : 'Never sold'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+
+        case 'supplier-performance':
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-blue-50 p-3 rounded border">
+                  <p className="text-xs text-blue-600 uppercase font-medium">Total Purchases</p>
+                  <p className="text-lg font-bold text-blue-800">R{data.reduce((sum: number, item: any) => sum + parseFloat(item.totalPurchases || 0), 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded border">
+                  <p className="text-xs text-green-600 uppercase font-medium">Active Suppliers</p>
+                  <p className="text-lg font-bold text-green-800">{data.length}</p>
+                </div>
+                <div className="bg-orange-50 p-3 rounded border">
+                  <p className="text-xs text-orange-600 uppercase font-medium">Avg Order Value</p>
+                  <p className="text-lg font-bold text-orange-800">R{(data.reduce((sum: number, item: any) => sum + parseFloat(item.avgOrderValue || 0), 0) / data.length).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {data.slice(0, 10).map((item: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                      <div>
+                        <p className="font-medium">{item.supplierName}</p>
+                        <p className="text-sm text-gray-500">{item.supplierEmail}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-purple-600">R{parseFloat(item.totalPurchases).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{item.orderCount} orders</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+
+        case 'profit-by-product':
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-green-50 p-3 rounded border">
+                  <p className="text-xs text-green-600 uppercase font-medium">Total Gross Profit</p>
+                  <p className="text-lg font-bold text-green-800">R{data.reduce((sum: number, item: any) => sum + parseFloat(item.grossProfit || 0), 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-blue-50 p-3 rounded border">
+                  <p className="text-xs text-blue-600 uppercase font-medium">Total Revenue</p>
+                  <p className="text-lg font-bold text-blue-800">R{data.reduce((sum: number, item: any) => sum + parseFloat(item.totalRevenue || 0), 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-orange-50 p-3 rounded border">
+                  <p className="text-xs text-orange-600 uppercase font-medium">Avg Margin</p>
+                  <p className="text-lg font-bold text-orange-800">{(data.reduce((sum: number, item: any) => sum + parseFloat(item.grossMargin || 0), 0) / data.length).toFixed(1)}%</p>
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {data.slice(0, 10).map((item: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white border rounded">
+                      <div>
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-gray-500">{item.unitsSold} units sold</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">R{parseFloat(item.grossProfit).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{parseFloat(item.grossMargin).toFixed(1)}% margin</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+
+        default:
+          return (
+            <div className="bg-gray-50 p-6 rounded-lg text-center">
+              <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p className="font-medium text-gray-600">Report Data Available</p>
+              <p className="text-sm text-gray-500">{data.length} records found</p>
+            </div>
+          );
+      }
+    };
+
+    return (
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <report.icon className="h-5 w-5" />
+            {report.name}
+          </DialogTitle>
+          <DialogDescription>{report.description}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              Last Updated: {report.lastUpdated}
+            </div>
+            <Badge variant="outline">{report.frequency}</Badge>
+            {reportData && (
+              <Badge variant="secondary">
+                {reportData.data?.length || 0} records
+              </Badge>
             )}
           </div>
+          
+          {renderReportData()}
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline">Export PDF</Button>
+            <Button variant="outline">Export Excel</Button>
+            <Button>Generate Report</Button>
+          </div>
         </div>
-        
-        <div className="flex justify-end gap-2">
-          <Button variant="outline">Export PDF</Button>
-          <Button variant="outline">Export Excel</Button>
-          <Button>Generate Report</Button>
-        </div>
-      </div>
-    </DialogContent>
-  );
+      </DialogContent>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

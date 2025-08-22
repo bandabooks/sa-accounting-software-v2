@@ -15874,6 +15874,308 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, and Real-time Alerts!");
+  // Business Reports Data Routes
+  app.get("/api/business-reports/sales-analytics/:reportId", requireAuth, async (req, res) => {
+    try {
+      const { reportId } = req.params;
+      const { companyId } = req.user;
+      
+      switch(reportId) {
+        case 'sales-by-product': {
+          const productSales = await db
+            .select({
+              productId: invoiceItems.productId,
+              productName: products.name,
+              totalRevenue: sql<number>`SUM(${invoiceItems.lineTotal})`,
+              totalQuantity: sql<number>`SUM(${invoiceItems.quantity})`,
+              avgPrice: sql<number>`AVG(${invoiceItems.price})`,
+              invoiceCount: sql<number>`COUNT(DISTINCT ${invoiceItems.invoiceId})`
+            })
+            .from(invoiceItems)
+            .innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id))
+            .innerJoin(products, eq(invoiceItems.productId, products.id))
+            .where(and(
+              eq(invoices.companyId, companyId),
+              eq(invoices.status, 'paid')
+            ))
+            .groupBy(invoiceItems.productId, products.name)
+            .orderBy(desc(sql`SUM(${invoiceItems.lineTotal})`));
+
+          res.json({ data: productSales, reportType: 'sales-by-product' });
+          break;
+        }
+        
+        case 'sales-by-category': {
+          const categorySales = await db
+            .select({
+              categoryId: products.categoryId,
+              categoryName: productCategories.name,
+              totalRevenue: sql<number>`SUM(${invoiceItems.lineTotal})`,
+              totalQuantity: sql<number>`SUM(${invoiceItems.quantity})`,
+              productCount: sql<number>`COUNT(DISTINCT ${products.id})`,
+              invoiceCount: sql<number>`COUNT(DISTINCT ${invoiceItems.invoiceId})`
+            })
+            .from(invoiceItems)
+            .innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id))
+            .innerJoin(products, eq(invoiceItems.productId, products.id))
+            .innerJoin(productCategories, eq(products.categoryId, productCategories.id))
+            .where(and(
+              eq(invoices.companyId, companyId),
+              eq(invoices.status, 'paid')
+            ))
+            .groupBy(products.categoryId, productCategories.name)
+            .orderBy(desc(sql`SUM(${invoiceItems.lineTotal})`));
+
+          res.json({ data: categorySales, reportType: 'sales-by-category' });
+          break;
+        }
+
+        case 'sales-trends': {
+          const salesTrends = await db
+            .select({
+              month: sql<string>`TO_CHAR(${invoices.invoiceDate}, 'Mon YYYY')`,
+              monthNumber: sql<string>`TO_CHAR(${invoices.invoiceDate}, 'YYYY-MM')`,
+              revenue: sql<number>`SUM(${invoices.totalAmount})`,
+              invoiceCount: sql<number>`COUNT(*)`,
+              avgInvoiceValue: sql<number>`AVG(${invoices.totalAmount})`
+            })
+            .from(invoices)
+            .where(and(
+              eq(invoices.companyId, companyId),
+              eq(invoices.status, 'paid'),
+              gte(invoices.invoiceDate, sql`NOW() - INTERVAL '12 months'`)
+            ))
+            .groupBy(sql`TO_CHAR(${invoices.invoiceDate}, 'Mon YYYY')`, sql`TO_CHAR(${invoices.invoiceDate}, 'YYYY-MM')`)
+            .orderBy(sql`TO_CHAR(${invoices.invoiceDate}, 'YYYY-MM')`);
+
+          res.json({ data: salesTrends, reportType: 'sales-trends' });
+          break;
+        }
+
+        default:
+          res.status(400).json({ message: "Unknown sales report type" });
+      }
+    } catch (error) {
+      console.error("Sales analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch sales analytics" });
+    }
+  });
+
+  app.get("/api/business-reports/customer-analytics/:reportId", requireAuth, async (req, res) => {
+    try {
+      const { reportId } = req.params;
+      const { companyId } = req.user;
+      
+      switch(reportId) {
+        case 'top-customers': {
+          const topCustomers = await db
+            .select({
+              customerId: customers.id,
+              customerName: customers.name,
+              customerEmail: customers.email,
+              totalRevenue: sql<number>`SUM(${invoices.totalAmount})`,
+              invoiceCount: sql<number>`COUNT(${invoices.id})`,
+              avgInvoiceValue: sql<number>`AVG(${invoices.totalAmount})`,
+              lastInvoiceDate: sql<Date>`MAX(${invoices.invoiceDate})`
+            })
+            .from(customers)
+            .innerJoin(invoices, eq(customers.id, invoices.customerId))
+            .where(and(
+              eq(customers.companyId, companyId),
+              eq(invoices.status, 'paid')
+            ))
+            .groupBy(customers.id, customers.name, customers.email)
+            .orderBy(desc(sql`SUM(${invoices.totalAmount})`))
+            .limit(20);
+
+          res.json({ data: topCustomers, reportType: 'top-customers' });
+          break;
+        }
+
+        case 'customer-acquisition': {
+          const customerAcquisition = await db
+            .select({
+              month: sql<string>`TO_CHAR(${customers.createdAt}, 'Mon YYYY')`,
+              monthNumber: sql<string>`TO_CHAR(${customers.createdAt}, 'YYYY-MM')`,
+              newCustomers: sql<number>`COUNT(*)`,
+              totalRevenue: sql<number>`COALESCE(SUM(${invoices.totalAmount}), 0)`
+            })
+            .from(customers)
+            .leftJoin(invoices, and(
+              eq(customers.id, invoices.customerId),
+              eq(invoices.status, 'paid')
+            ))
+            .where(and(
+              eq(customers.companyId, companyId),
+              gte(customers.createdAt, sql`NOW() - INTERVAL '12 months'`)
+            ))
+            .groupBy(sql`TO_CHAR(${customers.createdAt}, 'Mon YYYY')`, sql`TO_CHAR(${customers.createdAt}, 'YYYY-MM')`)
+            .orderBy(sql`TO_CHAR(${customers.createdAt}, 'YYYY-MM')`);
+
+          res.json({ data: customerAcquisition, reportType: 'customer-acquisition' });
+          break;
+        }
+
+        default:
+          res.status(400).json({ message: "Unknown customer report type" });
+      }
+    } catch (error) {
+      console.error("Customer analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch customer analytics" });
+    }
+  });
+
+  app.get("/api/business-reports/inventory-analytics/:reportId", requireAuth, async (req, res) => {
+    try {
+      const { reportId } = req.params;
+      const { companyId } = req.user;
+      
+      switch(reportId) {
+        case 'inventory-valuation': {
+          const inventoryValuation = await db
+            .select({
+              productId: products.id,
+              productName: products.name,
+              categoryName: productCategories.name,
+              currentStock: products.stockQuantity,
+              costPrice: products.cost,
+              sellingPrice: products.price,
+              totalValue: sql<number>`${products.stockQuantity} * ${products.cost}`,
+              potentialRevenue: sql<number>`${products.stockQuantity} * ${products.price}`
+            })
+            .from(products)
+            .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
+            .where(and(
+              eq(products.companyId, companyId),
+              eq(products.isActive, true),
+              gt(products.stockQuantity, 0)
+            ))
+            .orderBy(desc(sql`${products.stockQuantity} * ${products.cost}`));
+
+          res.json({ data: inventoryValuation, reportType: 'inventory-valuation' });
+          break;
+        }
+
+        case 'slow-moving': {
+          const slowMovingStock = await db
+            .select({
+              productId: products.id,
+              productName: products.name,
+              categoryName: productCategories.name,
+              currentStock: products.stockQuantity,
+              costPrice: products.cost,
+              lastSaleDate: sql<Date>`MAX(${invoices.invoiceDate})`,
+              daysSinceLastSale: sql<number>`EXTRACT(DAYS FROM NOW() - MAX(${invoices.invoiceDate}))`,
+              totalValue: sql<number>`${products.stockQuantity} * ${products.cost}`
+            })
+            .from(products)
+            .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
+            .leftJoin(invoiceItems, eq(products.id, invoiceItems.productId))
+            .leftJoin(invoices, eq(invoiceItems.invoiceId, invoices.id))
+            .where(and(
+              eq(products.companyId, companyId),
+              eq(products.isActive, true),
+              gt(products.stockQuantity, 0)
+            ))
+            .groupBy(products.id, products.name, productCategories.name, products.stockQuantity, products.cost)
+            .having(or(
+              isNull(sql`MAX(${invoices.invoiceDate})`),
+              lt(sql`MAX(${invoices.invoiceDate})`, sql`NOW() - INTERVAL '90 days'`)
+            ))
+            .orderBy(desc(sql`EXTRACT(DAYS FROM NOW() - MAX(${invoices.invoiceDate}))`));
+
+          res.json({ data: slowMovingStock, reportType: 'slow-moving' });
+          break;
+        }
+
+        default:
+          res.status(400).json({ message: "Unknown inventory report type" });
+      }
+    } catch (error) {
+      console.error("Inventory analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch inventory analytics" });
+    }
+  });
+
+  app.get("/api/business-reports/supplier-analytics/:reportId", requireAuth, async (req, res) => {
+    try {
+      const { reportId } = req.params;
+      const { companyId } = req.user;
+      
+      switch(reportId) {
+        case 'supplier-performance': {
+          const supplierPerformance = await db
+            .select({
+              supplierId: suppliers.id,
+              supplierName: suppliers.name,
+              supplierEmail: suppliers.email,
+              totalPurchases: sql<number>`SUM(${purchaseOrders.totalAmount})`,
+              orderCount: sql<number>`COUNT(${purchaseOrders.id})`,
+              avgOrderValue: sql<number>`AVG(${purchaseOrders.totalAmount})`,
+              lastOrderDate: sql<Date>`MAX(${purchaseOrders.orderDate})`
+            })
+            .from(suppliers)
+            .innerJoin(purchaseOrders, eq(suppliers.id, purchaseOrders.supplierId))
+            .where(and(
+              eq(suppliers.companyId, companyId),
+              eq(purchaseOrders.status, 'completed')
+            ))
+            .groupBy(suppliers.id, suppliers.name, suppliers.email)
+            .orderBy(desc(sql`SUM(${purchaseOrders.totalAmount})`));
+
+          res.json({ data: supplierPerformance, reportType: 'supplier-performance' });
+          break;
+        }
+
+        default:
+          res.status(400).json({ message: "Unknown supplier report type" });
+      }
+    } catch (error) {
+      console.error("Supplier analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch supplier analytics" });
+    }
+  });
+
+  app.get("/api/business-reports/profitability/:reportId", requireAuth, async (req, res) => {
+    try {
+      const { reportId } = req.params;
+      const { companyId } = req.user;
+      
+      switch(reportId) {
+        case 'profit-by-product': {
+          const productProfitability = await db
+            .select({
+              productId: invoiceItems.productId,
+              productName: products.name,
+              totalRevenue: sql<number>`SUM(${invoiceItems.lineTotal})`,
+              totalCost: sql<number>`SUM(${invoiceItems.quantity} * ${products.cost})`,
+              grossProfit: sql<number>`SUM(${invoiceItems.lineTotal}) - SUM(${invoiceItems.quantity} * ${products.cost})`,
+              grossMargin: sql<number>`ROUND((SUM(${invoiceItems.lineTotal}) - SUM(${invoiceItems.quantity} * ${products.cost})) / SUM(${invoiceItems.lineTotal}) * 100, 2)`,
+              unitsSold: sql<number>`SUM(${invoiceItems.quantity})`
+            })
+            .from(invoiceItems)
+            .innerJoin(invoices, eq(invoiceItems.invoiceId, invoices.id))
+            .innerJoin(products, eq(invoiceItems.productId, products.id))
+            .where(and(
+              eq(invoices.companyId, companyId),
+              eq(invoices.status, 'paid')
+            ))
+            .groupBy(invoiceItems.productId, products.name)
+            .orderBy(desc(sql`SUM(${invoiceItems.lineTotal}) - SUM(${invoiceItems.quantity} * ${products.cost})`));
+
+          res.json({ data: productProfitability, reportType: 'profit-by-product' });
+          break;
+        }
+
+        default:
+          res.status(400).json({ message: "Unknown profitability report type" });
+      }
+    } catch (error) {
+      console.error("Profitability analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch profitability analytics" });
+    }
+  });
+
+  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, and Business Reports Analytics!");
   return httpServer;
 }
