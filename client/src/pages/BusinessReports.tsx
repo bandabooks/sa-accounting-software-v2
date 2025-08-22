@@ -516,8 +516,34 @@ const BusinessReports = () => {
       queryKey: ['business-report', report.id],
       queryFn: async () => {
         if (!apiEndpoint) return null;
-        const response = await fetch(apiEndpoint);
-        if (!response.ok) throw new Error('Failed to fetch report data');
+        const token = localStorage.getItem('authToken');
+        const sessionToken = localStorage.getItem('sessionToken');
+        const companyId = localStorage.getItem('activeCompanyId');
+        
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        if (sessionToken) {
+          headers['X-Session-Token'] = sessionToken;
+        }
+        
+        if (companyId) {
+          headers['X-Company-ID'] = companyId;
+        }
+        
+        const response = await fetch(apiEndpoint, {
+          credentials: 'include',
+          headers,
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch report data: ${response.status} ${errorText}`);
+        }
         return response.json();
       },
       enabled: !!apiEndpoint,
