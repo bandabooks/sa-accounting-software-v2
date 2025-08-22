@@ -8640,25 +8640,44 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Create a default bank account for the new company
+  // Create default bank accounts for the new company linked to Chart of Accounts
   async createDefaultBankAccount(companyId: number): Promise<void> {
     try {
-      const defaultBankAccount = {
-        companyId,
-        accountName: 'Primary Bank Account',
-        bankName: '',
-        accountNumber: '',
-        branchCode: '',
-        accountType: 'cheque' as const,
-        balance: '0.00',
-        currency: 'ZAR',
-        isActive: true,
-      };
+      // Find Chart of Accounts bank entries for this company
+      const chartBankAccounts = await db.select()
+        .from(chartOfAccounts)
+        .where(
+          and(
+            eq(chartOfAccounts.companyId, companyId),
+            eq(chartOfAccounts.accountType, "Asset"),
+            gte(chartOfAccounts.accountCode, "1100"),
+            lte(chartOfAccounts.accountCode, "1199"),
+            eq(chartOfAccounts.isActive, true)
+          )
+        )
+        .orderBy(chartOfAccounts.accountCode);
 
-      await db.insert(bankAccounts).values(defaultBankAccount);
-      console.log(`✓ Created default bank account for company ${companyId}`);
+      // Create bank_accounts records that map to Chart of Accounts
+      for (const chartAccount of chartBankAccounts) {
+        const bankAccountData = {
+          companyId,
+          chartAccountId: chartAccount.id,
+          accountName: chartAccount.accountName,
+          bankName: 'Bank',
+          accountNumber: chartAccount.accountCode,
+          branchCode: '',
+          accountType: 'current' as const,
+          currentBalance: '0.00',
+          currency: 'ZAR',
+          isActive: true,
+        };
+
+        await db.insert(bankAccounts).values(bankAccountData);
+      }
+      
+      console.log(`✓ Created ${chartBankAccounts.length} default bank accounts for company ${companyId} linked to Chart of Accounts`);
     } catch (error) {
-      console.error(`Error creating default bank account for company ${companyId}:`, error);
+      console.error(`Error creating default bank accounts for company ${companyId}:`, error);
       // Don't throw - bank account can be set up later
     }
   }
