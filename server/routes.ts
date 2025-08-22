@@ -7593,15 +7593,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = user.user?.companyId || 2;
       const showAll = req.query.showAll === 'true';
       
+      console.log(`📊 Fetching Chart of Accounts for company ${companyId}, showAll: ${showAll}`);
+      
       // By default, show only active accounts. Use showAll=true to see all accounts
       const accounts = showAll 
         ? await storage.getAllChartOfAccounts(companyId)
         : await storage.getActiveChartOfAccounts(companyId);
       
-      res.json(accounts);
+      console.log(`📊 Found ${accounts?.length || 0} accounts for company ${companyId}`);
+      
+      // Ensure we always return an array
+      const result = Array.isArray(accounts) ? accounts : [];
+      res.json(result);
     } catch (error) {
       console.error("Error fetching chart of accounts:", error);
-      res.status(500).json({ error: "Failed to fetch chart of accounts" });
+      // Always return an empty array instead of an error to prevent UI crash
+      res.json([]);
     }
   });
 
