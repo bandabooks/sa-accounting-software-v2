@@ -1548,7 +1548,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      const companyId = req.user.companyId;
+      // Get current user's full info to access activeCompanyId
+      const user = await storage.getUser(req.user!.id);
+      const companyId = user?.activeCompanyId || req.user.companyId;
+      
+      console.log(`→ Fetching customers for company ${companyId}, user: ${req.user?.username}`);
       
       // Set cache headers
       res.set('Cache-Control', 'private, max-age=180'); // 3 minutes
@@ -1558,6 +1562,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         () => storage.getAllCustomers(companyId), 
         180000 // 3 minutes cache
       );
+      
+      console.log(`→ Found ${customers?.length || 0} customers for company ${companyId}`);
       
       if (search && typeof search === 'string') {
         const filteredCustomers = customers.filter(customer => 
@@ -1571,6 +1577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(customers);
     } catch (error) {
+      console.error("Error fetching customers:", error);
       res.status(500).json({ message: "Failed to fetch customers" });
     }
   });
