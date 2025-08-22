@@ -2316,8 +2316,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Payment request body:", req.body);
       
-      // Add default companyId if not provided (for backwards compatibility)
-      const companyId = req.body.companyId || 2; // Default company ID
+      // Get companyId from authenticated user context (no default fallback)
+      const companyId = (req as any).user?.companyId || req.body.companyId;
       
       // Store the original Chart of Accounts ID before setting bankAccountId to null
       const chartAccountId = req.body.bankAccountId;
