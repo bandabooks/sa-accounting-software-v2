@@ -6678,90 +6678,46 @@ export class DatabaseStorage implements IStorage {
   async activateEssentialBusinessAccounts(companyId: number): Promise<void> {
     // Define essential account codes that should be active by default
     const essentialAccountCodes = [
-      // Assets - Essential for business operations
-      '1100', // Bank Account - Current  
-      '1101', // Bank Account - Savings
-      '1110', // Petty Cash
-      '1150', // Accounts Receivable
-      '1200', // Inventory
-      '1300', // Equipment
-      '1400', // Vehicles
-      '1500', // Furniture & Fixtures
-      '1800', // Computer Equipment
+      // Cash and Banking (Essential for all businesses)
+      '1000', '1001', '1002', '1004', // Cash, Petty Cash, Bank Savings, Foreign Currency
+      '1100', '1101', '1102', '1103', // Bank Current, Bank Savings, Credit Card, Money Market
       
-      // Liabilities - Essential for business operations  
-      '2000', // Accounts Payable
-      '2100', // Credit Cards
-      '2200', // VAT Output
-      '2300', // PAYE Payable
-      '2400', // UIF Payable
-      '2500', // SDL Payable
-      '2600', // WCA Payable
+      // Core Receivables/Payables (Essential for all businesses)
+      '1200', '1201', '2100', '2101', // Accounts Receivable, AR Trade, Accounts Payable, AP Trade
       
-      // Equity - Essential 
-      '3000', // Owner's Equity
-      '3100', // Retained Earnings
+      // VAT Accounts (Essential in South Africa)
+      '1105', '2003', // VAT Input, VAT Output
       
-      // Revenue - Essential for sales
-      '4000', // Sales Revenue
-      '4001', // Service Revenue
+      // Basic Equity (Essential for all businesses)
+      '3000', '3100', '3200', // Share Capital, Retained Earnings, Current Year Earnings
       
-      // Cost of Goods Sold - Essential for product businesses
+      // Core Revenue (Essential for all businesses)
+      '4000', '4001', '4002', '4100', '4101', // Sales Revenue, Product Sales, Service Revenue, Other Revenue, Interest Income
+      
+      // Common Administrative Expenses (Essential for all businesses)
+      '6000', '6001', '6100', '6101', '6102', '6103', '6104', '6106', '6107', // Admin Expenses, Salaries, Office Rent, Utilities, Electricity, Water, Phone, Office Supplies, Stationery
+      '6200', '6201', '6202', // Professional Fees, Legal Fees, Accounting Fees
+      '6702', // Bank Charges
+      
+      // Common Assets (Most businesses need these)
+      '1500', '1600', '1605', '1700', // Other Current Assets, Property Plant Equipment, Computer Equipment, Intangible Assets
+      
+      // Basic Cost of Goods (For businesses that sell products)
       '5000', // Cost of Goods Sold
-      '5100', // Direct Materials
-      '5200', // Direct Labor
-      '5300', // Manufacturing Overhead
       
-      // Expenses - Essential for operations (49 common expense accounts)
-      '6000', // Administrative Expenses  
-      '6001', // Accounting & Professional Fees
-      '6002', // Legal Fees
-      '6003', // Consulting Fees
-      '6004', // Audit Fees
-      '6100', // Office Supplies
-      '6101', // Utilities
-      '6102', // Telephone & Internet
-      '6103', // Software & Subscriptions
-      '6104', // Office Equipment
-      '6105', // Computer Equipment
-      '6106', // Repairs & Maintenance
-      '6200', // Travel & Entertainment
-      '6201', // Travel Expenses
-      '6202', // Meals & Entertainment
-      '6203', // Accommodation
-      '6204', // Vehicle Expenses
-      '6300', // Rent & Property
-      '6301', // Office Rent
-      '6302', // Equipment Lease
-      '6303', // Property Insurance
-      '6304', // Property Taxes
-      '6400', // Marketing & Advertising
-      '6401', // Online Advertising
-      '6402', // Print Advertising
-      '6403', // Marketing Materials
-      '6404', // Trade Shows
-      '6500', // Insurance
-      '6501', // General Liability
-      '6502', // Professional Indemnity
-      '6503', // Vehicle Insurance
-      '6600', // Bank & Finance Charges
-      '6601', // Bank Charges
-      '6602', // Interest Expense
-      '6603', // Credit Card Fees
-      '6604', // Loan Interest
-      '6700', // Employee Expenses
-      '6701', // Salaries & Wages
-      '6702', // Employee Benefits
-      '6703', // Training & Development
-      '6704', // Recruitment Costs
-      '6800', // Operations
-      '6801', // Postage & Courier
-      '6802', // Cleaning
-      '6803', // Security
-      '6804', // Waste Removal
-      '6900', // Depreciation
-      '6901', // Equipment Depreciation
-      '6902', // Vehicle Depreciation
+      // Additional common expenses
+      '6300', '6301', // Marketing & Advertising, Website & Online Marketing
+      '6400', '6401', // Travel & Accommodation, Local Travel
+      '6500', '6501', '6502', '6503', // Motor Vehicle Expenses, Fuel, Vehicle Maintenance, Vehicle Insurance
+      '6600', '6601', '6603', // Insurance, Building Insurance, Public Liability Insurance
+      '6700', '6701', // Finance Costs, Interest Expense
+      
+      // Payroll related (Essential for businesses with employees)
+      '2120', '2121', '2122', '2123', // PAYE, UIF, SDL, WCA Payable
+      '6002', '6003', '6004', '6005', '6006', '6007', // Employee Benefits, Pension, Medical Aid, UIF, SDL, WCA Contributions
+      
+      // Depreciation (Common for businesses with assets)
+      '6800', '6801', '6804', '6805' // Depreciation, Depreciation Buildings, Computer Equipment, Motor Vehicles
     ];
 
     // Get all accounts for this company that match essential codes
