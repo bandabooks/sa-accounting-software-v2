@@ -2312,29 +2312,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/payments", async (req, res) => {
     try {
       console.log("Payment request body:", req.body);
       
-      // Get companyId from authenticated user context
-      const companyId = req.user.companyId;
+      // Add default companyId if not provided (for backwards compatibility)
+      const companyId = req.body.companyId || 2; // Default company ID
       
-      // Store the original Chart of Accounts ID before setting bankAccountId to null
-      const chartAccountId = req.body.bankAccountId;
+      // Map Chart of Accounts ID to bank_accounts ID if needed
+      let bankAccountId = req.body.bankAccountId;
       
-      // For now, we'll set bankAccountId to undefined since we're using Chart of Accounts directly
-      // The bank account information is tracked through journal entries
+      // Check if the bankAccountId is actually a Chart of Accounts ID (usually > 100)
+      if (bankAccountId && bankAccountId > 100) {
+        // This is likely a Chart of Accounts ID, map it to bank_accounts ID
+        const bankAccountMapping = await storage.getBankAccountByChartId(bankAccountId, companyId);
+        if (bankAccountMapping) {
+          console.log(`Mapped Chart of Accounts ID ${bankAccountId} to bank_accounts ID ${bankAccountMapping.id}`);
+          bankAccountId = bankAccountMapping.id;
+        } else {
+          console.error(`No bank account found for Chart of Accounts ID ${bankAccountId}`);
+          return res.status(400).json({ message: "Invalid bank account selected" });
+        }
+      }
+      
       const paymentData = {
         ...req.body,
-        bankAccountId: undefined, // Set to undefined as we're using Chart of Accounts directly
+        bankAccountId,
         companyId
       };
       
       const validatedData = insertPaymentSchema.parse(paymentData);
       console.log("Validated payment data:", validatedData);
       
-      // Create the payment with the Chart of Accounts ID
-      const payment = await storage.createPayment(validatedData, chartAccountId);
+      // Create the payment
+      const payment = await storage.createPayment(validatedData);
       
       // Get real-time updates for frontend
       const [bankAccounts, dashboardStats, invoiceUpdate] = await Promise.all([

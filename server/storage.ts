@@ -3411,14 +3411,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createPayment(insertPayment: InsertPayment, chartAccountId?: number): Promise<Payment> {
+  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
     const [payment] = await db
       .insert(payments)
       .values(insertPayment)
       .returning();
     
-    // Skip bank account balance update since we're using Chart of Accounts directly
-    // Bank balances are tracked through journal entries automatically
+    // Update bank account balance if bankAccountId is provided
+    if (insertPayment.bankAccountId && insertPayment.status === 'completed') {
+      await this.updateBankAccountBalance(
+        insertPayment.bankAccountId, 
+        parseFloat(insertPayment.amount)
+      );
+    }
     
     // Update invoice status and amount based on payments
     if (insertPayment.invoiceId) {
@@ -3426,7 +3431,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Create journal entry for payment
-    await this.createPaymentJournalEntry(payment.id, chartAccountId);
+    await this.createPaymentJournalEntry(payment.id);
     
     return payment;
   }
@@ -7138,14 +7143,14 @@ export class DatabaseStorage implements IStorage {
   // Banking Implementation - Get bank accounts from Chart of Accounts
   async getBankAccountsFromChartOfAccounts(companyId: number): Promise<any[]> {
     try {
-      // Get bank accounts from Chart of Accounts (Asset type, codes 1100-1199 to include all bank accounts)
+      // Get bank accounts from Chart of Accounts (Asset type, codes 1110-1199)
       const bankAccounts = await db.select()
         .from(chartOfAccounts)
         .where(
           and(
             eq(chartOfAccounts.companyId, companyId),
             eq(chartOfAccounts.accountType, "Asset"),
-            gte(chartOfAccounts.accountCode, "1100"),
+            gte(chartOfAccounts.accountCode, "1110"),
             lte(chartOfAccounts.accountCode, "1199"),
             eq(chartOfAccounts.isActive, true)
           )
@@ -8295,24 +8300,21 @@ export class DatabaseStorage implements IStorage {
     return this.createJournalEntry(entry, lines);
   }
 
-  async createPaymentJournalEntry(paymentId: number, bankAccountChartId?: number): Promise<JournalEntryWithLines> {
+  async createPaymentJournalEntry(paymentId: number): Promise<JournalEntryWithLines> {
     const payment = await db.select().from(payments)
       .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
       .innerJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(bankAccounts, eq(payments.bankAccountId, bankAccounts.id))
+      .leftJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
       .where(eq(payments.id, paymentId));
 
     if (!payment.length) throw new Error("Payment not found");
 
     const paymentData = payment[0];
     
-    // Use the provided Chart of Accounts ID for the bank account, or default to Bank Account - Current
-    let bankAccount;
-    if (bankAccountChartId) {
-      bankAccount = await this.getChartOfAccount(bankAccountChartId);
-    } else {
-      bankAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1100"); // Bank Account - Current as fallback
-    }
-    
+    // Use the specific bank account selected for the payment, or default to Bank Account - Current
+    const bankAccount = paymentData.chart_of_accounts || 
+      await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1100"); // Bank Account - Current as fallback
     const receivablesAccount = await this.getChartOfAccountByCode(paymentData.invoices.companyId, "1150"); // Accounts Receivable
 
     if (!bankAccount || !receivablesAccount) {
@@ -8640,44 +8642,25 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Create default bank accounts for the new company linked to Chart of Accounts
+  // Create a default bank account for the new company
   async createDefaultBankAccount(companyId: number): Promise<void> {
     try {
-      // Find Chart of Accounts bank entries for this company
-      const chartBankAccounts = await db.select()
-        .from(chartOfAccounts)
-        .where(
-          and(
-            eq(chartOfAccounts.companyId, companyId),
-            eq(chartOfAccounts.accountType, "Asset"),
-            gte(chartOfAccounts.accountCode, "1100"),
-            lte(chartOfAccounts.accountCode, "1199"),
-            eq(chartOfAccounts.isActive, true)
-          )
-        )
-        .orderBy(chartOfAccounts.accountCode);
+      const defaultBankAccount = {
+        companyId,
+        accountName: 'Primary Bank Account',
+        bankName: '',
+        accountNumber: '',
+        branchCode: '',
+        accountType: 'cheque' as const,
+        balance: '0.00',
+        currency: 'ZAR',
+        isActive: true,
+      };
 
-      // Create bank_accounts records that map to Chart of Accounts
-      for (const chartAccount of chartBankAccounts) {
-        const bankAccountData = {
-          companyId,
-          chartAccountId: chartAccount.id,
-          accountName: chartAccount.accountName,
-          bankName: 'Bank',
-          accountNumber: chartAccount.accountCode,
-          branchCode: '',
-          accountType: 'current' as const,
-          currentBalance: '0.00',
-          currency: 'ZAR',
-          isActive: true,
-        };
-
-        await db.insert(bankAccounts).values(bankAccountData);
-      }
-      
-      console.log(`✓ Created ${chartBankAccounts.length} default bank accounts for company ${companyId} linked to Chart of Accounts`);
+      await db.insert(bankAccounts).values(defaultBankAccount);
+      console.log(`✓ Created default bank account for company ${companyId}`);
     } catch (error) {
-      console.error(`Error creating default bank accounts for company ${companyId}:`, error);
+      console.error(`Error creating default bank account for company ${companyId}:`, error);
       // Don't throw - bank account can be set up later
     }
   }
