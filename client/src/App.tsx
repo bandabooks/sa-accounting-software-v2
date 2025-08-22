@@ -176,6 +176,7 @@ import AppLayout from "@/components/layout/app-layout";
 import { AIHealthBanner } from "@/components/ai-assistant/AIHealthBanner";
 import AIMonitorPage from "@/pages/ai-monitor";
 import AuditTrail from "@/pages/audit-trail";
+import { SubscriptionProtectedRoute } from "@/components/SubscriptionProtectedRoute";
 
 // Permission constants for route protection
 const PERMISSIONS = {
@@ -261,12 +262,16 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/expenses">
           <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
-            <ExpensesStandalone />
+            <SubscriptionProtectedRoute featureKey="expenses">
+              <ExpensesStandalone />
+            </SubscriptionProtectedRoute>
           </ProtectedRoute>
         </Route>
         <Route path="/bills">
           <ProtectedRoute permission={PERMISSIONS.EXPENSES_VIEW}>
-            <BillsPage />
+            <SubscriptionProtectedRoute featureKey="expenses">
+              <BillsPage />
+            </SubscriptionProtectedRoute>
           </ProtectedRoute>
         </Route>
         <Route path="/bills/create">
@@ -398,22 +403,30 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/purchase-dashboard">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
-            <PurchaseDashboard />
+            <SubscriptionProtectedRoute featureKey="purchases">
+              <PurchaseDashboard />
+            </SubscriptionProtectedRoute>
           </ProtectedRoute>
         </Route>
         <Route path="/suppliers">
           <ProtectedRoute permission={PERMISSIONS.SUPPLIERS_VIEW}>
-            <Suppliers />
+            <SubscriptionProtectedRoute featureKey="suppliers">
+              <Suppliers />
+            </SubscriptionProtectedRoute>
           </ProtectedRoute>
         </Route>
         <Route path="/purchase-orders/create">
           <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_CREATE}>
-            <PurchaseOrderCreate />
+            <SubscriptionProtectedRoute featureKey="purchases">
+              <PurchaseOrderCreate />
+            </SubscriptionProtectedRoute>
           </ProtectedRoute>
         </Route>
         <Route path="/purchase-orders">
           <ProtectedRoute permission={PERMISSIONS.PURCHASE_ORDERS_VIEW}>
-            <PurchaseOrders />
+            <SubscriptionProtectedRoute featureKey="purchases">
+              <PurchaseOrders />
+            </SubscriptionProtectedRoute>
           </ProtectedRoute>
         </Route>
         <Route path="/payment-flows">

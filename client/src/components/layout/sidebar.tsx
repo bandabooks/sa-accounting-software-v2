@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
+import { useSubscriptionNavigation } from "@/hooks/useSubscriptionNavigation";
+import { UpgradePrompt } from "@/components/navigation/UpgradePrompt";
 
 // Navigation group structure with module mapping - World-class reorganization (12 groups)
 const navigationGroups = [
@@ -237,6 +239,7 @@ interface NavigationGroupProps {
 
 function NavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle }: NavigationGroupProps) {
   const { isModuleAvailable } = useCompanySubscription();
+  const { canAccessPath, getUpgradeInfo, filterNavigationItems, isGroupVisible } = useSubscriptionNavigation();
   const [, setLocation] = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -288,14 +291,15 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
       return false;
     }
     
-    // Check subscription plan module availability
-    if (item.module && !isModuleAvailable(item.module)) {
+    // Use subscription navigation to check access
+    if (!canAccessPath(item.path)) {
       return false;
     }
     
     return true;
   });
 
+  // If no items are visible, return null to hide the entire group
   if (visibleItems.length === 0) return null;
 
   // Check if any item in the group is active
