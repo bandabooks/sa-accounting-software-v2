@@ -86,26 +86,7 @@ export default function CustomerDetail() {
     if (!customer || !invoices) return;
     
     try {
-      // Prepare enhanced statement data
-      const statementData = {
-        customer,
-        company: {
-          displayName: 'THINK MYBIZ ACCOUNTING',
-          email: 'accounts@thinkmybiz.com',
-          phone: '+27 66 210 5631'
-        },
-        invoices,
-        periodStart: invoices.length > 0 ? 
-          (typeof invoices[invoices.length - 1].issueDate === 'string' 
-            ? invoices[invoices.length - 1].issueDate 
-            : invoices[invoices.length - 1].issueDate.toISOString().split('T')[0]) 
-          : undefined,
-        periodEnd: new Date().toISOString().split('T')[0],
-        includePayments: true,
-        includePendingInvoices: true
-      };
-      
-      const pdf = await generateCustomerStatement(statementData);
+      const pdf = await generateCustomerStatement(customer, invoices);
       const fileName = `Statement_${customer.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
       
