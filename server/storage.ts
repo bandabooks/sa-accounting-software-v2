@@ -6654,12 +6654,13 @@ export class DatabaseStorage implements IStorage {
 
     if (existingAccounts.length === 0) {
       // Insert comprehensive South African IFRS-compliant Chart of Accounts
+      // All accounts start as INACTIVE by default, only essential ones will be activated later
       for (const account of SOUTH_AFRICAN_CHART_OF_ACCOUNTS) {
         try {
           await db.insert(chartOfAccounts).values({
             ...account,
             companyId,
-            isActive: true,
+            isActive: false, // Start all accounts as inactive
             level: account.level || 1,
             isSystemAccount: account.isSystemAccount || false,
             normalBalance: account.normalBalance || (
@@ -6673,55 +6674,138 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Activate essential business accounts by default
-      await this.activateEssentialBusinessAccounts(companyId);
+      console.log(`✓ Seeded ${SOUTH_AFRICAN_CHART_OF_ACCOUNTS.length} Chart of Accounts for company ${companyId} (all inactive initially)`);
     }
   }
 
-  // Helper method to get essential account codes
-  getEssentialAccountCodes(): string[] {
-    return [
-      // Cash and Banking (Essential for all businesses)
-      '1000', '1001', '1002', '1004', // Cash, Petty Cash, Bank Savings, Foreign Currency
-      '1100', '1101', '1102', '1103', // Bank Current, Bank Savings, Credit Card, Money Market
+  // Helper method to get industry-specific account codes
+  getIndustryAccountCodes(industryCode: string): string[] {
+    const coreBusinessAccounts = [
+      // CORE CASH & BANKING (Essential for all businesses)
+      '1001', '1100', '1101', '1102', // Petty Cash, Bank Current, Bank Savings, Credit Card
       
-      // Core Receivables/Payables (Essential for all businesses)
+      // CORE RECEIVABLES/PAYABLES (Essential for all businesses)
       '1200', '1201', '2100', '2101', // Accounts Receivable, AR Trade, Accounts Payable, AP Trade
       
-      // VAT Accounts (Essential in South Africa)
-      '1105', '2003', // VAT Input, VAT Output
+      // VAT ACCOUNTS (Essential in South Africa)
+      '1210', '2110', // VAT Input, VAT Output
       
-      // Basic Equity (Essential for all businesses)
-      '3000', '3100', '3200', // Share Capital, Retained Earnings, Current Year Earnings
+      // CORE EQUITY (Essential for all businesses)
+      '3100', '3200', '3300', // Share Capital, Retained Earnings, Current Year Earnings
       
-      // Core Revenue (Essential for all businesses)
-      '4000', '4001', '4002', '4100', '4101', // Sales Revenue, Product Sales, Service Revenue, Other Revenue, Interest Income
+      // CORE REVENUE (Essential for all businesses)
+      '4000', '4001', '4002', // Sales Revenue, Product Sales, Service Revenue
       
-      // Common Administrative Expenses (Essential for all businesses)
-      '6000', '6001', '6100', '6101', '6102', '6103', '6104', '6106', '6107', // Admin Expenses, Salaries, Office Rent, Utilities, Electricity, Water, Phone, Office Supplies, Stationery
-      '6200', '6201', '6202', // Professional Fees, Legal Fees, Accounting Fees
-      '6702', // Bank Charges
+      // ESSENTIAL ADMINISTRATIVE EXPENSES
+      '6000', '6001', '6100', '6101', '6102', '6103', '6104', // Admin Expenses, Salaries, Office Rent, Utilities, Electricity, Water, Phone
+      '6200', '6201', '6202', '6702', // Professional Fees, Legal Fees, Accounting Fees, Bank Charges
       
-      // Common Assets (Most businesses need these)
-      '1500', '1600', '1605', '1700', // Other Current Assets, Property Plant Equipment, Computer Equipment, Intangible Assets
+      // COMMON BUSINESS ASSETS
+      '1400', '1605', '1700', // Prepaid Expenses, Computer Equipment, Intangible Assets
       
-      // Basic Cost of Goods (For businesses that sell products)
-      '5000', // Cost of Goods Sold
+      // COMMON BUSINESS EXPENSES
+      '6300', '6301', '6400', '6401', // Marketing & Advertising, Website Marketing, Travel & Accommodation, Local Travel
+      '6600', '6701', // Insurance, Interest Expense
       
-      // Additional common expenses
-      '6300', '6301', // Marketing & Advertising, Website & Online Marketing
-      '6400', '6401', // Travel & Accommodation, Local Travel
-      '6500', '6501', '6502', '6503', // Motor Vehicle Expenses, Fuel, Vehicle Maintenance, Vehicle Insurance
-      '6600', '6601', '6603', // Insurance, Building Insurance, Public Liability Insurance
-      '6700', '6701', // Finance Costs, Interest Expense
-      
-      // Payroll related (Essential for businesses with employees)
-      '2120', '2121', '2122', '2123', // PAYE, UIF, SDL, WCA Payable
-      '6002', '6003', '6004', '6005', '6006', '6007', // Employee Benefits, Pension, Medical Aid, UIF, SDL, WCA Contributions
-      
-      // Depreciation (Common for businesses with assets)
-      '6800', '6801', '6804', '6805' // Depreciation, Depreciation Buildings, Computer Equipment, Motor Vehicles
+      // PAYROLL (For businesses with employees)
+      '2120', '2121', '2122', '6002', '6003', '6004', // PAYE, UIF, SDL, Employee Benefits, Pension, Medical Aid
     ];
+
+    // Industry-specific additions
+    const industrySpecific: Record<string, string[]> = {
+      'professional_services': [
+        ...coreBusinessAccounts,
+        // Professional services specific
+        '4003', '4004', '4005', // Consulting Fees, Legal Fees Revenue, Accounting Fees Revenue
+        '1300', '1301', // Work in Progress, Unbilled Receivables
+        '6203', '6604', '6902', '6903', // Professional Development, Professional Indemnity Insurance, Subscriptions, Training
+        '6106', '6107', // Office Supplies, Stationery
+        '1502', '2200', // Deposits Paid, Deferred Revenue
+      ],
+      'retail_wholesale': [
+        ...coreBusinessAccounts,
+        // Retail/Wholesale specific
+        '1302', '1303', '5000', '5001', // Inventory - Finished Goods, Merchandise, COGS, Purchase Returns
+        '6303', '6304', // Point of Sale Expenses, Merchant Fees
+        '1502', '6500', '6501', // Deposits, Vehicle Expenses, Fuel
+      ],
+      'technology': [
+        ...coreBusinessAccounts,
+        // Technology specific
+        '1701', '1702', '1703', // Software, Patents, Software Licenses
+        '4006', '4007', // Software License Revenue, Support Revenue
+        '6305', '6306', // Cloud Services, Development Tools
+      ],
+      'general': [
+        ...coreBusinessAccounts,
+        // General business additions
+        '5000', '6500', '6501', // COGS, Vehicle Expenses, Fuel
+      ]
+    };
+
+    return industrySpecific[industryCode] || industrySpecific['general'];
+  }
+
+  // NEW: Seed only industry-relevant Chart of Accounts (focused approach)
+  async seedIndustryChartOfAccounts(companyId: number, industryCode: string): Promise<void> {
+    // Check if accounts already exist
+    const existingAccounts = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(eq(chartOfAccounts.companyId, companyId));
+
+    if (existingAccounts.length === 0) {
+      // Get industry-specific account codes
+      const industryAccountCodes = this.getIndustryAccountCodes(industryCode);
+      
+      // Filter SOUTH_AFRICAN_CHART_OF_ACCOUNTS to only include industry-relevant accounts
+      const relevantAccounts = SOUTH_AFRICAN_CHART_OF_ACCOUNTS.filter(account => 
+        industryAccountCodes.includes(account.accountCode)
+      );
+
+      // Insert only relevant accounts for this industry
+      for (const account of relevantAccounts) {
+        try {
+          await db.insert(chartOfAccounts).values({
+            ...account,
+            companyId,
+            isActive: true, // Start accounts as ACTIVE since they're pre-filtered
+            level: account.level || 1,
+            isSystemAccount: account.isSystemAccount || false,
+            normalBalance: account.normalBalance || (
+              account.accountType === 'Asset' || account.accountType === 'Expense' || account.accountType === 'Cost of Goods Sold' 
+                ? 'Debit' 
+                : 'Credit'
+            ),
+          }).onConflictDoNothing();
+        } catch (error) {
+          console.warn(`Warning: Could not seed account ${account.accountCode} - ${account.accountName}:`, error);
+        }
+      }
+
+      console.log(`✓ Seeded ${relevantAccounts.length} industry-focused Chart of Accounts for company ${companyId} (${industryCode}) - ALL ACTIVE`);
+    }
+  }
+
+  // NEW: Auto-activate industry accounts (already activated in seeding, but ensure consistency)
+  async autoActivateIndustryAccounts(companyId: number, industryCode: string): Promise<void> {
+    const industryAccountCodes = this.getIndustryAccountCodes(industryCode);
+    
+    // Ensure all industry accounts are active
+    await db
+      .update(chartOfAccounts)
+      .set({ 
+        isActive: true, 
+        updatedAt: new Date() 
+      })
+      .where(
+        and(
+          eq(chartOfAccounts.companyId, companyId),
+          inArray(chartOfAccounts.accountCode, industryAccountCodes)
+        )
+      );
+
+    console.log(`✓ Auto-activated ${industryAccountCodes.length} ${industryCode} accounts for company ${companyId}`);
   }
 
   // Activate essential business accounts that every business needs
@@ -8478,23 +8562,22 @@ export class DatabaseStorage implements IStorage {
   // Initialize a new company with clean data and essential configurations
   async initializeNewCompany(companyId: number, industryCode: string, userId: number): Promise<void> {
     try {
-      // 1. Initialize Chart of Accounts based on industry template
-      if (industryCode && industryCode !== 'general') {
-        await this.activateIndustryChartOfAccounts(companyId, industryCode, userId);
-      } else {
-        await this.activateBasicChartOfAccounts(companyId, userId);
-      }
+      // 1. First, seed ONLY industry-relevant Chart of Accounts (focused approach)
+      await this.seedIndustryChartOfAccounts(companyId, industryCode);
+      
+      // 2. Auto-activate all seeded accounts (they're pre-filtered for industry)
+      await this.autoActivateIndustryAccounts(companyId, industryCode);
 
-      // 2. Initialize VAT types for the company
+      // 3. Initialize VAT types for the company
       await this.initializeCompanyVatTypes(companyId);
 
-      // 3. Initialize company settings with defaults
+      // 4. Initialize company settings with defaults
       await this.initializeCompanySettings(companyId);
 
-      // 4. Create initial bank account
+      // 5. Create initial bank account
       await this.createDefaultBankAccount(companyId);
 
-      console.log(`✓ New company ${companyId} initialized with clean data and essential configurations`);
+      console.log(`✓ New company ${companyId} initialized with focused ${industryCode} Chart of Accounts and essential configurations`);
     } catch (error) {
       console.error(`Error initializing company ${companyId}:`, error);
       throw error;

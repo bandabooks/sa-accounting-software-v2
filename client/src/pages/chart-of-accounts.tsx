@@ -106,6 +106,7 @@ const formatCurrency = (amount: string | number | null | undefined) => {
 export default function ChartOfAccounts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [showAllAccounts, setShowAllAccounts] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<ChartOfAccountWithBalance | null>(null);
   const [toggledAccountId, setToggledAccountId] = useState<number | null>(null);
@@ -113,7 +114,8 @@ export default function ChartOfAccounts() {
   const queryClient = useQueryClient();
 
   const { data: rawAccounts = [], isLoading, refetch: refetchAccounts } = useQuery({
-    queryKey: ["/api/chart-of-accounts"],
+    queryKey: ["/api/chart-of-accounts", { showAll: showAllAccounts }],
+    queryFn: () => apiRequest(`/api/chart-of-accounts${showAllAccounts ? '?showAll=true' : ''}`),
   });
 
   // Deduplication logic - keep only first occurrence of each account code
@@ -550,6 +552,16 @@ export default function ChartOfAccounts() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-background">
+              <Switch
+                checked={showAllAccounts}
+                onCheckedChange={setShowAllAccounts}
+                id="show-all-accounts"
+              />
+              <label htmlFor="show-all-accounts" className="text-sm font-medium cursor-pointer">
+                Show all accounts
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>
