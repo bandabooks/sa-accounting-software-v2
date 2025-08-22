@@ -15,6 +15,15 @@ Preferred communication style: Simple, everyday language.
 - Create rollback plan before making any modifications to core functionality
 - Document what works in production to prevent accidental regression
 
+**Subscription-Controlled Navigation System**: 
+- Comprehensive subscription-aware navigation implemented with dynamic UI updates
+- Every submenu item controllable by subscription toggles with feature key mapping
+- UpgradePrompt components show professional upgrade CTAs instead of "access denied" messages
+- SubscriptionProtectedRoute component enforces server-side access control
+- useSubscriptionNavigation hook provides centralized subscription logic
+- Navigation groups dynamically filter based on plan availability
+- Future-proof architecture supports easy addition of new subscription-controlled features
+
 ## Data Isolation & Security
 **Enterprise-Grade Multi-Company Architecture**: Bulletproof data isolation implemented with company_id-based row-level security across all business tables. Comprehensive security includes request-level validation, query-level filtering, result-level scrubbing, real-time monitoring, audit logging, and emergency isolation capabilities. Current security score: 95/100 with zero cross-company data leakage incidents.
 

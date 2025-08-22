@@ -483,10 +483,14 @@ function AuthenticatedApp() {
         </Route>
 
         <Route path="/products">
-          <Products />
+          <SubscriptionProtectedRoute featureKey="products_services">
+            <Products />
+          </SubscriptionProtectedRoute>
         </Route>
         <Route path="/products/create">
-          <ProductCreate />
+          <SubscriptionProtectedRoute featureKey="products_services">
+            <ProductCreate />
+          </SubscriptionProtectedRoute>
         </Route>
         <Route path="/products/:id/edit">
           <ProductEdit />
