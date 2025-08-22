@@ -6,11 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { insertCompanySchema } from "@shared/schema";
 import { z } from "zod";
+import { cn } from "@/lib/utils";
 
 interface CompanyCreationFormProps {
   isOpen: boolean;
@@ -84,6 +87,9 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
   });
 
   const [slugValidation, setSlugValidation] = useState({ isValid: true, message: '' });
+  
+  // Industry search state
+  const [industrySearchOpen, setIndustrySearchOpen] = useState(false);
 
   // Fetch subscription plans
   const { data: subscriptionPlans, isLoading: plansLoading } = useQuery({
@@ -431,27 +437,61 @@ export default function CompanyCreationForm({ isOpen, onClose, onSuccess }: Comp
               
               <div>
                 <Label htmlFor="industry" className="text-sm font-medium">Select your industry *</Label>
-                <Select 
-                  value={formData.industry}
-                  onValueChange={(value) => {
-                    handleInputChange('industry', value);
-                    // Clear custom industry if not "other"
-                    if (value !== 'other') {
-                      handleInputChange('customIndustry', '');
-                    }
-                  }}
-                >
-                  <SelectTrigger className="mt-1.5 h-11" data-testid="select-industry">
-                    <SelectValue placeholder="Choose your business industry" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {industryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={industrySearchOpen} onOpenChange={setIndustrySearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={industrySearchOpen}
+                      className="mt-1.5 h-11 w-full justify-between text-left font-normal"
+                      data-testid="button-industry-search"
+                    >
+                      {formData.industry 
+                        ? industryOptions.find((option) => option.value === formData.industry)?.label
+                        : "Search and select your business industry..."
+                      }
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Search industries..." 
+                        className="h-9"
+                      />
+                      <CommandList>
+                        <CommandEmpty>No industry found.</CommandEmpty>
+                        <CommandGroup>
+                          {industryOptions.map((option) => (
+                            <CommandItem
+                              key={option.value}
+                              value={option.label}
+                              onSelect={() => {
+                                handleInputChange('industry', option.value);
+                                
+                                // Clear custom industry if not "other"
+                                if (option.value !== 'other') {
+                                  handleInputChange('customIndustry', '');
+                                }
+                                
+                                setIndustrySearchOpen(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.industry === option.value ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {option.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <p className="text-xs text-gray-500 mt-1">This will determine your initial chart of accounts setup</p>
               </div>
 
