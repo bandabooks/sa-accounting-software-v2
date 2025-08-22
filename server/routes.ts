@@ -2312,12 +2312,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payments", async (req, res) => {
+  app.post("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       console.log("Payment request body:", req.body);
       
-      // Get companyId from authenticated user context (no default fallback)
-      const companyId = (req as any).user?.companyId || req.body.companyId;
+      // Get companyId from authenticated user context
+      const companyId = req.user.companyId;
       
       // Store the original Chart of Accounts ID before setting bankAccountId to null
       const chartAccountId = req.body.bankAccountId;
