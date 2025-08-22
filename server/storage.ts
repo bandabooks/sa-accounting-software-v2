@@ -6561,45 +6561,19 @@ export class DatabaseStorage implements IStorage {
 
   // Chart of Accounts Implementation
   async getAllChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
-    try {
-      // Get all accounts for this company directly
-      const accounts = await db
-        .select()
-        .from(chartOfAccounts)
-        .where(eq(chartOfAccounts.companyId, companyId))
-        .orderBy(chartOfAccounts.accountCode);
-      
-      console.log(`📊 Found ${accounts.length} raw accounts for company ${companyId}`);
-      
-      // If no accounts exist, auto-initialize with industry-specific accounts
-      if (accounts.length === 0) {
-        console.log(`📊 No Chart of Accounts found for company ${companyId}, auto-initializing...`);
-        await this.seedIndustryChartOfAccounts(companyId, 'professional_services');
-        
-        // Re-fetch after seeding
-        const newAccounts = await db
-          .select()
-          .from(chartOfAccounts)
-          .where(eq(chartOfAccounts.companyId, companyId))
-          .orderBy(chartOfAccounts.accountCode);
-          
-        return await Promise.all(newAccounts.map(async (account) => ({
-          ...account,
-          currentBalance: await this.calculateAccountBalance(account.id),
-          isActive: account.isActive,
-        })));
-      }
-      
-      return await Promise.all(accounts.map(async (account) => ({
-        ...account,
-        currentBalance: await this.calculateAccountBalance(account.id),
-        // Use the direct isActive field from the chart_of_accounts table
-        isActive: account.isActive,
-      })));
-    } catch (error) {
-      console.error('Error in getAllChartOfAccounts:', error);
-      return [];
-    }
+    // Get all accounts for this company directly
+    const accounts = await db
+      .select()
+      .from(chartOfAccounts)
+      .where(eq(chartOfAccounts.companyId, companyId))
+      .orderBy(chartOfAccounts.accountCode);
+    
+    return await Promise.all(accounts.map(async (account) => ({
+      ...account,
+      currentBalance: await this.calculateAccountBalance(account.id),
+      // Use the direct isActive field from the chart_of_accounts table
+      isActive: account.isActive,
+    })));
   }
 
   async getChartOfAccountById(id: number): Promise<ChartOfAccount | undefined> {
@@ -6609,32 +6583,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveChartOfAccounts(companyId: number): Promise<ChartOfAccountWithBalance[]> {
-    try {
-      const accounts = await db.select().from(chartOfAccounts)
-        .where(
-          and(
-            eq(chartOfAccounts.companyId, companyId),
-            eq(chartOfAccounts.isActive, true)
-          )
+    const accounts = await db.select().from(chartOfAccounts)
+      .where(
+        and(
+          eq(chartOfAccounts.companyId, companyId),
+          eq(chartOfAccounts.isActive, true)
         )
-        .orderBy(chartOfAccounts.accountCode);
+      )
+      .orderBy(chartOfAccounts.accountCode);
 
-      console.log(`📊 Found ${accounts.length} active accounts for company ${companyId}`);
-      
-      // If no active accounts exist, try to get all accounts and auto-initialize if needed
-      if (accounts.length === 0) {
-        console.log(`📊 No active Chart of Accounts found for company ${companyId}, checking all accounts...`);
-        return await this.getAllChartOfAccounts(companyId);
-      }
-
-      return await Promise.all(accounts.map(async (account) => ({
-        ...account,
-        currentBalance: await this.calculateAccountBalance(account.id),
-      })));
-    } catch (error) {
-      console.error('Error in getActiveChartOfAccounts:', error);
-      return [];
-    }
+    return await Promise.all(accounts.map(async (account) => ({
+      ...account,
+      currentBalance: await this.calculateAccountBalance(account.id),
+    })));
   }
 
   async toggleAccountActivation(accountId: number, isActive: boolean, companyId: number): Promise<ChartOfAccount | undefined> {

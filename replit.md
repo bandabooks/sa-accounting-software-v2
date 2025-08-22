@@ -15,13 +15,6 @@ Preferred communication style: Simple, everyday language.
 - Create rollback plan before making any modifications to core functionality
 - Document what works in production to prevent accidental regression
 
-**Chart of Accounts Auto-Population System**: 
-- Industry-focused Chart of Accounts auto-population implemented
-- Professional services gets ~50-60 essential accounts instead of 167 total accounts
-- Auto-initialization prevents white blank screen issues when no accounts exist
-- Defensive programming prevents API data format errors
-- Charts seed automatically during company creation or first access
-
 **Subscription-Controlled Navigation System**: 
 - Comprehensive subscription-aware navigation implemented with dynamic UI updates
 - Every submenu item controllable by subscription toggles with feature key mapping

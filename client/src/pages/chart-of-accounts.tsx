@@ -120,16 +120,10 @@ export default function ChartOfAccounts() {
 
   // Deduplication logic - keep only first occurrence of each account code
   const accounts = React.useMemo(() => {
-    // Defensive programming: ensure rawAccounts is an array
-    if (!Array.isArray(rawAccounts)) {
-      console.error('rawAccounts is not an array:', rawAccounts);
-      return [];
-    }
-
     const seen = new Set<string>();
     const deduplicatedAccounts: ChartOfAccountWithBalance[] = [];
     
-    rawAccounts.forEach((account: ChartOfAccountWithBalance) => {
+    (rawAccounts as ChartOfAccountWithBalance[]).forEach(account => {
       if (!seen.has(account.accountCode)) {
         seen.add(account.accountCode);
         deduplicatedAccounts.push(account);
