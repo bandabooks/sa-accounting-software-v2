@@ -116,7 +116,7 @@ import {
   insertApprovalWorkflowSchema,
   insertApprovalRequestSchema,
   insertBankIntegrationSchema,
-
+  insertCompanyEmailSettingsSchema,
 
   insertPaymentExceptionSchema,
   insertExceptionEscalationSchema,
@@ -16229,6 +16229,111 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, and Business Reports Analytics!");
+  // Company Email Settings API Routes
+  app.get("/api/company-email-settings", authenticate, requirePermission('settings:view'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+      
+      const settings = await storage.getCompanyEmailSettings(companyId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching company email settings:", error);
+      res.status(500).json({ message: "Failed to fetch email settings" });
+    }
+  });
+
+  app.post("/api/company-email-settings", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const validatedData = insertCompanyEmailSettingsSchema.parse({
+        ...req.body,
+        companyId
+      });
+
+      const settings = await storage.createCompanyEmailSettings(validatedData);
+      
+      await logAudit(req.user.id, 'CREATE', 'company_email_settings', settings.id, {
+        provider: settings.provider
+      });
+
+      res.json(settings);
+    } catch (error) {
+      console.error("Error creating company email settings:", error);
+      res.status(500).json({ message: "Failed to create email settings" });
+    }
+  });
+
+  app.put("/api/company-email-settings", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const settings = await storage.updateCompanyEmailSettings(companyId, req.body);
+      if (!settings) {
+        return res.status(404).json({ message: "Email settings not found" });
+      }
+
+      await logAudit(req.user.id, 'UPDATE', 'company_email_settings', settings.id, {
+        provider: settings.provider
+      });
+
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating company email settings:", error);
+      res.status(500).json({ message: "Failed to update email settings" });
+    }
+  });
+
+  app.delete("/api/company-email-settings", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const success = await storage.deleteCompanyEmailSettings(companyId);
+      if (!success) {
+        return res.status(404).json({ message: "Email settings not found" });
+      }
+
+      await logAudit(req.user.id, 'DELETE', 'company_email_settings', 0, {});
+
+      res.json({ message: "Email settings deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting company email settings:", error);
+      res.status(500).json({ message: "Failed to delete email settings" });
+    }
+  });
+
+  app.post("/api/company-email-settings/test", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const success = await storage.testCompanyEmailSettings(companyId);
+      
+      await logAudit(req.user.id, 'TEST', 'company_email_settings', 0, {
+        success
+      });
+
+      res.json({ success, message: success ? "Email settings test successful" : "Email settings test failed" });
+    } catch (error) {
+      console.error("Error testing company email settings:", error);
+      res.status(500).json({ message: "Failed to test email settings" });
+    }
+  });
+
+  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, and Company Email Settings!");
   return httpServer;
 }

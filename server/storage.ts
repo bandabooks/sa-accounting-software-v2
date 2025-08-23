@@ -612,6 +612,13 @@ export interface IStorage {
   // Supplier Payments
   getAllSupplierPayments(): Promise<SupplierPaymentWithSupplier[]>;
   getSupplierPaymentsBySupplier(supplierId: number): Promise<SupplierPayment[]>;
+
+  // Company Email Settings
+  getCompanyEmailSettings(companyId: number): Promise<CompanyEmailSettings | undefined>;
+  createCompanyEmailSettings(settings: InsertCompanyEmailSettings): Promise<CompanyEmailSettings>;
+  updateCompanyEmailSettings(companyId: number, settings: Partial<InsertCompanyEmailSettings>): Promise<CompanyEmailSettings | undefined>;
+  deleteCompanyEmailSettings(companyId: number): Promise<boolean>;
+  testCompanyEmailSettings(companyId: number): Promise<boolean>;
   getSupplierPaymentsByPurchaseOrder(purchaseOrderId: number): Promise<SupplierPayment[]>;
   createSupplierPayment(payment: InsertSupplierPayment): Promise<SupplierPayment>;
   updateSupplierPayment(id: number, payment: Partial<InsertSupplierPayment>): Promise<SupplierPayment | undefined>;
