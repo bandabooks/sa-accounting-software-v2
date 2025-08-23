@@ -2322,16 +2322,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Map Chart of Accounts ID to bank_accounts ID if needed
       let bankAccountId = req.body.bankAccountId;
       
-      // Check if the bankAccountId is actually a Chart of Accounts ID (usually > 100)
-      if (bankAccountId && bankAccountId > 100) {
-        // This is likely a Chart of Accounts ID, map it to bank_accounts ID
-        const bankAccountMapping = await storage.getBankAccountByChartId(bankAccountId, companyId);
-        if (bankAccountMapping) {
-          console.log(`Mapped Chart of Accounts ID ${bankAccountId} to bank_accounts ID ${bankAccountMapping.id}`);
-          bankAccountId = bankAccountMapping.id;
+      // Handle bank account ID mapping - first check if it's a valid bank account ID
+      if (bankAccountId) {
+        // First check if this is already a valid bank account ID
+        const directBankAccount = await storage.getBankAccount(bankAccountId);
+        if (directBankAccount && directBankAccount.companyId === companyId) {
+          console.log(`Using direct bank account ID ${bankAccountId}`);
+          // bankAccountId is already correct, no mapping needed
         } else {
-          console.error(`No bank account found for Chart of Accounts ID ${bankAccountId}`);
-          return res.status(400).json({ message: "Invalid bank account selected" });
+          // If not found as bank account, try mapping from chart of accounts ID
+          const bankAccountMapping = await storage.getBankAccountByChartId(bankAccountId, companyId);
+          if (bankAccountMapping) {
+            console.log(`Mapped Chart of Accounts ID ${bankAccountId} to bank_accounts ID ${bankAccountMapping.id}`);
+            bankAccountId = bankAccountMapping.id;
+          } else {
+            console.error(`No valid bank account found for ID ${bankAccountId}`);
+            return res.status(400).json({ message: "Invalid bank account selected" });
+          }
         }
       }
       
