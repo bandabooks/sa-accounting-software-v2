@@ -105,6 +105,7 @@ import Resources from "@/pages/resources";
 import Accountants from "@/pages/accountants";
 import TaxPractitioners from "@/pages/accountants/tax-practitioners";
 import Auditors from "@/pages/accountants/auditors";
+import PracticeDashboard from "@/pages/practice-dashboard";
 import Onboarding from "@/pages/onboarding";
 import SpendingWizard from "@/pages/spending-wizard";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
