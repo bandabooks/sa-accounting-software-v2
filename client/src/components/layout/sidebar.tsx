@@ -150,6 +150,16 @@ const navigationGroups = [
       { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" }
     ]
   },
+  // 8.5. Practice Management (for accounting professionals)
+  {
+    id: "practice",
+    label: "Practice Management",
+    icon: Briefcase,
+    module: "practice",
+    items: [
+      { path: "/practice/dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "DASHBOARD_VIEW", module: "practice" }
+    ]
+  },
   // 9. Reports and Analytics
   {
     id: "reports",
