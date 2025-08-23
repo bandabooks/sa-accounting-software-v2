@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useCompany } from "@/contexts/CompanyContext";
 import type { Customer, Invoice } from "@shared/schema";
 
 const paymentSchema = z.object({
@@ -31,6 +32,7 @@ export default function NewPayment() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { companyId } = useCompany();
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
@@ -57,7 +59,7 @@ export default function NewPayment() {
 
   const createMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
-      return await apiRequest("/api/payments", "POST", data);
+      return await apiRequest("/api/payments", "POST", { ...data, companyId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });

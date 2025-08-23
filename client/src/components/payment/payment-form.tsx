@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { CreditCard, DollarSign, Receipt, Banknote, CreditCard as CardIcon, Building2, Smartphone } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { apiRequest } from "@/lib/queryClient";
+import { useCompany } from "@/contexts/CompanyContext";
 
 const paymentFormSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
@@ -52,6 +53,7 @@ export default function PaymentForm({
   onPaymentAdded 
 }: PaymentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { companyId } = useCompany();
 
   // Fetch bank accounts
   const { data: bankAccounts = [] } = useQuery({
@@ -101,6 +103,7 @@ export default function PaymentForm({
           bankAccountId: parseInt(data.bankAccountId),
           invoiceId,
           status: "completed",
+          companyId,
         }),
       });
       

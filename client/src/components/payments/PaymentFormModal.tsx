@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useRealTimePayments } from "@/hooks/useRealTimePayments";
+import { useCompany } from "@/contexts/CompanyContext";
 
 const paymentFormSchema = z.object({
   invoiceId: z.coerce.number().min(1, "Please select an invoice"),
@@ -63,6 +64,7 @@ export function PaymentFormModal({
   invoiceAmount,
 }: PaymentFormModalProps) {
   const { handlePaymentSuccess } = useRealTimePayments();
+  const { companyId } = useCompany();
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentFormSchema),
@@ -97,6 +99,7 @@ export function PaymentFormModal({
           ...data,
           amount: data.amount.toString(),
           paymentDate: data.paymentDate.toISOString(),
+          companyId,
         }),
       });
       

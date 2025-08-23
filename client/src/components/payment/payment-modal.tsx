@@ -41,6 +41,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
+import { useCompany } from "@/contexts/CompanyContext";
 
 const paymentFormSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
@@ -72,6 +73,7 @@ export default function PaymentModal({
   invoiceNumber 
 }: PaymentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { companyId } = useCompany();
 
   // Fetch bank accounts
   const { data: bankAccounts = [] } = useQuery<any[]>({
@@ -125,6 +127,7 @@ export default function PaymentModal({
           bankAccountId: parseInt(data.bankAccountId),
           invoiceId,
           status: "completed",
+          companyId,
         }),
       });
 
