@@ -2312,12 +2312,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payments", async (req, res) => {
+  app.post("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       console.log("Payment request body:", req.body);
       
-      // Add default companyId if not provided (for backwards compatibility)
-      const companyId = req.body.companyId || 2; // Default company ID
+      // Get companyId from authenticated user (consistent with other routes)
+      const companyId = req.user?.companyId || req.body.companyId || 2;
       
       // Map Chart of Accounts ID to bank_accounts ID if needed
       let bankAccountId = req.body.bankAccountId;
