@@ -954,6 +954,14 @@ function AuthenticatedApp() {
             <ComplianceDocuments />
           </ProtectedRoute>
         </Route>
+
+        {/* Practice Management Routes */}
+        <Route path="/practice/dashboard">
+          <ProtectedRoute>
+            <PracticeDashboard />
+          </ProtectedRoute>
+        </Route>
+        
         <Route path="/ai-monitor">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <AIMonitorPage />
