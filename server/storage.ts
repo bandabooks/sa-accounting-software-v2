@@ -244,6 +244,8 @@ import {
   type InsertCompanySettings,
   type InventoryTransaction,
   type InsertInventoryTransaction,
+  type CompanyEmailSettings,
+  type InsertCompanyEmailSettings,
   type EmailReminder,
   type InsertEmailReminder,
   type CurrencyRate,
@@ -2096,6 +2098,27 @@ export class DatabaseStorage implements IStorage {
       ...invoice,
       customer,
       items
+    };
+  }
+
+  async getInvoiceWithCustomer(id: number): Promise<InvoiceWithCustomer | undefined> {
+    const result = await db
+      .select({
+        invoice: invoices,
+        customer: customers
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .where(eq(invoices.id, id))
+      .limit(1);
+
+    if (result.length === 0) return undefined;
+
+    const { invoice, customer } = result[0];
+    
+    return {
+      ...invoice,
+      customer
     };
   }
 
@@ -5157,6 +5180,67 @@ export class DatabaseStorage implements IStorage {
 
   async getInventoryTransactionsByProduct(productId: number): Promise<any[]> {
     return await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.productId, productId));
+  }
+
+  // Company Email Settings
+  async getCompanyEmailSettings(companyId: number): Promise<CompanyEmailSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(companyEmailSettings)
+      .where(eq(companyEmailSettings.companyId, companyId))
+      .limit(1);
+    return settings;
+  }
+
+  async createCompanyEmailSettings(settings: InsertCompanyEmailSettings): Promise<CompanyEmailSettings> {
+    const [newSettings] = await db.insert(companyEmailSettings).values(settings).returning();
+    return newSettings;
+  }
+
+  async updateCompanyEmailSettings(companyId: number, settings: Partial<InsertCompanyEmailSettings>): Promise<CompanyEmailSettings | undefined> {
+    const [updated] = await db
+      .update(companyEmailSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(companyEmailSettings.companyId, companyId))
+      .returning();
+    return updated;
+  }
+
+  async deleteCompanyEmailSettings(companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(companyEmailSettings)
+      .where(eq(companyEmailSettings.companyId, companyId));
+    return result.rowCount > 0;
+  }
+
+  async testCompanyEmailSettings(companyId: number): Promise<boolean> {
+    try {
+      const settings = await this.getCompanyEmailSettings(companyId);
+      if (!settings) return false;
+
+      // Update last test date
+      await db
+        .update(companyEmailSettings)
+        .set({ 
+          lastTestDate: new Date(),
+          errorMessage: null 
+        })
+        .where(eq(companyEmailSettings.companyId, companyId));
+
+      return true;
+    } catch (error) {
+      // Update error message
+      await db
+        .update(companyEmailSettings)
+        .set({ 
+          lastTestDate: new Date(),
+          errorMessage: error instanceof Error ? error.message : 'Test failed',
+          isVerified: false
+        })
+        .where(eq(companyEmailSettings.companyId, companyId));
+      
+      return false;
+    }
   }
 
   // Email Reminders

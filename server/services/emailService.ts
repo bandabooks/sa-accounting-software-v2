@@ -1,7 +1,7 @@
 import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
 import { db } from '../db';
-import { emailQueue, emailTemplates } from '@shared/schema';
+import { emailQueue, emailTemplates, companyEmailSettings } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 export interface EmailConfig {
@@ -46,12 +46,14 @@ export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private config: EmailConfig | null = null;
   private verifiedSenders: Set<string> = new Set();
+  private companyConfigs: Map<number, EmailConfig> = new Map();
 
   constructor() {
     void this.initializeService();
   }
 
   private async initializeService() {
+    // Initialize system-wide default config (fallback)
     // Try SendGrid first (preferred for production)
     if (process.env.SENDGRID_API_KEY) {
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -90,6 +92,58 @@ export class EmailService {
       if (process.env.SMTP_USER) {
         this.verifiedSenders.add(process.env.SMTP_USER);
       }
+    }
+  }
+
+  // Get company-specific email configuration
+  private async getCompanyEmailConfig(companyId: number): Promise<EmailConfig | null> {
+    if (this.companyConfigs.has(companyId)) {
+      return this.companyConfigs.get(companyId) || null;
+    }
+
+    try {
+      const [settings] = await db
+        .select()
+        .from(companyEmailSettings)
+        .where(and(
+          eq(companyEmailSettings.companyId, companyId),
+          eq(companyEmailSettings.isActive, true)
+        ))
+        .limit(1);
+
+      if (!settings) {
+        return null;
+      }
+
+      const config: EmailConfig = {
+        provider: settings.provider as 'sendgrid' | 'smtp',
+      };
+
+      if (settings.provider === 'sendgrid' && settings.sendgridApiKey) {
+        config.sendgrid = {
+          apiKey: settings.sendgridApiKey,
+          fromEmail: settings.sendgridFromEmail || 'noreply@company.com',
+          fromName: settings.sendgridFromName || 'Company Name',
+        };
+      } else if (settings.provider === 'smtp' && settings.smtpHost && settings.smtpUser) {
+        config.smtp = {
+          host: settings.smtpHost,
+          port: settings.smtpPort || 587,
+          secure: settings.smtpSecure || false,
+          auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPass || '',
+          },
+        };
+      } else {
+        return null; // Invalid configuration
+      }
+
+      this.companyConfigs.set(companyId, config);
+      return config;
+    } catch (error) {
+      console.error('Error fetching company email config:', error);
+      return null;
     }
   }
 
@@ -159,36 +213,33 @@ export class EmailService {
     priority?: number;
     fromEmail?: string; // Allow override but validate
   }) {
-    if (!this.config) {
-      throw new Error('Email service not configured. Please set SENDGRID_API_KEY or SMTP environment variables.');
+    // Try to get company-specific configuration first
+    let activeConfig = this.config;
+    
+    if (emailData.companyId) {
+      const companyConfig = await this.getCompanyEmailConfig(emailData.companyId);
+      if (companyConfig) {
+        activeConfig = companyConfig;
+        console.log(`Using company-specific email config for company ${emailData.companyId}`);
+      } else {
+        console.log(`No company-specific email config found for company ${emailData.companyId}, using system default`);
+      }
+    }
+
+    if (!activeConfig) {
+      throw new Error('Email service not configured. Please set SENDGRID_API_KEY/SMTP environment variables or configure company email settings.');
     }
 
     // Validate sender
     let fromEmail = emailData.fromEmail;
-    if (this.config.provider === 'sendgrid') {
-      fromEmail = fromEmail || this.config.sendgrid?.fromEmail || 'noreply@taxnify.co.za';
-      
-      // Check if sender is verified
-      if (!this.verifiedSenders.has(fromEmail)) {
-        const error: EmailError = {
-          code: 400,
-          message: 'Unverified sender email',
-          hint: `The sender email "${fromEmail}" is not verified. Please use a verified sender or configure SENDGRID_FROM_EMAIL.`
-        };
-        throw error;
-      }
+    if (activeConfig.provider === 'sendgrid') {
+      fromEmail = fromEmail || activeConfig.sendgrid?.fromEmail || 'noreply@taxnify.co.za';
     }
 
     try {
-      if (this.config.provider === 'sendgrid' && this.config.sendgrid) {
-        // Ensure API key is set
-        if (!process.env.SENDGRID_API_KEY) {
-          throw {
-            code: 500,
-            message: 'SendGrid API key not configured',
-            hint: 'Set SENDGRID_API_KEY environment variable'
-          };
-        }
+      if (activeConfig.provider === 'sendgrid' && activeConfig.sendgrid) {
+        // Set the API key for this request
+        sgMail.setApiKey(activeConfig.sendgrid.apiKey);
 
         // Use SendGrid
         const msg = {
@@ -196,8 +247,8 @@ export class EmailService {
           cc: emailData.cc,
           bcc: emailData.bcc,
           from: {
-            email: fromEmail || this.config.sendgrid.fromEmail,
-            name: this.config.sendgrid.fromName,
+            email: fromEmail || activeConfig.sendgrid.fromEmail,
+            name: activeConfig.sendgrid.fromName,
           },
           subject: emailData.subject,
           html: emailData.bodyHtml,
@@ -208,10 +259,12 @@ export class EmailService {
         console.log('Email sent via SendGrid:', response.statusCode);
         return { success: true, messageId: response.headers['x-message-id'] };
       } 
-      else if (this.config.provider === 'smtp' && this.transporter) {
+      else if (activeConfig.provider === 'smtp' && activeConfig.smtp) {
+        // Create transporter for company-specific SMTP
+        const companyTransporter = nodemailer.createTransporter(activeConfig.smtp);
         // Use SMTP
-        const info = await this.transporter.sendMail({
-          from: fromEmail || this.config.smtp?.auth.user,
+        const info = await companyTransporter.sendMail({
+          from: fromEmail || activeConfig.smtp?.auth.user,
           to: emailData.to,
           cc: emailData.cc,
           bcc: emailData.bcc,

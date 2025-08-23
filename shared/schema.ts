@@ -2630,6 +2630,33 @@ export const insertProductBundleSchema = createInsertSchema(productBundles).omit
   createdAt: true,
 });
 
+// Company Email Settings table
+export const companyEmailSettings = pgTable("company_email_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  provider: varchar("provider", { length: 20 }).notNull(), // 'sendgrid', 'smtp'
+  // SendGrid settings
+  sendgridApiKey: text("sendgrid_api_key"),
+  sendgridFromEmail: varchar("sendgrid_from_email", { length: 255 }),
+  sendgridFromName: varchar("sendgrid_from_name", { length: 255 }),
+  // SMTP settings
+  smtpHost: varchar("smtp_host", { length: 255 }),
+  smtpPort: integer("smtp_port"),
+  smtpSecure: boolean("smtp_secure").default(true),
+  smtpUser: varchar("smtp_user", { length: 255 }),
+  smtpPass: text("smtp_pass"), // Encrypted
+  // Common settings
+  isActive: boolean("is_active").default(true),
+  isVerified: boolean("is_verified").default(false),
+  lastTestDate: timestamp("last_test_date"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyUnique: unique().on(table.companyId),
+  companyIdx: index("company_email_settings_company_idx").on(table.companyId),
+}));
+
 // Email reminders table
 export const emailReminders = pgTable("email_reminders", {
   id: serial("id").primaryKey(),
@@ -2719,6 +2746,15 @@ export const insertInventoryTransactionSchema = createInsertSchema(inventoryTran
   updatedAt: true,
 });
 
+export const insertCompanyEmailSettingsSchema = createInsertSchema(companyEmailSettings).omit({
+  id: true,
+  isVerified: true,
+  lastTestDate: true,
+  errorMessage: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertEmailReminderSchema = createInsertSchema(emailReminders).omit({
   id: true,
   createdAt: true,
@@ -2748,6 +2784,9 @@ export type CompanySettings = typeof companySettings.$inferSelect;
 
 export type InsertInventoryTransaction = z.infer<typeof insertInventoryTransactionSchema>;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
+
+export type InsertCompanyEmailSettings = z.infer<typeof insertCompanyEmailSettingsSchema>;
+export type CompanyEmailSettings = typeof companyEmailSettings.$inferSelect;
 
 export type InsertEmailReminder = z.infer<typeof insertEmailReminderSchema>;
 export type EmailReminder = typeof emailReminders.$inferSelect;
