@@ -8700,13 +8700,13 @@ export class DatabaseStorage implements IStorage {
       const defaultSettings = {
         companyId,
         companyName: '', // Will be filled from company data
-        fiscalYearStart: '01-01',
+        fiscalYearStart: new Date('2024-01-01'),
         baseCurrency: 'ZAR',
         emailNotifications: true,
         smsNotifications: false,
         autoBackup: true,
         vatSubmissionFrequency: 'monthly',
-        vatSubmissionDate: '01',
+        vatSubmissionDate: 1,
         companyType: 'private',
         enableMultiCurrency: false,
         defaultPaymentTerms: 30,
@@ -8725,8 +8725,30 @@ export class DatabaseStorage implements IStorage {
   // Create a default bank account for the new company
   async createDefaultBankAccount(companyId: number): Promise<void> {
     try {
+      // Find a suitable chart account for bank account (cash or bank account)
+      const [bankChartAccount] = await db
+        .select()
+        .from(chartOfAccounts)
+        .where(
+          and(
+            eq(chartOfAccounts.companyId, companyId),
+            or(
+              like(chartOfAccounts.accountCode, '1001%'), // Bank accounts
+              like(chartOfAccounts.accountCode, '1000%')  // Cash accounts
+            ),
+            eq(chartOfAccounts.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (!bankChartAccount) {
+        console.log(`→ No suitable chart account found for bank account in company ${companyId}, skipping default bank account creation`);
+        return;
+      }
+
       const defaultBankAccount = {
         companyId,
+        chartAccountId: bankChartAccount.id,
         accountName: 'Primary Bank Account',
         bankName: '',
         accountNumber: '',
@@ -8738,7 +8760,7 @@ export class DatabaseStorage implements IStorage {
       };
 
       await db.insert(bankAccounts).values(defaultBankAccount);
-      console.log(`✓ Created default bank account for company ${companyId}`);
+      console.log(`✓ Created default bank account for company ${companyId} linked to chart account ${bankChartAccount.accountCode}`);
     } catch (error) {
       console.error(`Error creating default bank account for company ${companyId}:`, error);
       // Don't throw - bank account can be set up later
