@@ -33,30 +33,8 @@ export default function ProfitLossDetailedPage() {
     }
   });
 
-  // Sample data structure for detailed P&L (replace with actual API data)
-  const sampleDetailedData: DetailedPLAccount[] = [
-    // Revenue
-    { account_code: '4000', account_name: 'Sales Revenue', account_type: 'Revenue', category: 'revenue', amount: 106278 },
-    { account_code: '4100', account_name: 'Service Revenue', account_type: 'Revenue', category: 'revenue', amount: 24150 },
-    { account_code: '4200', account_name: 'Interest Income', account_type: 'Revenue', category: 'other_income', amount: 2500 },
-    
-    // Cost of Sales
-    { account_code: '5000', account_name: 'Cost of Goods Sold', account_type: 'Expense', category: 'cogs', amount: 8500 },
-    { account_code: '5100', account_name: 'Direct Materials', account_type: 'Expense', category: 'cogs', amount: 3200 },
-    
-    // Operating Expenses
-    { account_code: '6000', account_name: 'Office Rent', account_type: 'Expense', category: 'operating_expenses', amount: 5000 },
-    { account_code: '6100', account_name: 'Salaries & Wages', account_type: 'Expense', category: 'operating_expenses', amount: 12000 },
-    { account_code: '6200', account_name: 'Utilities', account_type: 'Expense', category: 'operating_expenses', amount: 1800 },
-    { account_code: '6300', account_name: 'Office Supplies', account_type: 'Expense', category: 'operating_expenses', amount: 750 },
-    { account_code: '6400', account_name: 'Professional Fees', account_type: 'Expense', category: 'operating_expenses', amount: 2500 },
-    
-    // Other Expenses
-    { account_code: '7000', account_name: 'Bank Charges', account_type: 'Expense', category: 'other_expenses', amount: 150 },
-    { account_code: '7100', account_name: 'Miscellaneous Expenses', account_type: 'Expense', category: 'other_expenses', amount: 300 }
-  ];
-
-  const data = detailedPLData || sampleDetailedData;
+  // Use only real API data - no hardcoded fallback to ensure proper company data isolation
+  const data = detailedPLData || [];
 
   // Group data by category
   const revenueAccounts = data.filter(acc => acc.category === 'revenue');

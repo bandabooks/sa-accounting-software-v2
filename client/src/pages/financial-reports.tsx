@@ -340,10 +340,8 @@ export default function FinancialReports() {
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             data: {
               entries: [
-                { date: "2025-01-27", account: "Cash", reference: "PV001", debit: 50000, credit: 0, balance: 50000 },
-                { date: "2025-01-27", account: "Sales Revenue", reference: "INV001", debit: 0, credit: 50000, balance: 50000 },
-                { date: "2025-01-26", account: "Office Expenses", reference: "EXP001", debit: 2500, credit: 0, balance: 2500 },
-                { date: "2025-01-26", account: "Cash", reference: "EXP001", debit: 0, credit: 2500, balance: 47500 }
+                // No hardcoded transactions - use real data from API
+                // Real journal entries will be loaded from API
               ]
             }
           }
