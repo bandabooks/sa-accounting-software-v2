@@ -538,8 +538,8 @@ export default function SubscriptionIntegratedPermissions({
     if (!module) return;
 
     if (enabled) {
-      // When enabling module, turn on basic permissions like "view"
-      const basicPermissions = ['view'];
+      // When enabling module, turn on basic permissions like "view", "create", "edit"
+      const basicPermissions = ['view', 'create', 'edit'];
       module.permissions.forEach(permission => {
         if (basicPermissions.includes(permission)) {
           handlePermissionToggle(moduleId, permission, true);
