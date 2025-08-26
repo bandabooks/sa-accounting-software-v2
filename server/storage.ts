@@ -8892,6 +8892,7 @@ export class DatabaseStorage implements IStorage {
         const defaultCompany = await this.createCompany({
           name: `Default Company`,
           displayName: `Default Company`,
+          slug: `default-company-${userId}`,
           industry: 'Professional Services',
           registrationNumber: '',
           vatNumber: '',
