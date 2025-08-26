@@ -13,46 +13,174 @@ import { useCompanySubscription } from "@/hooks/useCompanySubscription";
 import { useSubscriptionNavigation } from "@/hooks/useSubscriptionNavigation";
 import { UpgradePrompt } from "@/components/navigation/UpgradePrompt";
 
-// Navigation group structure with module mapping - World-class reorganization (12 groups)
+// Role-based navigation groups - Clean, focused menu for accounting professionals
+const getNavigationGroupsForRole = (userRole: string) => {
+  
+  // Core accounting functions - ALWAYS visible for all accounting professionals
+  const coreAccountingGroups = [
+    // 1. Dashboard - Single item, no dropdown
+    {
+      id: "overview",
+      label: "Dashboard",
+      module: "dashboard",
+      roleTypes: ["all"],
+      items: [
+        { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
+      ]
+    },
+    
+    // 2. Core Accounting - Essential for all accounting professionals
+    {
+      id: "accounting",
+      label: "Accounting",
+      icon: Calculator,
+      module: "accounting",
+      roleTypes: ["all"],
+      items: [
+        { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW", module: "accounting" },
+        { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
+        { path: "/general-ledger", label: "General Ledger", icon: BookOpen, permission: "GENERAL_LEDGER_VIEW", module: "accounting" }
+      ]
+    },
+
+    // 3. Client Revenue Management - Core for accounting practices
+    {
+      id: "revenue",
+      label: "Revenue",
+      icon: DollarSign,
+      module: "sales",
+      roleTypes: ["all"],
+      items: [
+        { path: "/invoices", label: "Invoices", icon: Receipt, permission: "INVOICE_VIEW", module: "sales" },
+        { path: "/estimates", label: "Quotes & Estimates", icon: FileText, permission: "ESTIMATE_VIEW", module: "sales" },
+        { path: "/customer-payments", label: "Customer Payments", icon: CreditCard, permission: "PAYMENTS_VIEW", module: "sales" },
+        { path: "/customers", label: "Customers", icon: Users, permission: "CUSTOMER_VIEW", module: "customers" }
+      ]
+    },
+
+    // 4. Business Expenses - Core accounting function
+    {
+      id: "expenses",
+      label: "Expenses",
+      icon: Receipt,
+      module: "expenses", 
+      roleTypes: ["all"],
+      items: [
+        { path: "/expenses", label: "Expense Management", icon: Receipt, permission: "EXPENSE_VIEW", module: "expenses" },
+        { path: "/bills", label: "Bills & Accounts Payable", icon: FileText, permission: "EXPENSE_VIEW", module: "expenses" },
+        { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" }
+      ]
+    },
+
+    // 5. Banking & Cash Flow - Essential for accounting
+    {
+      id: "banking",
+      label: "Banking",
+      icon: Landmark,
+      module: "banking",
+      roleTypes: ["all"],
+      items: [
+        { path: "/banking", label: "Banking Center", icon: Landmark, permission: "BANKING_VIEW", module: "banking" },
+        { path: "/bank-reconciliation", label: "Bank Reconciliation", icon: CheckCircle, permission: "BANKING_VIEW", module: "banking" }
+      ]
+    },
+
+    // 6. Financial Reports - Core for all accounting professionals
+    {
+      id: "reports",
+      label: "Financial Reports",
+      icon: BarChart3,
+      module: "reports",
+      roleTypes: ["all"],
+      items: [
+        { path: "/balance-sheet", label: "Balance Sheet", icon: PieChart, permission: "FINANCIAL_VIEW", module: "reports" },
+        { path: "/profit-loss", label: "Profit & Loss", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reports" },
+        { path: "/cash-flow-statement", label: "Cash Flow Statement", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "reports" },
+        { path: "/trial-balance", label: "Trial Balance", icon: BarChart3, permission: "FINANCIAL_VIEW", module: "reports" },
+        { path: "/aged-reports", label: "Aged Reports", icon: Clock, permission: "FINANCIAL_VIEW", module: "reports" }
+      ]
+    },
+
+    // 7. VAT & Tax Compliance - Essential for South African tax professionals
+    {
+      id: "tax_compliance",
+      label: "VAT & Tax Compliance",
+      icon: FileCheck,
+      module: "compliance",
+      roleTypes: ["all"],
+      items: [
+        { path: "/vat-management", label: "VAT Management", icon: FileCheck, permission: "VAT_VIEW", module: "compliance" },
+        { path: "/vat201-returns", label: "VAT201 Returns", icon: FileText, permission: "VAT_VIEW", module: "compliance" },
+        { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
+        { path: "/compliance-dashboard", label: "Compliance Dashboard", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" }
+      ]
+    },
+
+    // 8. Settings - Always needed
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      module: "dashboard",
+      roleTypes: ["all"],
+      items: [
+        { path: "/user-management", label: "User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
+        { path: "/settings", label: "Company Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
+        { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" }
+      ]
+    }
+  ];
+
+  // Additional modules available through subscription - for retail, manufacturing, etc.
+  const subscriptionBasedGroups = [
+    // Inventory Management - For retail/manufacturing businesses
+    {
+      id: "inventory",
+      label: "Inventory & Products",
+      icon: Package,
+      module: "inventory",
+      roleTypes: ["retail", "manufacturing"],
+      items: [
+        { path: "/products", label: "Products & Services", icon: Package, permission: "PRODUCT_VIEW", module: "inventory" },
+        { path: "/inventory", label: "Inventory Management", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" },
+        { path: "/stock-adjustments", label: "Stock Adjustments", icon: ToggleLeft, permission: "INVENTORY_VIEW", module: "inventory" }
+      ]
+    },
+
+    // Purchase Orders & Procurement - For businesses with complex purchasing
+    {
+      id: "procurement",
+      label: "Procurement",
+      icon: Truck,
+      module: "procurement",
+      roleTypes: ["retail", "manufacturing", "logistics"],
+      items: [
+        { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+        { path: "/goods-receipts", label: "Goods Receipts", icon: PackageCheck, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+        { path: "/deliveries", label: "Deliveries", icon: Truck, permission: "DELIVERY_VIEW", module: "sales" }
+      ]
+    },
+
+    // Point of Sale - For retail businesses
+    {
+      id: "pos",
+      label: "Point of Sale",
+      icon: Terminal,
+      module: "pos_sales",
+      roleTypes: ["retail"],
+      items: [
+        { path: "/pos", label: "POS Dashboard", icon: ChartLine, permission: "POS_VIEW", module: "pos_sales" },
+        { path: "/pos/terminal", label: "POS Terminal", icon: Terminal, permission: "POS_PROCESS_SALES", module: "pos_sales" }
+      ]
+    }
+  ];
+
+  // Return appropriate groups based on role and subscription
+  return [...coreAccountingGroups];
+};
+
+// Legacy navigation structure for compatibility (will be replaced)
 const navigationGroups = [
-  // 1. Dashboard - Single item, no dropdown
-  {
-    id: "overview",
-    label: "Dashboard",
-    module: "dashboard",
-    items: [
-      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
-    ]
-  },
-  // 2. Banking & Cash
-  {
-    id: "banking",
-    label: "Banking & Cash",
-    icon: Landmark,
-    module: "banking",
-    items: [
-      { path: "/banking", label: "Banking Center", icon: Landmark, permission: "BANKING_VIEW", module: "banking" },
-      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW", module: "advanced_reports" }
-    ]
-  },
-  // 3. Sales & Revenue
-  {
-    id: "sales",
-    label: "Sales & Revenue",
-    icon: DollarSign,
-    module: "sales",
-    items: [
-      { path: "/sales-dashboard", label: "Sales Dashboard", icon: ChartLine, permission: "DASHBOARD_VIEW", module: "sales" },
-      { path: "/invoices", label: "Invoices", icon: Receipt, permission: "INVOICE_VIEW", module: "sales" },
-      { path: "/estimates", label: "Estimates / Quotes", icon: FileText, permission: "ESTIMATE_VIEW", module: "sales" },
-      { path: "/sales-orders", label: "Sales Orders", icon: ShoppingCart, permission: "SALES_ORDER_VIEW", module: "sales" },
-      { path: "/credit-notes", label: "Credit Notes", icon: ReceiptText, permission: "CREDIT_NOTES_VIEW", module: "sales" },
-      { path: "/customer-payments", label: "Customer Payments", icon: CreditCard, permission: "PAYMENTS_VIEW", module: "sales" },
-      { path: "/deliveries", label: "Deliveries", icon: Truck, permission: "DELIVERY_VIEW", module: "sales" },
-      { path: "/customers", label: "Customers", icon: Users, permission: "CUSTOMER_VIEW", module: "customers" },
-      { path: "/sales-reports", label: "Sales Reports", icon: BarChart3, permission: "REPORTS_VIEW", module: "sales" }
-    ]
-  },
   // 4. Purchases & Expenses
   {
     id: "purchases",
@@ -475,6 +603,10 @@ export default function Sidebar() {
   const { isModuleAvailable, currentPlan, subscription, planStatus, isSuperAdminOrOwner } = useCompanySubscription();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
+  // Get role-specific navigation groups
+  const userRole = user?.role || 'accountant';
+  const roleBasedNavigationGroups = getNavigationGroupsForRole(userRole);
+
   // Get user permissions (fallback to all permissions for super admin or if no user)
   const userPermissions = user?.permissions || [
     "INVOICE_VIEW", "ESTIMATE_VIEW", "CUSTOMER_VIEW", "SUPPLIER_VIEW", 
@@ -486,7 +618,7 @@ export default function Sidebar() {
 
   // Auto-expand the group containing the active page
   React.useEffect(() => {
-    const activeGroup = navigationGroups.find(group => 
+    const activeGroup = roleBasedNavigationGroups.find(group => 
       group.items.some(item => 
         location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path))
       )
@@ -494,7 +626,7 @@ export default function Sidebar() {
     if (activeGroup) {
       setExpandedGroup(activeGroup.id);
     }
-  }, [location]);
+  }, [location, roleBasedNavigationGroups]);
 
   const toggleGroup = (groupId: string) => {
     // If clicking the same group, collapse it. Otherwise, expand the new group
@@ -576,7 +708,7 @@ export default function Sidebar() {
       
       {/* Navigation Section */}
       <nav data-onboarding="main-nav" className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
-        {navigationGroups.map((group) => (
+        {roleBasedNavigationGroups.map((group) => (
           <NavigationGroup
             key={group.id}
             group={group}
