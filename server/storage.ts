@@ -936,8 +936,6 @@ export interface IStorage {
 
   // RBAC - User Permissions
   getUserPermission(userId: number, companyId: number): Promise<UserPermission | undefined>;
-  getUserPermissions(userId: number, companyId: number): Promise<string[]>;
-  getUserRole(userId: number, companyId: number): Promise<SystemRole | undefined>;
   getAllUserPermissions(userId: number): Promise<UserPermission[]>;
   createUserPermission(permission: InsertUserPermission): Promise<UserPermission>;
   updateUserPermission(id: number, permission: Partial<InsertUserPermission>): Promise<UserPermission | undefined>;

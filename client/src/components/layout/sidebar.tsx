@@ -6,7 +6,7 @@ import {
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
-  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail,
+  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail
   FileCheck
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -475,7 +475,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
         'DASHBOARD_VIEW': 'dashboard:view'
       };
       
-      const newPermission = permissionMappings[item.permission as keyof typeof permissionMappings];
+      const newPermission = permissionMappings[item.permission];
       if (newPermission && !userPermissions.includes(newPermission)) {
         return false;
       }
