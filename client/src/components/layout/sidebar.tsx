@@ -298,7 +298,13 @@ const getFullNavigationGroups = () => [
     items: [
       { path: "/compliance-dashboard", label: "Compliance Dashboard", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/audit-trail", label: "Audit Trail", icon: FileText, permission: "AUDIT_VIEW", module: "compliance" }
+      { path: "/audit-trail", label: "Audit Trail", icon: FileText, permission: "AUDIT_VIEW", module: "compliance" },
+      { path: "/client-management", label: "Client Management", icon: Users, permission: "CLIENT_MANAGEMENT_VIEW", module: "compliance" },
+      { path: "/cipc-compliance", label: "CIPC Compliance", icon: Building, permission: "CIPC_COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/labour-compliance", label: "Labour Compliance", icon: Users, permission: "LABOUR_COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/task-management", label: "Task Management", icon: CheckSquare, permission: "TASK_MANAGEMENT_VIEW", module: "compliance" },
+      { path: "/calendar", label: "Calendar", icon: Calendar, permission: "CALENDAR_VIEW", module: "compliance" },
+      { path: "/document-library", label: "Document Library", icon: FolderOpen, permission: "DOCUMENT_LIBRARY_VIEW", module: "compliance" }
     ]
   },
   // 10. Reports and Analytics
@@ -345,9 +351,15 @@ const getFullNavigationGroups = () => [
     module: "administration",
     items: [
       { path: "/user-management", label: "User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
-      { path: "/settings", label: "Company Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/companies", label: "Companies", icon: Building, permission: "COMPANIES_VIEW", module: "administration" },
+      { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/integrations", label: "Integrations", icon: Zap, permission: "INTEGRATIONS_VIEW", module: "administration" },
+      { path: "/ai-health-monitor", label: "AI Health Monitor", icon: Brain, permission: "AI_HEALTH_VIEW", module: "administration" },
+      { path: "/email-settings", label: "Email Settings", icon: Mail, permission: "EMAIL_SETTINGS_VIEW", module: "administration" },
+      { path: "/enterprise-settings", label: "Enterprise Settings", icon: Settings, permission: "ENTERPRISE_SETTINGS_VIEW", module: "administration" },
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
-      { path: "/integrations", label: "Integrations", icon: Zap, permission: "INTEGRATIONS_VIEW", module: "administration" }
+      { path: "/super-admin-dashboard", label: "Super Admin Panel", icon: UserCog, permission: "SUPER_ADMIN_VIEW", module: "administration" },
+      { path: "/smart-spending-wizard", label: "Smart Spending Wizard", icon: Zap, permission: "SMART_SPENDING_VIEW", module: "administration" }
     ]
   }
 ];
@@ -607,9 +619,10 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
       return false;
     }
     
-    // Super admins, production administrators, and company admins should see everything
+    // Super admins, production administrators, and company admins should see everything - NO RESTRICTIONS
     const isOwnerOrAdmin = userRole === 'super_admin' || 
-                          userRole === 'company_admin';
+                          userRole === 'company_admin' ||
+                          userRole === 'production_administrator';
     
     if (isOwnerOrAdmin) {
       return true; // Show everything for admins/owners
