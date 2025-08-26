@@ -583,6 +583,13 @@ function AuthenticatedApp() {
             <LabourCompliance />
           </ProtectedRoute>
         </Route>
+        
+        {/* Document Library Route */}
+        <Route path="/document-library">
+          <ProtectedRoute>
+            <ComplianceDocuments />
+          </ProtectedRoute>
+        </Route>
 
         <Route path="/business-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
