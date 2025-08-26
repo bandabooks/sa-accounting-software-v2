@@ -28,7 +28,7 @@ export default function LabourCompliance() {
               <Users className="h-5 w-5 text-blue-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-blue-700">Active Employees</p>
-                <p className="text-xl font-bold text-blue-900">156</p>
+                <p className="text-xl font-bold text-blue-900">0</p>
               </div>
             </div>
           </CardContent>
@@ -39,7 +39,7 @@ export default function LabourCompliance() {
               <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-green-700">Compliant</p>
-                <p className="text-xl font-bold text-green-900">142</p>
+                <p className="text-xl font-bold text-green-900">0</p>
               </div>
             </div>
           </CardContent>
@@ -50,7 +50,7 @@ export default function LabourCompliance() {
               <Calendar className="h-5 w-5 text-orange-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-orange-700">Renewals Due</p>
-                <p className="text-xl font-bold text-orange-900">8</p>
+                <p className="text-xl font-bold text-orange-900">0</p>
               </div>
             </div>
           </CardContent>
@@ -61,7 +61,7 @@ export default function LabourCompliance() {
               <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-red-700">Non-Compliant</p>
-                <p className="text-xl font-bold text-red-900">6</p>
+                <p className="text-xl font-bold text-red-900">0</p>
               </div>
             </div>
           </CardContent>

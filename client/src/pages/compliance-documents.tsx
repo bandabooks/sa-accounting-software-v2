@@ -97,7 +97,7 @@ export default function ComplianceDocuments() {
               <FileText className="h-5 w-5 text-blue-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-blue-700">Total Documents</p>
-                <p className="text-xl font-bold text-blue-900">247</p>
+                <p className="text-xl font-bold text-blue-900">{documents.length}</p>
               </div>
             </div>
           </CardContent>
@@ -108,7 +108,7 @@ export default function ComplianceDocuments() {
               <FileText className="h-5 w-5 text-green-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-green-700">Approved</p>
-                <p className="text-xl font-bold text-green-900">189</p>
+                <p className="text-xl font-bold text-green-900">{documents.filter(d => d.status === 'approved').length}</p>
               </div>
             </div>
           </CardContent>
@@ -119,7 +119,7 @@ export default function ComplianceDocuments() {
               <FileText className="h-5 w-5 text-yellow-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-yellow-700">Pending Review</p>
-                <p className="text-xl font-bold text-yellow-900">42</p>
+                <p className="text-xl font-bold text-yellow-900">{documents.filter(d => d.status === 'pending_review').length}</p>
               </div>
             </div>
           </CardContent>
@@ -130,7 +130,7 @@ export default function ComplianceDocuments() {
               <FileText className="h-5 w-5 text-gray-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-gray-700">Drafts</p>
-                <p className="text-xl font-bold text-gray-900">16</p>
+                <p className="text-xl font-bold text-gray-900">{documents.filter(d => d.status === 'draft').length}</p>
               </div>
             </div>
           </CardContent>

@@ -194,15 +194,15 @@ export default function ComplianceCalendar() {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">This Month</span>
-                <span className="font-medium">12 events</span>
+                <span className="font-medium">0 events</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Overdue</span>
-                <span className="font-medium text-red-600">3 events</span>
+                <span className="font-medium text-red-600">0 events</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Due This Week</span>
-                <span className="font-medium text-orange-600">5 events</span>
+                <span className="font-medium text-orange-600">0 events</span>
               </div>
             </CardContent>
           </Card>

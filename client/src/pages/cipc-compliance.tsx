@@ -28,7 +28,7 @@ export default function CIPCCompliance() {
               <Building2 className="h-5 w-5 text-blue-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-blue-700">Annual Returns</p>
-                <p className="text-xl font-bold text-blue-900">25</p>
+                <p className="text-xl font-bold text-blue-900">0</p>
               </div>
             </div>
           </CardContent>
@@ -39,7 +39,7 @@ export default function CIPCCompliance() {
               <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-green-700">Filed</p>
-                <p className="text-xl font-bold text-green-900">20</p>
+                <p className="text-xl font-bold text-green-900">0</p>
               </div>
             </div>
           </CardContent>
@@ -50,7 +50,7 @@ export default function CIPCCompliance() {
               <Calendar className="h-5 w-5 text-orange-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-orange-700">Due Soon</p>
-                <p className="text-xl font-bold text-orange-900">4</p>
+                <p className="text-xl font-bold text-orange-900">0</p>
               </div>
             </div>
           </CardContent>
@@ -61,7 +61,7 @@ export default function CIPCCompliance() {
               <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
               <div>
                 <p className="text-sm font-medium text-red-700">Overdue</p>
-                <p className="text-xl font-bold text-red-900">1</p>
+                <p className="text-xl font-bold text-red-900">0</p>
               </div>
             </div>
           </CardContent>
