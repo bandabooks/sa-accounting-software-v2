@@ -3785,7 +3785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/cash-flow/:from/:to", authenticate, async (req, res) => {
     try {
       const { from, to } = req.params;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const report = await storage.getCashFlowReport(
         new Date(from),
@@ -3962,7 +3962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/balance-sheet/:from/:to", authenticate, async (req, res) => {
     try {
       const { from, to } = req.params;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const report = await storage.getBalanceSheetReport(
         companyId, 
@@ -3980,7 +3980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/trial-balance/:from/:to", authenticate, async (req, res) => {
     try {
       const { from, to } = req.params;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const report = await storage.getTrialBalanceReport(
         companyId, 
@@ -3999,7 +3999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { from, to } = req.params;
       const { accountId } = req.query;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const report = await storage.getGeneralLedgerReport(
         companyId, 
@@ -4018,7 +4018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/aged-receivables/:asAt", authenticate, async (req, res) => {
     try {
       const { asAt } = req.params;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const report = await storage.getAgedReceivablesReport(
         companyId, 
@@ -4035,7 +4035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/aged-payables/:asAt", authenticate, async (req, res) => {
     try {
       const { asAt } = req.params;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const report = await storage.getAgedPayablesReport(
         companyId, 
@@ -4128,7 +4128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/vat-summary", authenticate, async (req, res) => {
     try {
       const { from, to } = req.query;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const vatSummary = {
         taxPeriod: `${from} to ${to}`,
@@ -4167,7 +4167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/bank-reconciliation", authenticate, async (req, res) => {
     try {
       const { asAt } = req.query;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const bankReconciliation = {
         bankAccount: "Standard Bank - Current Account",
@@ -4207,7 +4207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/fixed-asset-register", authenticate, async (req, res) => {
     try {
       const { asAt } = req.query;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const fixedAssetRegister = {
         assets: [
@@ -4250,7 +4250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/tax-summary", authenticate, async (req, res) => {
     try {
       const { from, to } = req.query;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const taxSummary = {
         period: `${from} to ${to}`,
@@ -4293,7 +4293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/expense-report", authenticate, async (req, res) => {
     try {
       const { from, to } = req.query;
-      const companyId = 2; // Fixed company ID for now
+      const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const expenseReport = {
         categories: [
@@ -8454,7 +8454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/vat-reports", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = 2; // Fixed company ID for now
+      const companyId = req.user!.companyId;
       const vatReports = await storage.getVatReports(companyId);
       res.json(vatReports);
     } catch (error) {
@@ -8699,7 +8699,7 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
     try {
       const data = insertVatReportSchema.parse({
         ...req.body,
-        companyId: 2,
+        companyId: req.user!.companyId,
         createdBy: req.user!.id
       });
       const vatReport = await storage.createVatReport(data);
@@ -8715,7 +8715,7 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
 
   app.get("/api/vat-transactions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = 2; // Fixed company ID for now
+      const companyId = req.user!.companyId;
       const vatTransactions = await storage.getVatTransactions(companyId);
       res.json(vatTransactions);
     } catch (error) {
