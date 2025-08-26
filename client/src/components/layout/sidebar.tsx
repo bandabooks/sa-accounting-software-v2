@@ -306,6 +306,44 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
       return false;
     }
     
+    // Check permission-based access for role-based permission system
+    if (item.permission && item.permission !== null) {
+      // Map old permission names to new module:permission format
+      const permissionMappings = {
+        'SALES_ORDER_VIEW': 'sales_orders:view',
+        'DELIVERY_VIEW': 'deliveries:view', 
+        'INVOICE_VIEW': 'invoicing:view',
+        'ESTIMATE_VIEW': 'estimates:view',
+        'CREDIT_NOTES_VIEW': 'credit_notes:view',
+        'CUSTOMER_VIEW': 'customer_management:view',
+        'SUPPLIER_VIEW': 'suppliers:view',
+        'PURCHASE_ORDER_VIEW': 'purchase_orders:view',
+        'EXPENSE_VIEW': 'expenses:view',
+        'PRODUCT_VIEW': 'products_services:view',
+        'INVENTORY_VIEW': 'inventory:view',
+        'CHART_OF_ACCOUNTS_VIEW': 'chart_of_accounts:view',
+        'JOURNAL_ENTRY_VIEW': 'journal_entries:view',
+        'BANKING_VIEW': 'banking:view',
+        'FINANCIAL_VIEW': 'financial_reports:view',
+        'VAT_VIEW': 'vat_management:view',
+        'COMPLIANCE_VIEW': 'compliance_management:view',
+        'PAYMENTS_VIEW': 'payments:view',
+        'REPORTS_VIEW': 'financial_reports:view',
+        'POS_VIEW': 'pos_sales:view',
+        'POS_PROCESS_SALES': 'pos_sales:create',
+        'POS_MANAGE_SHIFTS': 'pos_sales:manage_terminals',
+        'POS_MANAGE': 'pos_sales:manage_terminals',
+        'USERS_VIEW': 'user_management:view',
+        'SETTINGS_VIEW': 'company_settings:view',
+        'DASHBOARD_VIEW': 'dashboard:view'
+      };
+      
+      const newPermission = permissionMappings[item.permission];
+      if (newPermission && !userPermissions.includes(newPermission)) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
