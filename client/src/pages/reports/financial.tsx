@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,9 +162,9 @@ export default function FinancialReportsPage() {
     const balanceSheetData = [
       ['ASSETS', '', ''],
       ['Current Assets', '', ''],
-      ['Cash and Cash Equivalents', '1000', 'R 24,150.00'],
-      ['Bank Current Account', '1010', 'R 33,500.00'],
-      ['Accounts Receivable', '1200', 'R 256,787.00'],
+      ['Cash and Cash Equivalents', '1000', formatCurrency(totalRevenue.toString())],
+      ['Bank Current Account', '1010', 'R 0.00'],
+      ['Accounts Receivable', '1200', 'R 0.00'],
       ['Total Current Assets', '', 'R 314,437.00'],
       ['', '', ''],
       ['LIABILITIES', '', ''],
@@ -208,9 +208,9 @@ export default function FinancialReportsPage() {
       ['Account Name', 'Account Code', 'Amount'],
       ['ASSETS', '', ''],
       ['Current Assets', '', ''],
-      ['Cash and Cash Equivalents', '1000', 24150],
-      ['Bank Current Account', '1010', 33500],
-      ['Accounts Receivable', '1200', 256787],
+      ['Cash and Cash Equivalents', '1000', totalRevenue],
+      ['Bank Current Account', '1010', 0],
+      ['Accounts Receivable', '1200', 0],
       ['Total Current Assets', '', 314437],
       ['', '', ''],
       ['LIABILITIES', '', ''],
@@ -253,19 +253,19 @@ export default function FinancialReportsPage() {
     // Cash Flow data
     const cashFlowData = [
       ['OPERATING ACTIVITIES', '', ''],
-      ['Net Income', '', 'R 116,763.00'],
-      ['Changes in Accounts Receivable', '', '(R 256,787.00)'],
-      ['Changes in Accounts Payable', '', 'R 13,665.00'],
-      ['Changes in VAT Balances', '', 'R 14,999.00'],
-      ['Net Cash from Operating Activities', '', '(R 111,360.00)'],
+      ['Net Income', '', formatCurrency(netProfit.toString())],
+      ['Changes in Accounts Receivable', '', 'R 0.00'],
+      ['Changes in Accounts Payable', '', 'R 0.00'],
+      ['Changes in VAT Balances', '', 'R 0.00'],
+      ['Net Cash from Operating Activities', '', formatCurrency(netProfit.toString())],
       ['', '', ''],
       ['FINANCING ACTIVITIES', '', ''],
-      ['Capital Contributions', '', 'R 169,010.00'],
-      ['Net Cash from Financing Activities', '', 'R 169,010.00'],
+      ['Capital Contributions', '', 'R 0.00'],
+      ['Net Cash from Financing Activities', '', 'R 0.00'],
       ['', '', ''],
-      ['NET INCREASE IN CASH', '', 'R 57,650.00'],
+      ['NET INCREASE IN CASH', '', formatCurrency(netProfit.toString())],
       ['Cash at Beginning of Period', '', 'R 0.00'],
-      ['CASH AT END OF PERIOD', '', 'R 57,650.00']
+      ['CASH AT END OF PERIOD', '', formatCurrency(netProfit.toString())]
     ];
 
     autoTable(doc, {
@@ -294,19 +294,19 @@ export default function FinancialReportsPage() {
       [''],
       ['Cash Flow Category', '', 'Amount'],
       ['OPERATING ACTIVITIES', '', ''],
-      ['Net Income', '', 116763],
-      ['Changes in Accounts Receivable', '', -256787],
-      ['Changes in Accounts Payable', '', 13665],
-      ['Changes in VAT Balances', '', 14999],
-      ['Net Cash from Operating Activities', '', -111360],
+      ['Net Income', '', netProfit],
+      ['Changes in Accounts Receivable', '', 0],
+      ['Changes in Accounts Payable', '', 0],
+      ['Changes in VAT Balances', '', 0],
+      ['Net Cash from Operating Activities', '', netProfit],
       ['', '', ''],
       ['FINANCING ACTIVITIES', '', ''],
-      ['Capital Contributions', '', 169010],
-      ['Net Cash from Financing Activities', '', 169010],
+      ['Capital Contributions', '', 0],
+      ['Net Cash from Financing Activities', '', 0],
       ['', '', ''],
-      ['NET INCREASE IN CASH', '', 57650],
+      ['NET INCREASE IN CASH', '', netProfit],
       ['Cash at Beginning of Period', '', 0],
-      ['CASH AT END OF PERIOD', '', 57650]
+      ['CASH AT END OF PERIOD', '', netProfit]
     ];
     
     const wb = XLSX.utils.book_new();
@@ -666,19 +666,19 @@ export default function FinancialReportsPage() {
                     <div className="ml-4 space-y-1">
                       <div className="flex justify-between py-2 border-b border-gray-100">
                         <span className="text-gray-600">Cash and Cash Equivalents</span>
-                        <span className="font-medium text-green-600">{formatCurrency('24150')}</span>
+                        <span className="font-medium text-green-600">{formatCurrency(totalRevenue.toString())}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-gray-100">
                         <span className="text-gray-600">Bank Current Account</span>
-                        <span className="font-medium text-green-600">{formatCurrency('33500')}</span>
+                        <span className="font-medium text-green-600">R 0.00</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-gray-100">
                         <span className="text-gray-600">Accounts Receivable</span>
-                        <span className="font-medium text-green-600">{formatCurrency('256787')}</span>
+                        <span className="font-medium text-green-600">R 0.00</span>
                       </div>
                       <div className="flex justify-between py-2 font-semibold text-gray-800 border-t-2 border-gray-300">
                         <span>Total Current Assets</span>
-                        <span className="text-green-700">{formatCurrency('314437')}</span>
+                        <span className="text-green-700">{formatCurrency(totalRevenue.toString())}</span>
                       </div>
                     </div>
                   </div>
@@ -716,7 +716,7 @@ export default function FinancialReportsPage() {
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Current Year Earnings</span>
-                      <span className="font-medium text-blue-600">{formatCurrency('116763')}</span>
+                      <span className="font-medium text-blue-600">{formatCurrency(netProfit.toString())}</span>
                     </div>
                     <div className="flex justify-between py-2 font-semibold text-gray-800 border-t-2 border-gray-300">
                       <span>Total Equity</span>
@@ -863,23 +863,23 @@ export default function FinancialReportsPage() {
                   <div className="ml-4 space-y-1">
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Net Income</span>
-                      <span className="font-medium text-green-600">{formatCurrency('116763')}</span>
+                      <span className="font-medium text-green-600">{formatCurrency(netProfit.toString())}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Changes in Accounts Receivable</span>
-                      <span className="font-medium text-red-600">({formatCurrency('256787')})</span>
+                      <span className="font-medium text-red-600">R 0.00</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Changes in Accounts Payable</span>
-                      <span className="font-medium text-green-600">{formatCurrency('13665')}</span>
+                      <span className="font-medium text-green-600">R 0.00</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Changes in VAT Balances</span>
-                      <span className="font-medium text-green-600">{formatCurrency('14999')}</span>
+                      <span className="font-medium text-green-600">R 0.00</span>
                     </div>
                     <div className="flex justify-between py-2 font-semibold text-gray-800 border-t-2 border-gray-300">
                       <span>Net Cash from Operating Activities</span>
-                      <span className="text-blue-700">{formatCurrency('-111360')}</span>
+                      <span className="text-blue-700">{formatCurrency(netProfit.toString())}</span>
                     </div>
                   </div>
                 </div>
@@ -890,11 +890,11 @@ export default function FinancialReportsPage() {
                   <div className="ml-4 space-y-1">
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Capital Contributions</span>
-                      <span className="font-medium text-green-600">{formatCurrency('169010')}</span>
+                      <span className="font-medium text-green-600">R 0.00</span>
                     </div>
                     <div className="flex justify-between py-2 font-semibold text-gray-800 border-t-2 border-gray-300">
                       <span>Net Cash from Financing Activities</span>
-                      <span className="text-blue-700">{formatCurrency('169010')}</span>
+                      <span className="text-blue-700">R 0.00</span>
                     </div>
                   </div>
                 </div>
@@ -903,7 +903,7 @@ export default function FinancialReportsPage() {
                 <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300 space-y-2">
                   <div className="flex justify-between py-2 font-bold text-gray-800 border-b border-gray-400">
                     <span>NET INCREASE IN CASH</span>
-                    <span className="text-green-700">{formatCurrency('57650')}</span>
+                    <span className="text-green-700">{formatCurrency(netProfit.toString())}</span>
                   </div>
                   <div className="flex justify-between py-1 text-gray-600">
                     <span>Cash at Beginning of Period</span>
@@ -911,22 +911,22 @@ export default function FinancialReportsPage() {
                   </div>
                   <div className="flex justify-between py-2 font-bold text-lg text-gray-800 border-t-2 border-gray-400">
                     <span>CASH AT END OF PERIOD</span>
-                    <span className="text-green-700">{formatCurrency('57650')}</span>
+                    <span className="text-green-700">{formatCurrency(netProfit.toString())}</span>
                   </div>
                   
                   <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
                     <h4 className="font-semibold text-blue-800 mb-2">Cash Reconciliation</h4>
                     <div className="flex justify-between text-sm text-blue-700">
                       <span>Cash and Cash Equivalents (Balance Sheet)</span>
-                      <span>{formatCurrency('24150')}</span>
+                      <span>{formatCurrency(totalRevenue.toString())}</span>
                     </div>
                     <div className="flex justify-between text-sm text-blue-700">
                       <span>Bank Current Account</span>
-                      <span>{formatCurrency('33500')}</span>
+                      <span>R 0.00</span>
                     </div>
                     <div className="flex justify-between font-semibold text-blue-800 border-t border-blue-300 pt-2">
                       <span>Total Cash Position</span>
-                      <span>{formatCurrency('57650')}</span>
+                      <span>{formatCurrency(netProfit.toString())}</span>
                     </div>
                   </div>
                 </div>
@@ -957,7 +957,7 @@ export default function FinancialReportsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-green-700 font-medium">Revenue Growth</p>
-                          <p className="text-2xl font-bold text-green-800">+340.5%</p>
+                          <p className="text-2xl font-bold text-green-800">0.0%</p>
                           <p className="text-xs text-green-600">Jul to Aug 2024</p>
                         </div>
                         <TrendingUp className="h-8 w-8 text-green-500" />
@@ -970,7 +970,7 @@ export default function FinancialReportsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-blue-700 font-medium">Profit Margin</p>
-                          <p className="text-2xl font-bold text-blue-800">89.5%</p>
+                          <p className="text-2xl font-bold text-blue-800">0.0%</p>
                           <p className="text-xs text-blue-600">Excellent profitability</p>
                         </div>
                         <TrendingUp className="h-8 w-8 text-blue-500" />
@@ -983,7 +983,7 @@ export default function FinancialReportsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-purple-700 font-medium">Cash Position</p>
-                          <p className="text-2xl font-bold text-purple-800">{formatCurrency('57650')}</p>
+                          <p className="text-2xl font-bold text-purple-800">{formatCurrency(netProfit.toString())}</p>
                           <p className="text-xs text-purple-600">Strong liquidity</p>
                         </div>
                         <DollarSign className="h-8 w-8 text-purple-500" />
@@ -1014,11 +1014,11 @@ export default function FinancialReportsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Gross Profit Margin</span>
-                            <span className="font-medium">89.5%</span>
+                            <span className="font-medium">0.0%</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Net Profit Margin</span>
-                            <span className="font-medium">89.5%</span>
+                            <span className="font-medium">0.0%</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Return on Assets</span>
@@ -1059,7 +1059,7 @@ export default function FinancialReportsPage() {
                         <Badge className="bg-green-100 text-green-800 mt-1">Strong</Badge>
                         <div>
                           <p className="font-medium">Exceptional Profitability</p>
-                          <p className="text-sm text-gray-600">89.5% profit margin indicates excellent cost management and pricing strategy</p>
+                          <p className="text-sm text-gray-600">No profit data available for this period</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
@@ -1073,7 +1073,7 @@ export default function FinancialReportsPage() {
                         <Badge className="bg-purple-100 text-purple-800 mt-1">Growth</Badge>
                         <div>
                           <p className="font-medium">Significant Revenue Growth</p>
-                          <p className="text-sm text-gray-600">340.5% month-over-month revenue increase demonstrates strong business expansion</p>
+                          <p className="text-sm text-gray-600">No revenue growth data available for this period</p>
                         </div>
                       </div>
                     </div>
