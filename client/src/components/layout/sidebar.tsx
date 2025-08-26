@@ -376,11 +376,11 @@ const getFullNavigationGroups = () => [
       { path: "/companies", label: "Companies", icon: Building, permission: "COMPANIES_VIEW", module: "administration" },
       { path: "/settings", label: "Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
       { path: "/integrations", label: "Integrations", icon: Zap, permission: "INTEGRATIONS_VIEW", module: "administration" },
-      { path: "/ai-health-monitor", label: "AI Health Monitor", icon: Brain, permission: "AI_HEALTH_VIEW", module: "administration" },
+      { path: "/ai-monitor", label: "AI Health Monitor", icon: Brain, permission: "AI_HEALTH_VIEW", module: "administration" },
       { path: "/email-settings", label: "Email Settings", icon: Mail, permission: "EMAIL_SETTINGS_VIEW", module: "administration" },
       { path: "/enterprise-settings", label: "Enterprise Settings", icon: Settings, permission: "ENTERPRISE_SETTINGS_VIEW", module: "administration" },
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
-      { path: "/super-admin-dashboard", label: "Super Admin Panel", icon: UserCog, permission: "SUPER_ADMIN_VIEW", module: "administration" },
+      { path: "/super-admin", label: "Super Admin Panel", icon: UserCog, permission: "SUPER_ADMIN_VIEW", module: "administration" },
       { path: "/smart-spending-wizard", label: "Smart Spending Wizard", icon: Zap, permission: "SMART_SPENDING_VIEW", module: "administration" }
     ]
   }
