@@ -308,10 +308,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
     
     // Super admins, production administrators, and company admins should see everything
     const isOwnerOrAdmin = userRole === 'super_admin' || 
-                          userRole === 'company_admin' ||
-                          user?.username === 'sysadmin_7f3a2b8e' ||
-                          user?.email === 'accounts@thinkmybiz.com' ||
-                          user?.name?.includes('Production Administrator');
+                          userRole === 'company_admin';
     
     if (isOwnerOrAdmin) {
       return true; // Show everything for admins/owners
