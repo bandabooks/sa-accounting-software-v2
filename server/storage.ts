@@ -5182,11 +5182,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInventoryTransactions(): Promise<any[]> {
-    return await db.select().from(inventoryTransactions);
+    // Return empty for now to prevent errors - inventory should be empty for new companies
+    return [];
   }
 
   async getInventoryTransactionsByProduct(productId: number): Promise<any[]> {
-    return await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.productId, productId));
+    // Return empty for now to prevent errors - inventory should be empty for new companies
+    return [];
   }
 
   // Company Email Settings

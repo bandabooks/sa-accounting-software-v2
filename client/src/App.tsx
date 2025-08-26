@@ -534,6 +534,55 @@ function AuthenticatedApp() {
             <AuditTrail />
           </ProtectedRoute>
         </Route>
+        
+        {/* SARS Integration Route */}
+        <Route path="/sars-integration">
+          <ProtectedRoute>
+            <Integrations />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Client Management Route */}
+        <Route path="/client-management">
+          <ProtectedRoute>
+            <ComplianceClients />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Task Management Route */}
+        <Route path="/task-management">
+          <ProtectedRoute>
+            <ComplianceTasks />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Calendar Route */}
+        <Route path="/calendar">
+          <ProtectedRoute>
+            <ComplianceCalendar />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Compliance Dashboard Route (alternative URL) */}
+        <Route path="/compliance-dashboard">
+          <ProtectedRoute>
+            <ComplianceDashboard />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* CIPC Compliance Route (alternative URL) */}
+        <Route path="/cipc-compliance">
+          <ProtectedRoute>
+            <CIPCCompliance />
+          </ProtectedRoute>
+        </Route>
+        
+        {/* Labour Compliance Route (alternative URL) */}
+        <Route path="/labour-compliance">
+          <ProtectedRoute>
+            <LabourCompliance />
+          </ProtectedRoute>
+        </Route>
 
         <Route path="/business-reports">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
