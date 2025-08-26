@@ -248,6 +248,7 @@ const getFullNavigationGroups = () => [
       { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
       { path: "/general-ledger", label: "General Ledger", icon: BookOpen, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
       { path: "/fixed-assets", label: "Fixed Assets", icon: Building, permission: "FIXED_ASSETS_VIEW", module: "advanced_reports" },
+      { path: "/bulk-data-entry", label: "Bulk Data Entry", icon: Upload, permission: "BULK_DATA_ENTRY_VIEW", module: "accounting" },
       { path: "/budgeting", label: "Budgeting", icon: BarChart3, permission: "BUDGETING_VIEW", module: "advanced_reports" }
     ]
   },
@@ -271,10 +272,16 @@ const getFullNavigationGroups = () => [
     icon: Package,
     module: "inventory",
     items: [
-      { path: "/products", label: "Products & Services", icon: Package, permission: "PRODUCT_VIEW", module: "inventory" },
-      { path: "/inventory", label: "Inventory Management", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" },
-      { path: "/categories", label: "Categories", icon: FolderOpen, permission: "PRODUCT_VIEW", module: "inventory" },
-      { path: "/stock-adjustments", label: "Stock Adjustments", icon: ToggleLeft, permission: "INVENTORY_VIEW", module: "inventory" }
+      { path: "/products", label: "Products", icon: Package, permission: "PRODUCT_VIEW", module: "inventory" },
+      { path: "/professional-services", label: "Professional Services", icon: Briefcase, permission: "PROFESSIONAL_SERVICES_VIEW", module: "inventory" },
+      { path: "/inventory", label: "Inventory", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/warehouses", label: "Warehouses", icon: Building, permission: "WAREHOUSES_VIEW", module: "inventory" },
+      { path: "/lot-batch-tracking", label: "Lot/Batch Tracking", icon: Package, permission: "LOT_BATCH_VIEW", module: "inventory" },
+      { path: "/serial-numbers", label: "Serial Numbers", icon: FileText, permission: "SERIAL_NUMBERS_VIEW", module: "inventory" },
+      { path: "/stock-counts", label: "Stock Counts", icon: CheckCircle, permission: "STOCK_COUNTS_VIEW", module: "inventory" },
+      { path: "/reorder-rules", label: "Reorder Rules", icon: ToggleLeft, permission: "REORDER_RULES_VIEW", module: "inventory" },
+      { path: "/product-bundles", label: "Product Bundles", icon: Package, permission: "PRODUCT_BUNDLES_VIEW", module: "inventory" },
+      { path: "/inventory-reports", label: "Inventory Reports", icon: BarChart3, permission: "INVENTORY_REPORTS_VIEW", module: "inventory" }
     ]
   },
   // 8. VAT Management
@@ -315,8 +322,10 @@ const getFullNavigationGroups = () => [
     module: "reports",
     items: [
       { path: "/financial-reports", label: "Financial Reports", icon: PieChart, permission: "FINANCIAL_VIEW", module: "reports" },
+      { path: "/advanced-analytics", label: "Advanced Analytics", icon: BarChart3, permission: "ADVANCED_ANALYTICS_VIEW", module: "reports" },
       { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "BUSINESS_REPORTS_VIEW", module: "reports" },
-      { path: "/general-reports", label: "General Reports", icon: FileText, permission: "REPORTS_VIEW", module: "reports" }
+      { path: "/general-reports", label: "General Reports", icon: FileText, permission: "REPORTS_VIEW", module: "reports" },
+      { path: "/audit-trail", label: "Audit Trail", icon: FileText, permission: "AUDIT_VIEW", module: "reports" }
     ]
   },
   // 11. CRM & Projects
@@ -326,9 +335,13 @@ const getFullNavigationGroups = () => [
     icon: Users,
     module: "customer_relationship",
     items: [
-      { path: "/leads", label: "Lead Management", icon: Users, permission: "LEADS_VIEW", module: "customer_relationship" },
-      { path: "/projects", label: "Project Management", icon: Briefcase, permission: "PROJECTS_VIEW", module: "customer_relationship" },
-      { path: "/communications", label: "Communications", icon: MessageCircle, permission: "COMMUNICATIONS_VIEW", module: "customer_relationship" }
+      { path: "/customer-lifecycle", label: "Customer Lifecycle", icon: Users, permission: "CUSTOMER_LIFECYCLE_VIEW", module: "customer_relationship" },
+      { path: "/communication-center", label: "Communication Center", icon: MessageCircle, permission: "COMMUNICATIONS_VIEW", module: "customer_relationship" },
+      { path: "/customer-segments", label: "Customer Segments", icon: Users, permission: "CUSTOMER_SEGMENTS_VIEW", module: "customer_relationship" },
+      { path: "/customer-insights", label: "Customer Insights", icon: BarChart3, permission: "CUSTOMER_INSIGHTS_VIEW", module: "customer_relationship" },
+      { path: "/projects", label: "Projects", icon: Briefcase, permission: "PROJECTS_VIEW", module: "customer_relationship" },
+      { path: "/tasks", label: "Tasks", icon: CheckSquare, permission: "TASKS_VIEW", module: "customer_relationship" },
+      { path: "/time-tracking", label: "Time Tracking", icon: Clock, permission: "TIME_TRACKING_VIEW", module: "customer_relationship" }
     ]
   },
   // 12. Point of Sale
