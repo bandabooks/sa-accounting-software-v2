@@ -7980,76 +7980,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Financial Reports - Trial Balance endpoint for frontend
   app.get("/api/financial/trial-balance", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
       
       // Create trial balance from actual system data
-      const trialBalanceData = [
-        {
-          account_code: "1000",
-          account_name: "Cash and Cash Equivalents", 
-          account_type: "Asset",
-          debit_amount: 24150,
-          credit_amount: 0
-        },
-        {
-          account_code: "1010",
-          account_name: "Bank Current Account",
-          account_type: "Asset", 
-          debit_amount: 33500,
-          credit_amount: 0
-        },
-        {
-          account_code: "1200",
-          account_name: "Accounts Receivable",
-          account_type: "Asset",
-          debit_amount: 256787,
-          credit_amount: 0
-        },
-        {
-          account_code: "2000",
-          account_name: "Accounts Payable",
-          account_type: "Liability",
-          debit_amount: 0,
-          credit_amount: 13665
-        },
-        {
-          account_code: "2100",
-          account_name: "VAT Output",
-          account_type: "Liability",
-          debit_amount: 0,
-          credit_amount: 19564
-        },
-        {
-          account_code: "3000",
-          account_name: "Retained Earnings",
-          account_type: "Equity",
-          debit_amount: 0,
-          credit_amount: 164445
-        },
-        {
-          account_code: "3100",
-          account_name: "Current Year Earnings",
-          account_type: "Equity", 
-          debit_amount: 0,
-          credit_amount: 116763
-        },
-        {
-          account_code: "4000",
-          account_name: "Revenue",
-          account_type: "Revenue",
-          debit_amount: 0,
-          credit_amount: 130428
-        },
-        {
-          account_code: "5000",
-          account_name: "Operating Expenses",
-          account_type: "Expense",
-          debit_amount: 13665,
-          credit_amount: 0
-        }
-      ];
+      const { asOfDate } = req.query;
       
-      res.json(trialBalanceData);
+      const date = asOfDate ? new Date(asOfDate as string) : new Date();
+      const trialBalance = await storage.getTrialBalance(companyId, date);
+      res.json(trialBalance);
     } catch (error) {
       console.error("Error generating financial trial balance:", error);
       res.status(500).json({ error: "Failed to generate financial trial balance" });
