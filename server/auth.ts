@@ -126,7 +126,6 @@ export const PERMISSIONS = {
   POS_VIEW: 'pos:view',
   POS_PROCESS_SALES: 'pos:process_sales',
   POS_MANAGE_SHIFTS: 'pos:manage_shifts',
-  POS_MANAGE_TERMINAL: 'pos:manage_terminals',
   POS_HANDLE_RETURNS: 'pos:handle_returns',
   POS_MANAGE_PROMOTIONS: 'pos:manage_promotions',
   POS_VIEW_REPORTS: 'pos:view_reports',

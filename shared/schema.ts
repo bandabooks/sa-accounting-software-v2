@@ -5972,7 +5972,7 @@ export const departments = pgTable("departments", {
   companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  managerId: integer("manager_id"), // Removed circular reference - will add relation later
+  managerId: integer("manager_id").references(() => employees.id),
   budget: decimal("budget", { precision: 15, scale: 2 }).default("0.00"),
   location: text("location"),
   isActive: boolean("is_active").default(true),
@@ -5998,7 +5998,7 @@ export const employees = pgTable("employees", {
   postalCode: text("postal_code"),
   position: text("position").notNull(),
   department: text("department"),
-  departmentId: integer("department_id"), // Removed circular reference - will add relation later
+  departmentId: integer("department_id").references(() => departments.id),
   startDate: date("start_date").notNull(),
   endDate: date("end_date"),
   employmentType: text("employment_type").notNull().default("permanent"), // permanent, contract, temporary, part_time

@@ -3125,19 +3125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user.id
       };
 
-      // For now, create a payment record - payBill method needs to be implemented
-      const paymentRecord = {
-        companyId,
-        amount: paymentData.amount.toString(),
-        reference: paymentData.reference || `Bill Payment ${billId}`,
-        paymentDate: new Date(paymentData.paymentDate),
-        description: paymentData.notes || `Payment for bill ${billId}`,
-        customerId: null,  // This is a bill payment, not customer payment
-        invoiceId: null,
-        method: 'bank_transfer'
-      };
-      const payment = await storage.createPayment(paymentRecord);
-      await logAudit(req.user!.id, 'PAYMENT', 'bill', billId, null, paymentData);
+      const payment = await storage.payBill(billId, paymentData);
+      await logAudit(req.user.id, 'PAYMENT', 'bill', billId, null, paymentData);
       
       res.json(payment);
     } catch (error) {
