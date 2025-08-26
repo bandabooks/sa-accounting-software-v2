@@ -6,7 +6,7 @@ import {
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
-  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail, FileCheck
+  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail, FileCheck, Calendar
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -15,6 +15,11 @@ import { UpgradePrompt } from "@/components/navigation/UpgradePrompt";
 
 // Role-based navigation groups - Clean, focused menu for accounting professionals
 const getNavigationGroupsForRole = (userRole: string) => {
+  
+  // Full menu for Super Admins and Company Admins - show everything
+  if (userRole === 'super_admin' || userRole === 'company_admin') {
+    return getFullNavigationGroups();
+  }
   
   // Core accounting functions - ALWAYS visible for all accounting professionals
   const coreAccountingGroups = [
@@ -178,6 +183,174 @@ const getNavigationGroupsForRole = (userRole: string) => {
   // Return appropriate groups based on role and subscription
   return [...coreAccountingGroups];
 };
+
+// Full navigation groups for Super Admins - complete menu structure
+const getFullNavigationGroups = () => [
+  // 1. Dashboard - Single item, no dropdown
+  {
+    id: "overview",
+    label: "Dashboard",
+    module: "dashboard",
+    items: [
+      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
+    ]
+  },
+  // 2. Banking & Cash
+  {
+    id: "banking",
+    label: "Banking & Cash",
+    icon: Landmark,
+    module: "banking",
+    items: [
+      { path: "/banking", label: "Banking Center", icon: Landmark, permission: "BANKING_VIEW", module: "banking" },
+      { path: "/cash-flow-forecasting", label: "Cash Flow Forecasting", icon: TrendingUp, permission: "CASH_FLOW_VIEW", module: "advanced_reports" }
+    ]
+  },
+  // 3. Sales & Revenue
+  {
+    id: "sales",
+    label: "Sales & Revenue",
+    icon: DollarSign,
+    module: "sales",
+    items: [
+      { path: "/sales-dashboard", label: "Sales Dashboard", icon: ChartLine, permission: "DASHBOARD_VIEW", module: "sales" },
+      { path: "/invoices", label: "Invoices", icon: Receipt, permission: "INVOICE_VIEW", module: "sales" },
+      { path: "/estimates", label: "Estimates / Quotes", icon: FileText, permission: "ESTIMATE_VIEW", module: "sales" },
+      { path: "/sales-orders", label: "Sales Orders", icon: ShoppingCart, permission: "SALES_ORDER_VIEW", module: "sales" },
+      { path: "/credit-notes", label: "Credit Notes", icon: FileText, permission: "CREDIT_NOTES_VIEW", module: "sales" },
+      { path: "/customer-payments", label: "Customer Payments", icon: CreditCard, permission: "PAYMENTS_VIEW", module: "sales" },
+      { path: "/deliveries", label: "Deliveries", icon: Truck, permission: "DELIVERY_VIEW", module: "sales" },
+      { path: "/customers", label: "Customers", icon: Users, permission: "CUSTOMER_VIEW", module: "customers" },
+      { path: "/sales-reports", label: "Sales Reports", icon: BarChart3, permission: "REPORTS_VIEW", module: "sales" }
+    ]
+  },
+  // 4. Purchases & Expenses
+  {
+    id: "purchases",
+    label: "Purchases & Expenses", 
+    icon: Receipt,
+    module: "purchases",
+    items: [
+      { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/expenses", label: "Expense Management", icon: Receipt, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/bills", label: "Bills & Accounts Payable", icon: FileText, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" }
+    ]
+  },
+  // 5. Accounting
+  {
+    id: "accounting",
+    label: "Accounting",
+    icon: Calculator,
+    module: "accounting",
+    items: [
+      { path: "/chart-of-accounts", label: "Chart of Accounts", icon: BookOpen, permission: "CHART_OF_ACCOUNTS_VIEW", module: "accounting" },
+      { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
+      { path: "/general-ledger", label: "General Ledger", icon: BookOpen, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
+      { path: "/fixed-assets", label: "Fixed Assets", icon: Building, permission: "FIXED_ASSETS_VIEW", module: "advanced_reports" },
+      { path: "/budgeting", label: "Budgeting", icon: BarChart3, permission: "BUDGETING_VIEW", module: "advanced_reports" }
+    ]
+  },
+  // 6. Employee Management
+  {
+    id: "employees",
+    label: "Employee Management",
+    icon: Users,
+    module: "human_resources",
+    items: [
+      { path: "/employees", label: "Employee Directory", icon: Users, permission: "EMPLOYEES_VIEW", module: "human_resources" },
+      { path: "/attendance", label: "Attendance Tracking", icon: Clock, permission: "ATTENDANCE_VIEW", module: "human_resources" },
+      { path: "/payroll", label: "Payroll Management", icon: DollarSign, permission: "PAYROLL_VIEW", module: "human_resources" },
+      { path: "/leave-management", label: "Leave Management", icon: Calendar, permission: "LEAVE_VIEW", module: "human_resources" }
+    ]
+  },
+  // 7. Products & Inventory
+  {
+    id: "inventory",
+    label: "Products & Inventory",
+    icon: Package,
+    module: "inventory",
+    items: [
+      { path: "/products", label: "Products & Services", icon: Package, permission: "PRODUCT_VIEW", module: "inventory" },
+      { path: "/inventory", label: "Inventory Management", icon: Archive, permission: "INVENTORY_VIEW", module: "inventory" },
+      { path: "/categories", label: "Categories", icon: FolderOpen, permission: "PRODUCT_VIEW", module: "inventory" },
+      { path: "/stock-adjustments", label: "Stock Adjustments", icon: ToggleLeft, permission: "INVENTORY_VIEW", module: "inventory" }
+    ]
+  },
+  // 8. VAT Management
+  {
+    id: "vat",
+    label: "VAT Management",
+    icon: FileCheck,
+    module: "compliance",
+    items: [
+      { path: "/vat-management", label: "VAT Management", icon: FileCheck, permission: "VAT_VIEW", module: "compliance" },
+      { path: "/vat201-returns", label: "VAT201 Returns", icon: FileText, permission: "VAT_VIEW", module: "compliance" },
+      { path: "/vat-reconciliation", label: "VAT Reconciliation", icon: CheckCircle, permission: "VAT_VIEW", module: "compliance" }
+    ]
+  },
+  // 9. Compliance Management
+  {
+    id: "compliance",
+    label: "Compliance Management",
+    icon: Shield,
+    module: "compliance",
+    items: [
+      { path: "/compliance-dashboard", label: "Compliance Dashboard", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/audit-trail", label: "Audit Trail", icon: FileText, permission: "AUDIT_VIEW", module: "compliance" }
+    ]
+  },
+  // 10. Reports and Analytics
+  {
+    id: "reports",
+    label: "Reports and Analytics",
+    icon: BarChart3,
+    module: "reports",
+    items: [
+      { path: "/financial-reports", label: "Financial Reports", icon: PieChart, permission: "FINANCIAL_VIEW", module: "reports" },
+      { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "BUSINESS_REPORTS_VIEW", module: "reports" },
+      { path: "/general-reports", label: "General Reports", icon: FileText, permission: "REPORTS_VIEW", module: "reports" }
+    ]
+  },
+  // 11. CRM & Projects
+  {
+    id: "crm",
+    label: "CRM & Projects",
+    icon: Users,
+    module: "customer_relationship",
+    items: [
+      { path: "/leads", label: "Lead Management", icon: Users, permission: "LEADS_VIEW", module: "customer_relationship" },
+      { path: "/projects", label: "Project Management", icon: Briefcase, permission: "PROJECTS_VIEW", module: "customer_relationship" },
+      { path: "/communications", label: "Communications", icon: MessageCircle, permission: "COMMUNICATIONS_VIEW", module: "customer_relationship" }
+    ]
+  },
+  // 12. Point of Sale
+  {
+    id: "pos",
+    label: "Point of Sale",
+    icon: Terminal,
+    module: "pos_sales",
+    items: [
+      { path: "/pos", label: "POS Dashboard", icon: ChartLine, permission: "POS_VIEW", module: "pos_sales" },
+      { path: "/pos/terminal", label: "POS Terminal", icon: Terminal, permission: "POS_PROCESS_SALES", module: "pos_sales" },
+      { path: "/pos/shifts", label: "Shift Management", icon: Clock, permission: "POS_MANAGE_SHIFTS", module: "pos_sales" }
+    ]
+  },
+  // 13. Administration
+  {
+    id: "administration",
+    label: "Administration",
+    icon: Settings,
+    module: "administration",
+    items: [
+      { path: "/user-management", label: "User Management", icon: Users, permission: "USERS_VIEW", module: "advanced_analytics" },
+      { path: "/settings", label: "Company Settings", icon: Settings, permission: "SETTINGS_VIEW", module: "dashboard" },
+      { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
+      { path: "/integrations", label: "Integrations", icon: Zap, permission: "INTEGRATIONS_VIEW", module: "administration" }
+    ]
+  }
+];
 
 // Legacy navigation structure for compatibility (will be replaced)
 const navigationGroups = [
