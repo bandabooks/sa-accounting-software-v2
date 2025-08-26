@@ -492,19 +492,23 @@ export default function SubscriptionIntegratedPermissions({
       return response.json();
     },
     onSuccess: (result, variables) => {
-      // Update local state immediately for responsive UI
-      const key = `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
-      setPermissionStates(prev => ({
-        ...prev,
-        [key]: variables.enabled
-      }));
-      
+      // State already updated in handlePermissionToggle for immediate feedback
       toast({
         title: "Permission Updated",
         description: `${variables.permissionType} permission for ${variables.moduleId} ${variables.enabled ? 'enabled' : 'disabled'} successfully.`,
       });
+      
+      // Refresh permissions data to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['/api/permissions'] });
     },
-    onError: (error: any) => {
+    onError: (error: any, variables) => {
+      // Revert the optimistic update on error
+      const key = `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
+      setPermissionStates(prev => ({
+        ...prev,
+        [key]: !variables.enabled // Revert to previous state
+      }));
+      
       toast({
         title: "Error",
         description: error.message || "Failed to update permission",
@@ -523,6 +527,13 @@ export default function SubscriptionIntegratedPermissions({
   // Handle permission toggle
   const handlePermissionToggle = (moduleId: string, permission: string, enabled: boolean) => {
     if (!selectedRoleId) return;
+    
+    // Immediately update local state for responsive UI
+    const key = `${selectedRoleId}-${moduleId}-${permission}`;
+    setPermissionStates(prev => ({
+      ...prev,
+      [key]: enabled
+    }));
 
     togglePermissionMutation.mutate({
       roleId: selectedRoleId,
