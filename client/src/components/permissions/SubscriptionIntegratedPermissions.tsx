@@ -410,6 +410,7 @@ export default function SubscriptionIntegratedPermissions({
 
   // Simple permission state management
   const [permissionStates, setPermissionStates] = useState<Record<string, boolean>>({});
+  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
 
   // Load current permissions for selected role
   const { data: currentPermissions } = useQuery({
@@ -475,14 +476,23 @@ export default function SubscriptionIntegratedPermissions({
     }
   }, [currentPermissions, subscriptionData, selectedRoleId]);
 
-  // Direct permission toggle mutation
+  // Direct permission toggle mutation with better error handling
   const togglePermissionMutation = useMutation({
-    mutationFn: async (data: { roleId: number; moduleId: string; permissionType: string; enabled: boolean }) => {
-      const response = await apiRequest('/api/permissions/toggle', 'POST', data);
+    mutationFn: async (data: { roleId: number; moduleId: string; permissionType: string; enabled: boolean; _key?: string }) => {
+      // Remove the _key before sending to API
+      const { _key, ...apiData } = data;
+      const response = await apiRequest('/api/permissions/toggle', 'POST', apiData);
       return response.json();
     },
     onSuccess: (result, variables) => {
-      // State already updated in handlePermissionToggle for immediate feedback
+      // Remove from pending toggles
+      const key = variables._key || `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
+      setPendingToggles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+      
       toast({
         title: "Permission Updated",
         description: `${variables.permissionType} permission for ${variables.moduleId} ${variables.enabled ? 'enabled' : 'disabled'} successfully.`,
@@ -492,8 +502,14 @@ export default function SubscriptionIntegratedPermissions({
       queryClient.invalidateQueries({ queryKey: ['/api/permissions'] });
     },
     onError: (error: any, variables) => {
-      // Revert the optimistic update on error
-      const key = `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
+      // Remove from pending toggles and revert the optimistic update on error
+      const key = variables._key || `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
+      setPendingToggles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+      
       setPermissionStates(prev => ({
         ...prev,
         [key]: !variables.enabled // Revert to previous state
@@ -514,22 +530,33 @@ export default function SubscriptionIntegratedPermissions({
     return permissionStates[key] || false;
   };
 
-  // Handle permission toggle
+  // Handle permission toggle with better isolation
   const handlePermissionToggle = (moduleId: string, permission: string, enabled: boolean) => {
     if (!selectedRoleId) return;
     
-    // Immediately update local state for responsive UI
+    // Create isolated state update that only affects this specific permission
     const key = `${selectedRoleId}-${moduleId}-${permission}`;
-    setPermissionStates(prev => ({
-      ...prev,
-      [key]: enabled
-    }));
+    
+    // Prevent multiple simultaneous toggles of the same permission
+    if (pendingToggles.has(key)) return;
+    
+    // Add to pending toggles
+    setPendingToggles(prev => new Set([...prev, key]));
+    
+    // Use functional update to ensure we don't interfere with other toggles
+    setPermissionStates(prev => {
+      const newState = { ...prev };
+      newState[key] = enabled;
+      return newState;
+    });
 
+    // Use a unique mutation key to prevent interference
     togglePermissionMutation.mutate({
       roleId: selectedRoleId,
       moduleId,
       permissionType: permission,
-      enabled
+      enabled,
+      _key: key // Add unique identifier
     });
   };
 
@@ -747,20 +774,21 @@ export default function SubscriptionIntegratedPermissions({
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 {module.permissions.map((permission) => {
                                   const isEnabled = isPermissionEnabled(module.id, permission);
-                                  const isToggling = togglePermissionMutation.isPending;
-
+                                  const switchKey = `${selectedRoleId}-${module.id}-${permission}`;
+                                  
                                   return (
-                                    <div key={permission} className="flex items-center space-x-2">
+                                    <div key={`${module.id}-${permission}-container`} className="flex items-center space-x-2">
                                       <Switch
-                                        id={`${module.id}-${permission}`}
+                                        key={switchKey}
+                                        id={`switch-${switchKey}`}
                                         checked={isEnabled}
                                         onCheckedChange={(checked) => 
                                           handlePermissionToggle(module.id, permission, checked)
                                         }
-                                        disabled={isToggling}
+                                        disabled={false}
                                       />
                                       <Label
-                                        htmlFor={`${module.id}-${permission}`}
+                                        htmlFor={`switch-${switchKey}`}
                                         className="text-sm capitalize cursor-pointer"
                                       >
                                         {permission.replace('_', ' ')}
