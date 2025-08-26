@@ -174,14 +174,14 @@ export default function FinancialReportsPage() {
       ['', '', ''],
       ['LIABILITIES', '', ''],
       ['Current Liabilities', '', ''],
-      ['Accounts Payable', '2000', 'R 13,665.00'],
-      ['VAT Output', '2100', 'R 19,564.00'],
-      ['Total Current Liabilities', '', 'R 33,229.00'],
+      ['Accounts Payable', '2000', 'R 0.00'],
+      ['VAT Output', '2100', 'R 0.00'],
+      ['Total Current Liabilities', '', 'R 0.00'],
       ['', '', ''],
       ['EQUITY', '', ''],
-      ['Retained Earnings', '3000', 'R 164,445.00'],
+      ['Retained Earnings', '3000', 'R 0.00'],
       ['Current Year Earnings', '3100', 'R 116,763.00'],
-      ['Total Equity', '', 'R 281,208.00'],
+      ['Total Equity', '', 'R 0.00'],
       ['', '', ''],
       ['TOTAL LIABILITIES + EQUITY', '', 'R 314,437.00']
     ];
@@ -697,15 +697,15 @@ export default function FinancialReportsPage() {
                     <div className="ml-4 space-y-1">
                       <div className="flex justify-between py-2 border-b border-gray-100">
                         <span className="text-gray-600">Accounts Payable</span>
-                        <span className="font-medium text-red-600">{formatCurrency('13665')}</span>
+                        <span className="font-medium text-red-600">R 0.00</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-gray-100">
                         <span className="text-gray-600">VAT Output</span>
-                        <span className="font-medium text-red-600">{formatCurrency('19564')}</span>
+                        <span className="font-medium text-red-600">R 0.00</span>
                       </div>
                       <div className="flex justify-between py-2 font-semibold text-gray-800 border-t-2 border-gray-300">
                         <span>Total Current Liabilities</span>
-                        <span className="text-red-700">{formatCurrency('33229')}</span>
+                        <span className="text-red-700">R 0.00</span>
                       </div>
                     </div>
                   </div>
@@ -717,7 +717,7 @@ export default function FinancialReportsPage() {
                   <div className="ml-4 space-y-1">
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Retained Earnings</span>
-                      <span className="font-medium text-blue-600">{formatCurrency('164445')}</span>
+                      <span className="font-medium text-blue-600">R 0.00</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-600">Current Year Earnings</span>
@@ -725,7 +725,7 @@ export default function FinancialReportsPage() {
                     </div>
                     <div className="flex justify-between py-2 font-semibold text-gray-800 border-t-2 border-gray-300">
                       <span>Total Equity</span>
-                      <span className="text-blue-700">{formatCurrency('281208')}</span>
+                      <span className="text-blue-700">{formatCurrency(netProfit.toString())}</span>
                     </div>
                   </div>
                 </div>
