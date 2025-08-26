@@ -231,10 +231,18 @@ const getFullNavigationGroups = () => [
     icon: Receipt,
     module: "purchases",
     items: [
-      { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/purchase-dashboard", label: "Purchase Dashboard", icon: BarChart3, permission: "DASHBOARD_VIEW", module: "purchases" },
       { path: "/expenses", label: "Expense Management", icon: Receipt, permission: "EXPENSE_VIEW", module: "expenses" },
       { path: "/bills", label: "Bills & Accounts Payable", icon: FileText, permission: "EXPENSE_VIEW", module: "expenses" },
-      { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" }
+      { path: "/purchase-orders", label: "Purchase Orders", icon: Package, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/suppliers", label: "Suppliers", icon: Building, permission: "SUPPLIER_VIEW", module: "purchases" },
+      { path: "/goods-receipts", label: "Goods Receipts", icon: PackageCheck, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/purchase-requisitions", label: "Purchase Requisitions", icon: FileText, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/payment-flows", label: "Payment Flows", icon: CreditCard, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/three-way-matching", label: "3-Way Matching", icon: CheckSquare, permission: "PURCHASE_ORDER_VIEW", module: "purchases" },
+      { path: "/recurring-expenses", label: "Recurring Expenses", icon: Clock, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/expense-approvals", label: "Expense Approvals", icon: CheckSquare, permission: "EXPENSE_VIEW", module: "expenses" },
+      { path: "/exception-dashboard", label: "Exception Dashboard", icon: Shield, permission: "EXCEPTIONS_VIEW", module: "purchases" }
     ]
   },
   // 5. Accounting
