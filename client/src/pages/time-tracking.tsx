@@ -98,9 +98,7 @@ export default function TimeTrackingPage() {
 
   const stopTimeMutation = useMutation({
     mutationFn: async (timeEntryId: number) => {
-      return await apiRequest(`/api/time-entries/${timeEntryId}/stop`, {
-        method: "PUT",
-      });
+      return await apiRequest(`/api/time-entries/${timeEntryId}/stop`, "PUT");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
@@ -121,9 +119,7 @@ export default function TimeTrackingPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (timeEntryId: number) => {
-      return await apiRequest(`/api/time-entries/${timeEntryId}`, {
-        method: "DELETE",
-      });
+      return await apiRequest(`/api/time-entries/${timeEntryId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries"] });
@@ -163,7 +159,7 @@ export default function TimeTrackingPage() {
   };
 
   const handleStopTime = () => {
-    if (activeTimeEntry) {
+    if (activeTimeEntry && activeTimeEntry.id) {
       stopTimeMutation.mutate(activeTimeEntry.id);
     }
   };

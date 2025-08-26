@@ -65,62 +65,22 @@ export default function CustomerInsights() {
   const [engagementFilter, setEngagementFilter] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerInsight | null>(null);
 
-  // Mock data for now - this would come from the API
-  const mockInsights: CustomerInsight[] = [
-    {
-      id: 1,
-      name: "Acme Corp",
-      email: "contact@acmecorp.com",
-      phone: "+27 11 123 4567",
-      totalRevenue: 125000,
-      totalInvoices: 24,
-      averageOrderValue: 5208.33,
-      lastOrderDate: "2024-01-15T10:00:00Z",
-      lifecycleStage: "customer",
-      riskScore: 25,
-      engagementScore: 78,
-      satisfactionScore: 85,
-      communicationsCount: 156,
-      paymentBehavior: {
-        averageDaysToPay: 18,
-        overdueCount: 2,
-        onTimePaymentRate: 91.7
-      },
-      insights: [
-        { type: 'opportunity', message: 'Customer has increased order frequency by 30% this quarter', priority: 'high' },
-        { type: 'info', message: 'Preferred communication time: 9-11 AM', priority: 'low' }
-      ]
-    },
-    {
-      id: 2,
-      name: "Tech Solutions Ltd",
-      email: "billing@techsolutions.co.za",
-      phone: "+27 21 456 7890",
-      totalRevenue: 87500,
-      totalInvoices: 18,
-      averageOrderValue: 4861.11,
-      lastOrderDate: "2023-11-20T14:30:00Z",
-      lifecycleStage: "dormant",
-      riskScore: 85,
-      engagementScore: 22,
-      satisfactionScore: 65,
-      communicationsCount: 89,
-      paymentBehavior: {
-        averageDaysToPay: 45,
-        overdueCount: 8,
-        onTimePaymentRate: 55.6
-      },
-      insights: [
-        { type: 'risk', message: 'No orders in the last 60 days - potential churn risk', priority: 'high' },
-        { type: 'risk', message: 'Payment delays increasing over time', priority: 'medium' },
-        { type: 'opportunity', message: 'Previously high-value customer - consider re-engagement campaign', priority: 'medium' }
-      ]
-    }
-  ];
+  // Real data from API - no hardcoded mock data
 
-  const { data: insights = mockInsights } = useQuery({
+  const { data: insights = [] } = useQuery({
     queryKey: ["/api/customers/insights"],
-    queryFn: () => Promise.resolve(mockInsights) // This would be an actual API call
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/customers/insights', {
+          credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to fetch customer insights');
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching customer insights:', error);
+        return [];
+      }
+    }
   });
 
   const filteredInsights = insights.filter(customer => {

@@ -186,7 +186,7 @@ export default function TasksPage() {
   };
 
   const handleStopTime = () => {
-    if (activeTimeEntry) {
+    if (activeTimeEntry && activeTimeEntry.id) {
       stopTimeMutation.mutate(activeTimeEntry.id);
     }
   };
