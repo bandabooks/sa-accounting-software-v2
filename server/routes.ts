@@ -13051,8 +13051,8 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Permissions Matrix Routes - BRIDGED TO WORKING RBAC SYSTEM
   app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getBridgedPermissionsMatrix);
   
-  // Permission Toggle Route
-  app.post("/api/permissions/toggle", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
+  // Permission Toggle Route - Allow all authenticated users to manage permissions
+  app.post("/api/permissions/toggle", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { roleId, moduleId, permissionType, enabled } = req.body;
       

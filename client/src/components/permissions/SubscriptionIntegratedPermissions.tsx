@@ -460,18 +460,16 @@ export default function SubscriptionIntegratedPermissions({
         });
       }
 
-      // Auto-enable ALL permissions for subscription-active modules to match subscription interface
-      if (subscriptionData?.plan?.modules) {
-        Object.values(AVAILABLE_MODULES).forEach(module => {
-          if (isModuleActiveInSubscription(module.id)) {
-            module.permissions.forEach(permission => {
-              const key = `${selectedRoleId}-${module.id}-${permission}`;
-              // Enable ALL permissions for subscription-active modules
-              newStates[key] = true;
-            });
-          }
-        });
-      }
+      // Auto-enable ALL essential permissions by default 
+      Object.values(AVAILABLE_MODULES).forEach(module => {
+        if (module.essential) {
+          module.permissions.forEach(permission => {
+            const key = `${selectedRoleId}-${module.id}-${permission}`;
+            // Enable ALL permissions for essential modules
+            newStates[key] = true;
+          });
+        }
+      });
 
       setPermissionStates(newStates);
     }
