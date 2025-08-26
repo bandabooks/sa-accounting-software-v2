@@ -7626,10 +7626,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = user.user?.companyId || 2;
       const showAll = req.query.showAll === 'true';
       
+      console.log(`🔍 Fetching chart of accounts for company ${companyId}, user: ${user.user?.username}, showAll: ${showAll}`);
+      
       // By default, show only active accounts. Use showAll=true to see all accounts
       const accounts = showAll 
         ? await storage.getAllChartOfAccounts(companyId)
         : await storage.getActiveChartOfAccounts(companyId);
+      
+      console.log(`📊 Found ${accounts.length} accounts for company ${companyId}`);
       
       res.json(accounts);
     } catch (error) {
