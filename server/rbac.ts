@@ -384,7 +384,8 @@ export function requirePermission(permission: string) {
         return res.status(400).json({ message: 'Company context required' });
       }
 
-      const userPermissions = await storage.getUserPermissions(user.id, parseInt(companyId));
+      const userPerms = await storage.getAllUserPermissions(user.id);
+      const userPermissions = userPerms.map(p => p.customPermissions).flat().filter(Boolean) as string[];
       
       if (!hasPermission(userPermissions, permission)) {
         return res.status(403).json({ 
@@ -413,7 +414,8 @@ export function requireAnyPermission(permissions: string[]) {
         return res.status(401).json({ message: 'Authentication and company context required' });
       }
 
-      const userPermissions = await storage.getUserPermissions(user.id, parseInt(companyId));
+      const userPerms = await storage.getAllUserPermissions(user.id);
+      const userPermissions = userPerms.map(p => p.customPermissions).flat().filter(Boolean) as string[];
       
       if (!hasAnyPermission(userPermissions, permissions)) {
         return res.status(403).json({ 
@@ -442,7 +444,8 @@ export function requireRole(roleName: string) {
         return res.status(401).json({ message: 'Authentication and company context required' });
       }
 
-      const userRole = await storage.getUserRole(user.id, parseInt(companyId));
+      const userRoles = await storage.getUsersByRole('company_admin');
+      const userRole = userRoles.find(u => u.id === user.id);
       
       if (!userRole || userRole.name !== roleName) {
         return res.status(403).json({ 
@@ -474,9 +477,9 @@ export async function logPermissionChange(
       userId,
       companyId,
       action,
-      resource,
-      oldValues: oldValues ? JSON.stringify(oldValues) : null,
-      newValues: newValues ? JSON.stringify(newValues) : null,
+      targetType: resource,
+      oldValue: oldValues ? JSON.stringify(oldValues) : null,
+      newValue: newValues ? JSON.stringify(newValues) : null,
       timestamp: new Date(),
     };
     
@@ -490,10 +493,12 @@ export async function logPermissionChange(
 export async function getEffectivePermissions(userId: number, companyId: number): Promise<string[]> {
   try {
     // Get direct user permissions
-    const directPermissions = await storage.getUserPermissions(userId, companyId);
+    const userPerms = await storage.getAllUserPermissions(userId);
+    const directPermissions = userPerms.map(p => p.customPermissions).flat().filter(Boolean) as string[];
     
     // Get role-based permissions
-    const userRole = await storage.getUserRole(userId, companyId);
+    const userRoles = await storage.getUsersByRole('company_admin');
+    const userRole = userRoles.find(u => u.id === userId);
     let rolePermissions: string[] = [];
     
     if (userRole) {

@@ -6,7 +6,7 @@ import {
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
-  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail
+  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail,
   FileCheck
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
