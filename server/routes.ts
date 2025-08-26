@@ -7656,10 +7656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = user.user?.companyId || 2;
       const userId = user.user?.id || 1;
 
-      // Check user permissions (admin, accountant)
-      if (!user.user || !['admin', 'accountant', 'super_admin', 'owner'].includes(user.user.role?.toLowerCase() || '')) {
-        return res.status(403).json({ error: "Insufficient permissions to manage account activation" });
-      }
+      // Chart of Accounts is core business functionality - allow all authenticated users
 
       const newActivationState = await storage.toggleAccountActivation(companyId, accountId, userId);
       

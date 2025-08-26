@@ -81,6 +81,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   // Sales Representative - Sales focused
   sales_rep: [
     'dashboard:view',
+    'chart_of_accounts:view', 'chart_of_accounts:create', 'chart_of_accounts:update',
     'customers:view', 'customers:create', 'customers:update',
     'invoices:view', 'invoices:create', 'invoices:update', 'invoices:send',
     'estimates:view', 'estimates:create', 'estimates:update', 'estimates:convert',
@@ -92,6 +93,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   // Cashier - POS and basic sales
   cashier: [
     'dashboard:view',
+    'chart_of_accounts:view', 'chart_of_accounts:create',
     'pos:view', 'pos:process_sales', 'pos:handle_returns',
     'customers:view',
     'products:view',
@@ -101,6 +103,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   // Employee - Limited access
   employee: [
     'dashboard:view',
+    'chart_of_accounts:view', 'chart_of_accounts:create', 'chart_of_accounts:update',
     'time:tracking',
     'tasks:view'
   ],
@@ -108,6 +111,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   // Viewer - Read-only access
   viewer: [
     'dashboard:view',
+    'chart_of_accounts:view',
     'reports:view',
     'customers:view',
     'invoices:view',
