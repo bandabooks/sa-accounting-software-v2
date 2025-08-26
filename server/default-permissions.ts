@@ -9,7 +9,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'purchases:view', 'purchases:create', 'purchases:update', 'purchases:delete',
     'products:view', 'products:create', 'products:update', 'products:delete',
     'inventory:view', 'inventory:manage', 'inventory:adjust', 'inventory:count',
-    'accounting:view', 'chart_of_accounts:view', 'chart_of_accounts:update',
+    'accounting:view', 'chart_of_accounts:view', 'chart_of_accounts:create', 'chart_of_accounts:update', 'chart_of_accounts:delete',
     'journal_entries:view', 'journal_entries:create', 'journal_entries:update',
     'banking:view', 'banking:create', 'banking:update', 'banking:reconciliation',
     'reports:view', 'reports:export', 'reports:schedule',
@@ -48,7 +48,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'purchases:view', 'purchases:create', 'purchases:update', 'purchases:delete',
     'purchase_orders:view', 'purchase_orders:create', 'purchase_orders:update', 'purchase_orders:delete',
     'suppliers:view', 'suppliers:create', 'suppliers:update', 'suppliers:delete',
-    'accounting:view', 'chart_of_accounts:view', 'chart_of_accounts:update',
+    'accounting:view', 'chart_of_accounts:view', 'chart_of_accounts:create', 'chart_of_accounts:update', 'chart_of_accounts:delete',
     'journal_entries:view', 'journal_entries:create', 'journal_entries:update',
     'banking:view', 'banking:create', 'banking:update', 'banking:reconciliation',
     'reports:view', 'reports:export', 'reports:schedule',
@@ -64,7 +64,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   // Bookkeeper - Enhanced data entry with purchase and VAT access
   bookkeeper: [
     'dashboard:view',
-    'accounting:view', 'journal_entries:view', 'journal_entries:create',
+    'accounting:view', 'chart_of_accounts:view', 'chart_of_accounts:create', 'journal_entries:view', 'journal_entries:create',
     'banking:view', 'banking:create',
     'reports:view',
     'invoices:view', 'invoices:create', 'invoices:update',
