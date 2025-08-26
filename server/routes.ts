@@ -4117,9 +4117,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error calculating cash flow:", error);
       res.status(500).json({ 
-        cashInflow: "534843.00",
+        cashInflow: "0.00",
         cashOutflow: "0.00", 
-        netCashFlow: "534843.00"
+        netCashFlow: "0.00"
       });
     }
   });
@@ -4130,30 +4130,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { from, to } = req.query;
       const companyId = (req as AuthenticatedRequest).user!.companyId;
       
+      // Get actual invoices and expenses for VAT calculation
+      const invoices = await storage.getAllInvoices(companyId);
+      const expenses = await storage.getAllExpenses(companyId);
+      
+      // Calculate VAT output from invoices
+      const totalVATOutput = invoices.reduce((sum, inv) => {
+        return sum + (inv.vatAmount ? parseFloat(inv.vatAmount) : 0);
+      }, 0);
+      
+      // Calculate VAT input from expenses
+      const totalVATInput = expenses.reduce((sum, exp) => {
+        return sum + (exp.vatAmount ? parseFloat(exp.vatAmount) : 0);
+      }, 0);
+      
+      const vatPayable = Math.max(0, totalVATOutput - totalVATInput);
+      const vatRefund = Math.max(0, totalVATInput - totalVATOutput);
+      
       const vatSummary = {
         taxPeriod: `${from} to ${to}`,
-        totalVATOutput: "15000.00",
-        totalVATInput: "5000.00", 
-        vatPayable: "10000.00",
-        vatRefund: "0.00",
-        transactions: [
-          {
-            date: "2025-01-15",
-            reference: "INV-2025-001",
-            description: "Sales Invoice",
-            vatType: "STD",
-            netAmount: "100000.00",
-            vatAmount: "15000.00"
-          },
-          {
-            date: "2025-01-10",
-            reference: "BILL-2025-001", 
-            description: "Office Supplies",
-            vatType: "STD",
-            netAmount: "5000.00",
-            vatAmount: "750.00"
-          }
-        ]
+        totalVATOutput: totalVATOutput.toFixed(2),
+        totalVATInput: totalVATInput.toFixed(2), 
+        vatPayable: vatPayable.toFixed(2),
+        vatRefund: vatRefund.toFixed(2),
+        transactions: [] // Empty for now - can be populated from actual transactions
       };
       
       res.json(vatSummary);
@@ -4169,31 +4169,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { asAt } = req.query;
       const companyId = (req as AuthenticatedRequest).user!.companyId;
       
+      // For new companies with no data, return empty reconciliation
       const bankReconciliation = {
-        bankAccount: "Standard Bank - Current Account",
+        bankAccount: "No bank accounts configured",
         period: asAt,
-        openingBalance: "50000.00",
-        closingBalance: "75000.00",
-        bookBalance: "74500.00",
-        reconciliationItems: [
-          {
-            date: "2025-01-15",
-            description: "Outstanding deposit",
-            reference: "DEP-001",
-            amount: "5000.00",
-            type: "deposit" as const,
-            reconciled: false
-          },
-          {
-            date: "2025-01-14",
-            description: "Outstanding cheque",
-            reference: "CHQ-123",
-            amount: "-2500.00",
-            type: "withdrawal" as const,
-            reconciled: false
-          }
-        ],
-        unreconciled: "2500.00"
+        openingBalance: "0.00",
+        closingBalance: "0.00",
+        bookBalance: "0.00",
+        reconciliationItems: [],
+        unreconciled: "0.00"
       };
       
       res.json(bankReconciliation);
@@ -4252,31 +4236,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { from, to } = req.query;
       const companyId = (req as AuthenticatedRequest).user!.companyId;
       
+      // Get actual financial data to calculate taxes
+      const invoices = await storage.getAllInvoices(companyId);
+      const expenses = await storage.getAllExpenses(companyId);
+      
+      // Calculate VAT payable from actual data
+      const totalVATOutput = invoices.reduce((sum, inv) => sum + (parseFloat(inv.vatAmount || '0')), 0);
+      const totalVATInput = expenses.reduce((sum, exp) => sum + (parseFloat(exp.vatAmount || '0')), 0);
+      const vatPayable = Math.max(0, totalVATOutput - totalVATInput);
+      
       const taxSummary = {
         period: `${from} to ${to}`,
-        vatPayable: "15000.00",
-        payePayable: "25000.00",
-        uifPayable: "2500.00",
-        sdlPayable: "1500.00",
-        totalTaxLiability: "44000.00",
-        companyTax: "50000.00",
+        vatPayable: vatPayable.toFixed(2),
+        payePayable: "0.00", // Would need payroll data
+        uifPayable: "0.00",  // Would need payroll data
+        sdlPayable: "0.00",  // Would need payroll data
+        totalTaxLiability: vatPayable.toFixed(2),
+        companyTax: "0.00",  // Would need profit calculation
         breakdown: [
           {
             taxType: "VAT",
-            amount: "15000.00",
+            amount: vatPayable.toFixed(2),
             dueDate: "2025-02-28",
-            status: "outstanding" as const
-          },
-          {
-            taxType: "PAYE",
-            amount: "25000.00", 
-            dueDate: "2025-02-07",
-            status: "paid" as const
-          },
-          {
-            taxType: "Company Tax",
-            amount: "50000.00",
-            dueDate: "2025-03-31",
             status: "outstanding" as const
           }
         ]
