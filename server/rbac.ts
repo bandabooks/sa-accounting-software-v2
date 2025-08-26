@@ -476,6 +476,7 @@ export async function logPermissionChange(
     const auditLog: InsertPermissionAuditLog = {
       userId,
       companyId,
+      changedBy: userId, // Required field
       action,
       targetType: resource,
       oldValue: oldValues ? JSON.stringify(oldValues) : null,
