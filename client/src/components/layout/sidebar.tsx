@@ -353,7 +353,8 @@ const getFullNavigationGroups = () => [
     items: [
       { path: "/pos", label: "POS Dashboard", icon: ChartLine, permission: "POS_VIEW", module: "pos_sales" },
       { path: "/pos/terminal", label: "POS Terminal", icon: Terminal, permission: "POS_PROCESS_SALES", module: "pos_sales" },
-      { path: "/pos/shifts", label: "Shift Management", icon: Clock, permission: "POS_MANAGE_SHIFTS", module: "pos_sales" }
+      { path: "/pos/shifts", label: "Shift Management", icon: Clock, permission: "POS_MANAGE_SHIFTS", module: "pos_sales" },
+      { path: "/pos/setup", label: "Terminal Setup", icon: Settings, permission: "POS_SETUP", module: "pos_sales" }
     ]
   },
   // 13. Administration
