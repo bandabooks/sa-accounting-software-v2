@@ -216,20 +216,20 @@ export default function FinancialReportsPage() {
       ['Cash and Cash Equivalents', '1000', totalRevenue],
       ['Bank Current Account', '1010', 0],
       ['Accounts Receivable', '1200', 0],
-      ['Total Current Assets', '', 314437],
+      ['Total Current Assets', '', totalRevenue],
       ['', '', ''],
       ['LIABILITIES', '', ''],
       ['Current Liabilities', '', ''],
-      ['Accounts Payable', '2000', 13665],
-      ['VAT Output', '2100', 19564],
+      ['Accounts Payable', '2000', 0],
+      ['VAT Output', '2100', 0],
       ['Total Current Liabilities', '', 33229],
       ['', '', ''],
       ['EQUITY', '', ''],
-      ['Retained Earnings', '3000', 164445],
-      ['Current Year Earnings', '3100', 116763],
-      ['Total Equity', '', 281208],
+      ['Retained Earnings', '3000', 0],
+      ['Current Year Earnings', '3100', netProfit],
+      ['Total Equity', '', netProfit],
       ['', '', ''],
-      ['TOTAL LIABILITIES + EQUITY', '', 314437]
+      ['TOTAL LIABILITIES + EQUITY', '', totalRevenue + totalExpenses]
     ];
     
     const wb = XLSX.utils.book_new();
@@ -734,7 +734,7 @@ export default function FinancialReportsPage() {
                 <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300">
                   <div className="flex justify-between text-lg font-bold text-gray-800">
                     <span>TOTAL LIABILITIES + EQUITY</span>
-                    <span>{formatCurrency('314437')}</span>
+                    <span>{formatCurrency((totalRevenue + totalExpenses).toString())}</span>
                   </div>
                   <div className="text-center mt-2">
                     <Badge variant="default" className="bg-green-100 text-green-800">

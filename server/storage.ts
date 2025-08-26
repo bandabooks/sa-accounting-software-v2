@@ -8543,75 +8543,17 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Load professional services templates for accounting firms
+  // Load professional services templates for accounting firms - DISABLED TO PREVENT HARDCODED DATA
   private async loadProfessionalServicesTemplates(companyId: number): Promise<void> {
-    console.log(`Loading professional services templates for company ${companyId}`);
+    console.log(`Professional services templates disabled to maintain data isolation - company ${companyId} starts with clean product catalog`);
     
-    const professionalServices = [
-      {
-        name: 'Annual Financial Statements (AFS)',
-        description: 'Comprehensive annual financial statements preparation',
-        sku: 'SRV-001',
-        unitPrice: 8500.00,
-        isService: true,
-        isActive: true,
-        vatRate: 15.0,
-        vatInclusive: true,
-        companyId
-      },
-      {
-        name: 'Professional Annual Financial Statements',
-        description: 'Professional annual financial statements for medium enterprises',
-        sku: 'SRV-002',
-        unitPrice: 25000.00,
-        isService: true,
-        isActive: true,
-        vatRate: 15.0,
-        vatInclusive: true,
-        companyId
-      },
-      {
-        name: 'VAT Registration',
-        description: 'VAT registration services for new businesses',
-        sku: 'SRV-003',
-        unitPrice: 850.00,
-        isService: true,
-        isActive: true,
-        vatRate: 15.0,
-        vatInclusive: true,
-        companyId
-      },
-      {
-        name: 'Tax Compliance Review',
-        description: 'Comprehensive tax compliance review and advisory',
-        sku: 'SRV-004',
-        unitPrice: 3500.00,
-        isService: true,
-        isActive: true,
-        vatRate: 15.0,
-        vatInclusive: true,
-        companyId
-      },
-      {
-        name: 'Monthly Bookkeeping',
-        description: 'Professional monthly bookkeeping services',
-        sku: 'SRV-005',
-        unitPrice: 2500.00,
-        isService: true,
-        isActive: true,
-        vatRate: 15.0,
-        vatInclusive: true,
-        companyId
-      }
-    ];
-
+    // Professional services are now created manually by users to ensure proper data isolation
+    // No hardcoded products should be automatically added to any company
+    
     try {
-      for (const service of professionalServices) {
-        await db.insert(products).values(service);
-      }
-      console.log(`✓ Loaded ${professionalServices.length} professional services templates`);
+      console.log(`✓ Company ${companyId} initialized with empty product catalog for proper data isolation`);
     } catch (error) {
-      console.error('Error loading professional services templates:', error);
+      console.error('Error initializing company product catalog:', error);
     }
   }
 
