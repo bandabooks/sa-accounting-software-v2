@@ -321,7 +321,7 @@ const getFullNavigationGroups = () => [
     icon: BarChart3,
     module: "reports",
     items: [
-      { path: "/financial-reports", label: "Financial Reports", icon: PieChart, permission: "FINANCIAL_VIEW", module: "reports" },
+      { path: "/reports/financial", label: "Financial Reports", icon: PieChart, permission: "FINANCIAL_VIEW", module: "reports" },
       { path: "/advanced-analytics", label: "Advanced Analytics", icon: BarChart3, permission: "ADVANCED_ANALYTICS_VIEW", module: "reports" },
       { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "BUSINESS_REPORTS_VIEW", module: "reports" },
       { path: "/general-reports", label: "General Reports", icon: FileText, permission: "REPORTS_VIEW", module: "reports" },

@@ -509,11 +509,6 @@ function AuthenticatedApp() {
             <GeneralReports />
           </ProtectedRoute>
         </Route>
-        <Route path="/financial-reports">
-          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
-            <FinancialReports />
-          </ProtectedRoute>
-        </Route>
         <Route path="/advanced-analytics">
           <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
             <FinancialReports />
