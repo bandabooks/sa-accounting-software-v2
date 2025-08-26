@@ -32,6 +32,11 @@ export default function FinancialReportsPage() {
     queryKey: ['/api/financial/trial-balance'],
   });
 
+  // Fetch Real Financial Ratios
+  const { data: financialRatios, isLoading: ratiosLoading } = useQuery({
+    queryKey: ['/api/financial-ratios'],
+  });
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -1014,15 +1019,15 @@ export default function FinancialReportsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Gross Profit Margin</span>
-                            <span className="font-medium">0.0%</span>
+                            <span className="font-medium">{ratiosLoading ? 'Loading...' : `${financialRatios?.profitability?.grossProfitMargin || 0.0}%`}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Net Profit Margin</span>
-                            <span className="font-medium">0.0%</span>
+                            <span className="font-medium">{ratiosLoading ? 'Loading...' : `${financialRatios?.profitability?.netProfitMargin || 0.0}%`}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Return on Assets</span>
-                            <span className="font-medium">37.1%</span>
+                            <span className="font-medium">{ratiosLoading ? 'Loading...' : `${financialRatios?.profitability?.returnOnAssets || 0.0}%`}</span>
                           </div>
                         </div>
                       </div>
@@ -1032,15 +1037,15 @@ export default function FinancialReportsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Current Ratio</span>
-                            <span className="font-medium">9.46:1</span>
+                            <span className="font-medium">{ratiosLoading ? 'Loading...' : `${financialRatios?.liquidity?.currentRatio || 0.0}:1`}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Quick Ratio</span>
-                            <span className="font-medium">7.73:1</span>
+                            <span className="font-medium">{ratiosLoading ? 'Loading...' : `${financialRatios?.liquidity?.quickRatio || 0.0}:1`}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Cash Ratio</span>
-                            <span className="font-medium">1.73:1</span>
+                            <span className="font-medium">{ratiosLoading ? 'Loading...' : `${financialRatios?.liquidity?.cashRatio || 0.0}:1`}</span>
                           </div>
                         </div>
                       </div>
@@ -1066,7 +1071,7 @@ export default function FinancialReportsPage() {
                         <Badge className="bg-blue-100 text-blue-800 mt-1">Positive</Badge>
                         <div>
                           <p className="font-medium">Strong Liquidity Position</p>
-                          <p className="text-sm text-gray-600">Current ratio of 9.46:1 shows excellent ability to meet short-term obligations</p>
+                          <p className="text-sm text-gray-600">{financialRatios?.liquidity?.currentRatio > 0 ? `Current ratio of ${financialRatios.liquidity.currentRatio}:1 shows ${financialRatios.liquidity.currentRatio > 2 ? 'excellent' : 'good'} ability to meet short-term obligations` : 'No current ratio data available for this period'}</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">

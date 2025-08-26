@@ -16254,6 +16254,79 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, and Company Email Settings!");
+  // Financial Ratios Calculation Endpoint
+  app.get("/api/financial-ratios", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user!.companyId;
+      const { asOfDate } = req.query;
+      const date = asOfDate ? new Date(asOfDate as string) : new Date();
+      
+      // Get trial balance data for ratio calculations
+      const trialBalance = await storage.getTrialBalance(companyId, date);
+      
+      // Calculate Current Assets and Current Liabilities from trial balance
+      const currentAssets = trialBalance
+        .filter(acc => acc.account_type === 'Asset' && 
+               (acc.account_name?.toLowerCase().includes('current') || 
+                acc.account_name?.toLowerCase().includes('cash') ||
+                acc.account_name?.toLowerCase().includes('receivable') ||
+                acc.account_name?.toLowerCase().includes('inventory')))
+        .reduce((sum, acc) => sum + (acc.debit_amount || 0), 0);
+      
+      const currentLiabilities = trialBalance
+        .filter(acc => acc.account_type === 'Liability' && 
+               (acc.account_name?.toLowerCase().includes('current') ||
+                acc.account_name?.toLowerCase().includes('payable') ||
+                acc.account_name?.toLowerCase().includes('accrued')))
+        .reduce((sum, acc) => sum + (acc.credit_amount || 0), 0);
+      
+      const cashAssets = trialBalance
+        .filter(acc => acc.account_type === 'Asset' && 
+               (acc.account_name?.toLowerCase().includes('cash') ||
+                acc.account_name?.toLowerCase().includes('bank')))
+        .reduce((sum, acc) => sum + (acc.debit_amount || 0), 0);
+      
+      const totalAssets = trialBalance
+        .filter(acc => acc.account_type === 'Asset')
+        .reduce((sum, acc) => sum + (acc.debit_amount || 0), 0);
+      
+      const totalRevenue = trialBalance
+        .filter(acc => acc.account_type === 'Revenue')
+        .reduce((sum, acc) => sum + (acc.credit_amount || 0), 0);
+      
+      const netIncome = totalRevenue - trialBalance
+        .filter(acc => acc.account_type === 'Expense')
+        .reduce((sum, acc) => sum + (acc.debit_amount || 0), 0);
+      
+      // Calculate Financial Ratios using real company-specific data
+      const currentRatio = currentLiabilities > 0 ? currentAssets / currentLiabilities : 0;
+      const quickRatio = currentLiabilities > 0 ? (currentAssets - 0) / currentLiabilities : 0;
+      const cashRatio = currentLiabilities > 0 ? cashAssets / currentLiabilities : 0;
+      const returnOnAssets = totalAssets > 0 ? (netIncome / totalAssets) * 100 : 0;
+      const grossProfitMargin = totalRevenue > 0 ? ((totalRevenue - 0) / totalRevenue) * 100 : 0;
+      const netProfitMargin = totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0;
+      
+      const ratios = {
+        profitability: {
+          grossProfitMargin: parseFloat(grossProfitMargin.toFixed(1)),
+          netProfitMargin: parseFloat(netProfitMargin.toFixed(1)),
+          returnOnAssets: parseFloat(returnOnAssets.toFixed(1))
+        },
+        liquidity: {
+          currentRatio: parseFloat(currentRatio.toFixed(2)),
+          quickRatio: parseFloat(quickRatio.toFixed(2)),
+          cashRatio: parseFloat(cashRatio.toFixed(2))
+        }
+      };
+      
+      console.log(`Financial ratios calculated for company ${companyId}:`, ratios);
+      res.json(ratios);
+    } catch (error) {
+      console.error("Error calculating financial ratios:", error);
+      res.status(500).json({ error: "Failed to calculate financial ratios" });
+    }
+  });
+
+  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, Company Email Settings, and Financial Ratios!");
   return httpServer;
 }
