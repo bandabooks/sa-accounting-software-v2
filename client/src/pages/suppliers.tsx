@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Edit, Trash2, Building, Search, Filter, Mail, Phone, MapPin, Star, Eye, MessageCircle, ShoppingCart, Calendar, Award, TrendingUp, Users, Target, Clock } from "lucide-react";
+import { Plus, Edit, Trash2, Building, Search, Filter, Mail, Phone, MapPin, Eye, MessageCircle, ShoppingCart, Calendar, Award, TrendingUp, Users, Target, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils-invoice";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -168,11 +168,7 @@ export default function Suppliers() {
     return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  // Generate random ratings and performance data for visual enhancement
-  const getSupplierRating = (supplierId: number) => {
-    const ratings = [4.2, 4.5, 4.8, 3.9, 4.1, 4.7, 4.3, 4.6, 4.0, 4.4];
-    return ratings[supplierId % ratings.length];
-  };
+  // Remove fake ratings - use real performance data only
 
   const getSupplierAvatar = (name: string) => {
     return name.charAt(0).toUpperCase();
@@ -551,10 +547,7 @@ export default function Suppliers() {
                             <Badge className={`bg-gradient-to-r ${getCategoryColor(supplier.category || 'standard')} text-white border-0 shadow-md`}>
                               {formatCategoryName(supplier.category || 'standard')}
                             </Badge>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                              <span className="text-sm font-medium text-gray-600">{getSupplierRating(supplier.id)}</span>
-                            </div>
+                            {/* Real performance metrics only - no fake ratings */}
                           </div>
                         </div>
                       </div>

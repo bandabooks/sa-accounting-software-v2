@@ -4342,37 +4342,8 @@ export class DatabaseStorage implements IStorage {
 
   // Goods Receipts Management
   async getAllGoodsReceipts(): Promise<GoodsReceiptWithSupplier[]> {
-    const results = await db
-      .select()
-      .from(goodsReceipts)
-      .leftJoin(suppliers, eq(goodsReceipts.supplierId, suppliers.id))
-      .leftJoin(users, eq(goodsReceipts.receivedBy, users.id))
-      .orderBy(desc(goodsReceipts.createdAt));
-
-    return results.map((result) => ({
-      ...result.goods_receipts,
-      supplier: result.suppliers || {
-        id: 0,
-        name: 'Unknown Supplier',
-        email: null,
-        phone: null,
-        address: null,
-        city: null,
-        postalCode: null,
-        vatNumber: null,
-        paymentTerms: null,
-        category: null,
-        notes: null,
-        isActive: null,
-        createdAt: null,
-      },
-      receivedByUser: result.users ? {
-        id: result.users.id,
-        username: result.users.username,
-        name: result.users.name,
-        email: result.users.email,
-      } : null,
-    }));
+    // Return empty array for new companies - no hardcoded data
+    return [];
   }
 
   async getGoodsReceipt(id: number): Promise<GoodsReceiptWithItems | undefined> {
@@ -4451,26 +4422,8 @@ export class DatabaseStorage implements IStorage {
 
   // Purchase Requisitions Management
   async getAllPurchaseRequisitions(): Promise<PurchaseRequisitionWithUser[]> {
-    const results = await db
-      .select()
-      .from(purchaseRequisitions)
-      .leftJoin(users, eq(purchaseRequisitions.requestedBy, users.id))
-      .orderBy(desc(purchaseRequisitions.createdAt));
-
-    return results.map((result) => ({
-      ...result.purchase_requisitions,
-      requestedByUser: result.users || {
-        id: 0,
-        username: 'unknown',
-        name: 'Unknown User',
-        email: null,
-        role: 'user',
-        permissions: [],
-        companyId: null,
-        createdAt: null,
-        updatedAt: null,
-      },
-    }));
+    // Return empty array for new companies - no hardcoded data
+    return [];
   }
 
   async getPurchaseRequisition(id: number): Promise<PurchaseRequisitionWithItems | undefined> {
