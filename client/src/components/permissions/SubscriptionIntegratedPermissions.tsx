@@ -530,6 +530,29 @@ export default function SubscriptionIntegratedPermissions({
     return permissionStates[key] || false;
   };
 
+  // Handle module-level toggle (master switch)
+  const handleModuleToggle = (moduleId: string, enabled: boolean) => {
+    if (!selectedRoleId) return;
+    
+    const module = AVAILABLE_MODULES[moduleId];
+    if (!module) return;
+
+    if (enabled) {
+      // When enabling module, turn on basic permissions like "view"
+      const basicPermissions = ['view'];
+      module.permissions.forEach(permission => {
+        if (basicPermissions.includes(permission)) {
+          handlePermissionToggle(moduleId, permission, true);
+        }
+      });
+    } else {
+      // When disabling module, turn off all permissions
+      module.permissions.forEach(permission => {
+        handlePermissionToggle(moduleId, permission, false);
+      });
+    }
+  };
+
   // Handle permission toggle with better isolation
   const handlePermissionToggle = (moduleId: string, permission: string, enabled: boolean) => {
     if (!selectedRoleId) return;
@@ -766,9 +789,16 @@ export default function SubscriptionIntegratedPermissions({
                                     <p className="text-sm text-gray-600">{module.description}</p>
                                   </div>
                                 </div>
-                                <Badge variant={hasAnyPermission || isModuleActiveInSubscription(module.id) ? "default" : "outline"}>
-                                  {hasAnyPermission || isModuleActiveInSubscription(module.id) ? "Active" : "Disabled"}
-                                </Badge>
+                                <div className="flex items-center space-x-3">
+                                  <Switch
+                                    checked={hasAnyPermission}
+                                    onCheckedChange={(checked) => handleModuleToggle(module.id, checked)}
+                                    className="data-[state=checked]:bg-blue-600"
+                                  />
+                                  <Badge variant={hasAnyPermission || isModuleActiveInSubscription(module.id) ? "default" : "outline"}>
+                                    {hasAnyPermission || isModuleActiveInSubscription(module.id) ? "Active" : "Disabled"}
+                                  </Badge>
+                                </div>
                               </div>
 
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
