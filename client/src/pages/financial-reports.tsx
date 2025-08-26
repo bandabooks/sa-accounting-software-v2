@@ -114,6 +114,51 @@ export default function FinancialReports() {
     }
   });
 
+  // Fetch aged receivables analysis
+  const { data: agedReceivables } = useQuery({
+    queryKey: ['/api/reports/aged-receivables', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/aged-receivables?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  // Fetch aged payables analysis  
+  const { data: agedPayables } = useQuery({
+    queryKey: ['/api/reports/aged-payables', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/aged-payables?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  // Fetch VAT summary
+  const { data: vatSummary } = useQuery({
+    queryKey: ['/api/reports/vat-summary', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/vat-summary?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  // Fetch tax summary
+  const { data: taxSummary } = useQuery({
+    queryKey: ['/api/reports/tax-summary', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/tax-summary?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
+  // Fetch bank reconciliation
+  const { data: bankReconciliation } = useQuery({
+    queryKey: ['/api/reports/bank-reconciliation', dateFrom, dateTo],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/bank-reconciliation?from=${dateFrom}&to=${dateTo}`, "GET");
+      return response.json ? await response.json() : response;
+    }
+  });
+
   // Calculate real financial report data from actual transactions
   const calculateReportData = () => {
     // Calculate Balance Sheet from account balances
@@ -315,18 +360,14 @@ export default function FinancialReports() {
             title: "Aged Receivables Analysis",
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             summary: {
-              total: 485000,
-              current: 320000,
-              overdue30: 95000,
-              overdue60: 45000,
-              overdue90: 25000
+              total: agedReceivables?.total ? parseFloat(agedReceivables.total) : 0,
+              current: agedReceivables?.current ? parseFloat(agedReceivables.current) : 0,
+              overdue30: agedReceivables?.days30 ? parseFloat(agedReceivables.days30) : 0,
+              overdue60: agedReceivables?.days60 ? parseFloat(agedReceivables.days60) : 0,
+              overdue90: agedReceivables?.days90 ? parseFloat(agedReceivables.days90) : 0
             },
             data: {
-              customers: [
-                { name: "ABC Corp", current: 120000, days30: 25000, days60: 0, days90: 0, total: 145000 },
-                { name: "XYZ Ltd", current: 85000, days30: 35000, days60: 15000, days90: 10000, total: 145000 },
-                { name: "DEF Industries", current: 115000, days30: 35000, days60: 30000, days90: 15000, total: 195000 }
-              ]
+              customers: agedReceivables?.customers || []
             }
           }
         },
@@ -342,18 +383,14 @@ export default function FinancialReports() {
             title: "Aged Payables Analysis",
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             summary: {
-              total: 285000,
-              current: 180000,
-              overdue30: 65000,
-              overdue60: 25000,
-              overdue90: 15000
+              total: agedPayables?.total ? parseFloat(agedPayables.total) : 0,
+              current: agedPayables?.current ? parseFloat(agedPayables.current) : 0,
+              overdue30: agedPayables?.days30 ? parseFloat(agedPayables.days30) : 0,
+              overdue60: agedPayables?.days60 ? parseFloat(agedPayables.days60) : 0,
+              overdue90: agedPayables?.days90 ? parseFloat(agedPayables.days90) : 0
             },
             data: {
-              suppliers: [
-                { name: "Office Supplies Co", current: 45000, days30: 15000, days60: 0, days90: 0, total: 60000 },
-                { name: "Tech Equipment Ltd", current: 85000, days30: 25000, days60: 15000, days90: 10000, total: 135000 },
-                { name: "Utilities Provider", current: 50000, days30: 25000, days60: 10000, days90: 5000, total: 90000 }
-              ]
+              suppliers: agedPayables?.suppliers || []
             }
           }
         },
@@ -369,22 +406,27 @@ export default function FinancialReports() {
             title: "Expense Analysis Report",
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             summary: {
-              totalExpenses: 1420000,
-              operatingExpenses: 520000,
-              adminExpenses: 220000,
-              costOfSales: 680000
+              totalExpenses: expenses?.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
+              operatingExpenses: expenses?.filter((exp: any) => exp.category?.toLowerCase().includes('operating')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
+              adminExpenses: expenses?.filter((exp: any) => exp.category?.toLowerCase().includes('admin')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
+              costOfSales: expenses?.filter((exp: any) => exp.category?.toLowerCase().includes('cost')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0
             },
             data: {
-              categories: [
-                { category: "Cost of Goods Sold", amount: 680000, percentage: 47.9 },
-                { category: "Operating Expenses", amount: 520000, percentage: 36.6 },
-                { category: "Administrative Expenses", amount: 220000, percentage: 15.5 }
-              ],
-              monthlyTrend: [
-                { month: "Jan", amount: 485000 },
-                { month: "Feb", amount: 465000 },
-                { month: "Mar", amount: 470000 }
-              ]
+              categories: expenses?.length ? 
+                expenses.reduce((acc: any[], exp: any) => {
+                  const category = exp.category || 'Other';
+                  const existing = acc.find(cat => cat.category === category);
+                  if (existing) {
+                    existing.amount += parseFloat(exp.amount) || 0;
+                  } else {
+                    acc.push({ category, amount: parseFloat(exp.amount) || 0, percentage: 0 });
+                  }
+                  return acc;
+                }, []).map((cat: any) => ({
+                  ...cat,
+                  percentage: expenses.length > 0 ? ((cat.amount / expenses.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0)) * 100) : 0
+                })) : [],
+              monthlyTrend: []
             }
           }
         }
@@ -412,21 +454,14 @@ export default function FinancialReports() {
             title: "VAT Summary Report",
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             summary: {
-              vatInput: 145000,
-              vatOutput: 285000,
-              vatPayable: 140000,
+              vatInput: vatSummary?.totalVATInput ? parseFloat(vatSummary.totalVATInput) : 0,
+              vatOutput: vatSummary?.totalVATOutput ? parseFloat(vatSummary.totalVATOutput) : 0,
+              vatPayable: vatSummary?.vatPayable ? parseFloat(vatSummary.vatPayable) : 0,
               vatRate: 15
             },
             data: {
-              vatInput: [
-                { description: "Office Equipment Purchase", vatAmount: 45000, netAmount: 300000 },
-                { description: "Professional Services", vatAmount: 15000, netAmount: 100000 },
-                { description: "Office Supplies", vatAmount: 85000, netAmount: 566667 }
-              ],
-              vatOutput: [
-                { description: "Product Sales", vatAmount: 180000, netAmount: 1200000 },
-                { description: "Service Revenue", vatAmount: 105000, netAmount: 700000 }
-              ]
+              vatInput: vatSummary?.transactions?.filter((t: any) => parseFloat(t.vatAmount || '0') < 0) || [],
+              vatOutput: vatSummary?.transactions?.filter((t: any) => parseFloat(t.vatAmount || '0') > 0) || []
             }
           }
         },
@@ -442,17 +477,13 @@ export default function FinancialReports() {
             title: "Tax Summary Report",
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             summary: {
-              incomeTax: 129000,
-              vatPayable: 140000,
-              paye: 85000,
-              totalTaxLiability: 354000
+              incomeTax: 0,
+              vatPayable: taxSummary?.vatPayable ? parseFloat(taxSummary.vatPayable) : 0,
+              paye: taxSummary?.payePayable ? parseFloat(taxSummary.payePayable) : 0,
+              totalTaxLiability: taxSummary?.totalTaxLiability ? parseFloat(taxSummary.totalTaxLiability) : 0
             },
             data: {
-              taxes: [
-                { type: "Income Tax", amount: 129000, dueDate: "2025-02-28", status: "Pending" },
-                { type: "VAT", amount: 140000, dueDate: "2025-02-25", status: "Pending" },
-                { type: "PAYE", amount: 85000, dueDate: "2025-02-07", status: "Overdue" }
-              ]
+              taxes: taxSummary?.breakdown || []
             }
           }
         },
@@ -468,17 +499,13 @@ export default function FinancialReports() {
             title: "Bank Reconciliation",
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             summary: {
-              bookBalance: 485000,
-              bankBalance: 495000,
-              reconcileItems: 3,
-              unreconciled: 10000
+              bookBalance: bankReconciliation?.bookBalance ? parseFloat(bankReconciliation.bookBalance) : 0,
+              bankBalance: bankReconciliation?.closingBalance ? parseFloat(bankReconciliation.closingBalance) : 0,
+              reconcileItems: bankReconciliation?.reconciliationItems?.length || 0,
+              unreconciled: bankReconciliation?.unreconciled ? parseFloat(bankReconciliation.unreconciled) : 0
             },
             data: {
-              reconcileItems: [
-                { date: "2025-01-27", description: "Outstanding Cheque #1001", amount: -15000, type: "outstanding" },
-                { date: "2025-01-26", description: "Bank Charges", amount: -500, type: "bank_charges" },
-                { date: "2025-01-25", description: "Deposit in Transit", amount: 25500, type: "deposit_transit" }
-              ]
+              reconcileItems: bankReconciliation?.reconciliationItems || []
             }
           }
         }
