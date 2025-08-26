@@ -478,17 +478,7 @@ export default function SubscriptionIntegratedPermissions({
   // Direct permission toggle mutation
   const togglePermissionMutation = useMutation({
     mutationFn: async (data: { roleId: number; moduleId: string; permissionType: string; enabled: boolean }) => {
-      const response = await fetch('/api/permissions/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to toggle permission');
-      }
-      
+      const response = await apiRequest('/api/permissions/toggle', 'POST', data);
       return response.json();
     },
     onSuccess: (result, variables) => {
