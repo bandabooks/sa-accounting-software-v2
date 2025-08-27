@@ -877,6 +877,16 @@ function AuthenticatedApp() {
             <VATTransactionAnalysis />
           </ProtectedRoute>
         </Route>
+        <Route path="/vat201-returns">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VATReturns />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/vat-reconciliation">
+          <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
+            <VATReturns />
+          </ProtectedRoute>
+        </Route>
         <Route path="/enterprise-settings">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
             <EnterpriseSettings />
