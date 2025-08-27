@@ -7771,11 +7771,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Insufficient permissions to set up Chart of Accounts" });
       }
       
-      console.log(`🏗️ Setting up Chart of Accounts for company ${companyId} by user ${userRole}`);
-      await storage.seedSouthAfricanChartOfAccounts(companyId);
+      // Get company industry to use industry-specific account seeding
+      const company = await storage.getCompany(companyId);
+      const industryCode = company?.industry || 'general';
       
-      // Also activate essential accounts for companies that already had accounts seeded
-      await storage.activateEssentialBusinessAccounts(companyId);
+      console.log(`🏗️ Setting up Chart of Accounts for company ${companyId} (${industryCode} industry) by user ${userRole}`);
+      
+      // Use industry-specific seeding which automatically activates relevant accounts
+      await storage.seedIndustryChartOfAccounts(companyId, industryCode);
+      
+      // Also run auto-activation to ensure all industry accounts are active
+      await storage.autoActivateIndustryAccounts(companyId, industryCode);
       
       console.log(`✅ Chart of Accounts seeded successfully for company ${companyId}`);
       res.json({ message: "South African Chart of Accounts seeded successfully with essential accounts activated" });
