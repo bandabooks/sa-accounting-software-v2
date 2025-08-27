@@ -616,7 +616,7 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                   </tr>
                 </thead>
                 <tbody>
-                  {data.transactions?.slice(0, 10).map((transaction: any, index: number) => (
+                  {Array.isArray(data.transactions) ? data.transactions.slice(0, 10).map((transaction: any, index: number) => (
                     <tr key={index} className="border-b">
                       <td className="p-2">{new Date(transaction.date).toLocaleDateString()}</td>
                       <td className="p-2">
@@ -630,10 +630,16 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                       <td className="p-2 text-right">R {transaction.vatAmount}</td>
                       <td className="p-2 text-right">R {transaction.grossAmount}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={7} className="p-4 text-center text-gray-500">
+                        No transactions found for the selected period
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
-              {data.transactions?.length > 10 && (
+              {Array.isArray(data.transactions) && data.transactions.length > 10 && (
                 <p className="text-sm text-gray-500 mt-2">
                   Showing first 10 of {data.transactions.length} transactions
                 </p>
