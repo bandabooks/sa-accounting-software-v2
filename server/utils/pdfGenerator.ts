@@ -1,5 +1,5 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+const jsPDF = require('jspdf').jsPDF;
+const autoTable = require('jspdf-autotable');
 
 interface VatSummaryData {
   period: { startDate: string; endDate: string };
