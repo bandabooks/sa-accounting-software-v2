@@ -305,15 +305,25 @@ export default function Login() {
 
               {/* Security & Support Links */}
               <div className="pt-6 border-t border-gray-100">
-                <div className="text-center">
+                <div className="text-center space-y-2">
                   <Button
                     type="button"
                     variant="link"
                     className="text-blue-600 hover:text-blue-700 font-medium"
-                    onClick={() => setLocation("/trial-signup")}
+                    onClick={() => setLocation("/reset-password")}
                   >
-                    New to Taxnify? Start your free 30-day trial →
+                    Forgot your password?
                   </Button>
+                  <div>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                      onClick={() => setLocation("/trial-signup")}
+                    >
+                      New to Taxnify? Start your free 30-day trial →
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="flex justify-center items-center space-x-6 mt-4 text-xs text-gray-500">

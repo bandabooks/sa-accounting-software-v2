@@ -489,12 +489,8 @@ export default function CustomerLifecycle() {
                   <CardTitle>Recent Automated Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {[
-                    { action: "Welcome email sent", customer: "John Doe", time: "2 hours ago", type: "email" },
-                    { action: "Follow-up reminder created", customer: "Jane Smith", time: "4 hours ago", type: "reminder" },
-                    { action: "Stage updated: Lead → Customer", customer: "Mike Johnson", time: "6 hours ago", type: "stage" },
-                    { action: "Churn risk alert triggered", customer: "Sarah Wilson", time: "1 day ago", type: "alert" }
-                  ].map((activity, index) => (
+                  {/* Recent automated actions will be loaded from API - no hardcoded demo data */}
+                  {[].map((activity, index) => (
                     <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       <div className={`w-2 h-2 rounded-full ${
                         activity.type === 'email' ? 'bg-blue-500' :

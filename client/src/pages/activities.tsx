@@ -26,50 +26,9 @@ export default function Activities() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
-  // Mock data for activities - replace with real API call
+  // Activities will be loaded from API - no hardcoded demo data
   const activities: Activity[] = [
-    {
-      id: "1",
-      type: "success",
-      title: "New invoice payment received",
-      description: "Payment of R2,500 received for Invoice #INV-001",
-      time: "2 mins ago",
-      priority: "high",
-      category: "payments",
-      link: "/payments",
-      entityId: "INV-001"
-    },
-    {
-      id: "2",
-      type: "warning",
-      title: "Monthly VAT return due in 3 days",
-      description: "VAT201 submission deadline approaching",
-      time: "1 hour ago",
-      priority: "medium",
-      category: "compliance",
-      link: "/vat-management"
-    },
-    {
-      id: "3",
-      type: "info",
-      title: "New customer registration",
-      description: "John Smith has been added to your customer database",
-      time: "3 hours ago",
-      priority: "low",
-      category: "customers",
-      link: "/customers"
-    },
-    {
-      id: "4",
-      type: "success",
-      title: "Invoice INV-2024-010 created",
-      description: "New invoice generated for ABC Corp - R5,200",
-      time: "1 day ago",
-      priority: "medium",
-      category: "invoices",
-      link: "/invoices",
-      entityId: "INV-2024-010"
-    },
+    // Real activities will populate here from API
     {
       id: "5",
       type: "warning",

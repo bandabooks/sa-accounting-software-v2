@@ -47,6 +47,7 @@ import Companies from "@/pages/companies";
 import Profile from "@/pages/profile";
 import AdminPanel from "@/pages/admin-panel";
 import Login from "@/pages/login";
+import ResetPassword from "@/pages/reset-password";
 import TrialSignup from "@/pages/trial-signup";
 import ChartOfAccounts from "@/pages/chart-of-accounts";
 import ChartManagement from "@/pages/chart-management";
@@ -1063,6 +1064,7 @@ function Router() {
         <Route path="/accountants/tax-practitioners" component={TaxPractitioners} />
         <Route path="/accountants/auditors" component={Auditors} />
         <Route path="/login" component={Login} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route path="/trial-signup" component={TrialSignup} />
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/portal" component={CustomerPortal} />

@@ -12,35 +12,8 @@ export default function PayFastPayments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isEnabled, setIsEnabled] = useState(true);
 
-  const recentTransactions = [
-    {
-      id: "PF001",
-      customer: "John Smith",
-      amount: 599.99,
-      status: "completed",
-      method: "Credit Card",
-      timestamp: "2024-01-15 14:30:25",
-      reference: "INV-2024-001"
-    },
-    {
-      id: "PF002",
-      customer: "Sarah Johnson",
-      amount: 1299.50,
-      status: "pending",
-      method: "EFT",
-      timestamp: "2024-01-15 13:45:12",
-      reference: "INV-2024-002"
-    },
-    {
-      id: "PF003",
-      customer: "Mike Chen",
-      amount: 299.00,
-      status: "failed",
-      method: "Credit Card",
-      timestamp: "2024-01-15 12:15:30",
-      reference: "INV-2024-003"
-    }
-  ];
+  // Recent transactions will be loaded from API - no hardcoded demo data
+  const recentTransactions: any[] = [];
 
   const paymentMethods = [
     { name: "Credit Card", enabled: true, fee: "2.9% + R2.50" },

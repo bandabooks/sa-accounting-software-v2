@@ -139,10 +139,6 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
   const totalRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
   const totalExpenses = chartData.reduce((sum, item) => sum + item.expenses, 0);
   const netProfit = totalRevenue - totalExpenses;
-  
-  console.log(`Chart Data for ${period}:`, chartData); // Debug log
-  console.log(`Original data received:`, data); // Debug original data
-  console.log(`Filtered data:`, filteredData); // Debug filtered data
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">

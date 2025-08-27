@@ -14,57 +14,11 @@ export default function POSShiftManagement() {
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
 
-  const currentShift = {
-    id: "SHIFT-001",
-    employee: "John Smith",
-    terminal: "Terminal 1",
-    startTime: "08:00 AM",
-    startCash: 500.00,
-    currentCash: 1250.00,
-    status: "active"
-  };
+  // Current shift will be loaded from API - no hardcoded demo data
+  const currentShift = null;
 
-  const shifts = [
-    {
-      id: "SHIFT-001",
-      employee: "John Smith",
-      terminal: "Terminal 1",
-      date: "2024-01-15",
-      startTime: "08:00 AM",
-      endTime: "16:00 PM",
-      startCash: 500.00,
-      endCash: 1250.00,
-      totalSales: 3450.00,
-      transactions: 47,
-      status: "active"
-    },
-    {
-      id: "SHIFT-002",
-      employee: "Sarah Johnson",
-      terminal: "Terminal 2",
-      date: "2024-01-14",
-      startTime: "08:00 AM",
-      endTime: "16:00 PM",
-      startCash: 500.00,
-      endCash: 1150.00,
-      totalSales: 2890.00,
-      transactions: 38,
-      status: "completed"
-    },
-    {
-      id: "SHIFT-003",
-      employee: "Mike Chen",
-      terminal: "Terminal 1",
-      date: "2024-01-14",
-      startTime: "16:00 PM",
-      endTime: "00:00 AM",
-      startCash: 1150.00,
-      endCash: 800.00,
-      totalSales: 1970.00,
-      transactions: 25,
-      status: "completed"
-    }
-  ];
+  // Shifts will be loaded from API - no hardcoded demo data
+  const shifts: any[] = [];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
