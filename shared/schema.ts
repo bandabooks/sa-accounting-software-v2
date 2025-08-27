@@ -4435,6 +4435,9 @@ export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  startTime: z.string().transform((str) => new Date(str)).or(z.date()),
+  endTime: z.string().transform((str) => new Date(str)).or(z.date()).optional(),
 });
 
 export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({
