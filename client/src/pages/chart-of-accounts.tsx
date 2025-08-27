@@ -112,13 +112,16 @@ export default function ChartOfAccounts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: rawAccounts = [], isLoading, refetch: refetchAccounts } = useQuery({
+  const { data: rawAccounts = [], isLoading, refetch: refetchAccounts, isFetching } = useQuery({
     queryKey: ["/api/chart-of-accounts", "showAll"],
     queryFn: async () => {
       const response = await apiRequest(`/api/chart-of-accounts?showAll=true`, "GET");
       const data = await response.json();
       return data;
     },
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
+    staleTime: 5000, // Consider data stale after 5 seconds
   });
 
   // Deduplication logic - keep only first occurrence of each account code
@@ -350,11 +353,17 @@ export default function ChartOfAccounts() {
           <Button 
             variant="outline" 
             onClick={() => refetchAccounts()}
+            disabled={isFetching}
             className="flex items-center gap-2 text-blue-600 border-blue-600 hover:bg-blue-50"
-            title="Refresh account balances"
+            title="Refresh account balances (Auto-refresh every 30s)"
           >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            {isFetching ? 'Refreshing...' : 'Refresh'}
+            {!isFetching && (
+              <span className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                Auto
+              </span>
+            )}
           </Button>
           {accounts.length === 0 && (
             <Button

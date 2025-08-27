@@ -7661,6 +7661,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/chart-of-accounts/:id/toggle", authenticate, async (req, res) => {
     try {
       const accountId = parseInt(req.params.id);
+      if (isNaN(accountId) || accountId <= 0) {
+        return res.status(400).json({ error: "Invalid account ID" });
+      }
       const user = req as AuthenticatedRequest;
       const companyId = user.user?.companyId || 2;
       const userId = user.user?.id || 1;
@@ -7679,6 +7682,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chart-of-accounts/:id", authenticate, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({ error: "Invalid account ID" });
+      }
       const account = await storage.getChartOfAccount(id);
       if (!account) {
         return res.status(404).json({ error: "Account not found" });
