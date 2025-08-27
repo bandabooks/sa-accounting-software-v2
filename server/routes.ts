@@ -8517,18 +8517,38 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
       const { startDate, endDate, format } = req.query;
       
+      // Validate required parameters
+      if (!startDate || !endDate) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Both startDate and endDate are required" 
+        });
+      }
+      
+      console.log('VAT Transaction API called with:', { companyId, startDate, endDate, format });
+      
       const transactions = await storage.getVatTransactionReport(companyId, startDate as string, endDate as string);
       
-      if (format === 'csv' || format === 'excel') {
+      if (format === 'excel' || format === 'csv') {
+        const csvContent = `Date,Type,Reference,Net,VAT,Gross
+${transactions.transactions ? transactions.transactions.map((t: any) => 
+          `${t.date},${t.type},${t.reference},${t.netAmount},${t.vatAmount},${t.grossAmount}`
+        ).join('\n') : ''}`;
+        
         res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${Date.now()}.${format}`);
-        res.send('Generated file content');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${startDate}-${endDate}.${format}`);
+        res.send(csvContent);
       } else {
-        res.json(transactions);
+        // For both PDF and view formats, return JSON data for client-side processing
+        res.json({ success: true, data: transactions });
       }
     } catch (error) {
       console.error("Error generating VAT transaction report:", error);
-      res.status(500).json({ message: "Failed to generate VAT transaction report" });
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate VAT transaction report",
+        error: error.message
+      });
     }
   });
 
