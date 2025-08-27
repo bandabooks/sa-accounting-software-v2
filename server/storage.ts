@@ -9291,41 +9291,64 @@ export class DatabaseStorage implements IStorage {
 
   async getVatTransactionReport(companyId: number, startDate: string, endDate: string): Promise<any> {
     try {
-      // Get detailed VAT transactions from invoices using same approach as VAT summary
-      const invoiceTransactions = await db.select()
+      console.log('Generating VAT transaction report for dates:', { companyId, startDate, endDate });
+      
+      // Validate date format and ensure they're proper Date objects - EXACT same as VAT summary
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new Error('Invalid date format provided');
+      }
+
+      // Get detailed VAT transactions from invoices - EXACT same pattern as VAT summary  
+      const invoiceTransactions = await db.select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        issueDate: invoices.issueDate,
+        customerId: invoices.customerId,
+        total: invoices.total,
+        subtotal: invoices.subtotal,
+        vatAmount: invoices.vatAmount,
+        customerName: customers.name
+      })
         .from(invoices)
         .leftJoin(customers, eq(invoices.customerId, customers.id))
         .where(and(
           eq(invoices.companyId, companyId),
-          sql`invoice_date >= ${startDate}`,
-          sql`invoice_date <= ${endDate}`
-        ))
-        .orderBy(desc(invoices.invoiceDate));
+          gte(invoices.issueDate, start),
+          lte(invoices.issueDate, end)
+        ));
 
-      // Get detailed VAT transactions from expenses using same approach as VAT summary
-      const expenseTransactions = await db.select()
+      // Get detailed VAT transactions from expenses - EXACT same pattern as VAT summary
+      const expenseTransactions = await db.select({
+        id: expenses.id,
+        description: expenses.description,
+        expenseDate: expenses.expenseDate,
+        amount: expenses.amount,
+        vatAmount: expenses.vatAmount
+      })
         .from(expenses)
         .where(and(
           eq(expenses.companyId, companyId),
-          sql`expense_date >= ${startDate}`,
-          sql`expense_date <= ${endDate}`
-        ))
-        .orderBy(desc(expenses.expenseDate));
+          gte(expenses.expenseDate, start),
+          lte(expenses.expenseDate, end)
+        ));
 
-      // Format invoice transactions
+      // Format invoice transactions with proper field access
       const formattedInvoices = invoiceTransactions.map(inv => ({
-        id: inv.invoices.id,
+        id: inv.id,
         type: 'Sale',
-        date: inv.invoices.invoiceDate,
-        reference: inv.invoices.invoiceNumber,
-        description: `Invoice - ${inv.customers?.name || 'Unknown Customer'}`,
-        netAmount: inv.invoices.subtotal?.toString() || '0.00',
-        vatAmount: inv.invoices.vatAmount?.toString() || '0.00',
-        grossAmount: inv.invoices.total?.toString() || '0.00',
+        date: inv.issueDate,
+        reference: inv.invoiceNumber,
+        description: `Invoice - ${inv.customerName || 'Unknown Customer'}`,
+        netAmount: inv.subtotal?.toString() || '0.00',
+        vatAmount: inv.vatAmount?.toString() || '0.00',
+        grossAmount: inv.total?.toString() || '0.00',
         vatRate: 15
       }));
 
-      // Format expense transactions
+      // Format expense transactions with proper field access
       const formattedExpenses = expenseTransactions.map(exp => ({
         id: exp.id,
         type: 'Purchase',
