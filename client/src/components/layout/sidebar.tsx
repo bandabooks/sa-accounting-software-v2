@@ -256,7 +256,7 @@ const getFullNavigationGroups = () => [
       { path: "/journal-entries", label: "Journal Entries", icon: BookOpenCheck, permission: "JOURNAL_ENTRY_VIEW", module: "accounting" },
       { path: "/general-ledger", label: "General Ledger", icon: BookOpen, permission: "GENERAL_LEDGER_VIEW", module: "accounting" },
       { path: "/fixed-assets", label: "Fixed Assets", icon: Building, permission: "FIXED_ASSETS_VIEW", module: "advanced_reports" },
-      { path: "/bulk-data-entry", label: "Bulk Data Entry", icon: Upload, permission: "BULK_DATA_ENTRY_VIEW", module: "accounting" },
+      { path: "/bulk-capture", label: "Bulk Data Entry", icon: Upload, permission: "BULK_DATA_ENTRY_VIEW", module: "accounting" },
       { path: "/budgeting", label: "Budgeting", icon: BarChart3, permission: "BUDGETING_VIEW", module: "advanced_reports" }
     ]
   },
