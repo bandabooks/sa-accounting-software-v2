@@ -281,15 +281,48 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
         } else {
           throw new Error(result.message || 'Failed to load report preview');
         }
+      } else if (format === 'pdf') {
+        // For PDF, get data and generate client-side PDF like invoices/estimates
+        const response = await apiRequest(`${apiEndpoint}?${queryParams.replace('format=pdf', 'format=view')}`, 'GET');
+        const result = await response.json();
+        
+        if (result.success || result.period) {
+          const data = result.success ? result.data : result;
+          
+          // Import and use appropriate PDF generator
+          let pdf;
+          if (selectedReport === 'summary') {
+            const { generateVATSummaryPDF } = await import('./vat-pdf-generator');
+            pdf = await generateVATSummaryPDF(data);
+          } else if (selectedReport === 'transactions') {
+            const { generateVATTransactionPDF } = await import('./vat-pdf-generator');
+            pdf = await generateVATTransactionPDF(data);
+          } else if (selectedReport === 'reconciliation') {
+            const { generateVATReconciliationPDF } = await import('./vat-pdf-generator');
+            pdf = await generateVATReconciliationPDF(data);
+          }
+          
+          if (pdf) {
+            // Open PDF in new tab like invoices/estimates
+            const pdfBlob = pdf.output('blob');
+            const url = URL.createObjectURL(pdfBlob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          }
+        }
       } else {
-        // For file downloads (PDF, Excel, CSV), use direct fetch to avoid response parsing
-        const url = `${apiEndpoint}?${queryParams}`;
+        // For Excel/CSV downloads, use direct API response
+        const response = await apiRequest(`${apiEndpoint}?${queryParams}`, 'GET');
+        const blob = await response.blob();
+        
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.style.display = 'none';
+        link.download = `vat-${selectedReport}-${dateRange.startDate}-to-${dateRange.endDate}.${format}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       
       toast({

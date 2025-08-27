@@ -8491,17 +8491,7 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
       
       const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
       
-      if (format === 'pdf') {
-        const pdfContent = `VAT Summary Report
-Period: ${startDate} to ${endDate}
-Output VAT: R ${summary.summary.outputVat}
-Input VAT: R ${summary.summary.inputVat}
-Net VAT Payable: R ${summary.summary.netVatPayable}`;
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.pdf`);
-        res.send(Buffer.from(pdfContent));
-      } else if (format === 'excel' || format === 'csv') {
+      if (format === 'excel' || format === 'csv') {
         const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable
 ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable}`;
         
@@ -8509,6 +8499,7 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
         res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.${format}`);
         res.send(csvContent);
       } else {
+        // For both PDF and view formats, return JSON data for client-side processing
         res.json({ success: true, data: summary });
       }
     } catch (error) {
