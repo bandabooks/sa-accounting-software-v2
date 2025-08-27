@@ -286,12 +286,29 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
         const response = await apiRequest(`${apiEndpoint}?${queryParams}`, 'GET');
         
         if (format === 'pdf') {
-          // For PDF, create blob and open in new tab
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
+          // For PDF, get data and generate PDF on client side (like invoices)
+          const result = await response.json();
+          const data = result.success ? result.data : result;
+          
+          // Generate PDF using client-side PDF generator
+          const { generateVatSummaryPDF, generateVatTransactionPDF } = await import('./vat-pdf-generator');
+          
+          let pdf;
+          if (selectedReport === 'summary') {
+            pdf = generateVatSummaryPDF(data, 'MY Redeployment');
+          } else if (selectedReport === 'transactions') {
+            pdf = generateVatTransactionPDF(data, 'MY Redeployment');
+          } else {
+            // For reconciliation, use summary format for now
+            pdf = generateVatSummaryPDF(data, 'MY Redeployment');
+          }
+          
+          // Open PDF in new tab for preview/download/print
+          const pdfBlob = pdf.output('blob');
+          const url = URL.createObjectURL(pdfBlob);
           window.open(url, '_blank');
-          // Clean up the blob URL after a delay
           setTimeout(() => URL.revokeObjectURL(url), 1000);
+          
         } else {
           // For Excel/CSV, download the file
           const blob = await response.blob();

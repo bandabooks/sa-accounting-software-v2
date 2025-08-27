@@ -8492,12 +8492,8 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
       const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
       
       if (format === 'pdf') {
-        const { generateVatSummaryPDF } = await import('./utils/pdfGenerator.js');
-        const pdfBuffer = generateVatSummaryPDF(summary, 'MY Redeployment');
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename=vat-summary-${startDate}-${endDate}.pdf`);
-        res.send(pdfBuffer);
+        // Return data for client-side PDF generation (same as other formats)
+        res.json({ success: true, data: summary });
       } else if (format === 'excel' || format === 'csv') {
         const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable
 ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable}`;
@@ -8526,12 +8522,8 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       const transactions = await storage.getVatTransactionReport(companyId, startDate as string, endDate as string);
       
       if (format === 'pdf') {
-        const { generateVatTransactionPDF } = await import('./utils/pdfGenerator.js');
-        const pdfBuffer = generateVatTransactionPDF(transactions, 'MY Redeployment');
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename=vat-transactions-${startDate}-${endDate}.pdf`);
-        res.send(pdfBuffer);
+        // Return data for client-side PDF generation (same as other formats)
+        res.json({ success: true, data: transactions });
       } else if (format === 'csv' || format === 'excel') {
         // Generate CSV content from transaction data
         const csvHeaders = 'Date,Type,Reference,Description,Net Amount,VAT Amount,Gross Amount\n';
@@ -8564,12 +8556,8 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       const reconciliation = await storage.getVatReconciliationReport(companyId, period as string);
       
       if (format === 'pdf') {
-        const { generateVatReconciliationPDF } = await import('./utils/pdfGenerator.js');
-        const pdfBuffer = generateVatReconciliationPDF(reconciliation, 'MY Redeployment');
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename=vat-reconciliation-${period}.pdf`);
-        res.send(pdfBuffer);
+        // Return data for client-side PDF generation (same as other formats)
+        res.json({ success: true, data: reconciliation });
       } else if (format === 'excel' || format === 'csv') {
         const csvContent = `Item,Value
 Status,${reconciliation.reconciliation?.reportStatus || 'Pending'}
