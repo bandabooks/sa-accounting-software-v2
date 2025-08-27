@@ -31,17 +31,19 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, User, Clock, CheckCircle2, Circle, Play, Pause } from "lucide-react";
+import { Plus, Calendar, User, Clock, CheckCircle2, Circle, Play, Pause, Paperclip } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertTaskSchema, type TaskWithDetails } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { FileUpload } from "@/components/ui/file-upload";
 
 const formSchema = insertTaskSchema.omit({ companyId: true, createdBy: true });
 
 export default function TasksPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filter, setFilter] = useState<string>("all");
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -166,11 +168,15 @@ export default function TasksPage() {
       isInternal: false,
       isBillable: true,
       progress: 0,
+      isRecurring: false,
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     createMutation.mutate(values);
+    // Reset form and attached files
+    form.reset();
+    setAttachedFiles([]);
   };
 
   const handleStartTime = (taskId: number) => {
@@ -401,6 +407,45 @@ export default function TasksPage() {
                     )}
                   />
                 </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            value={field.value || ""} 
+                            onChange={(e) => field.onChange(e.target.value || null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            value={field.value || ""} 
+                            onChange={(e) => field.onChange(e.target.value || null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -430,21 +475,94 @@ export default function TasksPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="dueDate"
+                    name="isRecurring"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Due Date</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date" 
-                            {...field}
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(e.target.value || undefined)}
-                          />
-                        </FormControl>
+                        <FormLabel>Recurring Task</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(value === "true")} value={field.value ? "true" : "false"}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="false">One-time Task</SelectItem>
+                            <SelectItem value="true">Recurring Task</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
+                  />
+                </div>
+                
+                {form.watch("isRecurring") && (
+                  <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+                    <FormField
+                      control={form.control}
+                      name="recurringType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Repeat Every</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select interval" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="weekly">Week</SelectItem>
+                              <SelectItem value="biweekly">2 Weeks</SelectItem>
+                              <SelectItem value="monthly">Month</SelectItem>
+                              <SelectItem value="bimonthly">2 Months</SelectItem>
+                              <SelectItem value="quarterly">3 Months</SelectItem>
+                              <SelectItem value="semiannual">6 Months</SelectItem>
+                              <SelectItem value="yearly">Year</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="recurringEndDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date (Optional)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              {...field} 
+                              value={field.value || ""} 
+                              onChange={(e) => field.onChange(e.target.value || null)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+                
+                {/* File Upload Section */}
+                <div className="mt-6">
+                  <FileUpload
+                    onFilesChange={setAttachedFiles}
+                    maxFiles={5}
+                    maxSizeMB={10}
+                    acceptedTypes={[
+                      "application/pdf",
+                      "image/jpeg",
+                      "image/png",
+                      "image/gif",
+                      "text/csv",
+                      "application/vnd.ms-excel",
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                      "application/msword",
+                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                      "text/plain"
+                    ]}
                   />
                 </div>
 

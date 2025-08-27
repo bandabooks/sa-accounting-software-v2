@@ -4284,6 +4284,11 @@ export const projects = pgTable("projects", {
   isInternal: boolean("is_internal").default(false),
   projectManagerId: integer("project_manager_id").references(() => users.id),
   color: varchar("color", { length: 7 }).default("#3B82F6"), // Hex color for UI
+  isRecurring: boolean("is_recurring").default(false), // whether this project repeats
+  recurringType: varchar("recurring_type", { length: 20 }), // weekly, monthly, quarterly, yearly, custom
+  recurringInterval: integer("recurring_interval"), // e.g., every 2 months = 2
+  recurringEndDate: date("recurring_end_date"), // when recurring stops
+  parentRecurringProjectId: integer("parent_recurring_project_id").references(() => projects.id), // links to the original recurring project
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -4314,6 +4319,14 @@ export const tasks: any = pgTable("tasks", {
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   progress: integer("progress").default(0), // 0-100 percentage
   tags: jsonb("tags"), // array of tags
+  isRecurring: boolean("is_recurring").default(false), // whether this task repeats
+  recurringType: varchar("recurring_type", { length: 20 }), // weekly, monthly, quarterly, yearly, custom
+  recurringInterval: integer("recurring_interval"), // e.g., every 2 weeks = 2
+  recurringDaysOfWeek: jsonb("recurring_days_of_week"), // for weekly: [1,2,3,4,5] (Mon-Fri)
+  recurringDayOfMonth: integer("recurring_day_of_month"), // for monthly: day of month (1-31)
+  recurringEndDate: date("recurring_end_date"), // when recurring stops
+  recurringCount: integer("recurring_count"), // max number of occurrences
+  parentRecurringTaskId: integer("parent_recurring_task_id").references(() => tasks.id), // links to the original recurring task
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -4374,6 +4387,7 @@ export const taskComments = pgTable("task_comments", {
 
 export const projectFiles = pgTable("project_files", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   projectId: integer("project_id").references(() => projects.id),
   taskId: integer("task_id").references(() => tasks.id),
   uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
@@ -4382,9 +4396,15 @@ export const projectFiles = pgTable("project_files", {
   filePath: varchar("file_path", { length: 500 }).notNull(),
   fileSize: integer("file_size").notNull(),
   mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  fileUrl: varchar("file_url", { length: 1000 }), // URL for uploaded file
+  category: varchar("category", { length: 50 }).default("general"), // general, contract, invoice, receipt, tax_document
   isPublic: boolean("is_public").default(false), // client can access
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  companyIdx: index("project_files_company_idx").on(table.companyId),
+  projectIdx: index("project_files_project_idx").on(table.projectId),
+  taskIdx: index("project_files_task_idx").on(table.taskId),
+}));
 
 export const projectTemplates = pgTable("project_templates", {
   id: serial("id").primaryKey(),
