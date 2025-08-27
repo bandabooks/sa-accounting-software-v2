@@ -8492,15 +8492,12 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
       const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
       
       if (format === 'pdf') {
-        const pdfContent = `VAT Summary Report
-Period: ${startDate} to ${endDate}
-Output VAT: R ${summary.summary.outputVat}
-Input VAT: R ${summary.summary.inputVat}
-Net VAT Payable: R ${summary.summary.netVatPayable}`;
+        const { generateVatSummaryPDF } = await import('./utils/pdfGenerator.js');
+        const pdfBuffer = generateVatSummaryPDF(summary, 'MY Redeployment');
         
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.pdf`);
-        res.send(Buffer.from(pdfContent));
+        res.setHeader('Content-Disposition', `inline; filename=vat-summary-${startDate}-${endDate}.pdf`);
+        res.send(pdfBuffer);
       } else if (format === 'excel' || format === 'csv') {
         const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable
 ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable}`;
@@ -8528,16 +8525,34 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       
       const transactions = await storage.getVatTransactionReport(companyId, startDate as string, endDate as string);
       
-      if (format === 'csv' || format === 'excel') {
+      if (format === 'pdf') {
+        const { generateVatTransactionPDF } = await import('./utils/pdfGenerator.js');
+        const pdfBuffer = generateVatTransactionPDF(transactions, 'MY Redeployment');
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename=vat-transactions-${startDate}-${endDate}.pdf`);
+        res.send(pdfBuffer);
+      } else if (format === 'csv' || format === 'excel') {
+        // Generate CSV content from transaction data
+        const csvHeaders = 'Date,Type,Reference,Description,Net Amount,VAT Amount,Gross Amount\n';
+        const csvRows = transactions.transactions.map((txn: any) => 
+          `${txn.date},${txn.type},${txn.reference},"${txn.description}",${txn.netAmount},${txn.vatAmount},${txn.grossAmount}`
+        ).join('\n');
+        const csvContent = csvHeaders + csvRows;
+        
         res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${Date.now()}.${format}`);
-        res.send('Generated file content');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${startDate}-${endDate}.${format}`);
+        res.send(csvContent);
       } else {
-        res.json(transactions);
+        res.json({ success: true, data: transactions });
       }
     } catch (error) {
       console.error("Error generating VAT transaction report:", error);
-      res.status(500).json({ message: "Failed to generate VAT transaction report" });
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate VAT transaction report",
+        error: error.message
+      });
     }
   });
 
@@ -8548,10 +8563,23 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       
       const reconciliation = await storage.getVatReconciliationReport(companyId, period as string);
       
-      if (format === 'pdf' || format === 'excel') {
-        res.setHeader('Content-Type', format === 'pdf' ? 'application/pdf' : 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename=vat-reconciliation-${Date.now()}.${format}`);
-        res.send('Generated file content');
+      if (format === 'pdf') {
+        const { generateVatReconciliationPDF } = await import('./utils/pdfGenerator.js');
+        const pdfBuffer = generateVatReconciliationPDF(reconciliation, 'MY Redeployment');
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename=vat-reconciliation-${period}.pdf`);
+        res.send(pdfBuffer);
+      } else if (format === 'excel' || format === 'csv') {
+        const csvContent = `Item,Value
+Status,${reconciliation.reconciliation?.reportStatus || 'Pending'}
+Output VAT,${reconciliation.reconciliation?.outputVat || '0.00'}
+Input VAT,${reconciliation.reconciliation?.inputVat || '0.00'}
+Net VAT,${reconciliation.reconciliation?.netVat || '0.00'}`;
+        
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename=vat-reconciliation-${period}.${format}`);
+        res.send(csvContent);
       } else {
         res.json(reconciliation);
       }
