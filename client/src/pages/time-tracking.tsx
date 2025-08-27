@@ -33,10 +33,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Play, Pause, Clock, Calendar, DollarSign, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { insertTimeEntrySchema, type TimeEntryWithDetails } from "@shared/schema";
+import { insertTimeEntrySchema, insertProjectSchema, insertTaskSchema, type TimeEntryWithDetails } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = insertTimeEntrySchema.omit({ companyId: true, userId: true });
+const projectFormSchema = insertProjectSchema.omit({ companyId: true, createdBy: true });
+const taskFormSchema = insertTaskSchema.omit({ companyId: true, createdBy: true });
 
 export default function TimeTrackingPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -45,6 +47,33 @@ export default function TimeTrackingPage() {
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Project form
+  const projectForm = useForm<z.infer<typeof projectFormSchema>>({
+    resolver: zodResolver(projectFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      status: "planning",
+      priority: "medium",
+      isInternal: false,
+      hourlyRate: "0",
+    },
+  });
+
+  // Task form
+  const taskForm = useForm<z.infer<typeof taskFormSchema>>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      status: "todo",
+      priority: "medium",
+      isInternal: false,
+      isBillable: true,
+      progress: 0,
+    },
+  });
 
   // Update current time every second
   useState(() => {
@@ -68,6 +97,10 @@ export default function TimeTrackingPage() {
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ["/api/customers"],
   });
 
   const createMutation = useMutation({
@@ -132,6 +165,58 @@ export default function TimeTrackingPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete time entry",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Project creation mutation
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof projectFormSchema>) => {
+      const response = await apiRequest("/api/projects", "POST", data);
+      return response.json();
+    },
+    onSuccess: (newProject: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setIsCreateProjectOpen(false);
+      // Set the new project in the main form
+      form.setValue("projectId", newProject.id);
+      projectForm.reset();
+      toast({
+        title: "Success",
+        description: "Project created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Task creation mutation
+  const createTaskMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof taskFormSchema>) => {
+      const response = await apiRequest("/api/tasks", "POST", data);
+      return response.json();
+    },
+    onSuccess: (newTask: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setIsCreateTaskOpen(false);
+      // Set the new task in the main form
+      form.setValue("taskId", newTask.id);
+      taskForm.reset();
+      toast({
+        title: "Success",
+        description: "Task created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create task",
         variant: "destructive",
       });
     },
@@ -491,6 +576,204 @@ export default function TimeTrackingPage() {
                         <Button type="submit" disabled={createMutation.isPending}>
                           <Play className="h-4 w-4 mr-2" />
                           {createMutation.isPending ? "Starting..." : "Start Timer"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+              
+              {/* Project Creation Dialog */}
+              <Dialog open={isCreateProjectOpen} onOpenChange={setIsCreateProjectOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Create New Project</DialogTitle>
+                    <DialogDescription>
+                      Add a new project for time tracking
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...projectForm}>
+                    <form onSubmit={projectForm.handleSubmit((data) => createProjectMutation.mutate(data))} className="space-y-4">
+                      <FormField
+                        control={projectForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Project Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter project name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={projectForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Enter project description" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={projectForm.control}
+                        name="customerId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Customer (Optional)</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select customer" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">Internal Project</SelectItem>
+                                {(customers as any[]).map((customer: any) => (
+                                  <SelectItem key={customer.id} value={customer.id.toString()}>
+                                    {customer.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex justify-end space-x-2">
+                        <Button type="button" variant="outline" onClick={() => setIsCreateProjectOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={createProjectMutation.isPending}>
+                          {createProjectMutation.isPending ? "Creating..." : "Create Project"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+              
+              {/* Task Creation Dialog */}
+              <Dialog open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Create New Task</DialogTitle>
+                    <DialogDescription>
+                      Add a new task for time tracking
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...taskForm}>
+                    <form onSubmit={taskForm.handleSubmit((data) => createTaskMutation.mutate(data))} className="space-y-4">
+                      <FormField
+                        control={taskForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Task Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter task title" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={taskForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Enter task description" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={taskForm.control}
+                        name="projectId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Project (Optional)</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select project" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">No Project</SelectItem>
+                                {projects.map((project: any) => (
+                                  <SelectItem key={project.id} value={project.id.toString()}>
+                                    {project.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={taskForm.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Priority</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="low">Low</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="high">High</SelectItem>
+                                  <SelectItem value="urgent">Urgent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={taskForm.control}
+                          name="status"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Status</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="todo">To Do</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="review">Review</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button type="button" variant="outline" onClick={() => setIsCreateTaskOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={createTaskMutation.isPending}>
+                          {createTaskMutation.isPending ? "Creating..." : "Create Task"}
                         </Button>
                       </div>
                     </form>
