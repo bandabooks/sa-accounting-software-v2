@@ -37,6 +37,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertTaskSchema, type TaskWithDetails } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/ui/file-upload";
+import { Label } from "@/components/ui/label";
 
 const formSchema = insertTaskSchema.omit({ companyId: true, createdBy: true });
 
@@ -545,8 +546,12 @@ export default function TasksPage() {
                   </div>
                 )}
                 
-                {/* File Upload Section */}
-                <div className="mt-6">
+                {/* File Upload Section - Compact */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <Paperclip className="h-4 w-4" />
+                    Attachments (Optional)
+                  </Label>
                   <FileUpload
                     onFilesChange={setAttachedFiles}
                     maxFiles={5}

@@ -150,17 +150,10 @@ export function FileUpload({
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Document Attachments
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Upload Area */}
+    <div className="space-y-3">
+        {/* Upload Area - Compact Version */}
         <div
-          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          className={`relative border border-dashed rounded-md p-3 text-center transition-colors ${
             dragActive
               ? "border-blue-400 bg-blue-50"
               : "border-gray-300 hover:border-gray-400"
@@ -178,37 +171,27 @@ export function FileUpload({
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             data-testid="file-input"
           />
-          <Upload className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2 text-sm text-gray-600">
-            <span className="font-medium">Click to upload</span> or drag and drop
-          </p>
-          <p className="text-xs text-gray-500">
-            Maximum {maxFiles} files, up to {maxSizeMB}MB each
-          </p>
+          <div className="flex items-center justify-center space-x-2">
+            <Upload className="h-4 w-4 text-gray-400" />
+            <span className="text-xs text-gray-600">
+              <span className="font-medium">Click to attach files</span> (max {maxFiles}, {maxSizeMB}MB each)
+            </span>
+          </div>
         </div>
 
-        {/* Existing Files */}
+        {/* Existing Files - Compact */}
         {existingFiles.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Existing Files</Label>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-gray-600">Existing Files</Label>
             {existingFiles.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   {getFileIcon(file.fileName)}
-                  <div>
-                    <p className="text-sm font-medium">{file.originalName}</p>
-                    <p className="text-xs text-gray-500">
-                      {formatFileSize(file.fileSize)}
-                      {file.category && (
-                        <Badge variant="outline" className="ml-2">
-                          {file.category}
-                        </Badge>
-                      )}
-                    </p>
-                  </div>
+                  <span className="truncate">{file.originalName}</span>
+                  <span className="text-gray-500">({formatFileSize(file.fileSize)})</span>
                 </div>
                 {onDeleteFile && (
                   <Button
@@ -216,10 +199,10 @@ export function FileUpload({
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteExistingFile(file.id)}
-                    className="text-red-600 hover:text-red-700"
+                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
                     data-testid={`delete-existing-file-${file.id}`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 )}
               </div>
@@ -227,33 +210,29 @@ export function FileUpload({
           </div>
         )}
 
-        {/* Newly Uploaded Files */}
+        {/* Newly Uploaded Files - Compact */}
         {uploadedFiles.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">New Files</Label>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium text-blue-600">New Files</Label>
             {uploadedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
+                className="flex items-center justify-between p-2 bg-blue-50 rounded text-xs border border-blue-200"
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   {getFileIcon(file.type)}
-                  <div>
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {formatFileSize(file.size)}
-                    </p>
-                  </div>
+                  <span className="truncate">{file.name}</span>
+                  <span className="text-gray-500">({formatFileSize(file.size)})</span>
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => removeFile(index)}
-                  className="text-red-600 hover:text-red-700"
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
                   data-testid={`remove-file-${index}`}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
             ))}
@@ -261,10 +240,11 @@ export function FileUpload({
         )}
 
         {/* File Stats */}
-        <div className="text-xs text-gray-500 border-t pt-3">
-          {uploadedFiles.length + existingFiles.length} of {maxFiles} files used
-        </div>
-      </CardContent>
-    </Card>
+        {(uploadedFiles.length > 0 || existingFiles.length > 0) && (
+          <div className="text-xs text-gray-500">
+            {uploadedFiles.length + existingFiles.length} of {maxFiles} files
+          </div>
+        )}
+    </div>
   );
 }
