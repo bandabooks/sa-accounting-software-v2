@@ -196,7 +196,10 @@ export default function CustomerInsights() {
               </div>
               <div className="space-y-1">
                 <p className="text-2xl font-bold text-gray-900">
-                  {Math.round(insights.reduce((sum, c) => sum + c.satisfactionScore, 0) / insights.length)}%
+                  {insights.length > 0 
+                    ? Math.round(insights.reduce((sum, c) => sum + c.satisfactionScore, 0) / insights.length)
+                    : 0
+                  }%
                 </p>
                 <p className="text-sm text-gray-600">Avg Score</p>
               </div>
