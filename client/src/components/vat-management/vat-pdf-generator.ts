@@ -222,8 +222,8 @@ export async function generateVATTransactionPDF(reportData: any): Promise<jsPDF>
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
     
-    const headers = ['Date', 'Type', 'Reference', 'Net', 'VAT', 'Gross'];
-    const colWidths = [25, 20, 40, 25, 25, 25];
+    const headers = ['Date', 'Type', 'Reference', 'Description', 'Net', 'VAT', 'Gross'];
+    const colWidths = [20, 15, 25, 35, 20, 20, 20];
     let xPos = 20;
     
     headers.forEach((header, i) => {
@@ -254,7 +254,8 @@ export async function generateVATTransactionPDF(reportData: any): Promise<jsPDF>
         const values = [
           formatDate(transaction.date),
           transaction.type,
-          transaction.reference.substring(0, 15) + (transaction.reference.length > 15 ? '...' : ''),
+          transaction.reference.substring(0, 12) + (transaction.reference.length > 12 ? '...' : ''),
+          transaction.description.substring(0, 20) + (transaction.description.length > 20 ? '...' : ''),
           formatCurrency(transaction.netAmount),
           formatCurrency(transaction.vatAmount),
           formatCurrency(transaction.grossAmount)
