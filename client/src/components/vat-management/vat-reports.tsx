@@ -229,7 +229,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
     enabled: !!dateRange.startDate && !!dateRange.endDate,
   });
 
-  // Fixed implementation using apiRequest for proper authentication
+  // Fixed implementation with proper download handling for all report types
   const handleGenerateReport = async (format: string) => {
     if (!dateRange.startDate || !dateRange.endDate) {
       toast({
@@ -252,40 +252,49 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
 
     setIsGenerating(true);
     try {
-      // Use apiRequest for proper authentication handling
-      const response = await apiRequest(`/api/vat/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=${format}`, 'GET');
+      // Determine the correct API endpoint based on report type
+      let apiEndpoint = '';
+      let queryParams = `startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&format=${format}`;
       
+      switch (selectedReport) {
+        case 'summary':
+          apiEndpoint = '/api/vat/reports/summary';
+          break;
+        case 'transactions':
+          apiEndpoint = '/api/vat/reports/transactions';
+          break;
+        case 'reconciliation':
+          apiEndpoint = '/api/vat/reports/reconciliation';
+          queryParams = `period=${dateRange.startDate}-to-${dateRange.endDate}&format=${format}`;
+          break;
+        default:
+          apiEndpoint = '/api/vat/reports/summary';
+      }
+
       if (format === 'view') {
-        // Parse JSON for preview
+        // For preview, use apiRequest to get JSON
+        const response = await apiRequest(`${apiEndpoint}?${queryParams}`, 'GET');
         const result = await response.json();
-        if (result.success) {
-          setReportData(result.data);
+        if (result.success || result.period) { // Handle different response formats
+          setReportData(result.success ? result.data : result);
           setShowPreview(true);
         } else {
           throw new Error(result.message || 'Failed to load report preview');
         }
-      } else if (format === 'pdf') {
-        // Open PDF in new tab
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
-        // Download excel/csv files
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        // For file downloads (PDF, Excel, CSV), use direct fetch to avoid response parsing
+        const url = `${apiEndpoint}?${queryParams}`;
         const link = document.createElement('a');
         link.href = url;
-        link.download = `vat-summary-${dateRange.startDate}-to-${dateRange.endDate}.${format}`;
+        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
       
       toast({
         title: "Report Generated",
-        description: `VAT ${selectedReport} report has been ${format === 'view' ? 'loaded' : 'generated'} successfully`,
+        description: `VAT ${reportTypes.find(r => r.id === selectedReport)?.name || selectedReport} report has been ${format === 'view' ? 'loaded' : 'generated'} successfully`,
       });
     } catch (error) {
       console.error('Report generation error:', error);
