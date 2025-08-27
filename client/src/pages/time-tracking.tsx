@@ -107,7 +107,7 @@ export default function TimeTrackingPage() {
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       return await apiRequest("/api/time-entries", "POST", {
         ...data,
-        startTime: new Date().toISOString(),
+        startTime: new Date(),
         isRunning: true,
       });
     },
