@@ -9291,24 +9291,24 @@ export class DatabaseStorage implements IStorage {
 
   async getVatTransactionReport(companyId: number, startDate: string, endDate: string): Promise<any> {
     try {
-      // Get detailed VAT transactions from invoices (using sql for date comparison)
+      // Get detailed VAT transactions from invoices using same approach as VAT summary
       const invoiceTransactions = await db.select()
         .from(invoices)
         .leftJoin(customers, eq(invoices.customerId, customers.id))
         .where(and(
           eq(invoices.companyId, companyId),
-          sql`${invoices.invoiceDate} >= ${startDate}`,
-          sql`${invoices.invoiceDate} <= ${endDate}`
+          sql`invoice_date >= ${startDate}`,
+          sql`invoice_date <= ${endDate}`
         ))
         .orderBy(desc(invoices.invoiceDate));
 
-      // Get detailed VAT transactions from expenses (using sql for date comparison)
+      // Get detailed VAT transactions from expenses using same approach as VAT summary
       const expenseTransactions = await db.select()
         .from(expenses)
         .where(and(
           eq(expenses.companyId, companyId),
-          sql`${expenses.expenseDate} >= ${startDate}`,
-          sql`${expenses.expenseDate} <= ${endDate}`
+          sql`expense_date >= ${startDate}`,
+          sql`expense_date <= ${endDate}`
         ))
         .orderBy(desc(expenses.expenseDate));
 
