@@ -8637,11 +8637,15 @@ export class DatabaseStorage implements IStorage {
   // Initialize a new company with clean data and essential configurations
   async initializeNewCompany(companyId: number, industryCode: string, userId: number): Promise<void> {
     try {
+      console.log(`🏗️ Initializing new company ${companyId} with ${industryCode} industry`);
+      
       // 1. First, seed ONLY industry-relevant Chart of Accounts (focused approach)
       await this.seedIndustryChartOfAccounts(companyId, industryCode);
       
       // 2. Auto-activate all seeded accounts (they're pre-filtered for industry)
       await this.autoActivateIndustryAccounts(companyId, industryCode);
+      
+      console.log(`✅ Activated industry-specific accounts for ${industryCode} company ${companyId}`);
 
       // 3. Initialize VAT types for the company
       await this.initializeCompanyVatTypes(companyId);
