@@ -1256,6 +1256,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Company users for dropdowns/assignments
+  app.get("/api/users", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company not found" });
+      }
+      
+      const users = await storage.getCompanyUsers(companyId);
+      // Return simplified user info for dropdowns
+      const userOptions = users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }));
+      
+      res.json(userOptions);
+    } catch (error) {
+      console.error("Error fetching company users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
   // Admin routes
   app.get("/api/admin/users", authenticate, requireRole('admin'), async (req: AuthenticatedRequest, res) => {
     try {
