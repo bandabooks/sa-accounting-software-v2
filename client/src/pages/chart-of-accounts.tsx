@@ -115,7 +115,7 @@ export default function ChartOfAccounts() {
   const { data: rawAccounts = [], isLoading, refetch: refetchAccounts } = useQuery({
     queryKey: ["/api/chart-of-accounts"],
     queryFn: async () => {
-      const response = await apiRequest(`/api/chart-of-accounts`, "GET");
+      const response = await apiRequest(`/api/chart-of-accounts?showAll=true`, "GET");
       const data = await response.json();
       return data;
     },
