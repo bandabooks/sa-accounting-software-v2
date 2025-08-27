@@ -96,7 +96,7 @@ export default function TasksPage() {
       return await apiRequest("/api/time-entries", "POST", {
         taskId,
         description: description || "Time tracking",
-        startTime: new Date().toISOString(),
+        startTime: new Date(),
         isRunning: true,
         isBillable: true,
       });
