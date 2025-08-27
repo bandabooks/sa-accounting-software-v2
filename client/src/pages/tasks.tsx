@@ -31,7 +31,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, User, Clock, CheckCircle2, Circle, Play, Pause, Paperclip } from "lucide-react";
+import { Plus, Calendar, User, Clock, CheckCircle2, Circle, Play, Pause, Paperclip, Square } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertTaskSchema, type TaskWithDetails } from "@shared/schema";
@@ -96,7 +96,7 @@ export default function TasksPage() {
       return await apiRequest("/api/time-entries", "POST", {
         taskId,
         description: description || "Time tracking",
-        startTime: new Date(),
+        startTime: new Date().toISOString(),
         isRunning: true,
         isBillable: true,
       });
@@ -191,11 +191,37 @@ export default function TasksPage() {
     startTimeMutation.mutate({ taskId });
   };
 
-  const handleStopTime = () => {
-    if (activeTimeEntry && activeTimeEntry.id) {
-      stopTimeMutation.mutate(activeTimeEntry.id);
-    }
+  const handleStopTime = (timeEntryId: number) => {
+    stopTimeMutation.mutate(timeEntryId);
   };
+
+  // Running Timer Component
+  const RunningTimer = ({ startTime }: { startTime: string }) => {
+    const [elapsed, setElapsed] = useState(0);
+
+    useState(() => {
+      const interval = setInterval(() => {
+        const start = new Date(startTime).getTime();
+        const now = Date.now();
+        setElapsed(Math.floor((now - start) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    });
+
+    const formatElapsed = (seconds: number) => {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return <span>{formatElapsed(elapsed)}</span>;
+  };
+
 
   const toggleTaskStatus = (task: TaskWithDetails) => {
     const newStatus = task.status === 'completed' ? 'in_progress' : 'completed';
@@ -721,15 +747,36 @@ export default function TasksPage() {
                   
                   <div className="flex items-center space-x-2">
                     {task.status !== 'completed' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStartTime(task.id)}
-                        disabled={!!activeTimeEntry || startTimeMutation.isPending}
-                      >
-                        <Play className="h-4 w-4 mr-2" />
-                        Start Timer
-                      </Button>
+                      <>
+                        {activeTimeEntry && activeTimeEntry.taskId === task.id ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded text-sm font-medium">
+                              <Clock className="h-4 w-4 mr-1 animate-pulse" />
+                              <RunningTimer startTime={activeTimeEntry.startTime} />
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStopTime(activeTimeEntry.id)}
+                              disabled={stopTimeMutation.isPending}
+                              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                            >
+                              <Square className="h-4 w-4 mr-2" />
+                              Stop Timer
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleStartTime(task.id)}
+                            disabled={!!activeTimeEntry || startTimeMutation.isPending}
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Start Timer
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
