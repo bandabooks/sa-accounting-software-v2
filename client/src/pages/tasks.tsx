@@ -75,6 +75,8 @@ export default function TasksPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       setIsDialogOpen(false);
+      form.reset();
+      setAttachedFiles([]);
       toast({
         title: "Success",
         description: "Task created successfully",
@@ -175,9 +177,6 @@ export default function TasksPage() {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     createMutation.mutate(values);
-    // Reset form and attached files
-    form.reset();
-    setAttachedFiles([]);
   };
 
   const handleStartTime = (taskId: number) => {
