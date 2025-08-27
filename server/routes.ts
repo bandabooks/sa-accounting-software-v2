@@ -7774,8 +7774,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🏗️ Setting up Chart of Accounts for company ${companyId} by user ${userRole}`);
       await storage.seedSouthAfricanChartOfAccounts(companyId);
       
+      // Also activate essential accounts for companies that already had accounts seeded
+      await storage.activateEssentialBusinessAccounts(companyId);
+      
       console.log(`✅ Chart of Accounts seeded successfully for company ${companyId}`);
-      res.json({ message: "South African Chart of Accounts seeded successfully" });
+      res.json({ message: "South African Chart of Accounts seeded successfully with essential accounts activated" });
     } catch (error) {
       console.error("Error seeding chart of accounts:", error);
       res.status(500).json({ error: "Failed to seed chart of accounts", details: error.message });
@@ -7784,8 +7787,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/chart-of-accounts/activate-essential", authenticate, async (req, res) => {
     try {
-      const companyId = (req as AuthenticatedRequest).user?.companyId || 2;
+      const companyId = (req as AuthenticatedRequest).user?.companyId;
+      const userRole = (req as AuthenticatedRequest).user?.role;
+      
+      // Allow admins, super_admins, and company_admins to activate essential accounts
+      if (!companyId || !['admin', 'super_admin', 'company_admin'].includes(userRole || '')) {
+        return res.status(403).json({ error: "Insufficient permissions to activate essential accounts" });
+      }
+
+      console.log(`🏗️ Activating essential business accounts for company ${companyId}`);
       await storage.activateEssentialBusinessAccounts(companyId);
+      
       res.json({ message: "Essential business accounts activated successfully" });
     } catch (error) {
       console.error("Error activating essential accounts:", error);

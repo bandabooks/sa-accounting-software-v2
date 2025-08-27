@@ -6668,14 +6668,67 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chartOfAccounts.companyId, companyId));
 
     if (existingAccounts.length === 0) {
+      // Define essential business accounts that should be active by default
+      const essentialAccountCodes = new Set([
+        // Cash accounts (essential for daily operations)
+        "1001", // Petty Cash
+        
+        // Bank accounts (essential for operations)
+        "1100", // Bank Account - Current
+        "1101", // Bank Account - Savings
+        
+        // Core receivables & VAT
+        "1200", // Accounts Receivable
+        "1210", // VAT Input
+        
+        // Essential payables & VAT
+        "2100", // Accounts Payable
+        "2110", // VAT Output
+        
+        // Basic equity accounts
+        "3100", // Share Capital
+        "3200", // Retained Earnings
+        
+        // Essential revenue accounts
+        "4000", // Sales Revenue
+        "4001", // Service Revenue
+        "4100", // Sales - Goods
+        "4200", // Sales - Services
+        
+        // Basic expense accounts (most common)
+        "6000", // Office Expenses
+        "6001", // Salaries & Wages
+        "6100", // Rent Expense
+        "6101", // Utilities Expense
+        "6102", // Telephone & Internet
+        "6200", // Professional Fees
+        "6201", // Legal Fees
+        "6202", // Accounting Fees
+        "6300", // Advertising & Marketing
+        "6400", // Travel & Entertainment
+        "6500", // Motor Vehicle Expenses
+        "6600", // Insurance Expense
+        "6700", // Bank Charges & Fees
+        "6800", // Stationery & Supplies
+        
+        // Basic assets
+        "1400", // Prepaid Expenses
+        "1500", // Equipment
+        "1600", // Furniture & Fixtures
+      ]);
+
       // Insert comprehensive South African IFRS-compliant Chart of Accounts
-      // All accounts start as INACTIVE by default, only essential ones will be activated later
+      // Essential accounts start ACTIVE, others start INACTIVE
+      let activeCount = 0;
       for (const account of SOUTH_AFRICAN_CHART_OF_ACCOUNTS) {
         try {
+          const isEssential = essentialAccountCodes.has(account.accountCode);
+          if (isEssential) activeCount++;
+          
           await db.insert(chartOfAccounts).values({
             ...account,
             companyId,
-            isActive: false, // Start all accounts as inactive
+            isActive: isEssential, // Essential accounts start active
             level: account.level || 1,
             isSystemAccount: account.isSystemAccount || false,
             normalBalance: account.normalBalance || (
@@ -6689,7 +6742,8 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      console.log(`✓ Seeded ${SOUTH_AFRICAN_CHART_OF_ACCOUNTS.length} Chart of Accounts for company ${companyId} (all inactive initially)`);
+      console.log(`✓ Seeded ${SOUTH_AFRICAN_CHART_OF_ACCOUNTS.length} Chart of Accounts for company ${companyId}`);
+      console.log(`✓ ${activeCount} essential accounts activated automatically (cash, bank, revenue, expenses, assets)`);
     }
   }
 
@@ -6825,15 +6879,59 @@ export class DatabaseStorage implements IStorage {
 
   // Activate essential business accounts that every business needs
   async activateEssentialBusinessAccounts(companyId: number): Promise<void> {
-    const essentialAccountCodes = this.getEssentialAccountCodes();
+    // Define the same essential account codes as in seeding
+    const essentialAccountCodes = [
+      // Cash accounts (essential for daily operations)
+      "1001", // Petty Cash
+      
+      // Bank accounts (essential for operations)
+      "1100", // Bank Account - Current
+      "1101", // Bank Account - Savings
+      
+      // Core receivables & VAT
+      "1200", // Accounts Receivable
+      "1210", // VAT Input
+      
+      // Essential payables & VAT
+      "2100", // Accounts Payable
+      "2110", // VAT Output
+      
+      // Basic equity accounts
+      "3100", // Share Capital
+      "3200", // Retained Earnings
+      
+      // Essential revenue accounts
+      "4000", // Sales Revenue
+      "4001", // Service Revenue
+      "4100", // Sales - Goods
+      "4200", // Sales - Services
+      
+      // Basic expense accounts (most common)
+      "6000", // Office Expenses
+      "6001", // Salaries & Wages
+      "6100", // Rent Expense
+      "6101", // Utilities Expense
+      "6102", // Telephone & Internet
+      "6200", // Professional Fees
+      "6201", // Legal Fees
+      "6202", // Accounting Fees
+      "6300", // Advertising & Marketing
+      "6400", // Travel & Entertainment
+      "6500", // Motor Vehicle Expenses
+      "6600", // Insurance Expense
+      "6700", // Bank Charges & Fees
+      "6800", // Stationery & Supplies
+      
+      // Basic assets
+      "1400", // Prepaid Expenses
+      "1500", // Equipment
+      "1600", // Furniture & Fixtures
+    ];
 
-    // Directly activate accounts in the chart_of_accounts table
+    // Activate essential accounts that exist for this company
     const result = await db
       .update(chartOfAccounts)
-      .set({ 
-        isActive: true, 
-        updatedAt: new Date() 
-      })
+      .set({ isActive: true, updatedAt: new Date() })
       .where(
         and(
           eq(chartOfAccounts.companyId, companyId),

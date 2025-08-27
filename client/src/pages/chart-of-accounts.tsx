@@ -115,14 +115,10 @@ export default function ChartOfAccounts() {
   const { data: rawAccounts = [], isLoading, refetch: refetchAccounts } = useQuery({
     queryKey: ["/api/chart-of-accounts", "showAll"],
     queryFn: async () => {
-      console.log("🔍 Frontend: Fetching chart of accounts with showAll=true");
       const response = await apiRequest(`/api/chart-of-accounts?showAll=true`, "GET");
       const data = await response.json();
-      console.log("📊 Frontend: Received accounts:", data.length);
       return data;
     },
-    staleTime: 0, // Force fresh request
-    gcTime: 0, // Don't cache
   });
 
   // Deduplication logic - keep only first occurrence of each account code
