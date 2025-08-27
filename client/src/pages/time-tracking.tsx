@@ -36,7 +36,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertTimeEntrySchema, insertProjectSchema, insertTaskSchema, type TimeEntryWithDetails } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-const formSchema = insertTimeEntrySchema.omit({ companyId: true, userId: true });
+const formSchema = insertTimeEntrySchema.omit({ companyId: true, userId: true, startTime: true, endTime: true, duration: true, isRunning: true });
 const projectFormSchema = insertProjectSchema.omit({ companyId: true, createdBy: true });
 const taskFormSchema = insertTaskSchema.omit({ companyId: true, createdBy: true });
 
@@ -227,7 +227,7 @@ export default function TimeTrackingPage() {
     defaultValues: {
       description: "",
       isBillable: true,
-      hourlyRate: 0,
+      hourlyRate: "0",
     },
   });
 
@@ -438,7 +438,7 @@ export default function TimeTrackingPage() {
                           <FormItem>
                             <FormLabel>Description</FormLabel>
                             <FormControl>
-                              <Input placeholder="What are you working on?" {...field} />
+                              <Input placeholder="What are you working on?" {...field} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -556,7 +556,8 @@ export default function TimeTrackingPage() {
                                   step="0.01"
                                   placeholder="0.00" 
                                   {...field}
-                                  onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  value={field.value || ""}
+                                  onChange={(e) => field.onChange(e.target.value || "0")}
                                 />
                               </FormControl>
                               <FormMessage />
