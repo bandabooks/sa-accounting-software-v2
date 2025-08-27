@@ -287,7 +287,7 @@ export default function Payroll() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(payrollPeriods as PayrollPeriod[]).map((period) => (
+                    {Array.isArray(payrollPeriods) && payrollPeriods.map((period) => (
                       <TableRow key={period.id}>
                         <TableCell className="font-medium">
                           {period.periodName}
@@ -423,7 +423,7 @@ export default function Payroll() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(payrollDetails as EmployeePayroll[]).map((emp) => (
+                          {Array.isArray(payrollDetails) && payrollDetails.map((emp) => (
                             <TableRow key={emp.id}>
                               <TableCell>
                                 <div>

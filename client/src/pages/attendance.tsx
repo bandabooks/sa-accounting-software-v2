@@ -232,7 +232,7 @@ export default function Attendance() {
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(employees as any[])?.map((employee) => (
+                      {Array.isArray(employees) && employees.map((employee) => (
                         <SelectItem key={employee.id} value={employee.id.toString()}>
                           {employee.name} ({employee.employeeNumber || employee.username})
                         </SelectItem>
@@ -367,7 +367,7 @@ export default function Attendance() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(attendanceRecords as AttendanceRecord[]).map((record) => (
+                {Array.isArray(attendanceRecords) && attendanceRecords.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell>
                       <div>

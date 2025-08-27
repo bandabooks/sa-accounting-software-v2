@@ -210,13 +210,13 @@ export default function LeaveManagement() {
     createLeaveRequest.mutate(data);
   };
 
-  const filteredRequests = (leaveRequests as LeaveRequest[])?.filter((request) => {
+  const filteredRequests = Array.isArray(leaveRequests) ? leaveRequests.filter((request) => {
     const matchesSearch = request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          request.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          request.leaveType.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     return matchesSearch && matchesStatus;
-  }) || [];
+  }) : [];
 
   const stats: LeaveStats = leaveStats || {
     totalRequests: 0,
@@ -258,7 +258,7 @@ export default function LeaveManagement() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(employees as any[])?.map((employee) => (
+                    {Array.isArray(employees) && employees.map((employee) => (
                       <SelectItem key={employee.id} value={employee.id.toString()}>
                         {employee.name} ({employee.employeeNumber || employee.username})
                       </SelectItem>
@@ -577,7 +577,7 @@ export default function LeaveManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(leaveBalances as LeaveBalance[]).map((balance) => (
+                  {Array.isArray(leaveBalances) && leaveBalances.map((balance) => (
                     <TableRow key={balance.id}>
                       <TableCell>
                         <div>
