@@ -134,6 +134,7 @@ import BulkCapture from "@/pages/bulk-capture";
 import EmployeesPage from "@/pages/employees";
 import PayrollPage from "@/pages/employees/payroll";
 import AttendancePage from "@/pages/employees/attendance";
+import LeavePage from "@/pages/employees/leave";
 import SalesDashboard from "@/pages/sales-dashboard";
 import SalesOrders from "@/pages/sales-orders";
 import SalesOrderCreate from "@/pages/sales-order-create";
@@ -238,6 +239,8 @@ const PERMISSIONS = {
   PAYROLL_APPROVE: 'payroll:approve',
   ATTENDANCE_VIEW: 'attendance:view',
   ATTENDANCE_MANAGE: 'attendance:manage',
+  LEAVE_VIEW: 'leave:view',
+  LEAVE_MANAGE: 'leave:manage',
 } as const;
 
 function AuthenticatedApp() {
@@ -481,6 +484,11 @@ function AuthenticatedApp() {
         <Route path="/employees/attendance">
           <ProtectedRoute permission={PERMISSIONS.ATTENDANCE_VIEW}>
             <AttendancePage />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/employees/leave">
+          <ProtectedRoute permission={PERMISSIONS.LEAVE_VIEW}>
+            <LeavePage />
           </ProtectedRoute>
         </Route>
 
