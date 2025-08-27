@@ -282,14 +282,30 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
           throw new Error(result.message || 'Failed to load report preview');
         }
       } else {
-        // For file downloads (PDF, Excel, CSV), use direct fetch to avoid response parsing
-        const url = `${apiEndpoint}?${queryParams}`;
-        const link = document.createElement('a');
-        link.href = url;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // For file downloads (PDF, Excel, CSV), use apiRequest with proper authentication
+        const response = await apiRequest(`${apiEndpoint}?${queryParams}`, 'GET');
+        
+        if (format === 'pdf') {
+          // For PDF, create blob and open in new tab
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          // Clean up the blob URL after a delay
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } else {
+          // For Excel/CSV, download the file
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `vat-${selectedReport}-${dateRange.startDate}-${dateRange.endDate}.${format}`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          // Clean up the blob URL
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
       }
       
       toast({
