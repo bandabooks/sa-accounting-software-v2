@@ -172,6 +172,8 @@ export default function TasksPage() {
       isBillable: true,
       progress: 0,
       isRecurring: false,
+      estimatedHours: "0",
+      hourlyRate: "0",
     },
   });
 
@@ -748,16 +750,16 @@ export default function TasksPage() {
                   <div className="flex items-center space-x-2">
                     {task.status !== 'completed' && (
                       <>
-                        {activeTimeEntry && activeTimeEntry.taskId === task.id ? (
+                        {activeTimeEntry && (activeTimeEntry as any).taskId === task.id ? (
                           <div className="flex items-center space-x-2">
                             <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded text-sm font-medium">
                               <Clock className="h-4 w-4 mr-1 animate-pulse" />
-                              <RunningTimer startTime={activeTimeEntry.startTime} />
+                              <RunningTimer startTime={(activeTimeEntry as any).startTime} />
                             </div>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleStopTime(activeTimeEntry.id)}
+                              onClick={() => handleStopTime((activeTimeEntry as any).id)}
                               disabled={stopTimeMutation.isPending}
                               className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
                             >
