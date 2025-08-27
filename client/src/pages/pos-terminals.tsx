@@ -84,49 +84,6 @@ export default function POSTerminals() {
     retry: 1,
   });
 
-  // Error state
-  if (terminalsError) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card className="w-full max-w-md mx-auto">
-          <CardContent className="p-6 text-center space-y-4">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
-            <h2 className="text-xl font-semibold text-gray-900">POS Terminals Error</h2>
-            <p className="text-gray-600">
-              There was an issue loading the POS terminals. Please refresh the page or contact support.
-            </p>
-            <div className="space-y-2">
-              <Button onClick={() => window.location.reload()} className="w-full">
-                Refresh Page
-              </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/pos-dashboard'} className="w-full">
-                <Home className="h-4 w-4 mr-2" />
-                Back to POS Dashboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card className="w-full max-w-md mx-auto">
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <h2 className="text-xl font-semibold text-gray-900">Loading POS Terminals</h2>
-            <p className="text-gray-600">
-              Loading terminal configurations and hardware settings...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   // Mutations
   const createTerminalMutation = useMutation({
     mutationFn: async (terminalData: TerminalFormData) => {
@@ -358,7 +315,18 @@ export default function POSTerminals() {
           <CardTitle>Terminal List</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {terminalsError ? (
+            <div className="text-center py-8 space-y-4">
+              <AlertTriangle className="h-12 w-12 text-red-500 mx-auto" />
+              <div>
+                <p className="text-gray-900 font-semibold">Error Loading Terminals</p>
+                <p className="text-gray-600 text-sm">Could not load POS terminals. Please try again.</p>
+              </div>
+              <Button onClick={() => window.location.reload()} size="sm">
+                Retry
+              </Button>
+            </div>
+          ) : isLoading ? (
             <div className="text-center py-8">Loading terminals...</div>
           ) : terminals.length === 0 ? (
             <div className="text-center py-8">
