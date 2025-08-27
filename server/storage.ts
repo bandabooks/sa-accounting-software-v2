@@ -9415,7 +9415,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         isVatRegistered: vatSettings.isVatRegistered,
         vatNumber: vatSettings.vatNumber,
-        vatRegistrationDate: vatSettings.vatRegistrationDate,
+        vatRegistrationDate: vatSettings.vatRegistrationDate && vatSettings.vatRegistrationDate.trim() !== "" ? vatSettings.vatRegistrationDate : null,
         vatPeriodMonths: vatSettings.vatPeriodMonths,
         vatSubmissionDay: vatSettings.vatSubmissionDay,
         updatedAt: new Date()
