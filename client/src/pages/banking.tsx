@@ -573,7 +573,7 @@ export default function Banking() {
                   <p className="text-emerald-200 text-xs mt-1">All accounts combined</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-full">
-                  <DollarSign className="h-8 w-8 text-white" />
+                  <Landmark className="h-8 w-8 text-white" />
                 </div>
               </div>
             </CardContent>
