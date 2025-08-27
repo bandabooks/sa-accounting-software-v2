@@ -718,6 +718,11 @@ function AuthenticatedApp() {
             <POSTerminals />
           </ProtectedRoute>
         </Route>
+        <Route path="/pos/setup">
+          <ProtectedRoute permission={PERMISSIONS.POS_MANAGE}>
+            <POSTerminals />
+          </ProtectedRoute>
+        </Route>
         
         {/* Professional Services Module */}
         <Route path="/professional-services">
