@@ -21,7 +21,8 @@ import {
   Wifi,
   WifiOff,
   Home,
-  Clock
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
