@@ -135,6 +135,11 @@ import EmployeesPage from "@/pages/employees";
 import PayrollPage from "@/pages/employees/payroll";
 import AttendancePage from "@/pages/employees/attendance";
 import LeavePage from "@/pages/employees/leave";
+
+// Root-level Employee pages (restored working versions)
+import Attendance from "@/pages/attendance";
+import Payroll from "@/pages/payroll";
+import LeaveManagement from "@/pages/leave-management";
 import SalesDashboard from "@/pages/sales-dashboard";
 import SalesOrders from "@/pages/sales-orders";
 import SalesOrderCreate from "@/pages/sales-order-create";
@@ -489,6 +494,23 @@ function AuthenticatedApp() {
         <Route path="/employees/leave">
           <ProtectedRoute permission={PERMISSIONS.LEAVE_VIEW}>
             <LeavePage />
+          </ProtectedRoute>
+        </Route>
+
+        {/* Root-level Employee Management routes (restored working versions) */}
+        <Route path="/attendance">
+          <ProtectedRoute permission={PERMISSIONS.ATTENDANCE_VIEW}>
+            <Attendance />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/payroll">
+          <ProtectedRoute permission={PERMISSIONS.PAYROLL_VIEW}>
+            <Payroll />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/leave-management">
+          <ProtectedRoute permission={PERMISSIONS.LEAVE_VIEW}>
+            <LeaveManagement />
           </ProtectedRoute>
         </Route>
 
