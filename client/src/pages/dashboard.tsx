@@ -254,10 +254,10 @@ export default function Dashboard() {
                 <span className="text-xs font-medium text-amber-700 uppercase tracking-wide">Expenses</span>
               </div>
               <div className="text-xl font-bold text-gray-900 mb-2">
-                {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
+                {formatCurrency(dashboardStats.totalExpenses)}
               </div>
               <div className="text-xs text-gray-700">
-                Monthly operating expenses
+                Total business expenses
               </div>
             </Card>
           </Link>
