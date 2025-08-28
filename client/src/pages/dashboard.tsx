@@ -155,297 +155,154 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
+      <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 pb-6 space-y-4">
-        {/* Enhanced Header */}
-        <div className="relative -mt-8">
-          {/* Background Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-2xl"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
-          
-          {/* Hero Content */}
-          <div className="relative p-8 text-white">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-white tracking-tight">{getCurrentGreeting()}!</h1>
-                <p className="text-blue-100 text-lg font-medium">Here's your business performance overview</p>
-                <div className="flex items-center gap-3 mt-4 flex-wrap">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <Activity className="h-4 w-4" />
-                    <span className="text-sm font-medium">Business Dashboard</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <BarChart3 className="h-4 w-4" />
-                    <span className="text-sm font-medium">Real-time Data</span>
-                  </div>
-                  <Link 
-                    href="/ai-monitor" 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 backdrop-blur-sm rounded-full border border-green-400/40 hover:bg-green-500/30 transition-all duration-300 transform hover:scale-105"
-                  >
-                    <Cpu className="h-4 w-4 text-green-300" />
-                    <span className="text-sm font-medium text-green-300">AI Online</span>
-                    <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                  </Link>
-                  <Link 
-                    href="/alerts" 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
-                  >
-                    <Bell className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {totalActiveAlerts > 0 ? `${totalActiveAlerts} Alerts` : 'System Alerts'}
-                    </span>
-                    {totalActiveAlerts > 0 && (
-                      <div className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] flex items-center justify-center">
-                        {totalActiveAlerts}
-                      </div>
-                    )}
-                  </Link>
-                  <Link 
-                    href="/reports" 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
-                  >
-                    <FileBarChart className="h-4 w-4" />
-                    <span className="text-sm font-medium">Reports</span>
-                  </Link>
-                  <Link 
-                    href="/banking" 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 hover:bg-white/30 transition-all duration-300 transform hover:scale-105"
-                  >
-                    <Banknote className="h-4 w-4" />
-                    <span className="text-sm font-medium">Banking</span>
-                  </Link>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Quick Create
-                      <ChevronDown className="h-4 w-4 ml-2" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl rounded-lg">
-                    <DropdownMenuLabel className="text-gray-700 font-semibold">Create New</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/invoices/create" className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 transition-colors">
-                        <div className="p-1.5 bg-blue-100 rounded-lg">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">New Invoice</div>
-                          <div className="text-sm text-gray-500">Create and send invoice</div>
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/estimates/create" className="flex items-center gap-3 px-3 py-2 hover:bg-purple-50 transition-colors">
-                        <div className="p-1.5 bg-purple-100 rounded-lg">
-                          <FileText className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">New Estimate</div>
-                          <div className="text-sm text-gray-500">Create quote for customer</div>
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsPaymentModalOpen(true)}>
-                      <div className="flex items-center gap-3 px-3 py-2 hover:bg-orange-50 transition-colors w-full">
-                        <div className="p-1.5 bg-orange-100 rounded-lg">
-                          <DollarSign className="h-4 w-4 text-orange-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">Record Payment</div>
-                          <div className="text-sm text-gray-500">Log customer payment</div>
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/customers/create" className="flex items-center gap-3 px-3 py-2 hover:bg-green-50 transition-colors">
-                        <div className="p-1.5 bg-green-100 rounded-lg">
-                          <User className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">Add Customer</div>
-                          <div className="text-sm text-gray-500">Register new customer</div>
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/expenses/create" className="flex items-center gap-3 px-3 py-2 hover:bg-red-50 transition-colors">
-                        <div className="p-1.5 bg-red-100 rounded-lg">
-                          <Receipt className="h-4 w-4 text-red-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">New Expense</div>
-                          <div className="text-sm text-gray-500">Record business expense</div>
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/purchase-orders/create" className="flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 transition-colors">
-                        <div className="p-1.5 bg-indigo-100 rounded-lg">
-                          <ShoppingBag className="h-4 w-4 text-indigo-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">Purchase Order</div>
-                          <div className="text-sm text-gray-500">Create supplier order</div>
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button 
-                  onClick={handleRefresh}
-                  variant="outline" 
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
+        {/* Compact Professional Header */}
+        <div className="border-b border-gray-200 bg-white px-4 py-3 -mx-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">{getCurrentGreeting()}</h1>
+              <p className="text-sm text-gray-600 mt-1">Business performance overview</p>
+            </div>
+            <div className="flex gap-2 items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Quick Create
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Create New</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/invoices/create" className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      New Invoice
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/estimates/create" className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      New Estimate
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsPaymentModalOpen(true)}>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Record Payment
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/customers/create" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Add Customer
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/expenses/create" className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4" />
+                      New Expense
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={handleRefresh} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Link href="/alerts">
+                <Button variant="outline" size="sm" className="relative">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Alerts
+                  {totalActiveAlerts > 0 && (
+                    <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs bg-red-500 text-white">
+                      {totalActiveAlerts}
+                    </Badge>
+                  )}
                 </Button>
-              </div>
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Enhanced Performance Metrics - Hidden when sales, finance, or reports tabs are active */}
+        {/* Compact Professional Metrics Grid */}
         {activeTab === "overview" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {/* Total Revenue Card */}
           <Link href="/reports" className="block">
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-100">Total Revenue</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <DollarSign className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold text-white mb-2">{formatCurrency(dashboardStats.totalRevenue)}</div>
-                <div className="flex items-center text-sm text-blue-100">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
-                    <ArrowUpRight className="h-3 w-3" />
-                    <span className="font-medium">+{getRevenueGrowth()}%</span>
-                    <span className="text-xs ml-1">from last month</span>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
+              <div className="flex items-center justify-between mb-2">
+                <DollarSign className="h-4 w-4 text-gray-500" />
+                <span className="text-xs text-gray-500">Revenue</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-900 mb-1">{formatCurrency(dashboardStats.totalRevenue)}</div>
+              <div className="text-xs text-gray-600">
+                <span className="text-green-600">+{getRevenueGrowth()}%</span> from last month
+              </div>
             </Card>
           </Link>
 
           {/* Outstanding Invoices Card */}
           <Link href="/invoices" className="block">
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-orange-600 via-red-600 to-red-700 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-orange-100">Outstanding Invoices</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <FileText className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold text-white mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
-                <div className="flex items-center text-sm text-orange-100">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span className="font-medium">overdue invoices</span>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
+              <div className="flex items-center justify-between mb-2">
+                <FileText className="h-4 w-4 text-gray-500" />
+                <span className="text-xs text-gray-500">Outstanding</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-900 mb-1">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
+              <div className="text-xs text-gray-600">
+                {dashboardStats.outstandingInvoiceCount} invoices pending
+              </div>
             </Card>
           </Link>
 
-          {/* Active Customers Card */}
+          {/* Total Customers Card */}
           <Link href="/customers" className="block">
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-purple-100">Active Customers</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold text-white mb-2">{dashboardStats.totalCustomers}</div>
-                <div className="flex items-center text-sm text-purple-100">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
-                    <TrendingUp className="h-3 w-3" />
-                    <span className="font-medium">new this month</span>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
+              <div className="flex items-center justify-between mb-2">
+                <Users className="h-4 w-4 text-gray-500" />
+                <span className="text-xs text-gray-500">Customers</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-900 mb-1">{dashboardStats.totalCustomers}</div>
+              <div className="text-xs text-gray-600">Active customers</div>
             </Card>
           </Link>
 
           {/* Pending Quotes Card */}
           <Link href="/estimates" className="block">
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-green-600 via-emerald-700 to-teal-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-green-100">Pending Quotes</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold text-white mb-2">{dashboardStats.pendingEstimates}</div>
-                <div className="flex items-center text-sm text-green-100">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
-                    <Clock className="h-3 w-3" />
-                    <span className="font-medium">in progress</span>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
+              <div className="flex items-center justify-between mb-2">
+                <Clock className="h-4 w-4 text-gray-500" />
+                <span className="text-xs text-gray-500">Quotes</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-900 mb-1">{dashboardStats.pendingEstimates}</div>
+              <div className="text-xs text-gray-600">Pending quotes</div>
             </Card>
           </Link>
 
           {/* Accounts Receivable Card */}
           <Link href="/customer-payments" className="block">
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-cyan-600 via-sky-700 to-blue-800 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-cyan-100">Accounts Receivable</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <ArrowUpRight className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold text-white mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
-                <div className="flex items-center text-sm text-cyan-100">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
-                    <Clock className="h-3 w-3" />
-                    <span className="font-medium">money owed to you</span>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
+              <div className="flex items-center justify-between mb-2">
+                <ArrowUpRight className="h-4 w-4 text-gray-500" />
+                <span className="text-xs text-gray-500">Receivable</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-900 mb-1">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
+              <div className="text-xs text-gray-600">Money owed to you</div>
             </Card>
           </Link>
 
           {/* Accounts Payable Card */}
           <Link href="/expenses" className="block">
-            <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-amber-600 via-orange-600 to-red-700 text-white transform hover:scale-105 transition-all duration-300 cursor-pointer">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-amber-100">Accounts Payable</CardTitle>
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                  <ArrowDownLeft className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="text-2xl font-bold text-white mb-2">
-                  {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
-                </div>
-                <div className="flex items-center text-sm text-amber-100">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/20">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span className="font-medium">money you owe</span>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
+              <div className="flex items-center justify-between mb-2">
+                <ArrowDownLeft className="h-4 w-4 text-gray-500" />
+                <span className="text-xs text-gray-500">Payable</span>
+              </div>
+              <div className="text-lg font-semibold text-gray-900 mb-1">
+                {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
+              </div>
+              <div className="text-xs text-gray-600">Money you owe</div>
             </Card>
           </Link>
           </div>
@@ -456,28 +313,28 @@ export default function Dashboard() {
         {/* Modular Widget System */}
         <div className="space-y-4">
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white backdrop-blur-sm border border-gray-200 shadow-md p-1.5 rounded-lg">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white border border-gray-200 p-1">
               <TabsTrigger 
                 value="overview" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
+                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
               >
                 Overview
               </TabsTrigger>
               <TabsTrigger 
                 value="sales" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
+                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
               >
                 Sales
               </TabsTrigger>
               <TabsTrigger 
                 value="finance" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
+                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
               >
                 Finance
               </TabsTrigger>
               <TabsTrigger 
                 value="reports" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md font-medium px-5 py-2.5 transition-all duration-200 hover:bg-gray-100"
+                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
               >
                 Reports
               </TabsTrigger>
@@ -569,7 +426,7 @@ export default function Dashboard() {
                       <RecentActivities 
                         activities={
                           activitySearchTerm
-                            ? (dashboardStats.recentActivities || []).filter(activity =>
+                            ? (dashboardStats.recentActivities || []).filter((activity: any) =>
                                 activity.description.toLowerCase().includes(activitySearchTerm.toLowerCase()) ||
                                 (activity.customerName && activity.customerName.toLowerCase().includes(activitySearchTerm.toLowerCase())) ||
                                 activity.amount.includes(activitySearchTerm) ||
@@ -589,10 +446,10 @@ export default function Dashboard() {
 
             <TabsContent value="sales" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-2xl transition-all duration-300">
+                <Card className="border border-gray-200 bg-white">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-semibold text-gray-800">Recent Invoices</CardTitle>
+                      <CardTitle className="text-base font-semibold text-gray-800">Recent Invoices</CardTitle>
                       <Button variant="outline" size="sm" asChild>
                         <Link href="/invoices">
                           <Eye className="h-4 w-4 mr-2" />
@@ -623,9 +480,9 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-2xl transition-all duration-300">
+                <Card className="border border-gray-200 bg-white">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
                       <BarChart3 className="h-5 w-5 text-blue-600" />
                       Sales Performance
                     </CardTitle>
@@ -672,22 +529,22 @@ export default function Dashboard() {
 
                           {/* Outstanding vs Paid Ratio */}
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-lg text-white">
+                            <div className="bg-gray-50 border border-gray-200 p-3 rounded">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <div className="text-lg font-bold">R {((parseFloat(dashboardStats.totalRevenue) / (dashboardStats.paidInvoiceCount + dashboardStats.outstandingInvoiceCount)) || 0).toFixed(0)}</div>
-                                  <div className="text-xs opacity-90">Avg Invoice Value</div>
+                                  <div className="text-lg font-bold text-gray-900">R {((parseFloat(dashboardStats.totalRevenue) / (dashboardStats.paidInvoiceCount + dashboardStats.outstandingInvoiceCount)) || 0).toFixed(0)}</div>
+                                  <div className="text-xs text-gray-600">Avg Invoice Value</div>
                                 </div>
-                                <Receipt className="h-6 w-6 opacity-80" />
+                                <Receipt className="h-5 w-5 text-gray-500" />
                               </div>
                             </div>
-                            <div className="bg-gradient-to-br from-purple-500 to-violet-600 p-3 rounded-lg text-white">
+                            <div className="bg-gray-50 border border-gray-200 p-3 rounded">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <div className="text-lg font-bold">{dashboardStats.recentInvoices.length}</div>
-                                  <div className="text-xs opacity-90">Active Invoices</div>
+                                  <div className="text-lg font-bold text-gray-900">{dashboardStats.recentInvoices.length}</div>
+                                  <div className="text-xs text-gray-600">Active Invoices</div>
                                 </div>
-                                <FileText className="h-6 w-6 opacity-80" />
+                                <FileText className="h-5 w-5 text-gray-500" />
                               </div>
                             </div>
                           </div>
@@ -727,9 +584,9 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-2xl transition-all duration-300">
+                <Card className="border border-gray-200 bg-white">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-semibold text-gray-800">Sales Pipeline</CardTitle>
+                    <CardTitle className="text-base font-semibold text-gray-800">Sales Pipeline</CardTitle>
                     <CardDescription>Real customer opportunities</CardDescription>
                   </CardHeader>
                   <CardContent>
