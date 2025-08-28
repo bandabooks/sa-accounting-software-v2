@@ -230,15 +230,15 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {/* Total Revenue Card */}
           <Link href="/reports" className="block group">
-            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+            <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                  <DollarSign className="h-4 w-4 text-blue-600" />
+                <div className="p-2 bg-blue-200 rounded-lg group-hover:bg-blue-300 transition-colors">
+                  <DollarSign className="h-4 w-4 text-blue-700" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Revenue</span>
+                <span className="text-xs font-medium text-blue-700 uppercase tracking-wide">Revenue</span>
               </div>
               <div className="text-xl font-bold text-gray-900 mb-2">{formatCurrency(dashboardStats.totalRevenue)}</div>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-gray-700">
                 <span className="text-emerald-600 font-semibold">+{getRevenueGrowth()}%</span> from last month
               </div>
             </Card>
@@ -246,15 +246,15 @@ export default function Dashboard() {
 
           {/* Outstanding Invoices Card */}
           <Link href="/invoices" className="block group">
-            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-amber-50 hover:to-orange-50 hover:border-amber-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+            <Card className="border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 hover:border-amber-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
-                  <FileText className="h-4 w-4 text-amber-600" />
+                <div className="p-2 bg-amber-200 rounded-lg group-hover:bg-amber-300 transition-colors">
+                  <FileText className="h-4 w-4 text-amber-700" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Outstanding</span>
+                <span className="text-xs font-medium text-amber-700 uppercase tracking-wide">Outstanding</span>
               </div>
               <div className="text-xl font-bold text-gray-900 mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-gray-700">
                 <span className="font-semibold">{dashboardStats.outstandingInvoiceCount}</span> invoices pending
               </div>
             </Card>
@@ -262,59 +262,59 @@ export default function Dashboard() {
 
           {/* Total Customers Card */}
           <Link href="/customers" className="block group">
-            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-violet-50 hover:border-purple-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+            <Card className="border border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100 hover:border-purple-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                  <Users className="h-4 w-4 text-purple-600" />
+                <div className="p-2 bg-purple-200 rounded-lg group-hover:bg-purple-300 transition-colors">
+                  <Users className="h-4 w-4 text-purple-700" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Customers</span>
+                <span className="text-xs font-medium text-purple-700 uppercase tracking-wide">Customers</span>
               </div>
               <div className="text-xl font-bold text-gray-900 mb-2">{dashboardStats.totalCustomers}</div>
-              <div className="text-xs text-gray-600">Active customers</div>
+              <div className="text-xs text-gray-700">Active customers</div>
             </Card>
           </Link>
 
           {/* Pending Quotes Card */}
           <Link href="/estimates" className="block group">
-            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-emerald-50 hover:to-green-50 hover:border-emerald-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+            <Card className="border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 hover:border-emerald-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                  <Clock className="h-4 w-4 text-emerald-600" />
+                <div className="p-2 bg-emerald-200 rounded-lg group-hover:bg-emerald-300 transition-colors">
+                  <Clock className="h-4 w-4 text-emerald-700" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quotes</span>
+                <span className="text-xs font-medium text-emerald-700 uppercase tracking-wide">Quotes</span>
               </div>
               <div className="text-xl font-bold text-gray-900 mb-2">{dashboardStats.pendingEstimates}</div>
-              <div className="text-xs text-gray-600">Pending quotes</div>
+              <div className="text-xs text-gray-700">Pending quotes</div>
             </Card>
           </Link>
 
           {/* Accounts Receivable Card */}
           <Link href="/customer-payments" className="block group">
-            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-cyan-50 hover:to-sky-50 hover:border-cyan-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+            <Card className="border border-cyan-200 bg-gradient-to-br from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 hover:border-cyan-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-cyan-100 rounded-lg group-hover:bg-cyan-200 transition-colors">
-                  <ArrowUpRight className="h-4 w-4 text-cyan-600" />
+                <div className="p-2 bg-cyan-200 rounded-lg group-hover:bg-cyan-300 transition-colors">
+                  <ArrowUpRight className="h-4 w-4 text-cyan-700" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Receivable</span>
+                <span className="text-xs font-medium text-cyan-700 uppercase tracking-wide">Receivable</span>
               </div>
               <div className="text-xl font-bold text-gray-900 mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
-              <div className="text-xs text-gray-600">Money owed to you</div>
+              <div className="text-xs text-gray-700">Money owed to you</div>
             </Card>
           </Link>
 
           {/* Accounts Payable Card */}
           <Link href="/expenses" className="block group">
-            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-rose-50 hover:to-red-50 hover:border-rose-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+            <Card className="border border-rose-200 bg-gradient-to-br from-rose-50 to-red-50 hover:from-rose-100 hover:to-red-100 hover:border-rose-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-rose-100 rounded-lg group-hover:bg-rose-200 transition-colors">
-                  <ArrowDownLeft className="h-4 w-4 text-rose-600" />
+                <div className="p-2 bg-rose-200 rounded-lg group-hover:bg-rose-300 transition-colors">
+                  <ArrowDownLeft className="h-4 w-4 text-rose-700" />
                 </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payable</span>
+                <span className="text-xs font-medium text-rose-700 uppercase tracking-wide">Payable</span>
               </div>
               <div className="text-xl font-bold text-gray-900 mb-2">
                 {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
               </div>
-              <div className="text-xs text-gray-600">Money you owe</div>
+              <div className="text-xs text-gray-700">Money you owe</div>
             </Card>
           </Link>
           </div>
