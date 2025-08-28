@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PullToRefresh } from "@/components/mobile/pull-to-refresh";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
 import { 
-  Plus, FileText, UserPlus, TrendingUp, Users, DollarSign, AlertTriangle,
+  Plus, FileText, UserPlus, TrendingUp, TrendingDown, Users, DollarSign, AlertTriangle,
   BarChart3, PieChart, Activity, Bell, Settings, ChevronRight, RefreshCw,
   Target, Award, Calendar, Clock, Zap, Star, ArrowUpRight, ArrowDownRight, ArrowDownLeft,
   Building, ShoppingCart, CreditCard, Wallet, Eye, Filter, Download, ChevronDown, Receipt,
@@ -244,18 +244,20 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          {/* Outstanding Invoices Card */}
-          <Link href="/invoices" className="block group">
+          {/* Total Expenses Card */}
+          <Link href="/expenses" className="block group">
             <Card className="border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 hover:border-amber-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
               <div className="flex items-center justify-between mb-3">
                 <div className="p-2 bg-amber-200 rounded-lg group-hover:bg-amber-300 transition-colors">
-                  <FileText className="h-4 w-4 text-amber-700" />
+                  <TrendingDown className="h-4 w-4 text-amber-700" />
                 </div>
-                <span className="text-xs font-medium text-amber-700 uppercase tracking-wide">Outstanding</span>
+                <span className="text-xs font-medium text-amber-700 uppercase tracking-wide">Expenses</span>
               </div>
-              <div className="text-xl font-bold text-gray-900 mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
+              <div className="text-xl font-bold text-gray-900 mb-2">
+                {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
+              </div>
               <div className="text-xs text-gray-700">
-                <span className="font-semibold">{dashboardStats.outstandingInvoiceCount}</span> invoices pending
+                Monthly operating expenses
               </div>
             </Card>
           </Link>
