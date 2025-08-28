@@ -155,14 +155,14 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 pb-6 space-y-4">
-        {/* Compact Professional Header */}
-        <div className="border-b border-gray-200 bg-white px-4 py-3 -mx-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
+        <div className="container mx-auto px-4 pb-8 space-y-6">
+        {/* Enhanced Professional Header */}
+        <div className="border-b border-gray-200 bg-white/90 backdrop-blur-sm px-6 py-4 -mx-4 shadow-sm">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">{getCurrentGreeting()}</h1>
-              <p className="text-sm text-gray-600 mt-1">Business performance overview</p>
+              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">{getCurrentGreeting()}</h1>
+              <p className="text-sm text-gray-600 mt-1 font-medium">Business performance overview</p>
             </div>
             <div className="flex gap-2 items-center">
               <DropdownMenu>
@@ -225,81 +225,93 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Compact Professional Metrics Grid */}
+        {/* Enhanced Professional Metrics Grid */}
         {activeTab === "overview" && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {/* Total Revenue Card */}
-          <Link href="/reports" className="block">
-            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
-              <div className="flex items-center justify-between mb-2">
-                <DollarSign className="h-4 w-4 text-gray-500" />
-                <span className="text-xs text-gray-500">Revenue</span>
+          <Link href="/reports" className="block group">
+            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                  <DollarSign className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Revenue</span>
               </div>
-              <div className="text-lg font-semibold text-gray-900 mb-1">{formatCurrency(dashboardStats.totalRevenue)}</div>
+              <div className="text-xl font-bold text-gray-900 mb-2">{formatCurrency(dashboardStats.totalRevenue)}</div>
               <div className="text-xs text-gray-600">
-                <span className="text-green-600">+{getRevenueGrowth()}%</span> from last month
+                <span className="text-emerald-600 font-semibold">+{getRevenueGrowth()}%</span> from last month
               </div>
             </Card>
           </Link>
 
           {/* Outstanding Invoices Card */}
-          <Link href="/invoices" className="block">
-            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
-              <div className="flex items-center justify-between mb-2">
-                <FileText className="h-4 w-4 text-gray-500" />
-                <span className="text-xs text-gray-500">Outstanding</span>
+          <Link href="/invoices" className="block group">
+            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-amber-50 hover:to-orange-50 hover:border-amber-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
+                  <FileText className="h-4 w-4 text-amber-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Outstanding</span>
               </div>
-              <div className="text-lg font-semibold text-gray-900 mb-1">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
+              <div className="text-xl font-bold text-gray-900 mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
               <div className="text-xs text-gray-600">
-                {dashboardStats.outstandingInvoiceCount} invoices pending
+                <span className="font-semibold">{dashboardStats.outstandingInvoiceCount}</span> invoices pending
               </div>
             </Card>
           </Link>
 
           {/* Total Customers Card */}
-          <Link href="/customers" className="block">
-            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
-              <div className="flex items-center justify-between mb-2">
-                <Users className="h-4 w-4 text-gray-500" />
-                <span className="text-xs text-gray-500">Customers</span>
+          <Link href="/customers" className="block group">
+            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-violet-50 hover:border-purple-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                  <Users className="h-4 w-4 text-purple-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Customers</span>
               </div>
-              <div className="text-lg font-semibold text-gray-900 mb-1">{dashboardStats.totalCustomers}</div>
+              <div className="text-xl font-bold text-gray-900 mb-2">{dashboardStats.totalCustomers}</div>
               <div className="text-xs text-gray-600">Active customers</div>
             </Card>
           </Link>
 
           {/* Pending Quotes Card */}
-          <Link href="/estimates" className="block">
-            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
-              <div className="flex items-center justify-between mb-2">
-                <Clock className="h-4 w-4 text-gray-500" />
-                <span className="text-xs text-gray-500">Quotes</span>
+          <Link href="/estimates" className="block group">
+            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-emerald-50 hover:to-green-50 hover:border-emerald-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                  <Clock className="h-4 w-4 text-emerald-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quotes</span>
               </div>
-              <div className="text-lg font-semibold text-gray-900 mb-1">{dashboardStats.pendingEstimates}</div>
+              <div className="text-xl font-bold text-gray-900 mb-2">{dashboardStats.pendingEstimates}</div>
               <div className="text-xs text-gray-600">Pending quotes</div>
             </Card>
           </Link>
 
           {/* Accounts Receivable Card */}
-          <Link href="/customer-payments" className="block">
-            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
-              <div className="flex items-center justify-between mb-2">
-                <ArrowUpRight className="h-4 w-4 text-gray-500" />
-                <span className="text-xs text-gray-500">Receivable</span>
+          <Link href="/customer-payments" className="block group">
+            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-cyan-50 hover:to-sky-50 hover:border-cyan-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 bg-cyan-100 rounded-lg group-hover:bg-cyan-200 transition-colors">
+                  <ArrowUpRight className="h-4 w-4 text-cyan-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Receivable</span>
               </div>
-              <div className="text-lg font-semibold text-gray-900 mb-1">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
+              <div className="text-xl font-bold text-gray-900 mb-2">{formatCurrency(dashboardStats.outstandingInvoices)}</div>
               <div className="text-xs text-gray-600">Money owed to you</div>
             </Card>
           </Link>
 
           {/* Accounts Payable Card */}
-          <Link href="/expenses" className="block">
-            <Card className="border border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer p-3">
-              <div className="flex items-center justify-between mb-2">
-                <ArrowDownLeft className="h-4 w-4 text-gray-500" />
-                <span className="text-xs text-gray-500">Payable</span>
+          <Link href="/expenses" className="block group">
+            <Card className="border border-gray-200 bg-white hover:bg-gradient-to-br hover:from-rose-50 hover:to-red-50 hover:border-rose-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 bg-rose-100 rounded-lg group-hover:bg-rose-200 transition-colors">
+                  <ArrowDownLeft className="h-4 w-4 text-rose-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payable</span>
               </div>
-              <div className="text-lg font-semibold text-gray-900 mb-1">
+              <div className="text-xl font-bold text-gray-900 mb-2">
                 {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
               </div>
               <div className="text-xs text-gray-600">Money you owe</div>
@@ -311,34 +323,40 @@ export default function Dashboard() {
 
 
         {/* Modular Widget System */}
-        <div className="space-y-4">
-          <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-white border border-gray-200 p-1">
-              <TabsTrigger 
-                value="overview" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger 
-                value="sales" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
-              >
-                Sales
-              </TabsTrigger>
-              <TabsTrigger 
-                value="finance" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
-              >
-                Finance
-              </TabsTrigger>
-              <TabsTrigger 
-                value="reports" 
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-medium px-4 py-2 transition-all duration-200 hover:bg-gray-100"
-              >
-                Reports
-              </TabsTrigger>
-            </TabsList>
+        <div className="space-y-6">
+          <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-1">
+              <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 bg-transparent p-0">
+                <TabsTrigger 
+                  value="overview" 
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm font-semibold px-6 py-3 rounded-md transition-all duration-200 hover:bg-gray-100 text-gray-700"
+                >
+                  <Activity className="h-4 w-4 mr-2" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="sales" 
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm font-semibold px-6 py-3 rounded-md transition-all duration-200 hover:bg-gray-100 text-gray-700"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Sales
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="finance" 
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm font-semibold px-6 py-3 rounded-md transition-all duration-200 hover:bg-gray-100 text-gray-700"
+                >
+                  <PieChart className="h-4 w-4 mr-2" />
+                  Finance
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="reports" 
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm font-semibold px-6 py-3 rounded-md transition-all duration-200 hover:bg-gray-100 text-gray-700"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Reports
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="overview" className="space-y-4">
 
@@ -446,18 +464,23 @@ export default function Dashboard() {
 
             <TabsContent value="sales" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                <Card className="border border-gray-200 bg-white">
-                  <CardHeader className="pb-3">
+                <Card className="border border-gray-200 bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-semibold text-gray-800">Recent Invoices</CardTitle>
-                      <Button variant="outline" size="sm" asChild>
+                      <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <div className="p-1.5 bg-green-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-green-600" />
+                        </div>
+                        Recent Invoices
+                      </CardTitle>
+                      <Button variant="outline" size="sm" asChild className="shadow-sm">
                         <Link href="/invoices">
                           <Eye className="h-4 w-4 mr-2" />
                           View All
                         </Link>
                       </Button>
                     </div>
-                    <CardDescription>Latest billing activity</CardDescription>
+                    <CardDescription className="text-gray-600 font-medium">Latest billing activity</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {dashboardStats.recentInvoices && dashboardStats.recentInvoices.length > 0 ? (
@@ -480,13 +503,15 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border border-gray-200 bg-white">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-blue-600" />
+                <Card className="border border-gray-200 bg-white/90 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <div className="p-1.5 bg-blue-100 rounded-lg">
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                      </div>
                       Sales Performance
                     </CardTitle>
-                    <CardDescription>Interactive analytics from real transactions</CardDescription>
+                    <CardDescription className="text-gray-600 font-medium">Interactive analytics from real transactions</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
