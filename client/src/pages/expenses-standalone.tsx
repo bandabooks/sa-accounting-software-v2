@@ -438,13 +438,11 @@ export default function ExpensesStandalone() {
                           <span>Invoice: {expense.supplierInvoiceNumber}</span>
                         )}
                         <span className="font-medium text-blue-600 dark:text-blue-400">
-                          {typeof expense.supplier === 'object' && expense.supplier?.name 
-                            ? expense.supplier.name 
-                            : expense.supplierName || "Direct Expense"}
+                          {expense.supplierName || "Direct Expense"}
                         </span>
                         <span>{format(new Date(expense.expenseDate), "dd MMM yyyy")}</span>
                         <span className="text-green-600 dark:text-green-400">
-                          • Paid from: {expense.bankAccountName || 'Bank Account'}
+                          • Paid status: Paid
                         </span>
                       </div>
                     </div>
@@ -491,7 +489,7 @@ export default function ExpensesStandalone() {
                       <div>
                         <span className="text-gray-500 dark:text-gray-400 block">Category</span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {expense.categoryName || expense.category || "General"}
+                          {expense.categoryName || "General"}
                         </span>
                       </div>
                       <div>
@@ -512,7 +510,7 @@ export default function ExpensesStandalone() {
                         <span className="text-gray-500 dark:text-gray-400 block">Total Amount</span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           {formatCurrency(
-                            parseFloat(expense.amount || '0') + parseFloat(expense.vatAmount || '0')
+                            (parseFloat(expense.amount || '0') + parseFloat(expense.vatAmount || '0')).toString()
                           )}
                         </span>
                       </div>
