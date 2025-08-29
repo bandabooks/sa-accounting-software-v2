@@ -7720,16 +7720,49 @@ export class DatabaseStorage implements IStorage {
       .orderBy(chartOfAccounts.accountCode);
 
     return await Promise.all(accounts.map(async (account) => {
-      const balance = await this.calculateAccountBalance(account.id, periodEnd);
+      // Calculate detailed debit and credit amounts from journal entry lines
+      const journalEntryData = await db
+        .select({
+          debitAmount: sql<string>`COALESCE(SUM(CASE WHEN ${journalEntryLines.debitAmount} IS NOT NULL THEN ${journalEntryLines.debitAmount} ELSE 0 END), 0)`,
+          creditAmount: sql<string>`COALESCE(SUM(CASE WHEN ${journalEntryLines.creditAmount} IS NOT NULL THEN ${journalEntryLines.creditAmount} ELSE 0 END), 0)`
+        })
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, and(
+          eq(journalEntries.id, journalEntryLines.journalEntryId),
+          eq(journalEntries.companyId, companyId),
+          gte(journalEntries.transactionDate, periodStart),
+          lte(journalEntries.transactionDate, periodEnd),
+          eq(journalEntries.isPosted, true)
+        ))
+        .where(eq(journalEntryLines.accountId, account.id));
+
+      const debitAmount = journalEntryData[0]?.debitAmount || "0";
+      const creditAmount = journalEntryData[0]?.creditAmount || "0";
+      
+      // Calculate balance based on account type
+      const debitNum = parseFloat(debitAmount);
+      const creditNum = parseFloat(creditAmount);
+      let balance = 0;
+      
+      // Asset and Expense accounts: Debit increases balance
+      if (account.accountType.toLowerCase().includes('asset') || 
+          account.accountType.toLowerCase().includes('expense')) {
+        balance = debitNum - creditNum;
+      } 
+      // Liability, Equity, and Revenue accounts: Credit increases balance
+      else {
+        balance = creditNum - debitNum;
+      }
+
       return {
         accountId: account.id,
         accountCode: account.accountCode,
         accountName: account.accountName,
         accountType: account.accountType,
-        openingBalance: "0.00", // TODO: Calculate opening balance
-        debitTotal: "0.00", // TODO: Calculate period debits
-        creditTotal: "0.00", // TODO: Calculate period credits
-        closingBalance: balance,
+        openingBalance: "0.00", // TODO: Calculate opening balance if needed
+        debitTotal: debitAmount,
+        creditTotal: creditAmount,
+        closingBalance: balance.toFixed(2),
       };
     }));
   }
