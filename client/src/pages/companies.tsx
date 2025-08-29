@@ -40,23 +40,23 @@ export default function Companies() {
   });
 
   // Fetch user's companies
-  const { data: userCompanies, isLoading } = useQuery({
+  const { data: userCompanies = [], isLoading } = useQuery<(CompanyUser & { company: Company })[]>({
     queryKey: ["/api/companies/my"],
   });
 
   // Fetch active company
-  const { data: activeCompany } = useQuery({
+  const { data: activeCompany } = useQuery<Company>({
     queryKey: ["/api/companies/active"],
   });
 
   // Fetch company users when a company is selected
-  const { data: companyUsers } = useQuery({
+  const { data: companyUsers = [] } = useQuery<any[]>({
     queryKey: ["/api/companies", selectedCompany?.id, "users"],
     enabled: !!selectedCompany,
   });
 
   // Fetch subscription plans
-  const { data: subscriptionPlans, isLoading: isLoadingPlans, error: plansError } = useQuery({
+  const { data: subscriptionPlans = [], isLoading: isLoadingPlans, error: plansError } = useQuery<any[]>({
     queryKey: ["/api/subscription-plans"],
   });
 
@@ -68,15 +68,16 @@ export default function Companies() {
   // Set active company mutation
   const setActiveCompanyMutation = useMutation({
     mutationFn: async (companyId: number) => {
-      return await apiRequest(`/api/companies/${companyId}/set-active`, "POST");
+      return await apiRequest(`/api/companies/switch`, "POST", { companyId });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Company Switched",
-        description: "Successfully switched to the selected company.",
+        description: `Successfully switched to ${data?.company?.name || 'selected company'}.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error: any) => {
       toast({
@@ -235,11 +236,13 @@ export default function Companies() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
+                            e.preventDefault();
                             setActiveCompanyMutation.mutate(companyUser.company.id);
                           }}
                           disabled={setActiveCompanyMutation.isPending}
+                          data-testid={`switch-to-company-${companyUser.company.id}`}
                         >
-                          Switch To
+                          {setActiveCompanyMutation.isPending ? "Switching..." : "Switch To"}
                         </Button>
                       )}
                       <Button
@@ -247,8 +250,10 @@ export default function Companies() {
                         variant="outline"
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           setSelectedCompany(companyUser.company);
                         }}
+                        data-testid={`settings-company-${companyUser.company.id}`}
                       >
                         <Settings className="h-4 w-4" />
                       </Button>
@@ -257,10 +262,12 @@ export default function Companies() {
                         variant="outline"
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           setSelectedSubscriptionCompany(companyUser.company);
                           setIsSubscriptionDialogOpen(true);
                         }}
                         className="flex items-center gap-1"
+                        data-testid={`plan-company-${companyUser.company.id}`}
                       >
                         <CreditCard className="h-3 w-3" />
                         Plan

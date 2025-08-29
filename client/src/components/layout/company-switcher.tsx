@@ -73,11 +73,15 @@ export default function CompanySwitcher() {
       return;
     }
     
+    // Close dropdown immediately for better UX
+    setIsOpen(false);
+    
     try {
+      // Switch company with optimistic UI update
       await switchCompany(targetCompanyId);
-      setIsOpen(false);
     } catch (error) {
       console.error('Failed to switch company:', error);
+      // Error handling is done in switchCompany function
     }
   };
 

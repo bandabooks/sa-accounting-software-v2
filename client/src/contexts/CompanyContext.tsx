@@ -60,8 +60,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setCompanyId(newCompanyId);
       localStorage.setItem('activeCompanyId', newCompanyId.toString());
 
-      // 2. Update company in backend (parallel with cache operations)
-      const backendUpdatePromise = fetch('/api/companies/switch', {
+      // 2. Optimistic cache invalidation for instant UI updates
+      queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+
+      // 3. Update company in backend
+      const response = await fetch('/api/companies/switch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,29 +79,6 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ companyId: newCompanyId }),
       });
 
-      // 3. Invalidate relevant queries only
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
-
-      // 4. Update URL with company parameter (non-blocking) - Remove this as it's causing issues
-      // const url = new URL(window.location.href);
-      // url.searchParams.set('co', newCompanyId.toString());
-      // window.history.pushState({}, '', url.toString());
-
-      // 5. WebSocket reconnection (non-blocking)
-      if (window.wsConnection) {
-        window.wsConnection.send(JSON.stringify({
-          type: 'switch_company',
-          oldCompanyId: companyId,
-          newCompanyId: newCompanyId,
-        }));
-      }
-
-      // 6. Wait for backend update to complete
-      const response = await backendUpdatePromise;
       if (!response.ok) {
         const errorData = await response.text();
         console.error('Company switch failed:', {
@@ -103,19 +87,30 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           error: errorData,
           companyId: newCompanyId
         });
+        
+        // Revert local state on failure
+        const previousCompanyId = localStorage.getItem('activeCompanyId');
+        if (previousCompanyId) {
+          setCompanyId(parseInt(previousCompanyId));
+        }
+        
         throw new Error(`Failed to switch company: ${response.status} - ${errorData}`);
       }
 
-      // 7. Get response data and update UI
       const data = await response.json();
       
-      // 8. Simple data refresh after successful switch
-      queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      // 4. WebSocket notification (non-blocking)
+      if (window.wsConnection) {
+        window.wsConnection.send(JSON.stringify({
+          type: 'switch_company',
+          oldCompanyId: companyId,
+          newCompanyId: newCompanyId,
+        }));
+      }
       
       toast({
         title: "Company switched",
-        description: `Now viewing ${data.company.name}`,
+        description: `Now viewing ${data.company?.name || 'selected company'}`,
       });
 
     } catch (error) {
@@ -123,7 +118,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         console.error('Failed to switch company:', error);
         toast({
           title: "Error",
-          description: "Failed to switch company",
+          description: "Failed to switch company. Please try again.",
           variant: "destructive",
         });
       }
