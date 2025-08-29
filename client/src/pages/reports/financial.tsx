@@ -57,6 +57,33 @@ export default function FinancialReportsPage() {
   const totalExpenses = parseFloat((dashboardStats as any)?.totalExpenses || '0');
   const netProfit = totalRevenue - totalExpenses;
 
+  // Calculate Revenue Growth (month-over-month)
+  const calculateRevenueGrowth = () => {
+    if (!profitLossData || profitLossData.length < 2) return 0;
+    
+    // Get current and previous month data
+    const currentMonth = profitLossData[profitLossData.length - 1];
+    const previousMonth = profitLossData[profitLossData.length - 2];
+    
+    const currentRevenue = parseFloat(currentMonth?.revenue || totalRevenue || 0);
+    const previousRevenue = parseFloat(previousMonth?.revenue || 0);
+    
+    if (previousRevenue === 0) {
+      return currentRevenue > 0 ? 100 : 0; // 100% growth from zero, 0% if still zero
+    }
+    
+    return ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+  };
+
+  // Calculate Profit Margin
+  const calculateProfitMargin = () => {
+    if (totalRevenue === 0) return 0;
+    return (netProfit / totalRevenue) * 100;
+  };
+
+  const revenueGrowth = calculateRevenueGrowth();
+  const profitMargin = calculateProfitMargin();
+
   // Professional PDF Generation Functions
   const generateTrialBalancePDF = (data: any[]) => {
     const doc = new jsPDF();
@@ -399,7 +426,6 @@ export default function FinancialReportsPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'Profit & Loss');
     XLSX.writeFile(wb, `Profit_Loss_Default_Company_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
-  const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -1304,10 +1330,12 @@ export default function FinancialReportsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-green-700 font-medium">Revenue Growth</p>
-                          <p className="text-2xl font-bold text-green-800">0.0%</p>
-                          <p className="text-xs text-green-600">Jul to Aug 2024</p>
+                          <p className={`text-2xl font-bold ${revenueGrowth >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                            {revenueGrowth >= 0 ? '+' : ''}{revenueGrowth.toFixed(1)}%
+                          </p>
+                          <p className="text-xs text-green-600">Month-over-month</p>
                         </div>
-                        <TrendingUp className="h-8 w-8 text-green-500" />
+                        <TrendingUp className={`h-8 w-8 ${revenueGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`} />
                       </div>
                     </CardContent>
                   </Card>
@@ -1317,10 +1345,17 @@ export default function FinancialReportsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-blue-700 font-medium">Profit Margin</p>
-                          <p className="text-2xl font-bold text-blue-800">0.0%</p>
-                          <p className="text-xs text-blue-600">Excellent profitability</p>
+                          <p className={`text-2xl font-bold ${profitMargin >= 0 ? 'text-blue-800' : 'text-red-800'}`}>
+                            {profitMargin.toFixed(1)}%
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {profitMargin >= 20 ? 'Excellent profitability' : 
+                             profitMargin >= 10 ? 'Good profitability' : 
+                             profitMargin >= 5 ? 'Moderate profitability' : 
+                             profitMargin > 0 ? 'Low profitability' : 'Loss-making'}
+                          </p>
                         </div>
-                        <TrendingUp className="h-8 w-8 text-blue-500" />
+                        <TrendingUp className={`h-8 w-8 ${profitMargin >= 0 ? 'text-blue-500' : 'text-red-500'}`} />
                       </div>
                     </CardContent>
                   </Card>
@@ -1403,24 +1438,49 @@ export default function FinancialReportsPage() {
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
-                        <Badge className="bg-green-100 text-green-800 mt-1">Strong</Badge>
+                        <Badge className={`mt-1 ${profitMargin >= 10 ? 'bg-green-100 text-green-800' : profitMargin >= 5 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                          {profitMargin >= 10 ? 'Strong' : profitMargin >= 5 ? 'Moderate' : 'Weak'}
+                        </Badge>
                         <div>
-                          <p className="font-medium">Exceptional Profitability</p>
-                          <p className="text-sm text-gray-600">No profit data available for this period</p>
+                          <p className="font-medium">
+                            {profitMargin >= 20 ? 'Exceptional Profitability' : 
+                             profitMargin >= 10 ? 'Strong Profitability' : 
+                             profitMargin >= 5 ? 'Moderate Profitability' : 
+                             profitMargin > 0 ? 'Low Profitability' : 'Loss-Making Operations'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {netProfit !== 0 ? `Net profit of ${formatCurrency(netProfit.toString())} with ${profitMargin.toFixed(1)}% profit margin` : 'No profit generated in current period'}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <Badge className="bg-blue-100 text-blue-800 mt-1">Positive</Badge>
+                        <Badge className={`mt-1 ${revenueGrowth >= 10 ? 'bg-green-100 text-green-800' : revenueGrowth >= 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                          {revenueGrowth >= 10 ? 'Excellent' : revenueGrowth >= 0 ? 'Positive' : 'Declining'}
+                        </Badge>
                         <div>
-                          <p className="font-medium">Strong Liquidity Position</p>
-                          <p className="text-sm text-gray-600">{financialRatios?.liquidity?.currentRatio > 0 ? `Current ratio of ${financialRatios.liquidity.currentRatio}:1 shows ${financialRatios.liquidity.currentRatio > 2 ? 'excellent' : 'good'} ability to meet short-term obligations` : 'No current ratio data available for this period'}</p>
+                          <p className="font-medium">
+                            {revenueGrowth >= 10 ? 'Exceptional Revenue Growth' : 
+                             revenueGrowth > 0 ? 'Positive Revenue Growth' : 
+                             revenueGrowth === 0 ? 'Stable Revenue' : 'Revenue Decline'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {revenueGrowth !== 0 ? `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toFixed(1)}% growth month-over-month` : 'Revenue remained flat compared to previous period'}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <Badge className="bg-purple-100 text-purple-800 mt-1">Growth</Badge>
+                        <Badge className={`mt-1 ${totalRevenue >= 100000 ? 'bg-purple-100 text-purple-800' : totalRevenue >= 50000 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {totalRevenue >= 100000 ? 'Strong' : totalRevenue >= 50000 ? 'Growing' : 'Starting'}
+                        </Badge>
                         <div>
-                          <p className="font-medium">Significant Revenue Growth</p>
-                          <p className="text-sm text-gray-600">No revenue growth data available for this period</p>
+                          <p className="font-medium">
+                            {totalRevenue >= 100000 ? 'Strong Cash Position' : 
+                             totalRevenue >= 50000 ? 'Growing Revenue Base' : 
+                             totalRevenue > 0 ? 'Early Stage Operations' : 'Business Development Phase'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {totalRevenue > 0 ? `Total revenue of ${formatCurrency(totalRevenue.toString())} provides ${totalRevenue >= 100000 ? 'strong' : totalRevenue >= 50000 ? 'adequate' : 'basic'} operational foundation` : 'Focus on generating initial revenue streams'}
+                          </p>
                         </div>
                       </div>
                     </div>
