@@ -89,10 +89,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         });
         
         // Revert local state on failure
-        const previousCompanyId = localStorage.getItem('activeCompanyId');
-        if (previousCompanyId) {
-          setCompanyId(parseInt(previousCompanyId));
-        }
+        setCompanyId(companyId);
         
         throw new Error(`Failed to switch company: ${response.status} - ${errorData}`);
       }

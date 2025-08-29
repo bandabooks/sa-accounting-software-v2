@@ -46,10 +46,12 @@ export default function CompanySwitcher() {
     queryKey: ["/api/companies/my"],
   });
 
-  // Get active company
-  const { data: activeCompany, isLoading: activeCompanyLoading } = useQuery<Company>({
-    queryKey: ["/api/companies/active"],
-  });
+  // Get active company based on context companyId
+  const activeCompany = useMemo(() => {
+    if (!userCompanies.length || !companyId) return null;
+    const userCompany = userCompanies.find(uc => uc.company.id === companyId);
+    return userCompany?.company || null;
+  }, [userCompanies, companyId]);
 
   // Filter companies based on search query
   const filteredCompanies = useMemo(() => {
@@ -75,6 +77,7 @@ export default function CompanySwitcher() {
     
     // Close dropdown immediately for better UX
     setIsOpen(false);
+    setSearchQuery(""); // Clear search when switching
     
     try {
       // Switch company with optimistic UI update
@@ -94,7 +97,6 @@ export default function CompanySwitcher() {
   const handleCreationSuccess = () => {
     // Refresh companies list after successful creation
     queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/companies/active"] });
   };
 
   const handleDropdownOpenChange = (open: boolean) => {
@@ -104,7 +106,7 @@ export default function CompanySwitcher() {
     }
   };
 
-  if (companiesLoading || activeCompanyLoading) {
+  if (companiesLoading) {
     return (
       <div className="flex items-center space-x-2 animate-pulse">
         <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
@@ -229,7 +231,7 @@ export default function CompanySwitcher() {
           ) : (
             filteredCompanies.map((userCompany) => {
             const company = userCompany.company;
-            const isActive = company.id === activeCompany.id;
+            const isActive = company.id === companyId;
             
             return (
               <DropdownMenuItem
