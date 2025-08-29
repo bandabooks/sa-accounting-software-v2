@@ -7263,7 +7263,7 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(chartOfAccounts.companyId, companyId),
             eq(chartOfAccounts.accountType, "Asset"),
-            gte(chartOfAccounts.accountCode, "1110"),
+            gte(chartOfAccounts.accountCode, "1100"),
             lte(chartOfAccounts.accountCode, "1199"),
             eq(chartOfAccounts.isActive, true)
           )
