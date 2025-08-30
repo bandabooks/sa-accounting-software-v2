@@ -102,7 +102,8 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
         const startDate = periodDates.periodStart.toISOString().split('T')[0];
         const endDate = periodDates.periodEnd.toISOString().split('T')[0];
         console.log('Making VAT API request:', { startDate, endDate, companyId });
-        const data = await apiRequest(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}`, 'GET');
+        const response = await apiRequest(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}`, 'GET');
+        const data = await response.json();
         console.log('VAT API response:', data);
         return data;
       } catch (error) {
@@ -150,6 +151,42 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
       }));
     }
   }, [vatData, vatError, useAutoCalculation]);
+
+  // Handler functions for buttons
+  const handleDownloadReturn = async (vatReturn: any) => {
+    try {
+      const response = await apiRequest(`/api/vat/returns/${vatReturn.id}/download`, 'GET');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `VAT201-${vatReturn.period}-${vatReturn.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({ title: 'Success', description: 'VAT201 return downloaded successfully' });
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({ title: 'Error', description: 'Failed to download VAT201 return', variant: 'destructive' });
+    }
+  };
+
+  const handleViewSarsStatus = async (vatReturn: any) => {
+    try {
+      const response = await apiRequest(`/api/vat/returns/${vatReturn.id}/sars-status`, 'GET');
+      const statusData = await response.json();
+      
+      // Show status in a toast or modal
+      toast({
+        title: 'SARS Status',
+        description: `Status: ${statusData.status || 'Unknown'}${statusData.reference ? ` - Reference: ${statusData.reference}` : ''}`,
+      });
+    } catch (error) {
+      console.error('SARS status check failed:', error);
+      toast({ title: 'Error', description: 'Failed to retrieve SARS status', variant: 'destructive' });
+    }
+  };
 
   // Create VAT201 mutation
   const createVat201Mutation = useMutation({
@@ -593,7 +630,12 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
                 )}
 
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDownloadReturn(vatReturn)}
+                    data-testid={`button-download-${vatReturn.id}`}
+                  >
                     <Download className="h-3 w-3 mr-1" />
                     Download
                   </Button>
@@ -610,7 +652,12 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
                   )}
                   
                   {vatReturn.status === 'submitted' && (
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleViewSarsStatus(vatReturn)}
+                      data-testid={`button-view-sars-${vatReturn.id}`}
+                    >
                       View SARS Status
                     </Button>
                   )}
