@@ -8539,6 +8539,8 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
       
       const summary = await storage.getVatSummaryReport(companyId, startDate as string, endDate as string);
       
+      console.log('VAT Summary API returning:', JSON.stringify(summary, null, 2));
+      
       if (format === 'excel' || format === 'csv') {
         const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable
 ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable}`;
@@ -8547,8 +8549,8 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
         res.setHeader('Content-Disposition', `attachment; filename=vat-summary-${startDate}-${endDate}.${format}`);
         res.send(csvContent);
       } else {
-        // For both PDF and view formats, return JSON data for client-side processing
-        res.json({ success: true, data: summary });
+        // Return the summary directly to match frontend expectations
+        res.json(summary);
       }
     } catch (error) {
       console.error("Error generating VAT summary report:", error);
@@ -8577,6 +8579,8 @@ ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputV
       
       const transactions = await storage.getVatTransactionReport(companyId, startDate as string, endDate as string);
       
+      console.log('VAT Transaction API returning:', JSON.stringify(transactions, null, 2));
+      
       if (format === 'excel' || format === 'csv') {
         const csvContent = `Date,Type,Reference,Net,VAT,Gross
 ${transactions.transactions ? transactions.transactions.map((t: any) => 
@@ -8587,8 +8591,8 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
         res.setHeader('Content-Disposition', `attachment; filename=vat-transactions-${startDate}-${endDate}.${format}`);
         res.send(csvContent);
       } else {
-        // For both PDF and view formats, return JSON data for client-side processing
-        res.json({ success: true, data: transactions });
+        // Return transactions directly to match frontend expectations
+        res.json(transactions);
       }
     } catch (error) {
       console.error("Error generating VAT transaction report:", error);
