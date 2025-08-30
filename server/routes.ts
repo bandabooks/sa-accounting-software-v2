@@ -9120,6 +9120,18 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   app.post("/api/super-admin/subscription-plans", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const planData = insertSubscriptionPlanSchema.parse(req.body);
+      
+      // Check if a plan with this name already exists
+      const existingPlans = await storage.getAllSubscriptionPlans();
+      const duplicateName = existingPlans.find(plan => plan.name.toLowerCase() === planData.name.toLowerCase());
+      
+      if (duplicateName) {
+        return res.status(400).json({ 
+          message: "A subscription plan with this name already exists",
+          field: "name"
+        });
+      }
+      
       const plan = await storage.createSubscriptionPlan(planData);
       
       await logAudit(req.user!.id, 'CREATE', 'subscription_plan', plan.id, 'Created subscription plan');
@@ -9127,6 +9139,15 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
       res.json(plan);
     } catch (error) {
       console.error("Failed to create subscription plan:", error);
+      
+      // Handle unique constraint violations specifically
+      if (error.code === '23505' && error.constraint === 'subscription_plans_name_key') {
+        return res.status(400).json({ 
+          message: "A subscription plan with this name already exists",
+          field: "name"
+        });
+      }
+      
       res.status(500).json({ message: "Failed to create subscription plan" });
     }
   });

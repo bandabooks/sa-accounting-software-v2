@@ -165,7 +165,8 @@ export default function SuperAdminDashboard() {
   // Create plan mutation
   const createPlanMutation = useMutation({
     mutationFn: async (planData: any) => {
-      return await apiRequest("/api/super-admin/subscription-plans", "POST", planData);
+      const response = await apiRequest("/api/super-admin/subscription-plans", "POST", planData);
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -178,10 +179,36 @@ export default function SuperAdminDashboard() {
       setSelectedLimits({});
       setCreatePlanTab("basic");
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Create plan error:", error);
+      
+      // Extract error message from the error response
+      let errorMessage = "Failed to create subscription plan";
+      
+      if (error?.message) {
+        // Parse error message if it contains JSON
+        try {
+          if (error.message.includes("A subscription plan with this name already exists")) {
+            errorMessage = "A subscription plan with this name already exists. Please choose a different name.";
+          } else if (error.message.includes("400:")) {
+            const jsonStart = error.message.indexOf('{');
+            if (jsonStart !== -1) {
+              const jsonPart = error.message.substring(jsonStart);
+              const errorData = JSON.parse(jsonPart);
+              errorMessage = errorData.message || errorMessage;
+            }
+          }
+        } catch (e) {
+          // If parsing fails, use the original error message
+          if (error.message.includes("already exists")) {
+            errorMessage = "A subscription plan with this name already exists. Please choose a different name.";
+          }
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create subscription plan",
+        description: errorMessage,
         variant: "destructive",
       });
     },
