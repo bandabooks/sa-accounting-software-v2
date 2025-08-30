@@ -95,20 +95,31 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
   });
 
   // Calculate VAT figures based on period
-  const { data: vatData, isLoading: isCalculating } = useQuery({
+  const { data: vatData, isLoading: isCalculating, error: vatError } = useQuery({
     queryKey: ['/api/vat/reports/summary', periodDates.periodStart, periodDates.periodEnd],
     queryFn: async () => {
       const startDate = periodDates.periodStart.toISOString().split('T')[0];
       const endDate = periodDates.periodEnd.toISOString().split('T')[0];
-      return apiRequest(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}&companyId=${companyId}`, 'GET');
+      console.log('Making VAT API request:', { startDate, endDate, companyId });
+      const response = await apiRequest(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}`, 'GET');
+      console.log('VAT API response:', response);
+      return response;
     },
     enabled: !!vatSettings?.isVatRegistered && useAutoCalculation,
+    retry: 1,
   });
 
   useEffect(() => {
+    if (vatError) {
+      console.error('VAT API Error:', vatError);
+    }
+    
     if (vatData && useAutoCalculation) {
       // Handle different response formats - backend returns data nested under 'data.summary'
       const summary = vatData.data?.summary || vatData.summary || vatData;
+      
+      console.log('VAT Data received:', vatData);
+      console.log('Summary extracted:', summary);
       
       const calculation = {
         totalSalesIncVat: parseFloat(summary.totalSalesIncVat || '0'),
@@ -123,7 +134,6 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
         netVatRefund: parseFloat(summary.netVatRefund || '0'),
       };
       
-      console.log('VAT Data received:', vatData);
       console.log('VAT Calculation processed:', calculation);
       
       setVatCalculation(calculation);
@@ -133,7 +143,7 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
         inputVat: calculation.inputVat.toString()
       }));
     }
-  }, [vatData, useAutoCalculation]);
+  }, [vatData, vatError, useAutoCalculation]);
 
   // Create VAT201 mutation
   const createVat201Mutation = useMutation({
