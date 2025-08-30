@@ -102,24 +102,7 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
         const startDate = periodDates.periodStart.toISOString().split('T')[0];
         const endDate = periodDates.periodEnd.toISOString().split('T')[0];
         console.log('Making VAT API request:', { startDate, endDate, companyId });
-        const response = await fetch(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include'
-        });
-        
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Error Response:', errorText);
-          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
-        }
-        
-        const data = await response.json();
+        const data = await apiRequest(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}`, 'GET');
         console.log('VAT API response:', data);
         return data;
       } catch (error) {
