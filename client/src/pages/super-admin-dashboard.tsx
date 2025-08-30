@@ -239,19 +239,46 @@ export default function SuperAdminDashboard() {
   // Delete plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (planId: number) => {
-      return await apiRequest(`/api/super-admin/subscription-plans/${planId}`, "DELETE");
+      const response = await apiRequest(`/api/super-admin/subscription-plans/${planId}`, "DELETE");
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
-        description: "Subscription plan deleted successfully",
+        description: data?.message || "Subscription plan deleted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/subscription-plans"] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Delete plan error:", error);
+      
+      // Extract error message from the error response
+      let errorMessage = "Failed to delete subscription plan";
+      
+      if (error?.message) {
+        try {
+          if (error.message.includes("Cannot delete plan")) {
+            // Extract the specific message about companies using the plan
+            const jsonStart = error.message.indexOf('{');
+            if (jsonStart !== -1) {
+              const jsonPart = error.message.substring(jsonStart);
+              const errorData = JSON.parse(jsonPart);
+              errorMessage = errorData.message || errorMessage;
+            } else if (error.message.includes("400:")) {
+              errorMessage = error.message.split("400:")[1]?.trim() || errorMessage;
+            }
+          }
+        } catch (e) {
+          // If parsing fails, try to extract message directly
+          if (error.message.includes("companies are currently using")) {
+            errorMessage = error.message;
+          }
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to delete subscription plan",
+        description: errorMessage,
         variant: "destructive",
       });
     },

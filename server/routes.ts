@@ -9182,15 +9182,19 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   app.delete("/api/super-admin/subscription-plans/:id", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const planId = parseInt(req.params.id);
-      const success = await storage.deleteSubscriptionPlan(planId);
+      const deleteResult = await storage.deleteSubscriptionPlan(planId);
       
-      if (!success) {
-        return res.status(404).json({ message: "Subscription plan not found" });
+      if (!deleteResult.success) {
+        // If deletion failed due to companies using the plan, return specific error
+        if (deleteResult.message?.includes('Cannot delete plan')) {
+          return res.status(400).json({ message: deleteResult.message });
+        }
+        return res.status(404).json({ message: deleteResult.message || "Subscription plan not found" });
       }
       
       await logAudit(req.user!.id, 'DELETE', 'subscription_plan', planId, 'Deleted subscription plan');
       
-      res.json({ success: true });
+      res.json({ success: true, message: deleteResult.message });
     } catch (error) {
       console.error("Failed to delete subscription plan:", error);
       res.status(500).json({ message: "Failed to delete subscription plan" });

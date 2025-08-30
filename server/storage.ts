@@ -4878,12 +4878,44 @@ export class DatabaseStorage implements IStorage {
     return plan;
   }
 
-  async deleteSubscriptionPlan(id: number): Promise<boolean> {
+  async deleteSubscriptionPlan(id: number): Promise<{ success: boolean; message?: string }> {
+    // First check if any companies are currently using this plan
+    const companiesUsingPlan = await db
+      .select({
+        companyId: companySubscriptions.companyId,
+        companyName: companies.name,
+        status: companySubscriptions.status
+      })
+      .from(companySubscriptions)
+      .innerJoin(companies, eq(companySubscriptions.companyId, companies.id))
+      .where(eq(companySubscriptions.planId, id));
+    
+    if (companiesUsingPlan.length > 0) {
+      const activeCompanies = companiesUsingPlan.filter(c => c.status === 'active');
+      if (activeCompanies.length > 0) {
+        const companyNames = activeCompanies.map(c => c.companyName).join(', ');
+        return {
+          success: false,
+          message: `Cannot delete plan. ${activeCompanies.length} company(ies) are currently using this plan: ${companyNames}. Please move them to another plan first.`
+        };
+      }
+    }
+    
+    // If no active companies are using the plan, we can safely delete it
+    // First, update any inactive subscriptions to point to a null plan or delete them
+    await db
+      .delete(companySubscriptions)
+      .where(eq(companySubscriptions.planId, id));
+    
+    // Now delete the plan completely
     const result = await db
-      .update(subscriptionPlans)
-      .set({ isActive: false })
+      .delete(subscriptionPlans)
       .where(eq(subscriptionPlans.id, id));
-    return result.rowCount !== null && result.rowCount > 0;
+    
+    return {
+      success: result.rowCount !== null && result.rowCount > 0,
+      message: result.rowCount && result.rowCount > 0 ? 'Plan deleted successfully' : 'Plan not found'
+    };
   }
 
   // Company Subscription Management
