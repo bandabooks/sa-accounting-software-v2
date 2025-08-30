@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,19 +23,51 @@ interface VatManagementPageProps {
 export function VatManagementPage({ companyId }: VatManagementPageProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const search = useSearch();
+  const [location, setLocation] = useLocation();
+  
+  // Get tab from URL parameter, default to "types"
+  const getTabFromUrl = () => {
+    const params = new URLSearchParams(search);
+    return params.get('tab') || 'types';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getTabFromUrl());
+  
+  // Update URL when tab changes
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(search);
+    params.set('tab', tab);
+    setLocation(`/vat-management?${params.toString()}`);
+  };
+  
+  // Update tab state when URL changes
+  useEffect(() => {
+    setActiveTab(getTabFromUrl());
+  }, [search]);
 
+  // Optimized VAT settings query with staleTime for better performance
   const { data: vatSettings } = useQuery({
     queryKey: ["/api/companies", companyId, "vat-settings"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   }) as { data?: { isVatRegistered: boolean; vatNumber?: string; vatRegistrationDate?: string; vatPeriodMonths: number; vatSubmissionDay: number; } };
 
+  // Optimized VAT types query - only load when needed and tab is active
   const { data: vatTypes } = useQuery({
     queryKey: ["/api/companies", companyId, "vat-types"],
-    enabled: !!vatSettings?.isVatRegistered,
+    enabled: !!vatSettings?.isVatRegistered && activeTab === 'types',
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
   }) as { data?: Array<{ id: number; code: string; name: string; description: string; rate: number; isActive: boolean; isSystemType: boolean; }> };
 
+  // Optimized VAT reports query - only load when needed
   const { data: vatReports } = useQuery({
     queryKey: ["/api/vat-reports"],
-    enabled: !!vatSettings?.isVatRegistered,
+    enabled: !!vatSettings?.isVatRegistered && (activeTab === 'reports' || activeTab === 'returns'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const manageVatTypeMutation = useMutation({
@@ -117,7 +150,7 @@ export function VatManagementPage({ companyId }: VatManagementPageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="types" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="settings">VAT Settings</TabsTrigger>
           <TabsTrigger value="types" className="bg-blue-50 border-blue-200">

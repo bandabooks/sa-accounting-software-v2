@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -874,7 +874,7 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/vat-returns">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
-            <VATReturns />
+            <Redirect to="/vat-management?tab=returns" />
           </ProtectedRoute>
         </Route>
         <Route path="/reports/vat">
@@ -889,7 +889,7 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/vat-preparation">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
-            <VATPreparation />
+            <Redirect to="/vat-management?tab=returns" />
           </ProtectedRoute>
         </Route>
         <Route path="/vat-history">
@@ -909,12 +909,12 @@ function AuthenticatedApp() {
         </Route>
         <Route path="/vat201-returns">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
-            <VATReturns />
+            <Redirect to="/vat-management?tab=returns" />
           </ProtectedRoute>
         </Route>
         <Route path="/vat-reconciliation">
           <ProtectedRoute permission={PERMISSIONS.SETTINGS_VIEW}>
-            <VATReturns />
+            <Redirect to="/vat-management?tab=returns" />
           </ProtectedRoute>
         </Route>
         <Route path="/enterprise-settings">

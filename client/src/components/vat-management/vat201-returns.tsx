@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,10 +6,25 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Plus, Download, Send, Calendar, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { FileText, Plus, Download, Send, Calendar, CheckCircle, Clock, AlertTriangle, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { formatCurrency } from '@/lib/utils-invoice';
+
+interface VATCalculation {
+  totalSalesIncVat: number;
+  totalSalesExcVat: number;
+  totalSalesVat: number;
+  totalPurchasesIncVat: number;
+  totalPurchasesExcVat: number;
+  totalPurchasesVat: number;
+  outputVat: number;
+  inputVat: number;
+  netVatPayable: number;
+  netVatRefund: number;
+}
 
 interface VAT201ReturnsProps {
   companyId: number;
@@ -24,7 +39,94 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
   });
 
   const [isCreating, setIsCreating] = useState(false);
+  const [useAutoCalculation, setUseAutoCalculation] = useState(true);
   const { toast } = useToast();
+
+  // Get VAT settings for calculations
+  const { data: vatSettings } = useQuery({
+    queryKey: ["/api/companies", companyId, "vat-settings"],
+  });
+
+  // Get current period dates (bi-monthly by default)
+  const getCurrentPeriod = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    // Calculate period based on bi-monthly schedule
+    let periodStart: Date;
+    let periodEnd: Date;
+    
+    if (currentMonth < 2) { // Jan-Feb
+      periodStart = new Date(currentYear, 0, 1);
+      periodEnd = new Date(currentYear, 1, 28);
+    } else if (currentMonth < 4) { // Mar-Apr
+      periodStart = new Date(currentYear, 2, 1);
+      periodEnd = new Date(currentYear, 3, 30);
+    } else if (currentMonth < 6) { // May-Jun
+      periodStart = new Date(currentYear, 4, 1);
+      periodEnd = new Date(currentYear, 5, 30);
+    } else if (currentMonth < 8) { // Jul-Aug
+      periodStart = new Date(currentYear, 6, 1);
+      periodEnd = new Date(currentYear, 7, 31);
+    } else if (currentMonth < 10) { // Sep-Oct
+      periodStart = new Date(currentYear, 8, 1);
+      periodEnd = new Date(currentYear, 9, 31);
+    } else { // Nov-Dec
+      periodStart = new Date(currentYear, 10, 1);
+      periodEnd = new Date(currentYear, 11, 31);
+    }
+    
+    return { periodStart, periodEnd };
+  };
+
+  const [periodDates, setPeriodDates] = useState(getCurrentPeriod());
+  const [vatCalculation, setVatCalculation] = useState<VATCalculation>({
+    totalSalesIncVat: 0,
+    totalSalesExcVat: 0,
+    totalSalesVat: 0,
+    totalPurchasesIncVat: 0,
+    totalPurchasesExcVat: 0,
+    totalPurchasesVat: 0,
+    outputVat: 0,
+    inputVat: 0,
+    netVatPayable: 0,
+    netVatRefund: 0,
+  });
+
+  // Calculate VAT figures based on period
+  const { data: vatData, isLoading: isCalculating } = useQuery({
+    queryKey: ['/api/vat/reports/summary', periodDates.periodStart, periodDates.periodEnd],
+    queryFn: async () => {
+      const startDate = periodDates.periodStart.toISOString().split('T')[0];
+      const endDate = periodDates.periodEnd.toISOString().split('T')[0];
+      return apiRequest(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}&companyId=${companyId}`, 'GET');
+    },
+    enabled: !!vatSettings?.isVatRegistered && useAutoCalculation,
+  });
+
+  useEffect(() => {
+    if (vatData && useAutoCalculation) {
+      const calculation = {
+        totalSalesIncVat: parseFloat(vatData.totalSalesIncVat || '0'),
+        totalSalesExcVat: parseFloat(vatData.totalSalesExcVat || '0'),
+        totalSalesVat: parseFloat(vatData.totalSalesVat || '0'),
+        totalPurchasesIncVat: parseFloat(vatData.totalPurchasesIncVat || '0'),
+        totalPurchasesExcVat: parseFloat(vatData.totalPurchasesExcVat || '0'),
+        totalPurchasesVat: parseFloat(vatData.totalPurchasesVat || '0'),
+        outputVat: parseFloat(vatData.outputVat || '0'),
+        inputVat: parseFloat(vatData.inputVat || '0'),
+        netVatPayable: parseFloat(vatData.netVatPayable || '0'),
+        netVatRefund: parseFloat(vatData.netVatRefund || '0'),
+      };
+      setVatCalculation(calculation);
+      setNewReturn(prev => ({
+        ...prev,
+        outputVat: calculation.outputVat.toString(),
+        inputVat: calculation.inputVat.toString()
+      }));
+    }
+  }, [vatData, useAutoCalculation]);
 
   // Create VAT201 mutation
   const createVat201Mutation = useMutation({
@@ -145,7 +247,7 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
             Create New VAT201 Return
           </CardTitle>
           <CardDescription>
-            Create a new VAT201 return for submission to SARS
+            Create a new VAT201 return for submission to SARS with automated calculations
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -155,65 +257,216 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
               Start New VAT201 Return
             </Button>
           ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-6">
+              {/* Calculation Mode Toggle */}
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <div>
-                  <Label htmlFor="period">VAT Period</Label>
-                  <Input
-                    id="period"
-                    placeholder="e.g., Jan 2025 - Feb 2025"
-                    value={newReturn.period}
-                    onChange={(e) => setNewReturn(prev => ({ ...prev, period: e.target.value }))}
-                  />
+                  <Label className="font-medium">Calculation Mode</Label>
+                  <p className="text-sm text-gray-600">
+                    {useAutoCalculation ? 'Auto-calculating from transactions' : 'Manual entry mode'}
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    placeholder="Optional description"
-                    value={newReturn.description}
-                    onChange={(e) => setNewReturn(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUseAutoCalculation(!useAutoCalculation)}
+                >
+                  <Calculator className="h-4 w-4 mr-2" />
+                  {useAutoCalculation ? 'Switch to Manual' : 'Use Auto Calculation'}
+                </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="outputVat">Output VAT (R)</Label>
-                  <Input
-                    id="outputVat"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newReturn.outputVat}
-                    onChange={(e) => setNewReturn(prev => ({ ...prev, outputVat: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="inputVat">Input VAT (R)</Label>
-                  <Input
-                    id="inputVat"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newReturn.inputVat}
-                    onChange={(e) => setNewReturn(prev => ({ ...prev, inputVat: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Net VAT (R)</Label>
-                  <div className="h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50 dark:bg-gray-800 flex items-center">
-                    <span className={`font-medium ${netVat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {netVat.toFixed(2)}
-                    </span>
+              {/* Period Selection */}
+              <Card className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Period Start</Label>
+                    <Input
+                      type="date"
+                      value={periodDates.periodStart.toISOString().split('T')[0]}
+                      onChange={(e) => setPeriodDates(prev => ({
+                        ...prev,
+                        periodStart: new Date(e.target.value)
+                      }))}
+                      disabled={!useAutoCalculation}
+                    />
+                  </div>
+                  <div>
+                    <Label>Period End</Label>
+                    <Input
+                      type="date"
+                      value={periodDates.periodEnd.toISOString().split('T')[0]}
+                      onChange={(e) => setPeriodDates(prev => ({
+                        ...prev,
+                        periodEnd: new Date(e.target.value)
+                      }))}
+                      disabled={!useAutoCalculation}
+                    />
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Input
+                      placeholder="Optional description"
+                      value={newReturn.description}
+                      onChange={(e) => setNewReturn(prev => ({ ...prev, description: e.target.value }))}
+                    />
                   </div>
                 </div>
-              </div>
+              </Card>
+
+              {/* VAT Calculation Display */}
+              {useAutoCalculation && vatSettings?.isVatRegistered && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Automated VAT Calculation</CardTitle>
+                    <CardDescription>
+                      Based on invoices and purchases for the selected period
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isCalculating ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin mx-auto h-8 w-8 border-b-2 border-blue-600 rounded-full"></div>
+                        <p className="mt-4 text-gray-600">Calculating VAT figures...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* Sales Section */}
+                        <div>
+                          <h4 className="font-medium text-lg mb-3 text-green-700">Sales (Output VAT)</h4>
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <div className="p-3 bg-green-50 rounded-lg">
+                              <Label className="text-sm text-green-700">Total Sales (Inc. VAT)</Label>
+                              <p className="text-lg font-semibold text-green-800">
+                                {formatCurrency(vatCalculation.totalSalesIncVat)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-green-50 rounded-lg">
+                              <Label className="text-sm text-green-700">Total Sales (Exc. VAT)</Label>
+                              <p className="text-lg font-semibold text-green-800">
+                                {formatCurrency(vatCalculation.totalSalesExcVat)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-green-100 rounded-lg">
+                              <Label className="text-sm text-green-700">VAT on Sales</Label>
+                              <p className="text-lg font-bold text-green-900">
+                                {formatCurrency(vatCalculation.totalSalesVat)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Purchases Section */}
+                        <div>
+                          <h4 className="font-medium text-lg mb-3 text-blue-700">Purchases (Input VAT)</h4>
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <div className="p-3 bg-blue-50 rounded-lg">
+                              <Label className="text-sm text-blue-700">Total Purchases (Inc. VAT)</Label>
+                              <p className="text-lg font-semibold text-blue-800">
+                                {formatCurrency(vatCalculation.totalPurchasesIncVat)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-blue-50 rounded-lg">
+                              <Label className="text-sm text-blue-700">Total Purchases (Exc. VAT)</Label>
+                              <p className="text-lg font-semibold text-blue-800">
+                                {formatCurrency(vatCalculation.totalPurchasesExcVat)}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-lg">
+                              <Label className="text-sm text-blue-700">VAT on Purchases</Label>
+                              <p className="text-lg font-bold text-blue-900">
+                                {formatCurrency(vatCalculation.totalPurchasesVat)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* Net VAT */}
+                        <div>
+                          <h4 className="font-medium text-lg mb-3">Net VAT Calculation</h4>
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="p-4 bg-gray-50 rounded-lg">
+                              <Label className="text-sm text-gray-700">Output VAT (Sales)</Label>
+                              <p className="text-xl font-semibold text-gray-800">
+                                {formatCurrency(vatCalculation.outputVat)}
+                              </p>
+                            </div>
+                            <div className="p-4 bg-gray-50 rounded-lg">
+                              <Label className="text-sm text-gray-700">Input VAT (Purchases)</Label>
+                              <p className="text-xl font-semibold text-gray-800">
+                                {formatCurrency(vatCalculation.inputVat)}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200">
+                            {vatCalculation.netVatPayable > 0 ? (
+                              <div>
+                                <Label className="text-sm text-purple-700">Net VAT Payable to SARS</Label>
+                                <p className="text-2xl font-bold text-purple-900">
+                                  {formatCurrency(vatCalculation.netVatPayable)}
+                                </p>
+                              </div>
+                            ) : (
+                              <div>
+                                <Label className="text-sm text-green-700">Net VAT Refund from SARS</Label>
+                                <p className="text-2xl font-bold text-green-900">
+                                  {formatCurrency(Math.abs(vatCalculation.netVatRefund))}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Manual Entry Fields */}
+              {!useAutoCalculation && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="outputVat">Output VAT (R)</Label>
+                    <Input
+                      id="outputVat"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={newReturn.outputVat}
+                      onChange={(e) => setNewReturn(prev => ({ ...prev, outputVat: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="inputVat">Input VAT (R)</Label>
+                    <Input
+                      id="inputVat"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={newReturn.inputVat}
+                      onChange={(e) => setNewReturn(prev => ({ ...prev, inputVat: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Net VAT (R)</Label>
+                    <div className="h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50 dark:bg-gray-800 flex items-center">
+                      <span className={`font-medium ${netVat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {netVat.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <Button 
                   onClick={handleCreateReturn}
-                  disabled={!newReturn.period || createVat201Mutation.isPending}
+                  disabled={createVat201Mutation.isPending}
                   className="flex-1"
                 >
                   {createVat201Mutation.isPending ? 'Creating...' : 'Create VAT201 Return'}
