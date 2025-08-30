@@ -98,12 +98,30 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
   const { data: vatData, isLoading: isCalculating, error: vatError } = useQuery({
     queryKey: ['/api/vat/reports/summary', periodDates.periodStart, periodDates.periodEnd],
     queryFn: async () => {
-      const startDate = periodDates.periodStart.toISOString().split('T')[0];
-      const endDate = periodDates.periodEnd.toISOString().split('T')[0];
-      console.log('Making VAT API request:', { startDate, endDate, companyId });
-      const response = await apiRequest(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}`, 'GET');
-      console.log('VAT API response:', response);
-      return response;
+      try {
+        const startDate = periodDates.periodStart.toISOString().split('T')[0];
+        const endDate = periodDates.periodEnd.toISOString().split('T')[0];
+        console.log('Making VAT API request:', { startDate, endDate, companyId });
+        
+        const response = await fetch(`/api/vat/reports/summary?startDate=${startDate}&endDate=${endDate}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('VAT API response:', data);
+        return data;
+      } catch (error) {
+        console.error('VAT API request failed:', error);
+        throw error;
+      }
     },
     enabled: !!vatSettings?.isVatRegistered && useAutoCalculation,
     retry: 1,
@@ -115,10 +133,11 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
     }
     
     if (vatData && useAutoCalculation) {
-      // Handle different response formats - backend returns data nested under 'data.summary'
-      const summary = vatData.data?.summary || vatData.summary || vatData;
-      
       console.log('VAT Data received:', vatData);
+      
+      // The backend now returns summary directly under vatData.summary
+      const summary = vatData.summary || {};
+      
       console.log('Summary extracted:', summary);
       
       const calculation = {
