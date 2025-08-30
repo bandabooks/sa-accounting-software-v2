@@ -9366,12 +9366,16 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Invalid date format provided');
       }
       
+      console.log('Date range converted:', { start: start.toISOString(), end: end.toISOString() });
+      
       // Get all invoices in date range for output VAT (using issueDate instead of invoiceDate)
       const invoicesResult = await db.select({
         id: invoices.id,
         invoiceNumber: invoices.invoiceNumber,
+        issueDate: invoices.issueDate,
         total: invoices.total,
-        vatAmount: invoices.vatAmount
+        vatAmount: invoices.vatAmount,
+        companyId: invoices.companyId
       })
         .from(invoices)
         .where(and(
@@ -9380,11 +9384,15 @@ export class DatabaseStorage implements IStorage {
           lte(invoices.issueDate, end)
         ));
 
+      console.log(`Found ${invoicesResult.length} invoices for company ${companyId}:`, invoicesResult);
+
       // Get all expenses in date range for input VAT (using expenseDate field)
       const expensesResult = await db.select({
         id: expenses.id,
         amount: expenses.amount,
-        vatAmount: expenses.vatAmount
+        vatAmount: expenses.vatAmount,
+        expenseDate: expenses.expenseDate,
+        companyId: expenses.companyId
       })
         .from(expenses) 
         .where(and(
@@ -9393,11 +9401,21 @@ export class DatabaseStorage implements IStorage {
           lte(expenses.expenseDate, end)
         ));
 
+      console.log(`Found ${expensesResult.length} expenses for company ${companyId}:`, expensesResult);
+
       // Calculate totals
       const outputVat = invoicesResult.reduce((sum, inv) => sum + parseFloat(inv.vatAmount?.toString() || '0'), 0);
       const totalSales = invoicesResult.reduce((sum, inv) => sum + parseFloat(inv.total?.toString() || '0'), 0);
       const inputVat = expensesResult.reduce((sum, exp) => sum + parseFloat(exp.vatAmount?.toString() || '0'), 0);
       const totalPurchases = expensesResult.reduce((sum, exp) => sum + parseFloat(exp.amount?.toString() || '0'), 0);
+
+      console.log('VAT Totals calculated:', {
+        outputVat,
+        totalSales,
+        inputVat,
+        totalPurchases,
+        netVat: outputVat - inputVat
+      });
 
       return {
         period: { startDate, endDate },

@@ -107,18 +107,25 @@ const VAT201Returns: React.FC<VAT201ReturnsProps> = ({ companyId }) => {
 
   useEffect(() => {
     if (vatData && useAutoCalculation) {
+      // Handle different response formats - backend returns data nested under 'data.summary'
+      const summary = vatData.data?.summary || vatData.summary || vatData;
+      
       const calculation = {
-        totalSalesIncVat: parseFloat(vatData.totalSalesIncVat || '0'),
-        totalSalesExcVat: parseFloat(vatData.totalSalesExcVat || '0'),
-        totalSalesVat: parseFloat(vatData.totalSalesVat || '0'),
-        totalPurchasesIncVat: parseFloat(vatData.totalPurchasesIncVat || '0'),
-        totalPurchasesExcVat: parseFloat(vatData.totalPurchasesExcVat || '0'),
-        totalPurchasesVat: parseFloat(vatData.totalPurchasesVat || '0'),
-        outputVat: parseFloat(vatData.outputVat || '0'),
-        inputVat: parseFloat(vatData.inputVat || '0'),
-        netVatPayable: parseFloat(vatData.netVatPayable || '0'),
-        netVatRefund: parseFloat(vatData.netVatRefund || '0'),
+        totalSalesIncVat: parseFloat(summary.totalSalesIncVat || '0'),
+        totalSalesExcVat: parseFloat(summary.totalSalesExcVat || '0'),
+        totalSalesVat: parseFloat(summary.totalSalesVat || '0'),
+        totalPurchasesIncVat: parseFloat(summary.totalPurchasesIncVat || '0'),
+        totalPurchasesExcVat: parseFloat(summary.totalPurchasesExcVat || '0'),
+        totalPurchasesVat: parseFloat(summary.totalPurchasesVat || '0'),
+        outputVat: parseFloat(summary.outputVat || '0'),
+        inputVat: parseFloat(summary.inputVat || '0'),
+        netVatPayable: parseFloat(summary.netVatPayable || '0'),
+        netVatRefund: parseFloat(summary.netVatRefund || '0'),
       };
+      
+      console.log('VAT Data received:', vatData);
+      console.log('VAT Calculation processed:', calculation);
+      
       setVatCalculation(calculation);
       setNewReturn(prev => ({
         ...prev,
