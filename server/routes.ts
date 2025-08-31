@@ -8541,7 +8541,297 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
       
       console.log('VAT Summary API returning:', JSON.stringify(summary, null, 2));
       
-      if (format === 'excel' || format === 'csv') {
+      if (format === 'pdf') {
+        // Generate SARS-formatted HTML for PDF viewing
+        const outputVat = parseFloat(summary.summary?.outputVat || '0');
+        const inputVat = parseFloat(summary.summary?.inputVat || '0');
+        const netVatPayable = parseFloat(summary.summary?.netVatPayable || '0');
+        const totalSalesExcVat = parseFloat(summary.summary?.totalSalesExcVat || '0');
+        const totalPurchasesExcVat = parseFloat(summary.summary?.totalPurchasesExcVat || '0');
+        
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>VAT Summary Report - SARS Format</title>
+            <style>
+              @page { size: A4; margin: 15mm; }
+              body { 
+                font-family: Arial, sans-serif; 
+                margin: 0;
+                padding: 20px;
+                font-size: 12px;
+                color: #333;
+              }
+              .header {
+                background: #6366f1;
+                color: white;
+                padding: 20px;
+                margin: -20px -20px 20px -20px;
+                text-align: center;
+              }
+              .header h1 { 
+                margin: 0;
+                font-size: 28px;
+                letter-spacing: 2px;
+              }
+              .header .subtitle {
+                margin-top: 5px;
+                font-size: 14px;
+                opacity: 0.9;
+              }
+              .report-title {
+                text-align: center;
+                color: #6366f1;
+                font-size: 24px;
+                margin: 30px 0;
+                font-weight: bold;
+              }
+              .report-info {
+                background: #f9fafb;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 8px;
+              }
+              .report-info p {
+                margin: 5px 0;
+                font-size: 13px;
+              }
+              .section-title {
+                background: #f3f4f6;
+                padding: 10px 15px;
+                margin-top: 20px;
+                margin-bottom: 0;
+                font-size: 14px;
+                font-weight: bold;
+                border: 1px solid #d1d5db;
+                border-bottom: none;
+              }
+              .section-subtitle {
+                font-size: 10px;
+                font-weight: normal;
+                color: #6b7280;
+                margin-top: 3px;
+              }
+              table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-bottom: 20px;
+              }
+              th { 
+                background: #e5e7eb; 
+                padding: 8px; 
+                text-align: left;
+                font-weight: bold;
+                border: 1px solid #d1d5db;
+                font-size: 10px;
+                text-transform: uppercase;
+              }
+              td { 
+                padding: 8px 10px; 
+                border: 1px solid #d1d5db;
+                font-size: 11px;
+              }
+              .field-number {
+                font-weight: bold;
+                margin-right: 5px;
+              }
+              .amount {
+                text-align: right;
+                font-family: 'Courier New', monospace;
+              }
+              .formula {
+                text-align: center;
+                color: #6b7280;
+                font-size: 10px;
+              }
+              .total-row { 
+                background: #eff6ff;
+                font-weight: bold;
+              }
+              .net-vat-section {
+                margin-top: 30px;
+                border: 2px solid #8b5cf6;
+                border-radius: 8px;
+                padding: 20px;
+                background: #faf5ff;
+              }
+              .net-vat-title {
+                color: #7c3aed;
+                font-size: 18px;
+                margin-bottom: 20px;
+                text-align: center;
+                font-weight: bold;
+              }
+              .vat-summary-grid {
+                display: flex;
+                justify-content: space-around;
+                margin-bottom: 20px;
+              }
+              .vat-item {
+                text-align: center;
+              }
+              .vat-label {
+                font-size: 11px;
+                color: #6b7280;
+                margin-bottom: 5px;
+              }
+              .vat-amount {
+                font-size: 20px;
+                font-weight: bold;
+              }
+              .output-vat { color: #059669; }
+              .input-vat { color: #2563eb; }
+              .net-payable { color: #7c3aed; }
+              .final-amount {
+                text-align: center;
+                padding: 15px;
+                background: #8b5cf6;
+                color: white;
+                border-radius: 8px;
+                margin-top: 20px;
+              }
+              .final-label {
+                font-size: 12px;
+                margin-bottom: 5px;
+              }
+              .final-value {
+                font-size: 28px;
+                font-weight: bold;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>TAXNIFY</h1>
+              <div class="subtitle">Business & Compliance</div>
+            </div>
+            
+            <h1 class="report-title">VAT Summary Report</h1>
+            
+            <div class="report-info">
+              <p><strong>Report Period:</strong> ${startDate} to ${endDate}</p>
+              <p><strong>Generated:</strong> ${new Date().toLocaleDateString('en-ZA')}</p>
+            </div>
+            
+            <!-- Section A: Output Tax -->
+            <div class="section-title">
+              A: Calculation of Output Tax and Imported Services
+              <div class="section-subtitle">SUPPLY OF GOODS AND/OR SERVICES BY YOU</div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 50%">FIELD DESCRIPTION</th>
+                  <th style="width: 20%">TAXABLE AMOUNT (EXCL)</th>
+                  <th style="width: 15%">FORMULA</th>
+                  <th style="width: 15%">VAT AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="field-number">1</span> Standard rate (excluding capital goods and/or services)</td>
+                  <td class="amount">R ${totalSalesExcVat.toFixed(2)}</td>
+                  <td class="formula">× 15 / (100+15)</td>
+                  <td class="amount"><strong>R ${outputVat.toFixed(2)}</strong></td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">1A</span> Standard rate (only capital goods and/or services)</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">× 15 / (100+15)</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">2</span> Zero rate (excluding goods exported)</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">3</span> Exempt and non-supplies</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr class="total-row">
+                  <td><span class="field-number">4</span> <strong>TOTAL A: TOTAL OUTPUT</strong></td>
+                  <td class="amount"><strong>R ${totalSalesExcVat.toFixed(2)}</strong></td>
+                  <td class="formula">-</td>
+                  <td class="amount output-vat"><strong>R ${outputVat.toFixed(2)}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <!-- Section B: Input Tax -->
+            <div class="section-title">
+              B: Calculation of Input Tax
+              <div class="section-subtitle">SUPPLY OF GOODS AND/OR SERVICES TO YOU</div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 50%">FIELD DESCRIPTION</th>
+                  <th style="width: 20%">TAXABLE AMOUNT (EXCL)</th>
+                  <th style="width: 15%">FORMULA</th>
+                  <th style="width: 15%">VAT AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="field-number">14</span> Capital goods and/or services supplied to you</td>
+                  <td class="amount">R ${totalPurchasesExcVat.toFixed(2)}</td>
+                  <td class="formula">× 15 / (100+15)</td>
+                  <td class="amount">R ${inputVat.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">15</span> Other goods and/or services supplied to you</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr class="total-row">
+                  <td><span class="field-number">19</span> <strong>TOTAL B: TOTAL INPUT</strong></td>
+                  <td class="amount"><strong>R ${totalPurchasesExcVat.toFixed(2)}</strong></td>
+                  <td class="formula">-</td>
+                  <td class="amount input-vat"><strong>R ${inputVat.toFixed(2)}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <!-- Net VAT Due -->
+            <div class="net-vat-section">
+              <h2 class="net-vat-title">Net VAT Due</h2>
+              <div class="vat-summary-grid">
+                <div class="vat-item">
+                  <div class="vat-label">OUTPUT VAT (Sales)</div>
+                  <div class="vat-amount output-vat">R ${outputVat.toFixed(2)}</div>
+                </div>
+                <div class="vat-item">
+                  <div class="vat-label">INPUT VAT (Purchases)</div>
+                  <div class="vat-amount input-vat">R ${inputVat.toFixed(2)}</div>
+                </div>
+              </div>
+              <div class="final-amount">
+                <div class="final-label"><strong>20</strong> NET VAT PAYABLE</div>
+                <div class="final-value">R ${netVatPayable.toFixed(2)}</div>
+                <div style="font-size: 10px; margin-top: 5px;">Amount PAYABLE to SARS</div>
+              </div>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+              <h3 style="font-size: 14px; margin-bottom: 10px;">TRANSACTION SUMMARY</h3>
+              <p style="margin: 5px 0;">Total Invoices: ${summary.transactions?.invoiceCount || 0}</p>
+              <p style="margin: 5px 0;">Total Expenses: ${summary.transactions?.expenseCount || 0}</p>
+            </div>
+          </body>
+          </html>
+        `;
+        
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', 'inline; filename=vat-summary-report.pdf');
+        res.send(htmlContent);
+      } else if (format === 'excel' || format === 'csv') {
         const csvContent = `Period,Output VAT,Input VAT,Net VAT Payable
 ${startDate} to ${endDate},${summary.summary.outputVat},${summary.summary.inputVat},${summary.summary.netVatPayable}`;
         
