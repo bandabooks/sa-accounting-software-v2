@@ -174,57 +174,69 @@ export default function CompanySwitcher() {
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="start" className="w-80 max-h-96 overflow-y-auto">
-        {/* Search Input */}
-        <div className="p-3 border-b border-gray-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search companies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 bg-gray-50 border-gray-200 focus:bg-white"
-              autoFocus={false}
-            />
+      <DropdownMenuContent align="start" className="w-96 max-h-[500px] overflow-hidden shadow-xl border-0">
+        {/* Header Section - Default Company Display */}
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-12 w-12 flex-shrink-0">
+              <AvatarFallback className="bg-blue-600 text-white text-lg font-semibold">
+                {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-gray-900 text-base">
+                {activeCompany.displayName || activeCompany.name}
+              </h3>
+              <p className="text-sm text-gray-600">{activeCompany.industry || "general"}</p>
+            </div>
           </div>
         </div>
 
-        {/* Create Company Option - Prominent at top */}
-        <div className="p-1">
+        {/* Create Company Option - Clean like Zoho */}
+        <div className="p-3 border-b border-gray-100 bg-white">
           <DropdownMenuItem
-            className="flex items-center space-x-3 p-3 cursor-pointer rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 transition-all duration-200"
+            className="flex items-center space-x-3 p-4 cursor-pointer rounded-lg hover:bg-blue-50 transition-colors border border-blue-200 bg-blue-50/30"
             onClick={handleCreateCompanyClick}
           >
-            <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-full">
+            <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
               <Plus className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold text-blue-800">Create New Company</span>
-                <Sparkles className="h-4 w-4 text-blue-600" />
-              </div>
-              <span className="text-sm text-blue-600">Set up your business in minutes</span>
+              <span className="font-medium text-blue-800 text-sm">Create New Company</span>
+              <p className="text-xs text-blue-600 mt-0.5">Set up your business in minutes</p>
             </div>
             <ArrowRight className="h-4 w-4 text-blue-600 flex-shrink-0" />
           </DropdownMenuItem>
         </div>
 
-        <DropdownMenuSeparator className="my-2" />
+        {/* Search Input */}
+        <div className="p-3 border-b border-gray-100 bg-gray-50/50">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search organizations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 bg-white border-gray-200 focus:bg-white text-sm"
+              autoFocus={false}
+            />
+          </div>
+        </div>
         
-        <DropdownMenuLabel className="font-semibold text-gray-900 flex items-center justify-between">
-          <span>Your Companies ({filteredCompanies.length})</span>
+        <DropdownMenuLabel className="px-4 py-3 font-medium text-gray-700 text-sm bg-white flex items-center justify-between border-b border-gray-100">
+          <span>My Organizations</span>
           {searchQuery && (
-            <span className="text-xs text-gray-500 font-normal">
-              {filteredCompanies.length} of {userCompanies.length} shown
+            <span className="text-xs text-gray-400 font-normal">
+              {filteredCompanies.length} results
             </span>
           )}
         </DropdownMenuLabel>
         
-        <div className="space-y-1 p-1">
+        <div className="max-h-64 overflow-y-auto bg-white">
           {filteredCompanies.length === 0 && searchQuery ? (
-            <div className="p-3 text-center text-gray-500">
+            <div className="p-6 text-center text-gray-500">
               <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No companies found for "{searchQuery}"</p>
+              <p className="text-sm">No organizations found for "{searchQuery}"</p>
               <p className="text-xs text-gray-400 mt-1">Try a different search term</p>
             </div>
           ) : (
@@ -236,44 +248,65 @@ export default function CompanySwitcher() {
               <DropdownMenuItem
                 key={company.id}
                 className={cn(
-                  "flex items-center space-x-3 p-3 cursor-pointer rounded-md transition-colors",
-                  isActive ? "bg-primary/10 border border-primary/20" : "hover:bg-gray-50"
+                  "flex items-center space-x-3 p-4 cursor-pointer transition-colors border-b border-gray-50 last:border-b-0 hover:bg-gray-50",
+                  isActive ? "bg-blue-50 border-blue-100" : ""
                 )}
                 onClick={() => handleSwitchCompany(company.id)}
               >
                 <div className="flex items-center space-x-3 flex-1">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className={cn(
-                      "text-sm font-medium",
-                      isActive ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
-                    )}>
-                      {getCompanyInitials(company.displayName || company.name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {/* Company Avatar with initials or icon */}
+                  <div className="relative">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className={cn(
+                        "text-sm font-medium border-2",
+                        isActive 
+                          ? "bg-blue-600 text-white border-blue-200" 
+                          : "bg-gray-100 text-gray-700 border-gray-200"
+                      )}>
+                        {getCompanyInitials(company.displayName || company.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isActive && (
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                    )}
+                  </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-between">
                       <span className={cn(
-                        "font-medium truncate",
-                        isActive ? "text-primary" : "text-gray-900"
+                        "font-medium text-sm truncate",
+                        isActive ? "text-blue-800" : "text-gray-900"
                       )}>
                         {company.displayName || company.name}
                       </span>
-                      {isActive && <span className="text-xs text-primary">Active</span>}
+                      {isActive && (
+                        <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-0.5 rounded-full">
+                          Active
+                        </span>
+                      )}
                     </div>
                     
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge 
                         variant="secondary" 
-                        className={cn("text-xs", getRoleColor(userCompany.role))}
+                        className={cn(
+                          "text-xs font-medium px-2 py-0.5",
+                          userCompany.role === 'owner' ? "bg-purple-100 text-purple-700" :
+                          userCompany.role === 'admin' ? "bg-blue-100 text-blue-700" :
+                          userCompany.role === 'manager' ? "bg-green-100 text-green-700" :
+                          "bg-gray-100 text-gray-700"
+                        )}
                       >
                         {userCompany.role}
                       </Badge>
-                      {company.industry && (
-                        <span className="text-xs text-gray-500 truncate">
-                          {company.industry}
-                        </span>
-                      )}
+                      <span className="text-xs text-gray-500 truncate">
+                        {company.industry || "General Business"}
+                      </span>
+                    </div>
+                    
+                    {/* Organization ID - like Zoho */}
+                    <div className="text-xs text-gray-400 mt-1">
+                      Organization ID: {company.id.toString().padStart(8, '0')}
                     </div>
                   </div>
                 </div>
