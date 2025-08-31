@@ -142,19 +142,19 @@ export default function Header() {
               <div className="px-2 py-1">
                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Purchases</div>
                 <DropdownMenuItem asChild>
-                  <Link href="/expenses/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                  <Link href="/expenses" className="cursor-pointer flex items-center px-2 py-1.5">
                     <Receipt className="h-4 w-4 mr-3 text-red-600" />
                     <span>Expense</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/purchase-orders/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                  <Link href="/purchase-orders" className="cursor-pointer flex items-center px-2 py-1.5">
                     <FileText className="h-4 w-4 mr-3 text-orange-600" />
                     <span>Purchase Order</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/suppliers/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                  <Link href="/suppliers" className="cursor-pointer flex items-center px-2 py-1.5">
                     <UserPlus className="h-4 w-4 mr-3 text-indigo-600" />
                     <span>Supplier</span>
                   </Link>
@@ -186,15 +186,28 @@ export default function Header() {
               <div className="px-2 py-1">
                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Projects</div>
                 <DropdownMenuItem asChild>
-                  <Link href="/projects/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                  <Link href="/projects" className="cursor-pointer flex items-center px-2 py-1.5">
                     <Settings className="h-4 w-4 mr-3 text-blue-600" />
                     <span>Project</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/tasks/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                  <Link href="/task" className="cursor-pointer flex items-center px-2 py-1.5">
                     <Bell className="h-4 w-4 mr-3 text-yellow-600" />
                     <span>Task</span>
+                  </Link>
+                </DropdownMenuItem>
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              {/* GENERAL Section */}
+              <div className="px-2 py-1">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">General</div>
+                <DropdownMenuItem asChild>
+                  <Link href="/users/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <User className="h-4 w-4 mr-3 text-gray-600" />
+                    <span>User</span>
                   </Link>
                 </DropdownMenuItem>
               </div>
