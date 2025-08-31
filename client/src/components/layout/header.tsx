@@ -81,12 +81,12 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 lg:left-72">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-gray-900 via-slate-800 to-blue-900 shadow-lg border-b border-gray-700 px-4 sm:px-6 py-3 sm:py-4 lg:left-72">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{getPageName()}</h2>
+          <h2 className="text-lg sm:text-2xl font-bold text-white truncate">{getPageName()}</h2>
           {user && (
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 truncate">
+            <p className="text-sm sm:text-base text-gray-300 truncate">
               Welcome back, <span className="font-medium">{user.name}</span>
             </p>
           )}
@@ -175,11 +175,11 @@ export default function Header() {
                 <Button 
                   data-onboarding="user-profile" 
                   variant="ghost" 
-                  className="flex items-center space-x-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-blue-200"
+                  className="flex items-center space-x-3 hover:bg-gradient-to-r hover:from-gray-800 hover:to-gray-700 p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-gray-600"
                 >
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-gray-900">{user.name}</div>
-                    <div className="text-xs text-gray-500 capitalize">
+                    <div className="text-sm font-semibold text-white">{user.name}</div>
+                    <div className="text-xs text-gray-300 capitalize">
                       {user.role.replace(/_/g, ' ')}
                     </div>
                   </div>
