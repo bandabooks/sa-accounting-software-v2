@@ -393,17 +393,10 @@ export default function ModulePermissionSelector({
     );
     setSelectedModules(modules);
 
-    // Extract permissions from features
-    const permissions: Record<string, string[]> = {};
-    selectedFeatures.forEach(feature => {
-      const parts = feature.split(":");
-      if (parts.length === 2) {
-        const [moduleId, permission] = parts;
-        if (!permissions[moduleId]) permissions[moduleId] = [];
-        permissions[moduleId].push(permission);
-      }
-    });
-    setModulePermissions(permissions);
+    // Use selectedLimits for permissions instead of extracting from features
+    if (selectedLimits && typeof selectedLimits === 'object') {
+      setModulePermissions(selectedLimits);
+    }
   }, [selectedFeatures]);
 
   const toggleModule = (moduleId: string) => {
@@ -456,17 +449,14 @@ export default function ModulePermissionSelector({
   };
 
   const updateFeatures = (modules: string[], permissions: Record<string, string[]>) => {
-    const features = [...modules];
+    // Only pass module IDs to features, not permissions
+    // Permissions should be handled separately via onLimitsChange
+    console.log('Updating features (modules only):', modules); // Debug log
+    onFeaturesChange(modules);
     
-    // Add permission-specific features
-    Object.entries(permissions).forEach(([moduleId, perms]) => {
-      perms.forEach(perm => {
-        features.push(`${moduleId}:${perm}`);
-      });
-    });
-
-    console.log('Updating features:', features); // Debug log
-    onFeaturesChange(features);
+    // Update permissions separately
+    console.log('Updating permissions:', permissions); // Debug log
+    onLimitsChange(permissions);
   };
 
   const toggleCategory = (category: string) => {

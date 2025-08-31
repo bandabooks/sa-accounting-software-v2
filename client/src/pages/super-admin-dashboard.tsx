@@ -178,6 +178,9 @@ export default function SuperAdminDashboard() {
       setSelectedFeatures([]);
       setSelectedLimits({});
       setCreatePlanTab("basic");
+      // Reset form
+      const form = document.getElementById('createPlanForm') as HTMLFormElement;
+      if (form) form.reset();
     },
     onError: (error: any) => {
       console.error("Create plan error:", error);
@@ -310,16 +313,18 @@ export default function SuperAdminDashboard() {
     const apiCallsLimitSelect = form.querySelector('[name="apiCallsLimit"]') as HTMLSelectElement;
 
     // Create user-friendly feature names from selected modules
-    const moduleFeatures = selectedFeatures.map(moduleId => 
-      moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-    );
+    const moduleFeatures = selectedFeatures.map(moduleId => {
+      // Get the actual module name from AVAILABLE_MODULES if possible
+      const moduleName = moduleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return moduleName;
+    });
 
     const planData = {
-      name: nameInput?.value || '',
-      displayName: displayNameInput?.value || '',
-      description: descriptionInput?.value || '',
-      monthlyPrice: parseFloat(monthlyPriceInput?.value || '0'),
-      annualPrice: parseFloat(annualPriceInput?.value || '0'),
+      name: nameInput?.value || formData.get('name')?.toString() || '',
+      displayName: displayNameInput?.value || formData.get('displayName')?.toString() || '',
+      description: descriptionInput?.value || formData.get('description')?.toString() || '',
+      monthlyPrice: parseFloat(monthlyPriceInput?.value || formData.get('monthlyPrice')?.toString() || '0'),
+      annualPrice: parseFloat(annualPriceInput?.value || formData.get('annualPrice')?.toString() || '0'),
       features: {
         core_features: moduleFeatures,
         included_modules: selectedFeatures,
@@ -506,11 +511,11 @@ export default function SuperAdminDashboard() {
                           <div className="grid grid-cols-3 gap-4">
                             <div>
                               <Label htmlFor="monthlyPrice">Monthly Price (R)</Label>
-                              <Input id="monthlyPrice" name="monthlyPrice" type="number" step="0.01" required />
+                              <Input id="monthlyPrice" name="monthlyPrice" type="number" step="0.01" defaultValue="0" required />
                             </div>
                             <div>
                               <Label htmlFor="annualPrice">Annual Price (R)</Label>
-                              <Input id="annualPrice" name="annualPrice" type="number" step="0.01" required />
+                              <Input id="annualPrice" name="annualPrice" type="number" step="0.01" defaultValue="0" required />
                             </div>
                             <div>
                               <Label htmlFor="sortOrder">Sort Order</Label>
