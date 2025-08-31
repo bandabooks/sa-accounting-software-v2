@@ -307,7 +307,7 @@ export default function Dashboard() {
                         <div className="text-sm font-semibold text-yellow-800">VAT Return Due</div>
                         <div className="text-xs text-yellow-600">Due in 5 days</div>
                       </div>
-                      <Link href="/compliance">
+                      <Link href="/vat-management?tab=returns">
                         <Button size="sm" variant="outline" className="text-xs border-yellow-300 text-yellow-700 hover:bg-yellow-100">
                           Prepare
                         </Button>
