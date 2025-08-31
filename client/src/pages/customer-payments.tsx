@@ -136,30 +136,183 @@ export default function CustomerPaymentsPage() {
   };
 
   const printReceipt = (payment: any) => {
-    // Generate and print payment receipt
-    const receiptContent = `
-      PAYMENT RECEIPT
-      ==================
-      Payment ID: #${payment.id}
-      Customer: ${payment.customerName}
-      Invoice: ${payment.invoiceNumber}
-      Amount: ${formatCurrency(payment.amount)}
-      Date: ${new Date(payment.paymentDate).toLocaleDateString('en-ZA')}
-      Method: ${payment.paymentMethod?.toUpperCase()}
-      Reference: ${payment.reference || 'N/A'}
-      ==================
-    `;
+    // Generate professional payment receipt
+    const currentDate = new Date().toLocaleDateString('en-ZA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const currentTime = new Date().toLocaleTimeString('en-ZA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
     
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
         <html>
-          <head><title>Payment Receipt</title></head>
+          <head>
+            <title>Payment Receipt #${payment.id}</title>
+            <style>
+              @media print {
+                body { margin: 0; padding: 20px; }
+                .no-print { display: none; }
+              }
+              body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                max-width: 400px;
+                margin: 0 auto;
+                padding: 20px;
+                background: white;
+                line-height: 1.4;
+              }
+              .header {
+                text-align: center;
+                border-bottom: 2px solid #333;
+                padding-bottom: 15px;
+                margin-bottom: 20px;
+              }
+              .company-name {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2563eb;
+                margin-bottom: 5px;
+              }
+              .document-title {
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+                margin: 10px 0;
+              }
+              .receipt-details {
+                background: #f8fafc;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 15px 0;
+              }
+              .detail-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 0;
+                border-bottom: 1px dotted #ddd;
+              }
+              .detail-row:last-child {
+                border-bottom: none;
+              }
+              .label {
+                font-weight: 600;
+                color: #374151;
+              }
+              .value {
+                color: #111827;
+                text-align: right;
+                font-weight: 500;
+              }
+              .amount-section {
+                background: #e7f3ff;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 20px 0;
+                border-left: 4px solid #2563eb;
+              }
+              .amount-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 18px;
+                font-weight: bold;
+                color: #1f2937;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 30px;
+                padding-top: 15px;
+                border-top: 1px solid #e5e7eb;
+                font-size: 14px;
+                color: #6b7280;
+              }
+              .thank-you {
+                font-size: 16px;
+                font-weight: 600;
+                color: #2563eb;
+                margin-bottom: 10px;
+              }
+              .receipt-number {
+                font-size: 14px;
+                color: #6b7280;
+                margin-top: 20px;
+              }
+              .date-time {
+                font-size: 12px;
+                color: #9ca3af;
+                margin-top: 5px;
+              }
+            </style>
+          </head>
           <body>
-            <pre style="font-family: monospace; white-space: pre-wrap;">
-              ${receiptContent}
-            </pre>
-            <script>window.print(); window.close();</script>
+            <div class="header">
+              <div class="company-name">TAXNIFY</div>
+              <div style="font-size: 14px; color: #6b7280;">Business Management Platform</div>
+              <div class="document-title">PAYMENT RECEIPT</div>
+            </div>
+            
+            <div class="receipt-details">
+              <div class="detail-row">
+                <span class="label">Receipt No:</span>
+                <span class="value">#${payment.id.toString().padStart(4, '0')}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Customer:</span>
+                <span class="value">${payment.customerName || 'Walk-in Customer'}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Invoice:</span>
+                <span class="value">${payment.invoiceNumber || 'N/A'}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Payment Date:</span>
+                <span class="value">${new Date(payment.paymentDate).toLocaleDateString('en-ZA')}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Payment Method:</span>
+                <span class="value">${(payment.paymentMethod || 'Cash').replace('_', ' ').toUpperCase()}</span>
+              </div>
+              ${payment.reference ? `
+              <div class="detail-row">
+                <span class="label">Reference:</span>
+                <span class="value">${payment.reference}</span>
+              </div>
+              ` : ''}
+            </div>
+            
+            <div class="amount-section">
+              <div class="amount-row">
+                <span>AMOUNT PAID:</span>
+                <span>${formatCurrency(payment.amount)}</span>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <div class="thank-you">Thank you for your payment!</div>
+              <div>This serves as your official payment receipt.</div>
+              <div>Please retain this receipt for your records.</div>
+              
+              <div class="receipt-number">
+                Receipt generated on ${currentDate} at ${currentTime}
+              </div>
+              <div class="date-time">
+                Powered by Taxnify Business Management Platform
+              </div>
+            </div>
+            
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                }, 500);
+              }
+            </script>
           </body>
         </html>
       `);
