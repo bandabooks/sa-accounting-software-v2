@@ -445,7 +445,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
             </thead>
             <tbody>
               <tr>
-                <td><span class="field-number">1</span> Standard rate (excluding capital goods and/or services)</td>
+                <td><span class="field-number">1</span> Standard rate (excluding capital goods and/or services and accommodation)</td>
                 <td class="amount">R ${totalSalesExcVat.toFixed(2)}</td>
                 <td class="formula">× 15 / (100+15)</td>
                 <td class="amount"><strong>R ${outputVat.toFixed(2)}</strong></td>
@@ -463,14 +463,86 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                 <td class="amount">R 0.00</td>
               </tr>
               <tr>
+                <td><span class="field-number">2A</span> Zero rate (only exported goods)</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
                 <td><span class="field-number">3</span> Exempt and non-supplies</td>
                 <td class="amount">R 0.00</td>
                 <td class="formula">-</td>
                 <td class="amount">R 0.00</td>
               </tr>
+              <tr>
+                <td><span class="field-number">4</span> VAT on Standard Rate Goods and Services</td>
+                <td class="amount">-</td>
+                <td class="formula">-</td>
+                <td class="amount"><strong>R ${outputVat.toFixed(2)}</strong></td>
+              </tr>
+              <tr>
+                <td><span class="field-number">4A</span> VAT on Capital Goods and Services at Standard Rate</td>
+                <td class="amount">-</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr style="background: #f3f4f6;">
+                <td colspan="4"><strong>SUPPLY OF ACCOMMODATION</strong></td>
+              </tr>
+              <tr>
+                <td><span class="field-number">5</span> Exceeding 28 days</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">× 60%</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">6</span> -</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">7</span> Value Not Exceeding 28 days</td>
+                <td class="amount">-</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">8</span> Total (6+7)</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">× 15 / 100</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">9</span> -</td>
+                <td class="amount">-</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr style="background: #f3f4f6;">
+                <td colspan="4"><strong>ADJUSTMENTS</strong></td>
+              </tr>
+              <tr>
+                <td><span class="field-number">10</span> Change in use and export of second-hand goods</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">× 15 / (100+15)</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">11</span> VAT on Change in use and Export of second-hand goods</td>
+                <td class="amount">-</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">12</span> Other and imported services</td>
+                <td class="amount">-</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
               <tr class="total-row">
-                <td><span class="field-number">4</span> <strong>TOTAL A: TOTAL OUTPUT</strong></td>
-                <td class="amount"><strong>R ${totalSalesExcVat.toFixed(2)}</strong></td>
+                <td><span class="field-number">13</span> <strong>TOTAL A: TOTAL OUTPUT TAX (4 + 4A + 11 + 12)</strong></td>
+                <td class="amount">-</td>
                 <td class="formula">-</td>
                 <td class="amount output-vat"><strong>R ${outputVat.toFixed(2)}</strong></td>
               </tr>
@@ -494,18 +566,48 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
             <tbody>
               <tr>
                 <td><span class="field-number">14</span> Capital goods and/or services supplied to you</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">14A</span> Capital goods imported by you</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">15</span> Other goods and/or services supplied to you (not capital goods)</td>
                 <td class="amount">R ${totalPurchasesExcVat.toFixed(2)}</td>
                 <td class="formula">× 15 / (100+15)</td>
                 <td class="amount">R ${inputVat.toFixed(2)}</td>
               </tr>
               <tr>
-                <td><span class="field-number">15</span> Other goods and/or services supplied to you</td>
+                <td><span class="field-number">15A</span> Other goods imported by you</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">16</span> Change in use (Input VAT Adjustments)</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">17</span> Bad debts (Input VAT Adjustments)</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">18</span> Other input VAT adjustments</td>
                 <td class="amount">R 0.00</td>
                 <td class="formula">-</td>
                 <td class="amount">R 0.00</td>
               </tr>
               <tr class="total-row">
-                <td><span class="field-number">19</span> <strong>TOTAL B: TOTAL INPUT</strong></td>
+                <td><span class="field-number">19</span> <strong>TOTAL B: TOTAL INPUT (14 + 14A + 15 + 15A + 16 + 17 + 18)</strong></td>
                 <td class="amount"><strong>R ${totalPurchasesExcVat.toFixed(2)}</strong></td>
                 <td class="formula">-</td>
                 <td class="amount input-vat"><strong>R ${inputVat.toFixed(2)}</strong></td>
@@ -1253,17 +1355,111 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                 </tr>
                 <tr className="border-b hover:bg-gray-50">
                   <td className="p-3 border-r">
+                    <span className="font-medium">2A</span> Zero rate (only exported goods)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
                     <span className="font-medium">3</span> Exempt and non-supplies
                   </td>
                   <td className="text-right p-3 border-r font-mono">R 0.00</td>
                   <td className="text-center p-3 border-r text-gray-500">-</td>
                   <td className="text-right p-3 font-mono">R 0.00</td>
                 </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">4</span> VAT on Standard Rate Goods and Services
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">-</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono font-bold">R {outputVat.toFixed(2)}</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">4A</span> VAT on Capital Goods and Services at Standard Rate
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">-</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="bg-gray-100">
+                  <td colSpan={4} className="p-2 font-bold">SUPPLY OF ACCOMMODATION</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">5</span> Exceeding 28 days
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">× 60%</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">6</span> -
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">7</span> Value Not Exceeding 28 days
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">-</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">8</span> Total (6+7)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">× 15 / 100</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">9</span> -
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">-</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="bg-gray-100">
+                  <td colSpan={4} className="p-2 font-bold">ADJUSTMENTS</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">10</span> Change in use and export of second-hand goods
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">× 15 / (100+15)</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">11</span> VAT on Change in use and Export of second-hand goods
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">-</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">12</span> Other and imported services
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">-</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
                 <tr className="bg-blue-50 font-bold">
                   <td className="p-3 border-r">
-                    <span className="font-medium">4</span> TOTAL A: TOTAL OUTPUT (1 + 1A + Other)
+                    <span className="font-medium">13</span> TOTAL A: TOTAL OUTPUT TAX (4 + 4A + 11 + 12)
                   </td>
-                  <td className="text-right p-3 border-r font-mono">R {totalSalesExcVat.toFixed(2)}</td>
+                  <td className="text-right p-3 border-r font-mono">-</td>
                   <td className="text-center p-3 border-r">-</td>
                   <td className="text-right p-3 font-mono text-green-600">R {outputVat.toFixed(2)}</td>
                 </tr>
@@ -1293,13 +1489,53 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                   <td className="p-3 border-r">
                     <span className="font-medium">14</span> Capital goods and/or services supplied to you
                   </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">14A</span> Capital goods imported by you
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">15</span> Other goods and/or services supplied to you (not capital goods)
+                  </td>
                   <td className="text-right p-3 border-r font-mono">R {totalPurchasesExcVat.toFixed(2)}</td>
                   <td className="text-center p-3 border-r text-gray-500">× 15 / (100+15)</td>
                   <td className="text-right p-3 font-mono">R {inputVat.toFixed(2)}</td>
                 </tr>
                 <tr className="border-b hover:bg-gray-50">
                   <td className="p-3 border-r">
-                    <span className="font-medium">15</span> Other goods and/or services supplied to you (not capital goods)
+                    <span className="font-medium">15A</span> Other goods imported by you
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">16</span> Change in use (Input VAT Adjustments)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">17</span> Bad debts (Input VAT Adjustments)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">18</span> Other input VAT adjustments
                   </td>
                   <td className="text-right p-3 border-r font-mono">R 0.00</td>
                   <td className="text-center p-3 border-r text-gray-500">-</td>
@@ -1307,7 +1543,7 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                 </tr>
                 <tr className="bg-blue-50 font-bold">
                   <td className="p-3 border-r">
-                    <span className="font-medium">19</span> TOTAL B: TOTAL INPUT (14 + 15 + Other)
+                    <span className="font-medium">19</span> TOTAL B: TOTAL INPUT (14 + 14A + 15 + 15A + 16 + 17 + 18)
                   </td>
                   <td className="text-right p-3 border-r font-mono">R {totalPurchasesExcVat.toFixed(2)}</td>
                   <td className="text-center p-3 border-r">-</td>
