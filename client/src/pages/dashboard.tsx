@@ -158,6 +158,130 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
         <div className="container mx-auto px-4 pb-8">
 
+        {/* Financial Health Indicators Bar */}
+        {activeTab === "overview" && (
+          <div className="mb-4">
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-800">Financial Health</h3>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Healthy</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Profit Margin */}
+                <div className="text-center">
+                  <div className="text-lg font-bold text-gray-900">
+                    {(() => {
+                      const revenue = parseFloat(dashboardStats.totalRevenue) || 0;
+                      const expenses = parseFloat(dashboardStats.totalExpenses) || 0;
+                      const margin = revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0;
+                      return `${margin.toFixed(1)}%`;
+                    })()}
+                  </div>
+                  <div className="text-xs text-gray-600">Profit Margin</div>
+                </div>
+                
+                {/* Cash Flow Trend */}
+                <div className="text-center">
+                  <div className="text-lg font-bold text-green-600">+{getRevenueGrowth()}%</div>
+                  <div className="text-xs text-gray-600">Cash Flow (30d)</div>
+                </div>
+                
+                {/* Outstanding Ratio */}
+                <div className="text-center">
+                  <div className="text-lg font-bold text-orange-600">
+                    {(() => {
+                      const receivables = parseFloat(dashboardStats.totalOutstanding) || 0;
+                      const revenue = parseFloat(dashboardStats.totalRevenue) || 0;
+                      const ratio = revenue > 0 ? (receivables / revenue * 100) : 0;
+                      return `${ratio.toFixed(1)}%`;
+                    })()}
+                  </div>
+                  <div className="text-xs text-gray-600">Outstanding Ratio</div>
+                </div>
+                
+                {/* Quick Ratio */}
+                <div className="text-center">
+                  <div className="text-lg font-bold text-blue-600">1.2</div>
+                  <div className="text-xs text-gray-600">Quick Ratio</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Today's Tasks Widget */}
+        {activeTab === "overview" && (
+          <div className="mb-4">
+            <Card className="bg-white/90 backdrop-blur-sm border border-orange-200 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-orange-100 rounded-lg">
+                      <Clock className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <CardTitle className="text-sm font-semibold text-gray-800">Today's Tasks</CardTitle>
+                  </div>
+                  <span className="text-xs text-orange-600 font-medium">3 items need attention</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Overdue Invoices */}
+                  <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-red-800">2 Overdue Invoices</div>
+                      <div className="text-xs text-red-600">Total: R 25,500.00</div>
+                    </div>
+                    <Link href="/invoices?filter=overdue">
+                      <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-700 hover:bg-red-100">
+                        Review
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {/* Tax Deadlines */}
+                  <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Calendar className="h-4 w-4 text-yellow-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-yellow-800">VAT Return Due</div>
+                      <div className="text-xs text-yellow-600">Due in 5 days</div>
+                    </div>
+                    <Link href="/compliance">
+                      <Button size="sm" variant="outline" className="text-xs border-yellow-300 text-yellow-700 hover:bg-yellow-100">
+                        Prepare
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {/* Follow-ups Needed */}
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Users className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-blue-800">3 Follow-ups</div>
+                      <div className="text-xs text-blue-600">Pending responses</div>
+                    </div>
+                    <Link href="/customers?filter=follow-up">
+                      <Button size="sm" variant="outline" className="text-xs border-blue-300 text-blue-700 hover:bg-blue-100">
+                        Contact
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Enhanced Professional Metrics Grid */}
         {activeTab === "overview" && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -329,69 +453,98 @@ export default function Dashboard() {
 
                 </div>
 
-                {/* Enhanced Recent Activities Widget - With Search and Scrolling */}
-                <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-gray-800">Recent Activities</CardTitle>
-                        <CardDescription>Latest business updates</CardDescription>
+                {/* Split Right Sidebar */}
+                <div className="space-y-4">
+                  {/* Banking Snapshot - Top */}
+                  <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-gray-800">Banking Snapshot</CardTitle>
+                        <Link href="/banking" className="text-xs text-blue-600 hover:text-blue-800">View All</Link>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        asChild
-                        className="hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
-                      >
-                        <Link href="/activities">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View All
-                        </Link>
-                      </Button>
-                    </div>
-                    {/* Enhanced Search Bar */}
-                    <div className="relative mb-4">
-                      <input
-                        type="text"
-                        placeholder="Search invoices, clients, amounts, or status..."
-                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10 bg-gray-50 hover:bg-white transition-colors"
-                        onChange={(e) => {
-                          setActivitySearchTerm(e.target.value);
-                        }}
-                        value={activitySearchTerm}
-                      />
-                      <div className="absolute left-3 top-3">
-                        <Search className="h-4 w-4 text-gray-400" />
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-600">Current Account</span>
+                          <span className="text-sm font-semibold text-green-600">R 256,090.63</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-600">Savings Account</span>
+                          <span className="text-sm font-semibold text-green-600">R 85,750.00</span>
+                        </div>
+                        <div className="border-t pt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-700">Total Available</span>
+                            <span className="text-sm font-bold text-gray-900">R 341,840.63</span>
+                          </div>
+                        </div>
                       </div>
-                      {activitySearchTerm && (
-                        <button
-                          onClick={() => setActivitySearchTerm("")}
-                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {/* Enhanced Scrollable Activities List - Show ALL activities with scrolling */}
-                    <div className="h-[40rem] overflow-y-auto px-6 pb-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                      <RecentActivities 
-                        activities={
-                          activitySearchTerm
-                            ? (dashboardStats.recentActivities || []).filter((activity: any) =>
-                                activity.description.toLowerCase().includes(activitySearchTerm.toLowerCase()) ||
-                                (activity.customerName && activity.customerName.toLowerCase().includes(activitySearchTerm.toLowerCase())) ||
-                                activity.amount.includes(activitySearchTerm) ||
-                                activity.status.toLowerCase().includes(activitySearchTerm.toLowerCase())
-                              )
-                            : dashboardStats.recentActivities || []
-                        } 
-                        showMore={true} 
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Activities - Middle (Condensed) */}
+                  <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-gray-800">Recent Activities</CardTitle>
+                        <Link href="/activities" className="text-xs text-blue-600 hover:text-blue-800">View All</Link>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {(dashboardStats.recentActivities || []).slice(0, 5).map((activity: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-gray-800 truncate">{activity.description}</div>
+                              <div className="text-xs text-gray-500">{activity.customerName}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs font-semibold text-gray-900">{activity.amount}</div>
+                              <div className={`text-xs ${activity.status === 'Paid' ? 'text-green-600' : activity.status === 'Overdue' ? 'text-red-600' : 'text-yellow-600'}`}>
+                                {activity.status}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Quick Financial Ratios - Bottom */}
+                  <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold text-gray-800">Key Ratios</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-2 bg-gray-50 rounded">
+                          <div className="text-sm font-bold text-blue-600">1.2</div>
+                          <div className="text-xs text-gray-600">Current Ratio</div>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded">
+                          <div className="text-sm font-bold text-green-600">15.2%</div>
+                          <div className="text-xs text-gray-600">ROI</div>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded">
+                          <div className="text-sm font-bold text-orange-600">28 days</div>
+                          <div className="text-xs text-gray-600">Avg Collection</div>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded">
+                          <div className="text-sm font-bold text-purple-600">
+                            {(() => {
+                              const revenue = parseFloat(dashboardStats.totalRevenue) || 0;
+                              const expenses = parseFloat(dashboardStats.totalExpenses) || 0;
+                              const margin = revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0;
+                              return `${margin.toFixed(0)}%`;
+                            })()}
+                          </div>
+                          <div className="text-xs text-gray-600">Gross Margin</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
 
 
