@@ -19,6 +19,7 @@ import CompanyCreationForm from "@/components/forms/CompanyCreationForm";
 
 interface Company {
   id: number;
+  companyId?: string;
   name: string;
   displayName?: string;
   industry?: string;
@@ -287,9 +288,9 @@ export default function CompanySwitcher() {
                       </span>
                     </div>
                     
-                    {/* Company ID - Consistent format */}
+                    {/* Company ID - Use actual companyId field */}
                     <div className="text-xs text-gray-400 mt-1">
-                      Company ID: {904886369 + company.id}
+                      Company ID: {company.companyId || `904886${(369 + company.id).toString()}`}
                     </div>
                   </div>
                 </div>
