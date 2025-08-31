@@ -336,9 +336,42 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Enhanced Professional Metrics Grid */}
+        {/* Enhanced Professional Metrics Grid - Collapsible */}
         {activeTab === "overview" && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm mb-4">
+            <div 
+              className="p-4 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+              onClick={() => setIsProfitOverviewExpanded(!isProfitOverviewExpanded)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-blue-100 rounded-lg">
+                    <BarChart3 className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-semibold text-gray-800">Business Metrics</CardTitle>
+                    <p className="text-xs text-gray-500">Revenue, expenses, customers, and key performance indicators</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button 
+                    size="sm" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsProfitOverviewExpanded(true);
+                    }}
+                  >
+                    View Metrics
+                  </Button>
+                  <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isProfitOverviewExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </div>
+            </div>
+            
+            {isProfitOverviewExpanded && (
+              <div className="px-4 pb-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 pt-4">
           {/* Total Revenue Card */}
           <Link href="/reports" className="block group">
             <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all duration-200 cursor-pointer p-4 shadow-sm hover:shadow-md">
@@ -430,7 +463,10 @@ export default function Dashboard() {
               <div className="text-xs text-gray-700">Money you owe</div>
             </Card>
           </Link>
-          </div>
+                </div>
+              </div>
+            )}
+          </Card>
         )}
 
 
