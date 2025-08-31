@@ -153,7 +153,7 @@ export default function CompanySwitcher() {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="flex items-center space-x-3 h-auto p-2 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg min-w-0"
+          className="flex items-center space-x-3 h-auto p-2 hover:bg-white/20 bg-white/10 border border-white/20 rounded-lg min-w-0 backdrop-blur-sm"
         >
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarFallback className="bg-primary text-white text-sm font-medium">
@@ -161,38 +161,35 @@ export default function CompanySwitcher() {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0 text-left">
-            <div className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+            <div className="font-medium text-white truncate text-sm">
               {activeCompany.displayName || activeCompany.name}
             </div>
             {activeCompany.industry && (
-              <div className="text-xs text-gray-500 truncate max-w-[140px]">
+              <div className="text-xs text-gray-300 truncate max-w-[140px]">
                 {activeCompany.industry}
               </div>
             )}
           </div>
-          <ChevronDown className="h-4 w-4 text-gray-400" />
+          <ChevronDown className="h-4 w-4 text-white/70" />
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="start" className="w-96 max-h-[500px] overflow-hidden shadow-xl border-0">
-        {/* Header Section - Default Company Display */}
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-12 w-12 flex-shrink-0">
-              <AvatarFallback className="bg-blue-600 text-white text-lg font-semibold">
-                {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 text-base">
-                {activeCompany.displayName || activeCompany.name}
-              </h3>
-              <p className="text-sm text-gray-600">{activeCompany.industry || "general"}</p>
-            </div>
+      <DropdownMenuContent align="start" className="w-96 max-h-[600px] overflow-hidden shadow-xl border-0">
+        {/* Search Input - First */}
+        <div className="p-3 border-b border-gray-100 bg-white">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search organizations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 bg-white border-gray-200 focus:bg-white text-sm"
+              autoFocus={false}
+            />
           </div>
         </div>
 
-        {/* Create Company Option - Clean like Zoho */}
+        {/* Create Company Option - Second */}
         <div className="p-3 border-b border-gray-100 bg-white">
           <DropdownMenuItem
             className="flex items-center space-x-3 p-4 cursor-pointer rounded-lg hover:bg-blue-50 transition-colors border border-blue-200 bg-blue-50/30"
@@ -208,23 +205,9 @@ export default function CompanySwitcher() {
             <ArrowRight className="h-4 w-4 text-blue-600 flex-shrink-0" />
           </DropdownMenuItem>
         </div>
-
-        {/* Search Input */}
-        <div className="p-3 border-b border-gray-100 bg-gray-50/50">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search organizations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 bg-white border-gray-200 focus:bg-white text-sm"
-              autoFocus={false}
-            />
-          </div>
-        </div>
         
         <DropdownMenuLabel className="px-4 py-3 font-medium text-gray-700 text-sm bg-white flex items-center justify-between border-b border-gray-100">
-          <span>My Organizations</span>
+          <span>Available Companies</span>
           {searchQuery && (
             <span className="text-xs text-gray-400 font-normal">
               {filteredCompanies.length} results
@@ -232,7 +215,7 @@ export default function CompanySwitcher() {
           )}
         </DropdownMenuLabel>
         
-        <div className="max-h-64 overflow-y-auto bg-white">
+        <div className="max-h-80 overflow-y-auto bg-white">
           {filteredCompanies.length === 0 && searchQuery ? (
             <div className="p-6 text-center text-gray-500">
               <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
@@ -304,9 +287,9 @@ export default function CompanySwitcher() {
                       </span>
                     </div>
                     
-                    {/* Organization ID - like Zoho */}
+                    {/* Company ID - Consistent format */}
                     <div className="text-xs text-gray-400 mt-1">
-                      Organization ID: {company.id.toString().padStart(8, '0')}
+                      Company ID: {904886369 + company.id}
                     </div>
                   </div>
                 </div>
