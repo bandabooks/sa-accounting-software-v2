@@ -36,7 +36,7 @@ export default function Header() {
   const isDashboard = location === '/dashboard' || location === '/';
   
   // Get alert counts for dashboard
-  const { data: alertCounts } = useQuery({
+  const { data: alertCounts, refetch: refetchAlerts } = useQuery({
     queryKey: ["/api/alerts/counts"],
     enabled: isDashboard,
     refetchInterval: 60000,
@@ -51,8 +51,11 @@ export default function Header() {
   
   const handleDashboardRefresh = async () => {
     if (isDashboard) {
-      // Efficient refresh without full page reload
-      window.location.reload();
+      // Trigger background refresh without page reload
+      await Promise.all([
+        refetchDashboard(),
+        refetchAlerts()
+      ]);
     }
   };
   
