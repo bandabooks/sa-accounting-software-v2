@@ -41,11 +41,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Desktop Sidebar */}
-      <div className={`desktop-sidebar hidden lg:block ${isSidebarCollapsed ? 'w-20' : 'w-72'} transition-all duration-300`}>
-        <Sidebar isCollapsed={isSidebarCollapsed} onToggle={handleSidebarToggle} />
-      </div>
+      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={handleSidebarToggle} />
 
       {/* Mobile Header */}
       <MobileHeader
@@ -69,7 +67,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </MobileSidebar>
 
       {/* Main Content */}
-      <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
+      <main className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
         {/* Desktop Header */}
         <div className="hidden lg:block">
           <Header />

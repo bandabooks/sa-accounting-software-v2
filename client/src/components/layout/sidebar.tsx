@@ -856,7 +856,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
   };
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-slate-50 via-white to-slate-50 shadow-2xl border-r border-slate-200/60 fixed h-full z-30 hidden lg:flex lg:flex-col backdrop-blur-sm transition-all duration-300`}>
+    <aside className={`${isCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-slate-50 via-white to-slate-50 shadow-2xl border-r border-slate-200/60 fixed left-0 top-0 h-full z-30 hidden lg:flex lg:flex-col backdrop-blur-sm transition-all duration-300`}>
       {/* Header Section with Enhanced Gradient */}
       <div className="relative">
         {/* Gradient Background */}
@@ -864,10 +864,10 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
         
         {/* Header Content */}
-        <div className="relative p-6 text-white">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30 shadow-lg">
-              <Calculator className="text-white" size={24} />
+        <div className={`relative ${isCollapsed ? 'p-3' : 'p-6'} text-white`}>
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-4'}`}>
+            <div className={`${isCollapsed ? 'w-10 h-10' : 'w-12 h-12'} bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30 shadow-lg`}>
+              <Calculator className="text-white" size={isCollapsed ? 20 : 24} />
             </div>
             {!isCollapsed && (
               <div className="flex-1">
@@ -895,7 +895,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
           {/* Collapse Toggle Button */}
           <button
             onClick={onToggle}
-            className="absolute top-6 right-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/20"
+            className={`absolute top-6 ${isCollapsed ? 'right-4' : 'right-3'} p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/20`}
             data-testid="sidebar-toggle"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -941,7 +941,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       </div>
       
       {/* Navigation Section */}
-      <nav data-onboarding="main-nav" className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 space-y-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
+      <nav data-onboarding="main-nav" className={`flex-1 overflow-y-auto overflow-x-hidden ${isCollapsed ? 'px-2' : 'px-4'} py-6 space-y-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400`}>
         {roleBasedNavigationGroups.map((group) => (
           <NavigationGroup
             key={group.id}
