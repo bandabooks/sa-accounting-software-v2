@@ -240,9 +240,9 @@ export default function CompanySwitcher() {
                 <div className="flex items-center space-x-3 flex-1">
                   {/* Company Avatar with initials or icon */}
                   <div className="relative">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-10 w-10 rounded-lg">
                       <AvatarFallback className={cn(
-                        "text-sm font-medium border-2",
+                        "text-sm font-medium border-2 rounded-lg",
                         isActive 
                           ? "bg-blue-600 text-white border-blue-200" 
                           : "bg-gray-100 text-gray-700 border-gray-200"
