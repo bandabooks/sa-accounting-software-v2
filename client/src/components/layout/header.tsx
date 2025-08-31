@@ -205,9 +205,21 @@ export default function Header() {
               <div className="px-2 py-1">
                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">General</div>
                 <DropdownMenuItem asChild>
-                  <Link href="/users/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                  <Link href="/user-management" className="cursor-pointer flex items-center px-2 py-1.5">
                     <User className="h-4 w-4 mr-3 text-gray-600" />
                     <span>User</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/employees" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <UserPlus className="h-4 w-4 mr-3 text-blue-600" />
+                    <span>Employee</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/products/create" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <Settings className="h-4 w-4 mr-3 text-green-600" />
+                    <span>Product & Service</span>
                   </Link>
                 </DropdownMenuItem>
               </div>
