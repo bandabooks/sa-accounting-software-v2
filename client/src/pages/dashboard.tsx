@@ -156,7 +156,7 @@ export default function Dashboard() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
-        <div className="container mx-auto px-4 pb-8 space-y-6">
+        <div className="container mx-auto px-4 pt-2 pb-8">
 
         {/* Enhanced Professional Metrics Grid */}
         {activeTab === "overview" && (
@@ -293,7 +293,7 @@ export default function Dashboard() {
               </TabsList>
             </div>
 
-            <TabsContent value="overview" className="space-y-4">
+            <TabsContent value="overview" className="space-y-3 mt-3">
 
               {/* Notification Cards Removed - Now handled by dedicated Alerts page */}
 
