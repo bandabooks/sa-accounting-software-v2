@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye, Settings } from 'lucide-react';
+import { BarChart3, Download, FileText, Calendar, TrendingUp, X, Eye, Settings, Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -228,6 +228,282 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
     queryKey: [`/api/vat/stats`, companyId, dateRange],
     enabled: !!dateRange.startDate && !!dateRange.endDate,
   });
+
+  // Print function for the preview modal
+  const printReportPreview = (reportType: string, data: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow || !data) return;
+    
+    let printContent = '';
+    
+    if (reportType === 'transactions' && data.transactions) {
+      // Group transactions by type
+      const salesTransactions = Array.isArray(data.transactions) 
+        ? data.transactions.filter((t: any) => t.type === 'Sale')
+        : [];
+      const purchaseTransactions = Array.isArray(data.transactions)
+        ? data.transactions.filter((t: any) => t.type === 'Purchase')
+        : [];
+      
+      // Calculate totals for each group
+      const salesTotals = salesTransactions.reduce((acc: any, tx: any) => ({
+        netAmount: acc.netAmount + parseFloat(tx.netAmount || 0),
+        vatAmount: acc.vatAmount + parseFloat(tx.vatAmount || 0),
+        grossAmount: acc.grossAmount + parseFloat(tx.grossAmount || 0)
+      }), { netAmount: 0, vatAmount: 0, grossAmount: 0 });
+      
+      const purchaseTotals = purchaseTransactions.reduce((acc: any, tx: any) => ({
+        netAmount: acc.netAmount + parseFloat(tx.netAmount || 0),
+        vatAmount: acc.vatAmount + parseFloat(tx.vatAmount || 0),
+        grossAmount: acc.grossAmount + parseFloat(tx.grossAmount || 0)
+      }), { netAmount: 0, vatAmount: 0, grossAmount: 0 });
+      
+      printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>VAT Transaction Analysis</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px;
+              font-size: 12px;
+            }
+            .header {
+              background: #6366f1;
+              color: white;
+              padding: 20px;
+              margin: -20px -20px 20px -20px;
+            }
+            h1 { 
+              margin: 0;
+              font-size: 24px;
+            }
+            .subtitle {
+              margin-top: 5px;
+              opacity: 0.9;
+            }
+            h2 { 
+              color: #1e40af; 
+              font-size: 16px;
+              margin-top: 20px;
+              margin-bottom: 10px;
+              border-bottom: 2px solid #e5e7eb;
+              padding-bottom: 5px;
+            }
+            h3 {
+              font-size: 14px;
+              margin: 15px 0 10px 0;
+            }
+            .summary-box {
+              background: #eff6ff;
+              padding: 15px;
+              margin-bottom: 20px;
+              border-radius: 8px;
+            }
+            .summary-grid {
+              display: flex;
+              gap: 40px;
+            }
+            .summary-item {
+              flex: 1;
+            }
+            .summary-label {
+              color: #6b7280;
+              font-size: 11px;
+              margin-bottom: 2px;
+            }
+            .summary-value {
+              font-size: 20px;
+              font-weight: bold;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-bottom: 20px;
+            }
+            th { 
+              background: #f3f4f6; 
+              padding: 8px; 
+              text-align: left;
+              font-weight: bold;
+              border: 1px solid #d1d5db;
+              font-size: 11px;
+            }
+            td { 
+              padding: 6px 8px; 
+              border: 1px solid #d1d5db;
+              font-size: 11px;
+            }
+            .total-row { 
+              font-weight: bold; 
+              background: #f9fafb;
+            }
+            .type-badge {
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 4px;
+              font-size: 10px;
+              font-weight: 600;
+            }
+            .type-sale {
+              background: #dcfce7;
+              color: #166534;
+            }
+            .type-purchase {
+              background: #fee2e2;
+              color: #991b1b;
+            }
+            .section-header {
+              background: #f9fafb;
+              padding: 10px;
+              margin-bottom: 0;
+              border: 1px solid #d1d5db;
+              border-bottom: none;
+            }
+            .text-right { text-align: right; }
+            .text-green { color: #059669; }
+            .text-red { color: #dc2626; }
+            @media print {
+              .header {
+                background: #6366f1 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>TAXNIFY</h1>
+            <div class="subtitle">Business & Compliance</div>
+          </div>
+          
+          <h1 style="color: #6366f1; margin-bottom: 20px;">VAT Transaction Analysis Preview</h1>
+          
+          <div class="summary-box">
+            <h3>Transaction Summary</h3>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-label">Total Transactions</div>
+                <div class="summary-value">${data.summary?.totalTransactions || 0}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Sales Transactions</div>
+                <div class="summary-value text-green">${salesTransactions.length}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Purchase Transactions</div>
+                <div class="summary-value text-red">${purchaseTransactions.length}</div>
+              </div>
+            </div>
+          </div>
+          
+          <h2>Sales (Output VAT)</h2>
+          <div class="section-header">
+            <strong>${salesTransactions.length} transactions</strong>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Reference</th>
+                <th>Description</th>
+                <th class="text-right">Net</th>
+                <th class="text-right">VAT</th>
+                <th class="text-right">Gross</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${salesTransactions.map((tx: any) => `
+                <tr>
+                  <td>${new Date(tx.date).toLocaleDateString('en-ZA')}</td>
+                  <td><span class="type-badge type-sale">Sale</span></td>
+                  <td>${tx.reference}</td>
+                  <td>${tx.description}</td>
+                  <td class="text-right">R ${tx.netAmount}</td>
+                  <td class="text-right text-green">R ${tx.vatAmount}</td>
+                  <td class="text-right"><strong>R ${tx.grossAmount}</strong></td>
+                </tr>
+              `).join('')}
+              ${salesTransactions.length > 0 ? `
+                <tr class="total-row">
+                  <td colspan="4">Total for Sales</td>
+                  <td class="text-right">R ${salesTotals.netAmount.toFixed(2)}</td>
+                  <td class="text-right text-green">R ${salesTotals.vatAmount.toFixed(2)}</td>
+                  <td class="text-right">R ${salesTotals.grossAmount.toFixed(2)}</td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
+          
+          <h2>Purchases (Input VAT)</h2>
+          <div class="section-header">
+            <strong>${purchaseTransactions.length} transactions</strong>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Reference</th>
+                <th>Description</th>
+                <th class="text-right">Net</th>
+                <th class="text-right">VAT</th>
+                <th class="text-right">Gross</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${purchaseTransactions.map((tx: any) => `
+                <tr>
+                  <td>${new Date(tx.date).toLocaleDateString('en-ZA')}</td>
+                  <td><span class="type-badge type-purchase">Purchase</span></td>
+                  <td>${tx.reference || 'N/A'}</td>
+                  <td>${tx.description}</td>
+                  <td class="text-right">R ${tx.netAmount}</td>
+                  <td class="text-right text-red">R ${tx.vatAmount}</td>
+                  <td class="text-right"><strong>R ${tx.grossAmount}</strong></td>
+                </tr>
+              `).join('')}
+              ${purchaseTransactions.length > 0 ? `
+                <tr class="total-row">
+                  <td colspan="4">Total for Purchases</td>
+                  <td class="text-right">R ${purchaseTotals.netAmount.toFixed(2)}</td>
+                  <td class="text-right text-red">R ${purchaseTotals.vatAmount.toFixed(2)}</td>
+                  <td class="text-right">R ${purchaseTotals.grossAmount.toFixed(2)}</td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+    } else {
+      // For other report types, create a simple print view
+      printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>VAT Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #1e40af; }
+            .content { white-space: pre-wrap; }
+          </style>
+        </head>
+        <body>
+          <h1>VAT Report</h1>
+          <div class="content">${JSON.stringify(data, null, 2)}</div>
+        </body>
+        </html>
+      `;
+    }
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   // Fixed implementation with proper download handling for all report types
   const handleGenerateReport = async (format: string) => {
@@ -545,16 +821,26 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                   {reportTypes.find(r => r.id === selectedReport)?.name} Preview
                 </h3>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowPreview(false);
-                  setReportData(null);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => printReportPreview(selectedReport, reportData)}
+                >
+                  <Printer className="h-4 w-4 mr-1" />
+                  Print
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowPreview(false);
+                    setReportData(null);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div className="p-6 overflow-auto max-h-[70vh]">
               <ReportPreview reportType={selectedReport} data={reportData} />
