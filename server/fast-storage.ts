@@ -25,7 +25,7 @@ export class FastStorage {
   async getFastDashboardStats(companyId: number) {
     try {
       // Use simple parallel queries like Sales Dashboard for maximum speed
-      const [invoices, expenses, customers, estimates] = await Promise.all([
+      const [invoices, expenses, customers, estimates, cashFlow, bankBalance] = await Promise.all([
         db.execute(sql`
           SELECT 
             COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as total_revenue,
@@ -49,6 +49,29 @@ export class FastStorage {
           SELECT COUNT(CASE WHEN status = 'sent' THEN 1 END) as pending_estimates
           FROM estimates 
           WHERE company_id = ${companyId}
+        `),
+        // Real cash flow calculation from payments and expenses
+        db.execute(sql`
+          SELECT 
+            COALESCE((
+              SELECT SUM(amount::numeric) 
+              FROM payments 
+              WHERE company_id = ${companyId} 
+              AND payment_date::date = CURRENT_DATE
+            ), 0) as today_inflow,
+            COALESCE((
+              SELECT SUM(amount::numeric) 
+              FROM expenses 
+              WHERE company_id = ${companyId} 
+              AND expense_date::date = CURRENT_DATE 
+              AND is_paid = true
+            ), 0) as today_outflow
+        `),
+        // Real bank balance calculation
+        db.execute(sql`
+          SELECT COALESCE(SUM(current_balance::numeric), 0) as bank_balance
+          FROM bank_accounts 
+          WHERE company_id = ${companyId}
         `)
       ]);
 
@@ -60,10 +83,11 @@ export class FastStorage {
         total_expenses: expenses.rows[0]?.total_expenses?.toString() || "0.00",
         total_customers: customers.rows[0]?.total_customers?.toString() || "0",
         pending_estimates: estimates.rows[0]?.pending_estimates?.toString() || "0",
-        bank_balance: "0.00", // Simplified for speed
+        bank_balance: bankBalance.rows[0]?.bank_balance?.toString() || "0.00",
+        current_cash_position: bankBalance.rows[0]?.bank_balance?.toString() || "0.00",
         vat_due: "0.00", // Simplified for speed
-        today_inflow: "0.00", // Simplified for speed
-        today_outflow: "0.00" // Simplified for speed
+        today_inflow: cashFlow.rows[0]?.today_inflow?.toString() || "0.00",
+        today_outflow: cashFlow.rows[0]?.today_outflow?.toString() || "0.00"
       };
 
       return stats;
@@ -75,6 +99,7 @@ export class FastStorage {
         total_expenses: "0.00", 
         total_customers: "0",
         bank_balance: "0.00",
+        current_cash_position: "0.00",
         pending_estimates: "0",
         outstanding_invoice_count: 0,
         paid_invoice_count: 0,
@@ -206,7 +231,7 @@ export class FastStorage {
       revenue.rows.forEach(row => {
         monthlyData.set(row.month, { 
           month: row.month, 
-          revenue: parseFloat(row.revenue || '0'), 
+          revenue: parseFloat((row.revenue as any)?.toString() || '0'), 
           expenses: 0 
         });
       });
@@ -214,12 +239,12 @@ export class FastStorage {
       expenses.rows.forEach(row => {
         const existing = monthlyData.get(row.month);
         if (existing) {
-          existing.expenses = parseFloat(row.expenses || '0');
+          existing.expenses = parseFloat((row.expenses as any)?.toString() || '0');
         } else {
           monthlyData.set(row.month, { 
             month: row.month, 
             revenue: 0, 
-            expenses: parseFloat(row.expenses || '0')
+            expenses: parseFloat((row.expenses as any)?.toString() || '0')
           });
         }
       });

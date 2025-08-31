@@ -1548,7 +1548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           receivablesAging: receivablesAging || [],
           payablesAging: payablesAging || [],
           cashFlowSummary: {
-            currentCashPosition: fastStats.bank_balance || "0.00",
+            currentCashPosition: fastStats.current_cash_position || fastStats.bank_balance || "0.00",
             todayInflow: fastStats.today_inflow || "0.00",
             todayOutflow: fastStats.today_outflow || "0.00", 
             netCashFlow: (parseFloat(fastStats.today_inflow || "0") - parseFloat(fastStats.today_outflow || "0")).toFixed(2)

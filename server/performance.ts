@@ -40,7 +40,7 @@ export class PerformanceOptimizedStorage {
           FROM bank_accounts 
           WHERE company_id = ${companyId}
         `),
-        // Today's cash flow
+        // Today's cash flow - Calculate from real transactions
         db.execute(sql`
           SELECT 
             COALESCE((
@@ -55,7 +55,12 @@ export class PerformanceOptimizedStorage {
               WHERE company_id = ${companyId} 
               AND expense_date::date = CURRENT_DATE 
               AND is_paid = true
-            ), 0)::text as today_outflow
+            ), 0)::text as today_outflow,
+            COALESCE((
+              SELECT SUM(current_balance::numeric)
+              FROM bank_accounts
+              WHERE company_id = ${companyId}
+            ), 0)::text as current_cash_position
         `),
         // Pending estimates count
         db.execute(sql`
@@ -88,7 +93,8 @@ export class PerformanceOptimizedStorage {
         outstanding_invoice_count: 0,
         paid_invoice_count: 0,
         today_inflow: "0.00",
-        today_outflow: "0.00"
+        today_outflow: "0.00",
+        current_cash_position: "0.00"
       };
     } catch (error) {
       console.error("Fast dashboard stats error:", error);
@@ -103,7 +109,8 @@ export class PerformanceOptimizedStorage {
         outstanding_invoice_count: 0,
         paid_invoice_count: 0,
         today_inflow: "0.00",
-        today_outflow: "0.00"
+        today_outflow: "0.00",
+        current_cash_position: "0.00"
       };
     }
   }
@@ -216,9 +223,9 @@ export class PerformanceOptimizedStorage {
       
       return profitLossData.rows.map(row => ({
         month: row.month,
-        revenue: parseFloat(row.revenue || '0'),
-        expenses: parseFloat(row.expenses || '0'),
-        profit: parseFloat(row.profit || '0')
+        revenue: parseFloat((row.revenue as any)?.toString() || '0'),
+        expenses: parseFloat((row.expenses as any)?.toString() || '0'),
+        profit: parseFloat((row.profit as any)?.toString() || '0')
       }));
     } catch (error) {
       console.error("Fast profit loss data error:", error);
