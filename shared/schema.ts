@@ -1084,8 +1084,6 @@ export const users = pgTable("users", {
   language: text("language").default("en"), // en, af, zu, xh
   timezone: text("timezone").default("Africa/Johannesburg"),
   theme: text("theme").default("light"), // light, dark, system
-  // Profile
-  profilePicture: text("profile_picture"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
