@@ -579,15 +579,15 @@ export default function Invoices() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full table-fixed">
                   <thead className="bg-gradient-to-r from-gray-50 to-blue-50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Invoice</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="w-56 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Invoice</th>
+                      <th className="w-64 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
+                      <th className="w-40 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                      <th className="w-32 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                      <th className="w-36 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
+                      <th className="w-32 px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -599,37 +599,37 @@ export default function Invoices() {
                       
                       return (
                         <tr key={invoice.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300">
-                          <td className="px-6 py-4">
+                          <td className="w-56 px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className={`p-2 rounded-lg bg-gradient-to-r ${getStatusGradient(invoice.status)}`}>
                                 <StatusIcon className="h-4 w-4 text-white" />
                               </div>
-                              <div>
-                                <div className="font-semibold text-gray-800">{invoice.invoiceNumber}</div>
-                                <div className="text-sm text-gray-600">Invoice #{invoice.id}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-gray-800 truncate">{invoice.invoiceNumber}</div>
+                                <div className="text-sm text-gray-600 truncate">Invoice #{invoice.id}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="w-64 px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8 border border-gray-200">
+                              <Avatar className="h-8 w-8 border border-gray-200 flex-shrink-0">
                                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold">
                                   {invoice.customer.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <div className="font-medium text-gray-800">{invoice.customer.name}</div>
-                                <div className="text-sm text-gray-600">{invoice.customer.email}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-gray-800 truncate">{invoice.customer.name}</div>
+                                <div className="text-sm text-gray-600 truncate">{invoice.customer.email}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="w-40 px-6 py-4">
                             <div className="font-bold text-lg text-gray-800">{formatCurrency(invoice.total || "0")}</div>
                             <div className="text-sm text-gray-600">
                               {invoice.status === 'paid' ? 'Paid in full' : 'Outstanding'}
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="w-32 px-6 py-4">
                             <div className="space-y-2">
                               <Badge className={`bg-gradient-to-r ${getStatusGradient(invoice.status)} text-white border-0`}>
                                 {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
@@ -640,7 +640,7 @@ export default function Invoices() {
                               />
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="w-36 px-6 py-4">
                             <div className={`text-sm ${daysSinceDue > 0 && invoice.status !== 'paid' ? 'text-red-600' : 'text-gray-800'}`}>
                               {invoice.dueDate ? formatDate(invoice.dueDate) : 'N/A'}
                             </div>
@@ -650,7 +650,7 @@ export default function Invoices() {
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="w-32 px-6 py-4 text-right">
                             <TooltipProvider>
                               <div className="flex gap-2 justify-end">
                                 <Tooltip>
