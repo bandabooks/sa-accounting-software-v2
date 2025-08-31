@@ -634,58 +634,144 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
   }
 
   if (reportType === 'transactions') {
+    // Group transactions by type
+    const salesTransactions = Array.isArray(data.transactions) 
+      ? data.transactions.filter((t: any) => t.type === 'Sale')
+      : [];
+    const purchaseTransactions = Array.isArray(data.transactions)
+      ? data.transactions.filter((t: any) => t.type === 'Purchase')
+      : [];
+    
+    // Calculate totals for each group
+    const salesTotals = salesTransactions.reduce((acc: any, tx: any) => ({
+      netAmount: acc.netAmount + parseFloat(tx.netAmount || 0),
+      vatAmount: acc.vatAmount + parseFloat(tx.vatAmount || 0),
+      grossAmount: acc.grossAmount + parseFloat(tx.grossAmount || 0)
+    }), { netAmount: 0, vatAmount: 0, grossAmount: 0 });
+    
+    const purchaseTotals = purchaseTransactions.reduce((acc: any, tx: any) => ({
+      netAmount: acc.netAmount + parseFloat(tx.netAmount || 0),
+      vatAmount: acc.vatAmount + parseFloat(tx.vatAmount || 0),
+      grossAmount: acc.grossAmount + parseFloat(tx.grossAmount || 0)
+    }), { netAmount: 0, vatAmount: 0, grossAmount: 0 });
+    
     return (
       <div className="space-y-6">
-        <Card>
+        {/* Transaction Summary */}
+        <Card className="bg-blue-50 dark:bg-blue-950">
           <CardHeader>
-            <CardTitle>Transaction Details</CardTitle>
-            <CardDescription>
-              {data.summary?.totalTransactions || 0} transactions found
-            </CardDescription>
+            <CardTitle className="text-blue-700 dark:text-blue-300">Transaction Summary</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Total Transactions</p>
+                <p className="text-xl font-bold">{data.summary?.totalTransactions || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Sales Transactions</p>
+                <p className="text-xl font-bold text-green-600">{salesTransactions.length}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Purchase Transactions</p>
+                <p className="text-xl font-bold text-red-600">{purchaseTransactions.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Sales Transactions */}
+        <Card>
+          <CardHeader className="bg-green-50 dark:bg-green-950">
+            <CardTitle className="text-green-700 dark:text-green-300">Sales (Output VAT)</CardTitle>
+            <CardDescription>{salesTransactions.length} transactions</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="bg-gray-50">
                   <tr className="border-b">
                     <th className="text-left p-2">Date</th>
                     <th className="text-left p-2">Type</th>
                     <th className="text-left p-2">Reference</th>
                     <th className="text-left p-2">Description</th>
-                    <th className="text-right p-2">Net Amount</th>
-                    <th className="text-right p-2">VAT Amount</th>
-                    <th className="text-right p-2">Gross Amount</th>
+                    <th className="text-right p-2">Net</th>
+                    <th className="text-right p-2">VAT</th>
+                    <th className="text-right p-2">Gross</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(data.transactions) ? data.transactions.slice(0, 10).map((transaction: any, index: number) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-2">{new Date(transaction.date).toLocaleDateString()}</td>
+                  {salesTransactions.map((transaction: any, index: number) => (
+                    <tr key={index} className="border-b hover:bg-gray-50">
+                      <td className="p-2">{new Date(transaction.date).toLocaleDateString('en-ZA')}</td>
                       <td className="p-2">
-                        <Badge variant={transaction.type === 'Sale' ? 'default' : 'secondary'}>
-                          {transaction.type}
-                        </Badge>
+                        <Badge className="bg-green-100 text-green-700">Sale</Badge>
                       </td>
-                      <td className="p-2">{transaction.reference}</td>
+                      <td className="p-2 font-medium">{transaction.reference}</td>
                       <td className="p-2">{transaction.description}</td>
-                      <td className="p-2 text-right">R {transaction.netAmount}</td>
-                      <td className="p-2 text-right">R {transaction.vatAmount}</td>
-                      <td className="p-2 text-right">R {transaction.grossAmount}</td>
+                      <td className="p-2 text-right font-mono">R {transaction.netAmount}</td>
+                      <td className="p-2 text-right font-mono text-green-600">R {transaction.vatAmount}</td>
+                      <td className="p-2 text-right font-mono font-bold">R {transaction.grossAmount}</td>
                     </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={7} className="p-4 text-center text-gray-500">
-                        No transactions found for the selected period
-                      </td>
+                  ))}
+                  {salesTransactions.length > 0 && (
+                    <tr className="bg-gray-100 font-bold">
+                      <td colSpan={4} className="p-2">Total for Sales</td>
+                      <td className="p-2 text-right font-mono">R {salesTotals.netAmount.toFixed(2)}</td>
+                      <td className="p-2 text-right font-mono text-green-600">R {salesTotals.vatAmount.toFixed(2)}</td>
+                      <td className="p-2 text-right font-mono">R {salesTotals.grossAmount.toFixed(2)}</td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              {Array.isArray(data.transactions) && data.transactions.length > 10 && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Showing first 10 of {data.transactions.length} transactions
-                </p>
-              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Purchase Transactions */}
+        <Card>
+          <CardHeader className="bg-red-50 dark:bg-red-950">
+            <CardTitle className="text-red-700 dark:text-red-300">Purchases (Input VAT)</CardTitle>
+            <CardDescription>{purchaseTransactions.length} transactions</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr className="border-b">
+                    <th className="text-left p-2">Date</th>
+                    <th className="text-left p-2">Type</th>
+                    <th className="text-left p-2">Reference</th>
+                    <th className="text-left p-2">Description</th>
+                    <th className="text-right p-2">Net</th>
+                    <th className="text-right p-2">VAT</th>
+                    <th className="text-right p-2">Gross</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchaseTransactions.map((transaction: any, index: number) => (
+                    <tr key={index} className="border-b hover:bg-gray-50">
+                      <td className="p-2">{new Date(transaction.date).toLocaleDateString('en-ZA')}</td>
+                      <td className="p-2">
+                        <Badge className="bg-red-100 text-red-700">Purchase</Badge>
+                      </td>
+                      <td className="p-2 font-medium">{transaction.reference || 'N/A'}</td>
+                      <td className="p-2">{transaction.description}</td>
+                      <td className="p-2 text-right font-mono">R {transaction.netAmount}</td>
+                      <td className="p-2 text-right font-mono text-red-600">R {transaction.vatAmount}</td>
+                      <td className="p-2 text-right font-mono font-bold">R {transaction.grossAmount}</td>
+                    </tr>
+                  ))}
+                  {purchaseTransactions.length > 0 && (
+                    <tr className="bg-gray-100 font-bold">
+                      <td colSpan={4} className="p-2">Total for Purchases</td>
+                      <td className="p-2 text-right font-mono">R {purchaseTotals.netAmount.toFixed(2)}</td>
+                      <td className="p-2 text-right font-mono text-red-600">R {purchaseTotals.vatAmount.toFixed(2)}</td>
+                      <td className="p-2 text-right font-mono">R {purchaseTotals.grossAmount.toFixed(2)}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
