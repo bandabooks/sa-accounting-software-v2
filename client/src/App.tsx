@@ -129,6 +129,7 @@ import PaymentFlows from "@/pages/payment-flows";
 import ThreeWayMatching from "@/pages/three-way-matching";
 import ExceptionDashboard from "@/pages/exception-dashboard";
 import BulkCapture from "@/pages/bulk-capture";
+import TestAutoMatch from "@/pages/test-auto-match";
 
 // Employee Management imports
 import EmployeesPage from "@/pages/employees";
@@ -457,6 +458,11 @@ function AuthenticatedApp() {
         <Route path="/bulk-capture">
           <ProtectedRoute permission={PERMISSIONS.BULK_CAPTURE_VIEW}>
             <BulkCapture />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/test-auto-match">
+          <ProtectedRoute permission={PERMISSIONS.BULK_CAPTURE_VIEW}>
+            <TestAutoMatch />
           </ProtectedRoute>
         </Route>
         <Route path="/purchase-reports">
