@@ -1,9 +1,11 @@
-import { ReactNode, useState } from "react";
-import Sidebar from "./sidebar";
+import { ReactNode, useState, useEffect } from "react";
+import CollapsibleSidebar from "./collapsible-sidebar";
 import Header from "./header";
 import { MobileHeader } from "../mobile/mobile-header";
 import { MobileSidebar } from "../mobile/mobile-sidebar";
 import { useLocation } from "wouter";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -11,7 +13,32 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    // Load sidebar state from localStorage
+    const saved = localStorage.getItem('sidebarCollapsed');
+    // Auto-collapse for bulk-capture page by default
+    if (saved === null && window.location.pathname === '/bulk-capture') {
+      return true;
+    }
+    return saved === 'true';
+  });
   const [location] = useLocation();
+
+  // Auto-collapse sidebar on bulk-capture page
+  useEffect(() => {
+    if (location === '/bulk-capture') {
+      setIsSidebarCollapsed(true);
+    }
+  }, [location]);
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', isSidebarCollapsed.toString());
+  }, [isSidebarCollapsed]);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   // Get page title based on current route
   const getPageTitle = () => {
@@ -33,8 +60,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex bg-gray-50">
       {/* Desktop Sidebar */}
-      <div className="desktop-sidebar hidden lg:block">
-        <Sidebar />
+      <div className={`desktop-sidebar hidden lg:block transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-72'}`}>
+        <CollapsibleSidebar isCollapsed={isSidebarCollapsed} />
+        {/* Sidebar Toggle Button */}
+        <Button
+          onClick={toggleSidebar}
+          size="sm"
+          variant="ghost"
+          className={`fixed z-50 top-20 transition-all duration-300 bg-white shadow-md hover:shadow-lg ${
+            isSidebarCollapsed ? 'left-12' : 'left-64'
+          }`}
+          title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
       </div>
 
       {/* Mobile Header */}
@@ -55,18 +94,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         isOpen={isMobileSidebarOpen}
         onClose={handleMobileSidebarClose}
       >
-        <Sidebar />
+        <CollapsibleSidebar />
       </MobileSidebar>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-72">
+      <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72'}`}>
         {/* Desktop Header */}
         <div className="hidden lg:block">
           <Header />
         </div>
         
         {/* Page Content */}
-        <div className={`main-content p-4 lg:p-6 pt-16 lg:pt-24 ${location === '/dashboard' || location === '/' ? 'dashboard-page' : ''}`}>
+        <div className={`main-content p-4 lg:p-6 pt-16 lg:pt-24 ${location === '/dashboard' || location === '/' ? 'dashboard-page' : ''} ${
+          location === '/bulk-capture' ? 'max-w-full' : ''
+        }`}>
           {children}
         </div>
       </main>

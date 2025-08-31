@@ -580,9 +580,10 @@ interface NavigationGroupProps {
   userRole: string;
   isExpanded: boolean;
   onToggle: () => void;
+  isCollapsed?: boolean;
 }
 
-function NavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle }: NavigationGroupProps) {
+function NavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle, isCollapsed = false }: NavigationGroupProps) {
   const { isModuleAvailable } = useCompanySubscription();
   const { canAccessPath, getUpgradeInfo, filterNavigationItems, isGroupVisible } = useSubscriptionNavigation();
   const [, setLocation] = useLocation();
@@ -805,7 +806,11 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
   );
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  isCollapsed?: boolean;
+}
+
+export default function Sidebar({ isCollapsed = false }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { isModuleAvailable, currentPlan, subscription, planStatus, isSuperAdminOrOwner } = useCompanySubscription();
@@ -842,7 +847,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-gradient-to-b from-slate-50 via-white to-slate-50 shadow-2xl border-r border-slate-200/60 fixed h-full z-30 hidden lg:flex lg:flex-col backdrop-blur-sm">
+    <aside className={`${isCollapsed ? 'w-16' : 'w-72'} bg-gradient-to-b from-slate-50 via-white to-slate-50 shadow-2xl border-r border-slate-200/60 fixed h-full z-30 hidden lg:flex lg:flex-col backdrop-blur-sm transition-all duration-300`}>
       {/* Header Section with Enhanced Gradient */}
       <div className="relative">
         {/* Gradient Background */}
@@ -856,28 +861,34 @@ export default function Sidebar() {
               <Calculator className="text-white" size={24} />
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white tracking-tight">Taxnify</h1>
-              <p className="text-blue-100 text-sm font-medium">Business & Compliance</p>
-              <div className="flex items-center gap-2 mt-2">
-                {isSuperAdminOrOwner ? (
-                  <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full font-semibold shadow-lg border border-white/20">
-                    ⚡ Super Admin
-                  </span>
-                ) : subscription ? (
-                  <span className="text-xs px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full border border-white/30 font-medium">
-                    {planStatus === 'trial' ? `✨ ${currentPlan?.displayName || 'Basic'} Trial` : currentPlan?.displayName || 'Basic Plan'}
-                  </span>
-                ) : (
-                  <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-full font-semibold">
-                    ⚠ No Active Plan
-                  </span>
-                )}
-              </div>
+              {!isCollapsed && (
+                <>
+                  <h1 className="text-2xl font-bold text-white tracking-tight">Taxnify</h1>
+                  <p className="text-blue-100 text-sm font-medium">Business & Compliance</p>
+                </>
+              )}
+              {!isCollapsed && (
+                <div className="flex items-center gap-2 mt-2">
+                  {isSuperAdminOrOwner ? (
+                    <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full font-semibold shadow-lg border border-white/20">
+                      ⚡ Super Admin
+                    </span>
+                  ) : subscription ? (
+                    <span className="text-xs px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white rounded-full border border-white/30 font-medium">
+                      {planStatus === 'trial' ? `✨ ${currentPlan?.displayName || 'Basic'} Trial` : currentPlan?.displayName || 'Basic Plan'}
+                    </span>
+                  ) : (
+                    <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-full font-semibold">
+                      ⚠ No Active Plan
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           
           {/* Super Admin Quick Access */}
-          {(user?.role === "super_admin" || user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com") && (
+          {(user?.role === "super_admin" || user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com") && !isCollapsed && (
             <div className="mt-4">
               <Link
                 href="/super-admin"
@@ -890,7 +901,7 @@ export default function Sidebar() {
           )}
           
           {/* Subscription Plan Information */}
-          {!subscription && !isSuperAdminOrOwner && (
+          {!subscription && !isSuperAdminOrOwner && !isCollapsed && (
             <div className="mt-4">
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
                 <div className="flex items-center gap-3">
@@ -925,6 +936,7 @@ export default function Sidebar() {
             userRole={user?.role || ""}
             isExpanded={expandedGroup === group.id}
             onToggle={() => toggleGroup(group.id)}
+            isCollapsed={isCollapsed}
           />
         ))}
       </nav>
