@@ -1,9 +1,11 @@
-import { Bell, User, LogOut, Settings, Shield } from "lucide-react";
+import { Bell, User, LogOut, Settings, Shield, Plus, ChevronDown, RefreshCw, FileText, UserPlus, Receipt } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { OnboardingHelpButton } from "@/components/onboarding/OnboardingHelpButton";
 import GlobalSearch from "@/components/global-search";
+import { useQuery } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +33,28 @@ const pageNames: Record<string, string> = {
 export default function Header() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const isDashboard = location === '/dashboard' || location === '/';
+  
+  // Get alert counts for dashboard
+  const { data: alertCounts } = useQuery({
+    queryKey: ["/api/alerts/counts"],
+    enabled: isDashboard,
+    refetchInterval: 60000,
+    staleTime: 45000,
+  });
+  
+  // Dashboard refresh functionality
+  const { refetch: refetchDashboard } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+    enabled: false, // Only use for manual refresh
+  });
+  
+  const handleDashboardRefresh = () => {
+    if (isDashboard) {
+      refetchDashboard();
+      window.location.reload(); // Force a full refresh for dashboard
+    }
+  };
   
   const getPageName = () => {
     if (location.includes("/invoices/new")) return "Create Invoice";
@@ -73,24 +97,77 @@ export default function Header() {
             <CompanySwitcher />
           </div>
           
+          {/* Dashboard-specific action buttons */}
+          {isDashboard && (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Quick Create
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Create New</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/invoices/new" className="cursor-pointer">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Invoice
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/estimates/new" className="cursor-pointer">
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Estimate
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/customers/new" className="cursor-pointer">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Customer
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={handleDashboardRefresh} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Link href="/alerts">
+                <Button variant="outline" size="sm" className="relative">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Alerts
+                  {((alertCounts as any)?.active || 0) > 0 && (
+                    <Badge className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs bg-red-500 text-white">
+                      {(alertCounts as any)?.active}
+                    </Badge>
+                  )}
+                </Button>
+              </Link>
+            </>
+          )}
 
-          
           {/* Onboarding Help Button */}
           <OnboardingHelpButton />
           
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            asChild
-            className="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-          >
-            <Link href="/alerts">
-              <Bell size={18} className="sm:w-5 sm:h-5" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
-                1
-              </span>
-            </Link>
-          </Button>
+          {/* General notifications - only when not dashboard */}
+          {!isDashboard && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              asChild
+              className="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <Link href="/alerts">
+                <Bell size={18} className="sm:w-5 sm:h-5" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                  1
+                </span>
+              </Link>
+            </Button>
+          )}
           
           {user && (
             <DropdownMenu>
