@@ -54,6 +54,8 @@ export default function Dashboard() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [activitySearchTerm, setActivitySearchTerm] = useState("");
+  const [isFinancialHealthExpanded, setIsFinancialHealthExpanded] = useState(false);
+  const [isTodaysTasksExpanded, setIsTodaysTasksExpanded] = useState(false);
   const [location, setLocation] = useLocation();
   // Fetch real alert counts from API - Less frequent updates for performance
   const { data: alertCounts } = useQuery({
@@ -158,126 +160,177 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
         <div className="container mx-auto px-4 pb-8">
 
-        {/* Financial Health Indicators Bar */}
+        {/* Financial Health Indicators - Collapsible */}
         {activeTab === "overview" && (
           <div className="mb-4">
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-800">Financial Health</h3>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Healthy</span>
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm">
+              {/* Header with expand/collapse button */}
+              <div 
+                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+                onClick={() => setIsFinancialHealthExpanded(!isFinancialHealthExpanded)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-green-100 rounded-lg">
+                      <BarChart3 className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-800">Financial Health</h3>
+                      <p className="text-xs text-gray-500">View key financial indicators</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>Healthy</span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isFinancialHealthExpanded ? 'rotate-180' : ''}`} />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {/* Profit Margin */}
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">
-                    {(() => {
-                      const revenue = parseFloat(dashboardStats.totalRevenue) || 0;
-                      const expenses = parseFloat(dashboardStats.totalExpenses) || 0;
-                      const margin = revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0;
-                      return `${margin.toFixed(1)}%`;
-                    })()}
+              
+              {/* Expandable content */}
+              {isFinancialHealthExpanded && (
+                <div className="px-4 pb-4 border-t border-gray-100">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                    {/* Profit Margin */}
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-gray-900">
+                        {(() => {
+                          const revenue = parseFloat(dashboardStats.totalRevenue) || 0;
+                          const expenses = parseFloat(dashboardStats.totalExpenses) || 0;
+                          const margin = revenue > 0 ? ((revenue - expenses) / revenue * 100) : 0;
+                          return `${margin.toFixed(1)}%`;
+                        })()}
+                      </div>
+                      <div className="text-xs text-gray-600">Profit Margin</div>
+                    </div>
+                    
+                    {/* Cash Flow Trend */}
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-green-600">+{getRevenueGrowth()}%</div>
+                      <div className="text-xs text-gray-600">Cash Flow (30d)</div>
+                    </div>
+                    
+                    {/* Outstanding Ratio */}
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-orange-600">
+                        {(() => {
+                          const receivables = parseFloat(dashboardStats.totalOutstanding) || 0;
+                          const revenue = parseFloat(dashboardStats.totalRevenue) || 0;
+                          const ratio = revenue > 0 ? (receivables / revenue * 100) : 0;
+                          return `${ratio.toFixed(1)}%`;
+                        })()}
+                      </div>
+                      <div className="text-xs text-gray-600">Outstanding Ratio</div>
+                    </div>
+                    
+                    {/* Quick Ratio */}
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-blue-600">1.2</div>
+                      <div className="text-xs text-gray-600">Quick Ratio</div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-600">Profit Margin</div>
                 </div>
-                
-                {/* Cash Flow Trend */}
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">+{getRevenueGrowth()}%</div>
-                  <div className="text-xs text-gray-600">Cash Flow (30d)</div>
-                </div>
-                
-                {/* Outstanding Ratio */}
-                <div className="text-center">
-                  <div className="text-lg font-bold text-orange-600">
-                    {(() => {
-                      const receivables = parseFloat(dashboardStats.totalOutstanding) || 0;
-                      const revenue = parseFloat(dashboardStats.totalRevenue) || 0;
-                      const ratio = revenue > 0 ? (receivables / revenue * 100) : 0;
-                      return `${ratio.toFixed(1)}%`;
-                    })()}
-                  </div>
-                  <div className="text-xs text-gray-600">Outstanding Ratio</div>
-                </div>
-                
-                {/* Quick Ratio */}
-                <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">1.2</div>
-                  <div className="text-xs text-gray-600">Quick Ratio</div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Today's Tasks Widget */}
+        {/* Today's Tasks Widget - Collapsible */}
         {activeTab === "overview" && (
           <div className="mb-4">
             <Card className="bg-white/90 backdrop-blur-sm border border-orange-200 shadow-sm">
-              <CardHeader className="pb-3">
+              {/* Header with call-to-action button */}
+              <div 
+                className="p-4 cursor-pointer hover:bg-orange-50/50 transition-colors rounded-lg"
+                onClick={() => setIsTodaysTasksExpanded(!isTodaysTasksExpanded)}
+              >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <div className="p-1.5 bg-orange-100 rounded-lg">
                       <Clock className="h-4 w-4 text-orange-600" />
                     </div>
-                    <CardTitle className="text-sm font-semibold text-gray-800">Today's Tasks</CardTitle>
+                    <div>
+                      <CardTitle className="text-sm font-semibold text-gray-800">Today's Tasks</CardTitle>
+                      <p className="text-xs text-gray-500">Important items that need your attention</p>
+                    </div>
                   </div>
-                  <span className="text-xs text-orange-600 font-medium">3 items need attention</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Overdue Invoices */}
-                  <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-red-800">2 Overdue Invoices</div>
-                      <div className="text-xs text-red-600">Total: R 25,500.00</div>
-                    </div>
-                    <Link href="/invoices?filter=overdue">
-                      <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-700 hover:bg-red-100">
-                        Review
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="px-2 py-1 bg-orange-100 rounded-full">
+                        <span className="text-xs font-medium text-orange-700">3 urgent</span>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsTodaysTasksExpanded(true);
+                        }}
+                      >
+                        View Tasks
                       </Button>
-                    </Link>
-                  </div>
-
-                  {/* Tax Deadlines */}
-                  <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <Calendar className="h-4 w-4 text-yellow-600" />
                     </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-yellow-800">VAT Return Due</div>
-                      <div className="text-xs text-yellow-600">Due in 5 days</div>
-                    </div>
-                    <Link href="/compliance">
-                      <Button size="sm" variant="outline" className="text-xs border-yellow-300 text-yellow-700 hover:bg-yellow-100">
-                        Prepare
-                      </Button>
-                    </Link>
-                  </div>
-
-                  {/* Follow-ups Needed */}
-                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-blue-800">3 Follow-ups</div>
-                      <div className="text-xs text-blue-600">Pending responses</div>
-                    </div>
-                    <Link href="/customers?filter=follow-up">
-                      <Button size="sm" variant="outline" className="text-xs border-blue-300 text-blue-700 hover:bg-blue-100">
-                        Contact
-                      </Button>
-                    </Link>
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isTodaysTasksExpanded ? 'rotate-180' : ''}`} />
                   </div>
                 </div>
-              </CardContent>
+              </div>
+              
+              {/* Expandable content */}
+              {isTodaysTasksExpanded && (
+                <div className="px-4 pb-4 border-t border-orange-100">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                    {/* Overdue Invoices */}
+                    <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-red-800">2 Overdue Invoices</div>
+                        <div className="text-xs text-red-600">Total: R 25,500.00</div>
+                      </div>
+                      <Link href="/invoices?filter=overdue">
+                        <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-700 hover:bg-red-100">
+                          Review
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {/* Tax Deadlines */}
+                    <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <Calendar className="h-4 w-4 text-yellow-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-yellow-800">VAT Return Due</div>
+                        <div className="text-xs text-yellow-600">Due in 5 days</div>
+                      </div>
+                      <Link href="/compliance">
+                        <Button size="sm" variant="outline" className="text-xs border-yellow-300 text-yellow-700 hover:bg-yellow-100">
+                          Prepare
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {/* Follow-ups Needed */}
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Users className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-blue-800">3 Follow-ups</div>
+                        <div className="text-xs text-blue-600">Pending responses</div>
+                      </div>
+                      <Link href="/customers?filter=follow-up">
+                        <Button size="sm" variant="outline" className="text-xs border-blue-300 text-blue-700 hover:bg-blue-100">
+                          Contact
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         )}
