@@ -156,7 +156,7 @@ export default function Dashboard() {
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
-        <div className="container mx-auto px-4 pt-2 pb-8">
+        <div className="container mx-auto px-4 pb-8">
 
         {/* Enhanced Professional Metrics Grid */}
         {activeTab === "overview" && (

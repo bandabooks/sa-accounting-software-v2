@@ -75,7 +75,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
         
         {/* Page Content */}
-        <div className={`main-content p-4 lg:p-6 pt-16 lg:pt-24 ${location === '/dashboard' || location === '/' ? 'dashboard-page' : ''}`}>
+        <div className={`main-content p-4 lg:p-6 ${location === '/dashboard' || location === '/' ? 'pt-16 lg:pt-4 dashboard-page' : 'pt-16 lg:pt-24'}`}>
           {children}
         </div>
       </main>
