@@ -68,7 +68,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </MobileSidebar>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
+      <main className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20 sidebar-collapsed' : 'lg:ml-72'}`}>
         {/* Desktop Header */}
         <div className="hidden lg:block">
           <Header />
