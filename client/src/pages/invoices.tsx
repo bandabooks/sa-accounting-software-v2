@@ -325,9 +325,12 @@ export default function Invoices() {
           >
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-bold text-gray-800">Aging Analysis</h2>
-              <Badge variant="outline" className="text-gray-600">
-                Total Outstanding: {formatCurrency(totalOutstanding.toString())}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-600">Total Outstanding:</span>
+                <span className="text-lg font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-lg border border-orange-200">
+                  {formatCurrency(totalOutstanding.toString())}
+                </span>
+              </div>
             </div>
             <ChevronDown 
               className={`h-5 w-5 text-gray-600 transition-transform duration-300 ${
