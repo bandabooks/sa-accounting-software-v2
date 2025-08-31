@@ -34,40 +34,41 @@ export default function PurchaseDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <div className="container mx-auto px-4 py-6 space-y-8">
-        {/* Enhanced Header */}
-        <div className="relative">
-          {/* Background Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-2xl"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
-          
-          {/* Header Content */}
-          <div className="relative p-8 text-white">
+        {/* Compact Header */}
+        <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 text-white">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="h-5 w-5" />
+              <span className="text-sm font-medium opacity-90">Purchase Management</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Purchase Dashboard</CardTitle>
+            <CardDescription className="text-blue-100">Monitor and manage all purchase activities with precision</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
             <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <h1 className="text-4xl font-bold text-white tracking-tight">Purchase Dashboard</h1>
-                <p className="text-blue-100 text-lg font-medium">Monitor and manage all your purchase activities with precision</p>
-                <div className="flex items-center gap-3 mt-4">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <DollarSign className="h-4 w-4" />
-                    <span className="text-sm font-medium">Real-time Data</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                    <TrendingUp className="h-4 w-4" />
-                    <span className="text-sm font-medium">Live Analytics</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-3">
                 <Link href="/purchase-orders">
-                  <Button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                    <Plus className="h-5 w-5 mr-2" />
+                  <Button variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0">
+                    <Plus className="h-4 w-4 mr-1" />
                     New Purchase Order
                   </Button>
                 </Link>
+                <Link href="/suppliers">
+                  <Button variant="outline" size="sm" className="bg-white/10 hover:bg-white/20 text-white border-white/20">
+                    <Building2 className="h-4 w-4 mr-1" />
+                    Suppliers
+                  </Button>
+                </Link>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full text-xs">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>Live Analytics</span>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Enhanced Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -215,41 +215,51 @@ export default function ExpensesStandalone() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-800 dark:to-gray-900">
       <div className="space-y-8 p-6">
-        {/* Enhanced Header */}
-        <div className="flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-                <DollarSign className="h-7 w-7 text-white" />
+        {/* Compact Header */}
+        <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 text-white">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="h-5 w-5" />
+              <span className="text-sm font-medium opacity-90">Expense Management</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Expenses</CardTitle>
+            <CardDescription className="text-blue-100">Manage your business expenses and track spending</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={() => setIsAddModalOpen(true)} 
+                  variant="secondary" 
+                  size="sm" 
+                  className="bg-white/20 hover:bg-white/30 text-white border-0"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Expense
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/bills')}
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                >
+                  <FileText className="h-4 w-4 mr-1" />
+                  Bills
+                </Button>
               </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                  Expenses
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 text-base">
-                  Manage your business expenses and track spending
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="text-center">
+                  <div className="text-xl font-bold">{filteredExpenses.length}</div>
+                  <div className="text-xs opacity-90">Expenses</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold">{formatCurrency(metrics?.totalExpenses || "0.00")}</div>
+                  <div className="text-xs opacity-90">Total</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setIsAddModalOpen(true)} 
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
-            >
-              <Plus className="h-5 w-5" />
-              Add New Expense
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => navigate('/bills')}
-              className="flex items-center gap-2 bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 text-orange-700 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-200 text-base px-6 py-3 rounded-xl"
-            >
-              <FileText className="h-5 w-5" />
-              Manage Bills
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Enhanced Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

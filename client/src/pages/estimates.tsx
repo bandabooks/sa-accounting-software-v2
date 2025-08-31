@@ -358,78 +358,52 @@ export default function Estimates() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <div className="container mx-auto px-4 py-6 space-y-8">
         
-        {/* Enhanced Header Section */}
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-700 to-pink-800 rounded-3xl"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
-          
-          <div className="relative p-8 lg:p-12 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-              <div className="space-y-4 flex-1">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-purple-100 text-lg font-medium">Estimate Management</span>
-                </div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-white tracking-tight">
-                  Sales Pipeline
-                </h1>
-                <p className="text-purple-100 text-xl font-medium">
-                  Track quotes and monitor conversion rates
-                </p>
+        {/* Compact Header Section */}
+        <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-r from-indigo-600 via-purple-700 to-pink-800 text-white">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-5 w-5" />
+              <span className="text-sm font-medium opacity-90">Estimate Management</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Sales Pipeline</CardTitle>
+            <CardDescription className="text-purple-100">Track quotes and monitor conversion rates</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button asChild variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0">
+                  <Link href="/estimates/new">
+                    <Plus className="h-4 w-4 mr-1" />
+                    New Estimate
+                  </Link>
+                </Button>
+                <Button 
+                  onClick={() => setViewMode(viewMode === "pipeline" ? "table" : "pipeline")}
+                  variant="outline" 
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                >
+                  <BarChart3 className="h-4 w-4 mr-1" />
+                  {viewMode === "pipeline" ? "Table" : "Pipeline"}
+                </Button>
               </div>
-
-              {/* Pipeline Metrics */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:min-w-[400px]">
-                <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                  <div className="text-2xl font-bold text-white">{filteredEstimates.length}</div>
-                  <div className="text-purple-100 text-sm">Total Quotes</div>
+              <div className="flex items-center gap-3">
+                <div className="text-center">
+                  <div className="text-xl font-bold">{filteredEstimates.length}</div>
+                  <div className="text-xs opacity-90">Total Quotes</div>
                 </div>
-                <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                  <div className="text-2xl font-bold text-white">{calculateConversionRate()}%</div>
-                  <div className="text-purple-100 text-sm">Conversion</div>
+                <div className="text-center">
+                  <div className="text-xl font-bold">{calculateConversionRate()}%</div>
+                  <div className="text-xs opacity-90">Conversion</div>
                 </div>
-                <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                  <div className="text-2xl font-bold text-white">{getEstimatesByStatus('accepted').length}</div>
-                  <div className="text-purple-100 text-sm">Accepted</div>
-                </div>
-                <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                  <div className="text-2xl font-bold text-white">
-                    {formatCurrency(
-                      getEstimatesByStatus('accepted')
-                        .reduce((sum, est) => sum + parseFloat(est.total || "0"), 0)
-                        .toString()
-                    )}
-                  </div>
-                  <div className="text-purple-100 text-sm">Won Value</div>
+                <div className="text-center">
+                  <div className="text-xl font-bold">{getEstimatesByStatus('accepted').length}</div>
+                  <div className="text-xs opacity-90">Accepted</div>
                 </div>
               </div>
             </div>
-
-            {/* Action Bar */}
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button asChild className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link href="/estimates/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Estimate
-                </Link>
-              </Button>
-              <Button 
-                onClick={() => setViewMode(viewMode === "pipeline" ? "table" : "pipeline")}
-                className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                {viewMode === "pipeline" ? "Table View" : "Pipeline View"}
-              </Button>
-              <Button className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Enhanced Search and Filter Bar */}
         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
