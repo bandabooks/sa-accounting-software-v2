@@ -3,6 +3,7 @@ import Sidebar from "./sidebar";
 import Header from "./header";
 import { MobileHeader } from "../mobile/mobile-header";
 import { MobileSidebar } from "../mobile/mobile-sidebar";
+import { MobileBottomNav } from "../mobile/mobile-bottom-nav";
 import { useLocation } from "wouter";
 
 interface AppLayoutProps {
@@ -78,6 +79,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav onMenuClick={() => setIsMobileSidebarOpen(true)} />
     </div>
   );
 }

@@ -234,6 +234,164 @@
   }
 }
 
+/* Sales Module Mobile Optimizations */
+@layer components {
+  .invoice-mobile-card,
+  .estimate-mobile-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid transparent;
+  }
+
+  .invoice-mobile-card.pending {
+    border-left-color: #f59e0b;
+  }
+
+  .invoice-mobile-card.paid {
+    border-left-color: #10b981;
+  }
+
+  .invoice-mobile-card.overdue {
+    border-left-color: #ef4444;
+  }
+
+  /* Expense Module Mobile */
+  .expense-mobile-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .expense-mobile-card .expense-status {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-bottom-left-radius: 8px;
+  }
+
+  .expense-mobile-card .expense-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .expense-mobile-card .expense-status.approved {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .expense-mobile-card .expense-status.paid {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  /* Task Module Mobile */
+  .task-mobile-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border-left: 4px solid transparent;
+    position: relative;
+  }
+
+  .task-mobile-card.priority-high {
+    border-left-color: #ef4444;
+  }
+
+  .task-mobile-card.priority-medium {
+    border-left-color: #f59e0b;
+  }
+
+  .task-mobile-card.priority-low {
+    border-left-color: #10b981;
+  }
+
+  .task-mobile-card .task-checkbox {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Mobile Quick Actions */
+  .mobile-quick-actions {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 40;
+  }
+
+  .mobile-quick-action {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+
+  .mobile-quick-action:active {
+    transform: scale(0.95);
+  }
+
+  /* Mobile Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    z-index: 30;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    text-decoration: none;
+    color: #6b7280;
+    transition: color 0.2s;
+  }
+
+  .mobile-bottom-nav-item.active {
+    color: #3b82f6;
+  }
+
+  .mobile-bottom-nav-item svg {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 2px;
+  }
+
+  .mobile-bottom-nav-item span {
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
 /* Mobile-specific responsive breakpoints */
 @media (max-width: 640px) {
   /* Hide desktop sidebar */
@@ -241,19 +399,91 @@
     display: none;
   }
 
-  /* Adjust main content for mobile */
+  /* Adjust main content for mobile with bottom nav spacing */
   .main-content {
     padding: 16px;
     margin-left: 0;
+    padding-bottom: 80px; /* Space for bottom navigation */
   }
 
-  /* Mobile-friendly tables */
-  .desktop-table {
-    display: none;
+  /* Dashboard Mobile Grid */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 
-  .mobile-table-view {
+  .stat-card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  /* Mobile Forms with better touch targets */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    padding: 12px;
+    min-height: 48px;
+  }
+
+  /* Mobile-optimized buttons */
+  .btn,
+  button {
+    min-height: 44px;
+    padding: 12px 20px;
+    font-size: 16px;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-group .btn {
+    flex: 1;
+  }
+
+  /* Mobile-friendly tables - Convert to cards */
+  .desktop-table,
+  table.hidden-mobile {
+    display: none !important;
+  }
+
+  .mobile-table-view,
+  .mobile-cards {
     display: block;
+  }
+
+  /* Convert table rows to cards */
+  table.responsive-table tbody {
+    display: block;
+  }
+
+  table.responsive-table tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  table.responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border: none;
+  }
+
+  table.responsive-table td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
   }
 
   /* Compact header on mobile */
@@ -286,7 +516,34 @@
   /* Card adjustments */
   .card-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
+  }
+
+  /* Sales cards mobile layout */
+  .sales-card {
+    padding: 1rem;
+  }
+
+  .sales-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.75rem;
+  }
+
+  .sales-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .sales-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
   }
 
   /* Modal adjustments */
@@ -303,10 +560,54 @@
   }
 }
 
+/* Mobile Search Bar */
+.mobile-search-bar {
+  position: sticky;
+  top: 56px;
+  background: white;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 20;
+}
+
+.mobile-search-bar input {
+  width: 100%;
+  padding: 10px 40px 10px 16px;
+  border-radius: 24px;
+  border: 1px solid #e5e7eb;
+  font-size: 16px;
+  background: #f9fafb;
+}
+
+/* Mobile Filters */
+.mobile-filters {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.75rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-filter-chip {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #f3f4f6;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mobile-filter-chip.active {
+  background: #3b82f6;
+  color: white;
+}
+
 @media (max-width: 480px) {
   /* Extra small screens */
   .main-content {
     padding: 12px;
+    padding-bottom: 76px;
   }
 
   .page-header {
@@ -327,6 +628,25 @@
 
   .text-responsive-sm {
     font-size: 12px;
+  }
+}
+
+/* iOS Safe Areas */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .mobile-bottom-nav {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .main-content {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  .fab {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-quick-actions {
+    bottom: calc(80px + env(safe-area-inset-bottom));
   }
 }
 
