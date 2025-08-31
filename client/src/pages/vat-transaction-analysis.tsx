@@ -30,6 +30,38 @@ export default function VATTransactionAnalysis() {
     const printWindow = window.open('', '_blank');
     if (!printWindow || !vatAnalysis) return;
     
+    // Check if we have the grouped structure or need to process it
+    let outputTransactions, inputTransactions, outputTotals, inputTotals;
+    
+    if (vatAnalysis.outputTransactions && vatAnalysis.inputTransactions) {
+      // Data is already grouped
+      outputTransactions = vatAnalysis.outputTransactions.transactions;
+      inputTransactions = vatAnalysis.inputTransactions.transactions;
+      outputTotals = vatAnalysis.outputTransactions.totals;
+      inputTotals = vatAnalysis.inputTransactions.totals;
+    } else if (Array.isArray(vatAnalysis.transactions)) {
+      // Data needs to be grouped
+      outputTransactions = vatAnalysis.transactions.filter((t: any) => t.type === 'Sale');
+      inputTransactions = vatAnalysis.transactions.filter((t: any) => t.type === 'Purchase');
+      
+      outputTotals = outputTransactions.reduce((acc: any, tx: any) => ({
+        netAmount: (acc.netAmount + parseFloat(tx.netAmount || 0)).toFixed(2),
+        vatAmount: (acc.vatAmount + parseFloat(tx.vatAmount || 0)).toFixed(2),
+        grossAmount: (acc.grossAmount + parseFloat(tx.grossAmount || 0)).toFixed(2),
+        count: acc.count + 1
+      }), { netAmount: 0, vatAmount: 0, grossAmount: 0, count: 0 });
+      
+      inputTotals = inputTransactions.reduce((acc: any, tx: any) => ({
+        netAmount: (acc.netAmount + parseFloat(tx.netAmount || 0)).toFixed(2),
+        vatAmount: (acc.vatAmount + parseFloat(tx.vatAmount || 0)).toFixed(2),
+        grossAmount: (acc.grossAmount + parseFloat(tx.grossAmount || 0)).toFixed(2),
+        count: acc.count + 1
+      }), { netAmount: 0, vatAmount: 0, grossAmount: 0, count: 0 });
+    } else {
+      console.error('Unexpected data structure:', vatAnalysis);
+      return;
+    }
+    
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -53,6 +85,10 @@ export default function VATTransactionAnalysis() {
             margin-bottom: 10px;
             background: #f3f4f6;
             padding: 5px 10px;
+          }
+          h3 {
+            font-size: 14px;
+            margin: 15px 0 10px 0;
           }
           .header-info { 
             margin-bottom: 20px;
@@ -101,9 +137,9 @@ export default function VATTransactionAnalysis() {
         
         <div class="transaction-summary">
           <h3>TRANSACTION SUMMARY</h3>
-          <p>Total Transactions: ${(vatAnalysis.outputTransactions.totals.count + vatAnalysis.inputTransactions.totals.count)}</p>
-          <p>Sales Transactions: ${vatAnalysis.outputTransactions.totals.count}</p>
-          <p>Purchase Transactions: ${vatAnalysis.inputTransactions.totals.count}</p>
+          <p>Total Transactions: ${outputTotals.count + inputTotals.count}</p>
+          <p>Sales Transactions: ${outputTotals.count}</p>
+          <p>Purchase Transactions: ${inputTotals.count}</p>
         </div>
 
         <h2>TRANSACTION DETAILS</h2>
@@ -122,12 +158,12 @@ export default function VATTransactionAnalysis() {
             </tr>
           </thead>
           <tbody>
-            ${vatAnalysis.outputTransactions.transactions.map(tx => `
+            ${outputTransactions.map((tx: any) => `
               <tr>
                 <td>${format(new Date(tx.date), 'yyyy/MM/dd')}</td>
                 <td>Sale</td>
                 <td>${tx.reference}</td>
-                <td>Invoice - ${tx.customerName || 'N/A'}</td>
+                <td>Invoice - ${tx.customerName || tx.description || 'N/A'}</td>
                 <td style="text-align: right;">R ${tx.netAmount}</td>
                 <td style="text-align: right;">R ${tx.vatAmount}</td>
                 <td style="text-align: right;">R ${tx.grossAmount}</td>
@@ -135,9 +171,9 @@ export default function VATTransactionAnalysis() {
             `).join('')}
             <tr class="total-row">
               <td colspan="4">Total for Sales</td>
-              <td style="text-align: right;">R ${vatAnalysis.outputTransactions.totals.netAmount}</td>
-              <td style="text-align: right;">R ${vatAnalysis.outputTransactions.totals.vatAmount}</td>
-              <td style="text-align: right;">R ${vatAnalysis.outputTransactions.totals.grossAmount}</td>
+              <td style="text-align: right;">R ${outputTotals.netAmount}</td>
+              <td style="text-align: right;">R ${outputTotals.vatAmount}</td>
+              <td style="text-align: right;">R ${outputTotals.grossAmount}</td>
             </tr>
           </tbody>
         </table>
@@ -156,12 +192,12 @@ export default function VATTransactionAnalysis() {
             </tr>
           </thead>
           <tbody>
-            ${vatAnalysis.inputTransactions.transactions.map(tx => `
+            ${inputTransactions.map((tx: any) => `
               <tr>
                 <td>${format(new Date(tx.date), 'yyyy/MM/dd')}</td>
                 <td>Purchase</td>
                 <td>${tx.reference || 'N/A'}</td>
-                <td>${tx.supplierName}</td>
+                <td>${tx.supplierName || tx.description || 'N/A'}</td>
                 <td style="text-align: right;">R ${tx.netAmount}</td>
                 <td style="text-align: right;">R ${tx.vatAmount}</td>
                 <td style="text-align: right;">R ${tx.grossAmount}</td>
@@ -169,9 +205,9 @@ export default function VATTransactionAnalysis() {
             `).join('')}
             <tr class="total-row">
               <td colspan="4">Total for Purchases</td>
-              <td style="text-align: right;">R ${vatAnalysis.inputTransactions.totals.netAmount}</td>
-              <td style="text-align: right;">R ${vatAnalysis.inputTransactions.totals.vatAmount}</td>
-              <td style="text-align: right;">R ${vatAnalysis.inputTransactions.totals.grossAmount}</td>
+              <td style="text-align: right;">R ${inputTotals.netAmount}</td>
+              <td style="text-align: right;">R ${inputTotals.vatAmount}</td>
+              <td style="text-align: right;">R ${inputTotals.grossAmount}</td>
             </tr>
           </tbody>
         </table>
@@ -181,15 +217,15 @@ export default function VATTransactionAnalysis() {
           <table>
             <tr>
               <td><strong>Output VAT (Sales):</strong></td>
-              <td style="text-align: right;"><strong>R ${vatAnalysis.summary.outputVat}</strong></td>
+              <td style="text-align: right;"><strong>R ${outputTotals.vatAmount}</strong></td>
             </tr>
             <tr>
               <td><strong>Input VAT (Purchases):</strong></td>
-              <td style="text-align: right;"><strong>R ${vatAnalysis.summary.inputVat}</strong></td>
+              <td style="text-align: right;"><strong>R ${inputTotals.vatAmount}</strong></td>
             </tr>
             <tr style="border-top: 2px solid #000;">
               <td><strong>Net VAT Payable to SARS:</strong></td>
-              <td style="text-align: right;"><strong>R ${vatAnalysis.summary.netVatPayable}</strong></td>
+              <td style="text-align: right;"><strong>R ${(parseFloat(outputTotals.vatAmount) - parseFloat(inputTotals.vatAmount)).toFixed(2)}</strong></td>
             </tr>
           </table>
         </div>
