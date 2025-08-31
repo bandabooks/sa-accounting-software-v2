@@ -264,10 +264,14 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
         <head>
           <title>VAT Transaction Analysis</title>
           <style>
+            @page { 
+              size: landscape;
+              margin: 10mm;
+            }
             body { 
               font-family: Arial, sans-serif; 
               margin: 20px;
-              font-size: 12px;
+              font-size: 11px;
             }
             .header {
               background: #6366f1;
@@ -310,7 +314,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
             }
             .summary-label {
               color: #6b7280;
-              font-size: 11px;
+              font-size: 10px;
               margin-bottom: 2px;
             }
             .summary-value {
@@ -324,16 +328,16 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
             }
             th { 
               background: #f3f4f6; 
-              padding: 8px; 
+              padding: 6px; 
               text-align: left;
               font-weight: bold;
               border: 1px solid #d1d5db;
-              font-size: 11px;
+              font-size: 10px;
             }
             td { 
-              padding: 6px 8px; 
+              padding: 5px 6px; 
               border: 1px solid #d1d5db;
-              font-size: 11px;
+              font-size: 10px;
             }
             .total-row { 
               font-weight: bold; 
@@ -341,9 +345,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
             }
             .type-badge {
               display: inline-block;
-              padding: 2px 8px;
+              padding: 2px 6px;
               border-radius: 4px;
-              font-size: 10px;
+              font-size: 9px;
               font-weight: 600;
             }
             .type-sale {
@@ -362,6 +366,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
               border-bottom: none;
             }
             .text-right { text-align: right; }
+            .text-center { text-align: center; }
             .text-green { color: #059669; }
             .text-red { color: #dc2626; }
             @media print {
@@ -409,7 +414,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                 <th>Date</th>
                 <th>Type</th>
                 <th>Reference</th>
-                <th>Description</th>
+                <th>Name</th>
+                <th>Tax Name</th>
+                <th class="text-center">TAX Rate</th>
                 <th class="text-right">Net</th>
                 <th class="text-right">VAT</th>
                 <th class="text-right">Gross</th>
@@ -421,7 +428,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                   <td>${new Date(tx.date).toLocaleDateString('en-ZA')}</td>
                   <td><span class="type-badge type-sale">Sale</span></td>
                   <td>${tx.reference}</td>
-                  <td>${tx.description}</td>
+                  <td>${tx.customerName || tx.description?.replace('Invoice - ', '') || 'Cash Sales'}</td>
+                  <td>VAT</td>
+                  <td class="text-center">15.00</td>
                   <td class="text-right">R ${tx.netAmount}</td>
                   <td class="text-right text-green">R ${tx.vatAmount}</td>
                   <td class="text-right"><strong>R ${tx.grossAmount}</strong></td>
@@ -429,7 +438,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
               `).join('')}
               ${salesTransactions.length > 0 ? `
                 <tr class="total-row">
-                  <td colspan="4">Total for Sales</td>
+                  <td colspan="6">Total for Sales</td>
                   <td class="text-right">R ${salesTotals.netAmount.toFixed(2)}</td>
                   <td class="text-right text-green">R ${salesTotals.vatAmount.toFixed(2)}</td>
                   <td class="text-right">R ${salesTotals.grossAmount.toFixed(2)}</td>
@@ -448,7 +457,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                 <th>Date</th>
                 <th>Type</th>
                 <th>Reference</th>
-                <th>Description</th>
+                <th>Name</th>
+                <th>Tax Name</th>
+                <th class="text-center">TAX Rate</th>
                 <th class="text-right">Net</th>
                 <th class="text-right">VAT</th>
                 <th class="text-right">Gross</th>
@@ -460,7 +471,9 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
                   <td>${new Date(tx.date).toLocaleDateString('en-ZA')}</td>
                   <td><span class="type-badge type-purchase">Purchase</span></td>
                   <td>${tx.reference || 'N/A'}</td>
-                  <td>${tx.description}</td>
+                  <td>${tx.supplierName || tx.description || 'Supplier'}</td>
+                  <td>VAT</td>
+                  <td class="text-center">15.00</td>
                   <td class="text-right">R ${tx.netAmount}</td>
                   <td class="text-right text-red">R ${tx.vatAmount}</td>
                   <td class="text-right"><strong>R ${tx.grossAmount}</strong></td>
@@ -468,7 +481,7 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
               `).join('')}
               ${purchaseTransactions.length > 0 ? `
                 <tr class="total-row">
-                  <td colspan="4">Total for Purchases</td>
+                  <td colspan="6">Total for Purchases</td>
                   <td class="text-right">R ${purchaseTotals.netAmount.toFixed(2)}</td>
                   <td class="text-right text-red">R ${purchaseTotals.vatAmount.toFixed(2)}</td>
                   <td class="text-right">R ${purchaseTotals.grossAmount.toFixed(2)}</td>
@@ -980,7 +993,9 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                     <th className="text-left p-2">Date</th>
                     <th className="text-left p-2">Type</th>
                     <th className="text-left p-2">Reference</th>
-                    <th className="text-left p-2">Description</th>
+                    <th className="text-left p-2">Name</th>
+                    <th className="text-left p-2">Tax Name</th>
+                    <th className="text-center p-2">TAX Rate</th>
                     <th className="text-right p-2">Net</th>
                     <th className="text-right p-2">VAT</th>
                     <th className="text-right p-2">Gross</th>
@@ -994,7 +1009,9 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                         <Badge className="bg-green-100 text-green-700">Sale</Badge>
                       </td>
                       <td className="p-2 font-medium">{transaction.reference}</td>
-                      <td className="p-2">{transaction.description}</td>
+                      <td className="p-2">{transaction.customerName || transaction.description?.replace('Invoice - ', '') || 'Cash Sales'}</td>
+                      <td className="p-2">VAT</td>
+                      <td className="p-2 text-center">15.00</td>
                       <td className="p-2 text-right font-mono">R {transaction.netAmount}</td>
                       <td className="p-2 text-right font-mono text-green-600">R {transaction.vatAmount}</td>
                       <td className="p-2 text-right font-mono font-bold">R {transaction.grossAmount}</td>
@@ -1002,7 +1019,7 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                   ))}
                   {salesTransactions.length > 0 && (
                     <tr className="bg-gray-100 font-bold">
-                      <td colSpan={4} className="p-2">Total for Sales</td>
+                      <td colSpan={6} className="p-2">Total for Sales</td>
                       <td className="p-2 text-right font-mono">R {salesTotals.netAmount.toFixed(2)}</td>
                       <td className="p-2 text-right font-mono text-green-600">R {salesTotals.vatAmount.toFixed(2)}</td>
                       <td className="p-2 text-right font-mono">R {salesTotals.grossAmount.toFixed(2)}</td>
@@ -1028,7 +1045,9 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                     <th className="text-left p-2">Date</th>
                     <th className="text-left p-2">Type</th>
                     <th className="text-left p-2">Reference</th>
-                    <th className="text-left p-2">Description</th>
+                    <th className="text-left p-2">Name</th>
+                    <th className="text-left p-2">Tax Name</th>
+                    <th className="text-center p-2">TAX Rate</th>
                     <th className="text-right p-2">Net</th>
                     <th className="text-right p-2">VAT</th>
                     <th className="text-right p-2">Gross</th>
@@ -1042,7 +1061,9 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                         <Badge className="bg-red-100 text-red-700">Purchase</Badge>
                       </td>
                       <td className="p-2 font-medium">{transaction.reference || 'N/A'}</td>
-                      <td className="p-2">{transaction.description}</td>
+                      <td className="p-2">{transaction.supplierName || transaction.description || 'Supplier'}</td>
+                      <td className="p-2">VAT</td>
+                      <td className="p-2 text-center">15.00</td>
                       <td className="p-2 text-right font-mono">R {transaction.netAmount}</td>
                       <td className="p-2 text-right font-mono text-red-600">R {transaction.vatAmount}</td>
                       <td className="p-2 text-right font-mono font-bold">R {transaction.grossAmount}</td>
@@ -1050,7 +1071,7 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
                   ))}
                   {purchaseTransactions.length > 0 && (
                     <tr className="bg-gray-100 font-bold">
-                      <td colSpan={4} className="p-2">Total for Purchases</td>
+                      <td colSpan={6} className="p-2">Total for Purchases</td>
                       <td className="p-2 text-right font-mono">R {purchaseTotals.netAmount.toFixed(2)}</td>
                       <td className="p-2 text-right font-mono text-red-600">R {purchaseTotals.vatAmount.toFixed(2)}</td>
                       <td className="p-2 text-right font-mono">R {purchaseTotals.grossAmount.toFixed(2)}</td>
