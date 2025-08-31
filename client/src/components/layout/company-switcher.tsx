@@ -154,13 +154,17 @@ export default function CompanySwitcher() {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="flex items-center space-x-3 h-auto p-2 hover:bg-white/20 bg-white/10 border border-white/20 rounded-lg min-w-0 backdrop-blur-sm"
+          className="flex items-center space-x-3 h-auto px-3 py-2 hover:bg-white/20 bg-white/10 border border-white/20 rounded-lg min-w-[200px] backdrop-blur-sm"
         >
-          <Avatar className="h-10 w-10 flex-shrink-0 rounded-lg">
-            <AvatarFallback className="bg-primary text-white text-base font-semibold rounded-lg">
-              {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-8 w-12 flex-shrink-0 rounded-lg">
+              <AvatarFallback className="bg-primary text-white text-sm font-semibold rounded-lg">
+                {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
+              </AvatarFallback>
+            </Avatar>
+            {/* Green active indicator */}
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+          </div>
           <div className="flex-1 min-w-0 text-left">
             <div className="font-medium text-white truncate text-sm">
               {activeCompany.displayName || activeCompany.name}
