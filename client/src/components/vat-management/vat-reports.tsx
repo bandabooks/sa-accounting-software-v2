@@ -236,7 +236,312 @@ const VATReports: React.FC<VATReportsProps> = ({ companyId }) => {
     
     let printContent = '';
     
-    if (reportType === 'transactions' && data.transactions) {
+    if (reportType === 'summary') {
+      // Calculate VAT amounts for the summary report
+      const outputVat = parseFloat(data.summary?.outputVat || '0');
+      const inputVat = parseFloat(data.summary?.inputVat || '0');
+      const netVatPayable = parseFloat(data.summary?.netVatPayable || '0');
+      const totalSalesExcVat = parseFloat(data.summary?.totalSalesExcVat || '0');
+      const totalPurchasesExcVat = parseFloat(data.summary?.totalPurchasesExcVat || '0');
+      
+      printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>VAT Summary Report - SARS Format</title>
+          <style>
+            @page { 
+              size: A4;
+              margin: 15mm;
+            }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0;
+              padding: 20px;
+              font-size: 12px;
+              color: #333;
+            }
+            .header {
+              background: #6366f1;
+              color: white;
+              padding: 20px;
+              margin: -20px -20px 20px -20px;
+              text-align: center;
+            }
+            .header h1 { 
+              margin: 0;
+              font-size: 28px;
+              letter-spacing: 2px;
+            }
+            .header .subtitle {
+              margin-top: 5px;
+              font-size: 14px;
+              opacity: 0.9;
+            }
+            .report-title {
+              text-align: center;
+              color: #6366f1;
+              font-size: 24px;
+              margin: 30px 0;
+              font-weight: bold;
+            }
+            .report-info {
+              background: #f9fafb;
+              padding: 15px;
+              margin-bottom: 20px;
+              border-radius: 8px;
+            }
+            .report-info p {
+              margin: 5px 0;
+              font-size: 13px;
+            }
+            .section-title {
+              background: #f3f4f6;
+              padding: 10px 15px;
+              margin-top: 20px;
+              margin-bottom: 0;
+              font-size: 14px;
+              font-weight: bold;
+              border: 1px solid #d1d5db;
+              border-bottom: none;
+            }
+            .section-subtitle {
+              font-size: 10px;
+              font-weight: normal;
+              color: #6b7280;
+              margin-top: 3px;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-bottom: 20px;
+            }
+            th { 
+              background: #e5e7eb; 
+              padding: 8px; 
+              text-align: left;
+              font-weight: bold;
+              border: 1px solid #d1d5db;
+              font-size: 10px;
+              text-transform: uppercase;
+            }
+            td { 
+              padding: 8px 10px; 
+              border: 1px solid #d1d5db;
+              font-size: 11px;
+            }
+            .field-number {
+              font-weight: bold;
+              margin-right: 5px;
+            }
+            .amount {
+              text-align: right;
+              font-family: 'Courier New', monospace;
+            }
+            .formula {
+              text-align: center;
+              color: #6b7280;
+              font-size: 10px;
+            }
+            .total-row { 
+              background: #eff6ff;
+              font-weight: bold;
+            }
+            .net-vat-section {
+              margin-top: 30px;
+              border: 2px solid #8b5cf6;
+              border-radius: 8px;
+              padding: 20px;
+              background: #faf5ff;
+            }
+            .net-vat-title {
+              color: #7c3aed;
+              font-size: 18px;
+              margin-bottom: 20px;
+              text-align: center;
+              font-weight: bold;
+            }
+            .vat-summary-grid {
+              display: flex;
+              justify-content: space-around;
+              margin-bottom: 20px;
+            }
+            .vat-item {
+              text-align: center;
+            }
+            .vat-label {
+              font-size: 11px;
+              color: #6b7280;
+              margin-bottom: 5px;
+            }
+            .vat-amount {
+              font-size: 20px;
+              font-weight: bold;
+            }
+            .output-vat { color: #059669; }
+            .input-vat { color: #2563eb; }
+            .net-payable { color: #7c3aed; }
+            .final-amount {
+              text-align: center;
+              padding: 15px;
+              background: #8b5cf6;
+              color: white;
+              border-radius: 8px;
+              margin-top: 20px;
+            }
+            .final-label {
+              font-size: 12px;
+              margin-bottom: 5px;
+            }
+            .final-value {
+              font-size: 28px;
+              font-weight: bold;
+            }
+            @media print {
+              .header {
+                background: #6366f1 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .net-vat-section {
+                background: #faf5ff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .final-amount {
+                background: #8b5cf6 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>TAXNIFY</h1>
+            <div class="subtitle">Business & Compliance</div>
+          </div>
+          
+          <h1 class="report-title">VAT Summary Report</h1>
+          
+          <div class="report-info">
+            <p><strong>Report Period:</strong> ${data.period?.startDate || 'N/A'} to ${data.period?.endDate || 'N/A'}</p>
+            <p><strong>Generated:</strong> ${new Date().toLocaleDateString('en-ZA')}</p>
+          </div>
+          
+          <!-- Section A: Output Tax -->
+          <div class="section-title">
+            A: Calculation of Output Tax and Imported Services
+            <div class="section-subtitle">SUPPLY OF GOODS AND/OR SERVICES BY YOU</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50%">FIELD DESCRIPTION</th>
+                <th style="width: 20%">TAXABLE AMOUNT (EXCL)</th>
+                <th style="width: 15%">FORMULA</th>
+                <th style="width: 15%">VAT AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="field-number">1</span> Standard rate (excluding capital goods and/or services)</td>
+                <td class="amount">R ${totalSalesExcVat.toFixed(2)}</td>
+                <td class="formula">× 15 / (100+15)</td>
+                <td class="amount"><strong>R ${outputVat.toFixed(2)}</strong></td>
+              </tr>
+              <tr>
+                <td><span class="field-number">1A</span> Standard rate (only capital goods and/or services)</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">× 15 / (100+15)</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">2</span> Zero rate (excluding goods exported)</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">3</span> Exempt and non-supplies</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr class="total-row">
+                <td><span class="field-number">4</span> <strong>TOTAL A: TOTAL OUTPUT</strong></td>
+                <td class="amount"><strong>R ${totalSalesExcVat.toFixed(2)}</strong></td>
+                <td class="formula">-</td>
+                <td class="amount output-vat"><strong>R ${outputVat.toFixed(2)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Section B: Input Tax -->
+          <div class="section-title">
+            B: Calculation of Input Tax
+            <div class="section-subtitle">SUPPLY OF GOODS AND/OR SERVICES TO YOU</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50%">FIELD DESCRIPTION</th>
+                <th style="width: 20%">TAXABLE AMOUNT (EXCL)</th>
+                <th style="width: 15%">FORMULA</th>
+                <th style="width: 15%">VAT AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="field-number">14</span> Capital goods and/or services supplied to you</td>
+                <td class="amount">R ${totalPurchasesExcVat.toFixed(2)}</td>
+                <td class="formula">× 15 / (100+15)</td>
+                <td class="amount">R ${inputVat.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td><span class="field-number">15</span> Other goods and/or services supplied to you</td>
+                <td class="amount">R 0.00</td>
+                <td class="formula">-</td>
+                <td class="amount">R 0.00</td>
+              </tr>
+              <tr class="total-row">
+                <td><span class="field-number">19</span> <strong>TOTAL B: TOTAL INPUT</strong></td>
+                <td class="amount"><strong>R ${totalPurchasesExcVat.toFixed(2)}</strong></td>
+                <td class="formula">-</td>
+                <td class="amount input-vat"><strong>R ${inputVat.toFixed(2)}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Net VAT Due -->
+          <div class="net-vat-section">
+            <h2 class="net-vat-title">Net VAT Due</h2>
+            <div class="vat-summary-grid">
+              <div class="vat-item">
+                <div class="vat-label">OUTPUT VAT (Sales)</div>
+                <div class="vat-amount output-vat">R ${outputVat.toFixed(2)}</div>
+              </div>
+              <div class="vat-item">
+                <div class="vat-label">INPUT VAT (Purchases)</div>
+                <div class="vat-amount input-vat">R ${inputVat.toFixed(2)}</div>
+              </div>
+            </div>
+            <div class="final-amount">
+              <div class="final-label"><strong>20</strong> NET VAT PAYABLE</div>
+              <div class="final-value">R ${netVatPayable.toFixed(2)}</div>
+              <div style="font-size: 10px; margin-top: 5px;">Amount PAYABLE to SARS</div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 30px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+            <h3 style="font-size: 14px; margin-bottom: 10px;">TRANSACTION SUMMARY</h3>
+            <p style="margin: 5px 0;">Total Invoices: ${data.transactions?.invoiceCount || 0}</p>
+            <p style="margin: 5px 0;">Total Expenses: ${data.transactions?.expenseCount || 0}</p>
+          </div>
+        </body>
+        </html>
+      `;
+    } else if (reportType === 'transactions' && data.transactions) {
       // Group transactions by type
       const salesTransactions = Array.isArray(data.transactions) 
         ? data.transactions.filter((t: any) => t.type === 'Sale')
@@ -870,60 +1175,170 @@ const ReportPreview = ({ reportType, data }: { reportType: string; data: any }) 
   if (!data) return <div>No data available</div>;
 
   if (reportType === 'summary') {
+    // Calculate VAT amounts from the data
+    const outputVat = parseFloat(data.summary?.outputVat || '0');
+    const inputVat = parseFloat(data.summary?.inputVat || '0');
+    const netVatPayable = parseFloat(data.summary?.netVatPayable || '0');
+    const totalSalesIncVat = parseFloat(data.summary?.totalSalesIncVat || '0');
+    const totalSalesExcVat = parseFloat(data.summary?.totalSalesExcVat || '0');
+    const totalPurchasesIncVat = parseFloat(data.summary?.totalPurchasesIncVat || '0');
+    const totalPurchasesExcVat = parseFloat(data.summary?.totalPurchasesExcVat || '0');
+
     return (
       <div className="space-y-6">
+        {/* Header Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Period</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Period</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm">
                 {data.period?.startDate} to {data.period?.endDate}
               </p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Transactions</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm">
                 {data.transactions?.invoiceCount || 0} Sales, {data.transactions?.expenseCount || 0} Purchases
               </p>
             </CardContent>
           </Card>
         </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>VAT Summary</CardTitle>
+
+        {/* SARS Block Format - Section A: Output Tax */}
+        <Card className="border-2">
+          <CardHeader className="bg-gray-50 border-b">
+            <CardTitle className="text-lg">A: Calculation of Output Tax and Imported Services</CardTitle>
+            <p className="text-xs text-gray-600 mt-1">SUPPLY OF GOODS AND/OR SERVICES BY YOU</p>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <Label className="text-xs text-gray-500">Output VAT</Label>
-                <p className="text-lg font-semibold text-green-600">
-                  R {data.summary?.outputVat || '0.00'}
-                </p>
+          <CardContent className="p-0">
+            <table className="w-full">
+              <thead className="bg-gray-100">
+                <tr className="text-xs">
+                  <th className="text-left p-3 border-r">FIELD DESCRIPTION</th>
+                  <th className="text-center p-3 border-r">TAXABLE AMOUNT (EXCL)</th>
+                  <th className="text-center p-3 border-r">FORMULA</th>
+                  <th className="text-right p-3">VAT AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">1</span> Standard rate (excluding capital goods and/or services and accommodation)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R {totalSalesExcVat.toFixed(2)}</td>
+                  <td className="text-center p-3 border-r text-gray-500">× 15 / (100+15)</td>
+                  <td className="text-right p-3 font-mono font-bold">R {outputVat.toFixed(2)}</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">1A</span> Standard rate (only capital goods and/or services)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">× 15 / (100+15)</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">2</span> Zero rate (excluding goods exported)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">3</span> Exempt and non-supplies
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="bg-blue-50 font-bold">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">4</span> TOTAL A: TOTAL OUTPUT (1 + 1A + Other)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R {totalSalesExcVat.toFixed(2)}</td>
+                  <td className="text-center p-3 border-r">-</td>
+                  <td className="text-right p-3 font-mono text-green-600">R {outputVat.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        {/* SARS Block Format - Section B: Input Tax */}
+        <Card className="border-2">
+          <CardHeader className="bg-gray-50 border-b">
+            <CardTitle className="text-lg">B: Calculation of Input Tax</CardTitle>
+            <p className="text-xs text-gray-600 mt-1">SUPPLY OF GOODS AND/OR SERVICES TO YOU</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <table className="w-full">
+              <thead className="bg-gray-100">
+                <tr className="text-xs">
+                  <th className="text-left p-3 border-r">FIELD DESCRIPTION</th>
+                  <th className="text-center p-3 border-r">TAXABLE AMOUNT (EXCL)</th>
+                  <th className="text-center p-3 border-r">FORMULA</th>
+                  <th className="text-right p-3">VAT AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">14</span> Capital goods and/or services supplied to you
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R {totalPurchasesExcVat.toFixed(2)}</td>
+                  <td className="text-center p-3 border-r text-gray-500">× 15 / (100+15)</td>
+                  <td className="text-right p-3 font-mono">R {inputVat.toFixed(2)}</td>
+                </tr>
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">15</span> Other goods and/or services supplied to you (not capital goods)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R 0.00</td>
+                  <td className="text-center p-3 border-r text-gray-500">-</td>
+                  <td className="text-right p-3 font-mono">R 0.00</td>
+                </tr>
+                <tr className="bg-blue-50 font-bold">
+                  <td className="p-3 border-r">
+                    <span className="font-medium">19</span> TOTAL B: TOTAL INPUT (14 + 15 + Other)
+                  </td>
+                  <td className="text-right p-3 border-r font-mono">R {totalPurchasesExcVat.toFixed(2)}</td>
+                  <td className="text-center p-3 border-r">-</td>
+                  <td className="text-right p-3 font-mono text-blue-600">R {inputVat.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        {/* Net VAT Due Section */}
+        <Card className="border-2 border-purple-500">
+          <CardHeader className="bg-purple-50 border-b">
+            <CardTitle className="text-lg">Net VAT Due</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-2">Total Output VAT (A)</p>
+                <p className="text-2xl font-bold text-green-600">R {outputVat.toFixed(2)}</p>
               </div>
-              <div>
-                <Label className="text-xs text-gray-500">Input VAT</Label>
-                <p className="text-lg font-semibold text-blue-600">
-                  R {data.summary?.inputVat || '0.00'}
-                </p>
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-2">Total Input VAT (B)</p>
+                <p className="text-2xl font-bold text-blue-600">R {inputVat.toFixed(2)}</p>
               </div>
-              <div>
-                <Label className="text-xs text-gray-500">Net VAT Payable</Label>
-                <p className="text-lg font-semibold text-purple-600">
-                  R {data.summary?.netVatPayable || '0.00'}
+              <div className="text-center bg-purple-100 rounded-lg p-4">
+                <p className="text-sm font-medium text-purple-700 mb-2">
+                  <span className="font-bold">20</span> VAT PAYABLE/REFUNDABLE
                 </p>
-              </div>
-              <div>
-                <Label className="text-xs text-gray-500">Net VAT Refund</Label>
-                <p className="text-lg font-semibold text-orange-600">
-                  R {data.summary?.netVatRefund || '0.00'}
-                </p>
+                <p className="text-3xl font-bold text-purple-800">R {netVatPayable.toFixed(2)}</p>
+                <p className="text-xs text-gray-600 mt-2">(Total A - Total B)</p>
               </div>
             </div>
           </CardContent>
