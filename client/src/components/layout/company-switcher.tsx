@@ -156,8 +156,8 @@ export default function CompanySwitcher() {
           variant="ghost" 
           className="flex items-center space-x-3 h-auto p-2 hover:bg-white/20 bg-white/10 border border-white/20 rounded-lg min-w-0 backdrop-blur-sm"
         >
-          <Avatar className="h-8 w-8 flex-shrink-0 rounded-lg">
-            <AvatarFallback className="bg-primary text-white text-sm font-medium rounded-lg">
+          <Avatar className="h-10 w-10 flex-shrink-0 rounded-lg">
+            <AvatarFallback className="bg-primary text-white text-base font-semibold rounded-lg">
               {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
             </AvatarFallback>
           </Avatar>
