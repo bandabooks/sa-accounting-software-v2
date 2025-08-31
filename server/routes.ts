@@ -242,6 +242,40 @@ const logoUpload = multer({
   }
 });
 
+// Configure multer for profile picture uploads
+const profilePictureStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/profile-pictures';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = `profile-${Date.now()}${ext}`;
+    cb(null, filename);
+  }
+});
+
+const profilePictureUpload = multer({
+  storage: profilePictureStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PNG, JPG, and GIF files are allowed.'));
+    }
+  }
+});
+
 // Configure multer for bank statement uploads
 const bankStatementStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -1228,6 +1262,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Profile picture upload endpoint
+  app.post("/api/auth/upload-profile-picture", authenticate, profilePictureUpload.single('profilePicture'), async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const filePath = `/uploads/profile-pictures/${req.file.filename}`;
+      
+      // Update user's profile picture path in database
+      const updatedUser = await storage.updateUser(req.user!.id, { 
+        profilePicture: filePath 
+      });
+      
+      res.json({ 
+        message: "Profile picture uploaded successfully", 
+        profilePicture: filePath,
+        user: updatedUser 
+      });
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      res.status(500).json({ message: "Failed to upload profile picture" });
     }
   });
 
