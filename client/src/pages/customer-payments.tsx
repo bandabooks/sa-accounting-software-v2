@@ -136,7 +136,7 @@ export default function CustomerPaymentsPage() {
   };
 
   const printReceipt = (payment: any) => {
-    // Generate professional payment receipt
+    // Generate formal business payment receipt with full company details
     const currentDate = new Date().toLocaleDateString('en-ZA', {
       year: 'numeric',
       month: 'long',
@@ -153,155 +153,227 @@ export default function CustomerPaymentsPage() {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Payment Receipt #${payment.id}</title>
+            <title>Payment Receipt for Invoice ${payment.invoiceNumber}</title>
             <style>
               @media print {
-                body { margin: 0; padding: 20px; }
+                body { margin: 0; padding: 15mm; }
                 .no-print { display: none; }
               }
               body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                max-width: 400px;
+                max-width: 210mm;
                 margin: 0 auto;
                 padding: 20px;
                 background: white;
-                line-height: 1.4;
+                line-height: 1.5;
+                color: #333;
               }
               .header {
-                text-align: center;
-                border-bottom: 2px solid #333;
-                padding-bottom: 15px;
-                margin-bottom: 20px;
-              }
-              .company-name {
-                font-size: 24px;
-                font-weight: bold;
-                color: #2563eb;
-                margin-bottom: 5px;
-              }
-              .document-title {
-                font-size: 18px;
-                font-weight: bold;
-                color: #333;
-                margin: 10px 0;
-              }
-              .receipt-details {
-                background: #f8fafc;
-                padding: 15px;
-                border-radius: 8px;
-                margin: 15px 0;
-              }
-              .detail-row {
                 display: flex;
                 justify-content: space-between;
-                padding: 5px 0;
-                border-bottom: 1px dotted #ddd;
+                margin-bottom: 30px;
+                padding-bottom: 20px;
+                border-bottom: 2px solid #e5e7eb;
               }
-              .detail-row:last-child {
-                border-bottom: none;
+              .company-info {
+                flex: 1;
               }
-              .label {
+              .customer-info {
+                flex: 1;
+                text-align: right;
+              }
+              .company-name {
+                font-size: 20px;
+                font-weight: bold;
+                color: #1f2937;
+                margin-bottom: 8px;
+              }
+              .company-details, .customer-details {
+                font-size: 14px;
+                line-height: 1.6;
+                color: #6b7280;
+              }
+              .document-title {
+                text-align: center;
+                font-size: 28px;
+                font-weight: bold;
+                color: #1f2937;
+                margin: 30px 0;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              }
+              .payment-summary {
+                display: flex;
+                justify-content: space-between;
+                margin: 30px 0;
+                gap: 40px;
+              }
+              .payment-details {
+                flex: 1;
+              }
+              .payment-amount {
+                flex: 1;
+                text-align: right;
+              }
+              .detail-group {
+                margin-bottom: 20px;
+              }
+              .detail-label {
                 font-weight: 600;
                 color: #374151;
+                margin-bottom: 5px;
               }
-              .value {
-                color: #111827;
+              .detail-value {
+                color: #1f2937;
+                font-size: 16px;
+              }
+              .amount-highlight {
+                background: #f0f9ff;
+                border: 2px solid #0ea5e9;
+                border-radius: 8px;
+                padding: 20px;
+                text-align: center;
+              }
+              .amount-label {
+                font-size: 16px;
+                color: #374151;
+                margin-bottom: 10px;
+              }
+              .amount-value {
+                font-size: 32px;
+                font-weight: bold;
+                color: #0ea5e9;
+              }
+              .invoice-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 30px 0;
+                background: white;
+              }
+              .invoice-table th {
+                background: #f8fafc;
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                color: #374151;
+                border-bottom: 2px solid #e5e7eb;
+              }
+              .invoice-table td {
+                padding: 12px;
+                border-bottom: 1px solid #f1f5f9;
+              }
+              .invoice-table .amount {
                 text-align: right;
                 font-weight: 500;
               }
-              .amount-section {
-                background: #e7f3ff;
-                padding: 15px;
-                border-radius: 8px;
-                margin: 20px 0;
-                border-left: 4px solid #2563eb;
-              }
-              .amount-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 18px;
-                font-weight: bold;
-                color: #1f2937;
-              }
               .footer {
-                text-align: center;
-                margin-top: 30px;
-                padding-top: 15px;
+                margin-top: 50px;
+                padding-top: 20px;
                 border-top: 1px solid #e5e7eb;
+                text-align: center;
                 font-size: 14px;
                 color: #6b7280;
               }
               .thank-you {
-                font-size: 16px;
+                font-size: 18px;
                 font-weight: 600;
-                color: #2563eb;
-                margin-bottom: 10px;
+                color: #059669;
+                margin-bottom: 15px;
               }
-              .receipt-number {
-                font-size: 14px;
-                color: #6b7280;
+              .terms {
                 margin-top: 20px;
-              }
-              .date-time {
                 font-size: 12px;
                 color: #9ca3af;
-                margin-top: 5px;
               }
             </style>
           </head>
           <body>
             <div class="header">
-              <div class="company-name">TAXNIFY</div>
-              <div style="font-size: 14px; color: #6b7280;">Business Management Platform</div>
-              <div class="document-title">PAYMENT RECEIPT</div>
+              <div class="company-info">
+                <div class="company-name">Think Mybiz Accountants</div>
+                <div class="company-details">
+                  No 48 Rabe Street<br>
+                  Mokopane Limpopo<br>
+                  South Africa 0600<br>
+                  <br>
+                  <strong>VAT Number:</strong> 4010320630<br>
+                  <strong>Phone:</strong> 0662105631<br>
+                  <strong>Email:</strong> accounts@thinkmybiz.io<br>
+                  <strong>Tax Number:</strong> 9074469272<br>
+                  <strong>Company Reg No:</strong> 2021/819201/07
+                </div>
+              </div>
+              <div class="customer-info">
+                <div class="customer-details">
+                  <strong>${payment.customerName || 'Valued Customer'}</strong><br>
+                  ${payment.customerAddress || ''}<br>
+                  ${payment.customerCity || ''}<br>
+                  ${payment.customerPostal || ''}<br>
+                  <br>
+                  ${payment.customerVatNumber ? `<strong>VAT Number:</strong> ${payment.customerVatNumber}<br>` : ''}
+                  ${payment.customerTaxNumber ? `<strong>Tax No:</strong> ${payment.customerTaxNumber}<br>` : ''}
+                </div>
+              </div>
             </div>
             
-            <div class="receipt-details">
-              <div class="detail-row">
-                <span class="label">Receipt No:</span>
-                <span class="value">#${payment.id.toString().padStart(4, '0')}</span>
+            <div class="document-title">Payment Receipt</div>
+            
+            <div class="payment-summary">
+              <div class="payment-details">
+                <div class="detail-group">
+                  <div class="detail-label">Payment Date:</div>
+                  <div class="detail-value">${new Date(payment.paymentDate).toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                </div>
+                <div class="detail-group">
+                  <div class="detail-label">Payment Mode:</div>
+                  <div class="detail-value">${(payment.paymentMethod || 'Bank Transfer').replace('_', ' ')}</div>
+                </div>
+                ${payment.reference ? `
+                <div class="detail-group">
+                  <div class="detail-label">Reference:</div>
+                  <div class="detail-value">${payment.reference}</div>
+                </div>
+                ` : ''}
               </div>
-              <div class="detail-row">
-                <span class="label">Customer:</span>
-                <span class="value">${payment.customerName || 'Walk-in Customer'}</span>
+              <div class="payment-amount">
+                <div class="amount-highlight">
+                  <div class="amount-label">Total Amount</div>
+                  <div class="amount-value">${formatCurrency(payment.amount)}</div>
+                </div>
               </div>
-              <div class="detail-row">
-                <span class="label">Invoice:</span>
-                <span class="value">${payment.invoiceNumber || 'N/A'}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Payment Date:</span>
-                <span class="value">${new Date(payment.paymentDate).toLocaleDateString('en-ZA')}</span>
-              </div>
-              <div class="detail-row">
-                <span class="label">Payment Method:</span>
-                <span class="value">${(payment.paymentMethod || 'Cash').replace('_', ' ').toUpperCase()}</span>
-              </div>
-              ${payment.reference ? `
-              <div class="detail-row">
-                <span class="label">Reference:</span>
-                <span class="value">${payment.reference}</span>
-              </div>
-              ` : ''}
             </div>
             
-            <div class="amount-section">
-              <div class="amount-row">
-                <span>AMOUNT PAID:</span>
-                <span>${formatCurrency(payment.amount)}</span>
-              </div>
-            </div>
+            <table class="invoice-table">
+              <thead>
+                <tr>
+                  <th>Invoice Number</th>
+                  <th>Invoice Date</th>
+                  <th class="amount">Invoice Amount</th>
+                  <th class="amount">Payment Amount</th>
+                  <th class="amount">Amount Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${payment.invoiceNumber || 'INV-' + payment.id.toString().padStart(6, '0')}</td>
+                  <td>${payment.invoiceDate ? new Date(payment.invoiceDate).toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : new Date(payment.paymentDate).toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                  <td class="amount">${formatCurrency(payment.invoiceAmount || payment.amount)}</td>
+                  <td class="amount">${formatCurrency(payment.amount)}</td>
+                  <td class="amount" style="color: ${(payment.invoiceAmount || payment.amount) - payment.amount > 0 ? '#dc2626' : '#059669'};">
+                    ${formatCurrency(Math.max(0, (payment.invoiceAmount || payment.amount) - payment.amount))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
             
             <div class="footer">
               <div class="thank-you">Thank you for your payment!</div>
-              <div>This serves as your official payment receipt.</div>
-              <div>Please retain this receipt for your records.</div>
+              <div><strong>This serves as your official payment receipt.</strong></div>
+              <div>Please retain this receipt for your records and tax purposes.</div>
               
-              <div class="receipt-number">
-                Receipt generated on ${currentDate} at ${currentTime}
-              </div>
-              <div class="date-time">
+              <div class="terms">
+                Receipt generated on ${currentDate} at ${currentTime}<br>
+                This document was generated electronically and is valid without signature.<br>
                 Powered by Taxnify Business Management Platform
               </div>
             </div>
@@ -310,7 +382,7 @@ export default function CustomerPaymentsPage() {
               window.onload = function() {
                 setTimeout(function() {
                   window.print();
-                }, 500);
+                }, 800);
               }
             </script>
           </body>
