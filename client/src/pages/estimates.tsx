@@ -6,7 +6,8 @@ import {
   BarChart3, TrendingUp, Target, Award, Calendar, Filter,
   Search, Download, MoreHorizontal, Edit, Star, Users,
   DollarSign, Percent, ArrowRight, ChevronRight, Zap,
-  Pencil, Copy, Trash2
+  Pencil, Copy, Trash2, ChevronDown, ChevronUp, Settings,
+  Building2, Wrench, Briefcase, Globe, Smartphone, Car
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,8 @@ export default function Estimates() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailData, setEmailData] = useState({ to: "", subject: "", message: "" });
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const [templatesExpanded, setTemplatesExpanded] = useState(false);
+  const [templateManageModal, setTemplateManageModal] = useState(false);
   
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -290,7 +293,7 @@ export default function Estimates() {
     sendEstimateMutation.mutate(id);
   };
 
-  // Sample templates data
+  // Comprehensive sales pipeline templates
   const templates: EstimateTemplate[] = [
     {
       id: "1",
@@ -315,8 +318,65 @@ export default function Estimates() {
       thumbnail: "💼",
       category: "Consulting",
       usage: 64
+    },
+    {
+      id: "4",
+      name: "Construction Estimate",
+      description: "Building and construction projects",
+      thumbnail: "🏗️",
+      category: "Construction",
+      usage: 78
+    },
+    {
+      id: "5",
+      name: "Digital Marketing Package",
+      description: "Marketing services and campaigns",
+      thumbnail: "📱",
+      category: "Marketing",
+      usage: 91
+    },
+    {
+      id: "6",
+      name: "IT Services Quote",
+      description: "Technology and IT consulting",
+      thumbnail: "💻",
+      category: "Technology",
+      usage: 83
+    },
+    {
+      id: "7",
+      name: "Event Planning Proposal",
+      description: "Corporate and private events",
+      thumbnail: "🎉",
+      category: "Events",
+      usage: 67
+    },
+    {
+      id: "8",
+      name: "Legal Services Quote",
+      description: "Legal consultation and services",
+      thumbnail: "⚖️",
+      category: "Legal",
+      usage: 59
+    },
+    {
+      id: "9",
+      name: "Vehicle Sales Quote",
+      description: "Automotive sales and services",
+      thumbnail: "🚗",
+      category: "Automotive",
+      usage: 74
     }
   ];
+
+  const handleCreateFromTemplate = (template: EstimateTemplate) => {
+    // Navigate to new estimate with template data
+    setLocation(`/estimates/new?template=${template.id}`);
+    toast({
+      title: "Template Selected",
+      description: `Creating new estimate from ${template.name} template.`,
+    });
+  };
 
   // Group estimates by status for pipeline view
   const pipelineStages = [
@@ -430,46 +490,111 @@ export default function Estimates() {
           </div>
         </div>
 
-        {/* Template Gallery Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-800">Quick Start Templates</h2>
-            <Button variant="outline" className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <Plus className="h-4 w-4 mr-2" />
-              Manage Templates
-            </Button>
-          </div>
+        {/* Collapsible Template Gallery Section */}
+        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
+          <CardHeader 
+            className="cursor-pointer hover:bg-gray-50/50 transition-colors"
+            onClick={() => setTemplatesExpanded(!templatesExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-gray-800">Quick Start Templates</CardTitle>
+                  <CardDescription>Professional estimate templates for faster sales pipeline</CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                  {templates.length} Templates
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTemplateManageModal(true);
+                  }}
+                  className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Manage Templates
+                </Button>
+                {templatesExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
+            </div>
+          </CardHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {templates.map((template) => (
-              <Card key={template.id} className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer group">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="text-4xl">{template.thumbnail}</div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-semibold text-gray-800 group-hover:text-purple-600 transition-colors">
-                        {template.name}
-                      </CardTitle>
-                      <CardDescription>{template.description}</CardDescription>
-                    </div>
+          {templatesExpanded && (
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {templates.map((template) => (
+                  <Card 
+                    key={template.id} 
+                    className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer group"
+                    onClick={() => handleCreateFromTemplate(template)}
+                  >
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="text-4xl transition-transform group-hover:scale-110">
+                          {template.thumbnail}
+                        </div>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-gray-800 group-hover:text-purple-600 transition-colors">
+                            {template.name}
+                          </CardTitle>
+                          <CardDescription className="text-sm">{template.description}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Usage Rate</span>
+                          <span className="font-semibold text-gray-800">{template.usage}%</span>
+                        </div>
+                        <Progress value={template.usage} className="h-2" />
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className="text-purple-600 border-purple-300">
+                            {template.category}
+                          </Badge>
+                          <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+                            <Plus className="h-3 w-3 mr-1" />
+                            Use Template
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {/* Template Categories Filter */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-700">Filter by category:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(new Set(templates.map(t => t.category))).map((category) => (
+                      <Badge 
+                        key={category}
+                        variant="outline" 
+                        className="cursor-pointer hover:bg-purple-100 hover:border-purple-300 transition-colors"
+                      >
+                        {category}
+                      </Badge>
+                    ))}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Usage Rate</span>
-                      <span className="font-semibold text-gray-800">{template.usage}%</span>
-                    </div>
-                    <Progress value={template.usage} className="h-2" />
-                    <Badge variant="outline" className="text-purple-600 border-purple-300">
-                      {template.category}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+                </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
 
         {/* Pipeline View or Table View */}
         {viewMode === "pipeline" ? (
@@ -788,6 +913,133 @@ export default function Estimates() {
               disabled={sendEmailMutation.isPending || !emailData.to}
             >
               {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Management Modal */}
+      <Dialog open={templateManageModal} onOpenChange={setTemplateManageModal}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Settings className="h-5 w-5" />
+              Manage Templates
+            </DialogTitle>
+            <DialogDescription>
+              Create, edit, and organize your estimate templates for faster sales pipeline management.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Template Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{templates.length}</div>
+                    <div className="text-sm text-gray-600">Total Templates</div>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">
+                      {Math.round(templates.reduce((sum, t) => sum + t.usage, 0) / templates.length)}%
+                    </div>
+                    <div className="text-sm text-gray-600">Avg Usage</div>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Target className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">
+                      {Array.from(new Set(templates.map(t => t.category))).length}
+                    </div>
+                    <div className="text-sm text-gray-600">Categories</div>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Star className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">
+                      {templates.filter(t => t.usage > 80).length}
+                    </div>
+                    <div className="text-sm text-gray-600">Popular</div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Template List with Actions */}
+            <div className="border rounded-lg">
+              <div className="p-4 border-b bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Template Library</h3>
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                    <Plus className="h-4 w-4 mr-1" />
+                    New Template
+                  </Button>
+                </div>
+              </div>
+              <div className="divide-y">
+                {templates.map((template) => (
+                  <div key={template.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="text-2xl">{template.thumbnail}</div>
+                        <div>
+                          <div className="font-medium">{template.name}</div>
+                          <div className="text-sm text-gray-600">{template.description}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {template.category}
+                            </Badge>
+                            <span className="text-xs text-gray-500">
+                              {template.usage}% usage rate
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTemplateManageModal(false)}>
+              Close
+            </Button>
+            <Button>
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
