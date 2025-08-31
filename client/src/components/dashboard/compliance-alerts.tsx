@@ -77,7 +77,7 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
           setLocation('/inventory?filter=low-stock');
           break;
         case 'vat':
-          setLocation('/vat-returns');
+          setLocation('/vat-management?tab=returns');
           break;
         case 'compliance':
           setLocation('/compliance-center');
@@ -108,7 +108,7 @@ export default function ComplianceAlerts({ alerts }: ComplianceAlertsProps) {
         setLocation('/inventory?filter=low-stock');
         break;
       case 'vat':
-        setLocation('/vat-returns');
+        setLocation('/vat-management?tab=returns');
         break;
       case 'compliance':
         setLocation('/compliance-center');
