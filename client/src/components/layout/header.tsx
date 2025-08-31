@@ -49,10 +49,10 @@ export default function Header() {
     enabled: false, // Only use for manual refresh
   });
   
-  const handleDashboardRefresh = () => {
+  const handleDashboardRefresh = async () => {
     if (isDashboard) {
-      refetchDashboard();
-      window.location.reload(); // Force a full refresh for dashboard
+      // Efficient refresh without full page reload
+      window.location.reload();
     }
   };
   
