@@ -8731,7 +8731,7 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
               </thead>
               <tbody>
                 <tr>
-                  <td><span class="field-number">1</span> Standard rate (excluding capital goods and/or services)</td>
+                  <td><span class="field-number">1</span> Standard rate (excluding capital goods and/or services and accommodation)</td>
                   <td class="amount">R ${totalSalesExcVat.toFixed(2)}</td>
                   <td class="formula">× 15 / (100+15)</td>
                   <td class="amount"><strong>R ${outputVat.toFixed(2)}</strong></td>
@@ -8749,14 +8749,86 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
                   <td class="amount">R 0.00</td>
                 </tr>
                 <tr>
+                  <td><span class="field-number">2A</span> Zero rate (only exported goods)</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
                   <td><span class="field-number">3</span> Exempt and non-supplies</td>
                   <td class="amount">R 0.00</td>
                   <td class="formula">-</td>
                   <td class="amount">R 0.00</td>
                 </tr>
+                <tr>
+                  <td><span class="field-number">4</span> VAT on Standard Rate Goods and Services</td>
+                  <td class="amount">-</td>
+                  <td class="formula">-</td>
+                  <td class="amount"><strong>R ${outputVat.toFixed(2)}</strong></td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">4A</span> VAT on Capital Goods and Services at Standard Rate</td>
+                  <td class="amount">-</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr style="background: #f3f4f6;">
+                  <td colspan="4"><strong>SUPPLY OF ACCOMMODATION</strong></td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">5</span> Exceeding 28 days</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">× 60%</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">6</span> -</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">7</span> Value Not Exceeding 28 days</td>
+                  <td class="amount">-</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">8</span> Total (6+7)</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">× 15 / 100</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">9</span> -</td>
+                  <td class="amount">-</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr style="background: #f3f4f6;">
+                  <td colspan="4"><strong>ADJUSTMENTS</strong></td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">10</span> Change in use and export of second-hand goods</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">× 15 / (100+15)</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">11</span> VAT on Change in use and Export of second-hand goods</td>
+                  <td class="amount">-</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">12</span> Other and imported services</td>
+                  <td class="amount">-</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
                 <tr class="total-row">
-                  <td><span class="field-number">4</span> <strong>TOTAL A: TOTAL OUTPUT</strong></td>
-                  <td class="amount"><strong>R ${totalSalesExcVat.toFixed(2)}</strong></td>
+                  <td><span class="field-number">13</span> <strong>TOTAL A: TOTAL OUTPUT TAX (4 + 4A + 11 + 12)</strong></td>
+                  <td class="amount">-</td>
                   <td class="formula">-</td>
                   <td class="amount output-vat"><strong>R ${outputVat.toFixed(2)}</strong></td>
                 </tr>
@@ -8780,18 +8852,48 @@ Net VAT Payable: R ${summary.summary.netVatPayable}`;
               <tbody>
                 <tr>
                   <td><span class="field-number">14</span> Capital goods and/or services supplied to you</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">14A</span> Capital goods imported by you</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">15</span> Other goods and/or services supplied to you (not capital goods)</td>
                   <td class="amount">R ${totalPurchasesExcVat.toFixed(2)}</td>
                   <td class="formula">× 15 / (100+15)</td>
                   <td class="amount">R ${inputVat.toFixed(2)}</td>
                 </tr>
                 <tr>
-                  <td><span class="field-number">15</span> Other goods and/or services supplied to you</td>
+                  <td><span class="field-number">15A</span> Other goods imported by you</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">16</span> Change in use (Input VAT Adjustments)</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">17</span> Bad debts (Input VAT Adjustments)</td>
+                  <td class="amount">R 0.00</td>
+                  <td class="formula">-</td>
+                  <td class="amount">R 0.00</td>
+                </tr>
+                <tr>
+                  <td><span class="field-number">18</span> Other input VAT adjustments</td>
                   <td class="amount">R 0.00</td>
                   <td class="formula">-</td>
                   <td class="amount">R 0.00</td>
                 </tr>
                 <tr class="total-row">
-                  <td><span class="field-number">19</span> <strong>TOTAL B: TOTAL INPUT</strong></td>
+                  <td><span class="field-number">19</span> <strong>TOTAL B: TOTAL INPUT (14 + 14A + 15 + 15A + 16 + 17 + 18)</strong></td>
                   <td class="amount"><strong>R ${totalPurchasesExcVat.toFixed(2)}</strong></td>
                   <td class="formula">-</td>
                   <td class="amount input-vat"><strong>R ${inputVat.toFixed(2)}</strong></td>
