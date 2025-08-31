@@ -6,7 +6,7 @@ import {
   DollarSign, TrendingUp, Users, Calendar, Filter, Search, Download,
   MoreHorizontal, CreditCard, Zap, Target, Award, ArrowUpRight,
   BarChart3, PieChart, Timer, Bell, Star, Building, Copy, Mail,
-  Pencil, ChevronLeft, ChevronRight
+  Pencil, ChevronLeft, ChevronRight, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,8 @@ interface AgingBucket {
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
+  const [isAgingAnalysisExpanded, setIsAgingAnalysisExpanded] = useState(false);
   
   // Navigation functions for invoice cards
   const getNextInvoice = (currentId: number) => {
@@ -318,31 +319,43 @@ export default function Invoices() {
 
         {/* Aging Analysis Section */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-800">Aging Analysis</h2>
-            <Badge variant="outline" className="text-gray-600">
-              Total Outstanding: {formatCurrency(totalOutstanding.toString())}
-            </Badge>
+          <div 
+            className="flex items-center justify-between cursor-pointer p-4 bg-white/80 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+            onClick={() => setIsAgingAnalysisExpanded(!isAgingAnalysisExpanded)}
+          >
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-gray-800">Aging Analysis</h2>
+              <Badge variant="outline" className="text-gray-600">
+                Total Outstanding: {formatCurrency(totalOutstanding.toString())}
+              </Badge>
+            </div>
+            <ChevronDown 
+              className={`h-5 w-5 text-gray-600 transition-transform duration-300 ${
+                isAgingAnalysisExpanded ? 'rotate-180' : ''
+              }`}
+            />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {agingBuckets.map((bucket, index) => (
-              <Card key={index} className={`border-0 shadow-xl bg-gradient-to-br ${bucket.color} text-white transform hover:scale-105 transition-all duration-300 h-24 flex flex-col justify-between`}>
-                <CardHeader className="pb-1 pt-3">
-                  <CardTitle className="text-sm font-semibold text-white opacity-90 leading-tight">{bucket.range}</CardTitle>
-                  <CardDescription className="text-white/80 text-xs leading-tight">{bucket.count} invoice{bucket.count !== 1 ? 's' : ''}</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0 pb-3">
-                  <div className="text-lg font-bold text-white leading-tight">
-                    {formatCurrency(bucket.amount.toString())}
-                  </div>
-                  <div className="text-xs text-white/80 leading-tight">
-                    {totalOutstanding > 0 ? Math.round((bucket.amount / totalOutstanding) * 100) : 0}% of total
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {isAgingAnalysisExpanded && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in slide-in-from-top-2 duration-300">
+              {agingBuckets.map((bucket, index) => (
+                <Card key={index} className={`border-0 shadow-xl bg-gradient-to-br ${bucket.color} text-white transform hover:scale-105 transition-all duration-300 h-24 flex flex-col justify-between`}>
+                  <CardHeader className="pb-1 pt-3">
+                    <CardTitle className="text-sm font-semibold text-white opacity-90 leading-tight">{bucket.range}</CardTitle>
+                    <CardDescription className="text-white/80 text-xs leading-tight">{bucket.count} invoice{bucket.count !== 1 ? 's' : ''}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0 pb-3">
+                    <div className="text-lg font-bold text-white leading-tight">
+                      {formatCurrency(bucket.amount.toString())}
+                    </div>
+                    <div className="text-xs text-white/80 leading-tight">
+                      {totalOutstanding > 0 ? Math.round((bucket.amount / totalOutstanding) * 100) : 0}% of total
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Invoice Grid or Table */}
