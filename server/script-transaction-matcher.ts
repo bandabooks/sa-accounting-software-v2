@@ -236,6 +236,25 @@ export class ScriptTransactionMatcher {
     
     console.log(`\nMatching: "${transaction.description}" (${transaction.type}, amount: ${transaction.amount})`);
     
+    // FIRST: Try direct keyword matching from description to account names
+    const descWords = description.split(/[\s\-_,.:;]+/).filter(w => w.length > 2);
+    for (const word of descWords) {
+      const directMatch = chartOfAccounts.find(acc => 
+        acc.accountName.toLowerCase().includes(word)
+      );
+      if (directMatch) {
+        console.log(`  Direct match found: ${directMatch.accountName} (matched on "${word}")`); 
+        return {
+          accountId: directMatch.id,
+          accountName: directMatch.accountName,
+          vatRate: transaction.type === 'expense' ? 15 : 15,
+          vatType: 'Standard Rate',
+          confidence: 0.85,
+          reasoning: `Direct keyword match on "${word}"`
+        };
+      }
+    }
+    
     // Enhanced pattern matching with word-level search and flexible matching
     let bestMatch: ScriptMatchResult | null = null;
     let highestConfidence = 0;
@@ -286,16 +305,20 @@ export class ScriptTransactionMatcher {
     
     // Fallback to default accounts with special handling for income
     if (transaction.type === 'income') {
-      // ALL income transactions default to Sales Revenue for manual review
-      const salesRevenueAccount = this.findMatchingAccount('Sales Revenue', chartOfAccounts);
-      if (salesRevenueAccount) {
+      // Try to find any income/revenue account
+      const incomeAccount = chartOfAccounts.find(acc => {
+        const name = acc.accountName.toLowerCase();
+        return name.includes('revenue') || name.includes('income') || 
+               name.includes('sales') || name.includes('fees received');
+      });
+      if (incomeAccount) {
         return {
-          accountId: salesRevenueAccount.id,
-          accountName: salesRevenueAccount.accountName,
+          accountId: incomeAccount.id,
+          accountName: incomeAccount.accountName,
           vatRate: 15,
           vatType: 'Standard Rate',
           confidence: 0.75,
-          reasoning: 'All income defaults to Sales Revenue - user can review and adjust manually or remove if internal transfer'
+          reasoning: 'Default income account - please review'
         };
       }
     }
@@ -324,8 +347,14 @@ export class ScriptTransactionMatcher {
   ) {
     const pattern = patternAccountName.toLowerCase();
     
-    // Strategy 1: Exact partial match (either direction)
+    // First, check for exact match
     let account = chartOfAccounts.find(acc => 
+      acc.accountName.toLowerCase() === pattern
+    );
+    if (account) return account;
+    
+    // Strategy 1: Exact partial match (either direction)
+    account = chartOfAccounts.find(acc => 
       acc.accountName.toLowerCase().includes(pattern) ||
       pattern.includes(acc.accountName.toLowerCase())
     );
@@ -339,36 +368,61 @@ export class ScriptTransactionMatcher {
     });
     if (account) return account;
     
-    // Strategy 3: Common synonyms and variations
+    // Strategy 3: Look for any account containing key words from the pattern
+    const patternKeywords = pattern.split(/[\s&-]+/).filter(w => w.length > 2);
+    account = chartOfAccounts.find(acc => {
+      const accLower = acc.accountName.toLowerCase();
+      return patternKeywords.some(keyword => accLower.includes(keyword));
+    });
+    if (account) return account;
+    
+    // Strategy 4: Common synonyms and variations
     const synonymMap: {[key: string]: string[]} = {
-      'employee costs': ['salaries', 'wages', 'payroll', 'staff', 'employee', 'salary'],
-      'office supplies': ['stationery', 'supplies', 'office'],
-      'rent expense': ['rent', 'rental', 'lease'],
-      'utilities': ['electricity', 'water', 'gas', 'municipal'],
-      'telephone': ['phone', 'communication', 'internet'],
-      'transport': ['travel', 'fuel', 'vehicle'],
-      'bank charges': ['bank', 'fees', 'charges', 'fee'],
-      'insurance': ['insurance', 'premium'],
-      'professional fees': ['professional', 'consulting', 'legal', 'fees', 'fee'],
-      'marketing': ['advertising', 'promotion'],
-      'equipment': ['furniture', 'computer', 'assets'],
-      'repairs': ['maintenance', 'repairs', 'repair'],
-      'software': ['app', 'technology', 'subscription', 'software'],
-      'sales revenue': ['sales', 'revenue', 'income'],
-      'service income': ['service', 'fees', 'fee'],
-      'interest income': ['interest', 'investment'],
-      'general expenses': ['expense', 'cost', 'payment'],
-      'other income': ['income', 'receipt', 'received']
+      'employee costs': ['salaries', 'wages', 'payroll', 'staff', 'employee', 'salary', 'compensation'],
+      'office supplies': ['stationery', 'supplies', 'office', 'consumables'],
+      'rent expense': ['rent', 'rental', 'lease', 'premises'],
+      'utilities': ['electricity', 'water', 'gas', 'municipal', 'power', 'utility'],
+      'telephone & internet': ['phone', 'communication', 'internet', 'telephone', 'data', 'telecommunications'],
+      'transport & travel': ['travel', 'fuel', 'vehicle', 'transport', 'transportation', 'petrol', 'diesel'],
+      'bank charges': ['bank', 'fees', 'charges', 'fee', 'banking', 'financial'],
+      'insurance': ['insurance', 'premium', 'cover', 'policy'],
+      'professional fees': ['professional', 'consulting', 'legal', 'fees', 'fee', 'accountant', 'lawyer', 'consultant'],
+      'marketing & advertising': ['advertising', 'promotion', 'marketing', 'ads', 'campaign'],
+      'equipment & furniture': ['furniture', 'computer', 'assets', 'equipment', 'machinery', 'hardware'],
+      'repairs & maintenance': ['maintenance', 'repairs', 'repair', 'fixing', 'service'],
+      'software & technology': ['app', 'technology', 'subscription', 'software', 'saas', 'license', 'tech'],
+      'sales revenue': ['sales', 'revenue', 'income', 'turnover'],
+      'service income': ['service', 'fees', 'fee', 'consulting', 'professional'],
+      'interest income': ['interest', 'investment', 'returns'],
+      'general expenses': ['expense', 'cost', 'payment', 'expenditure'],
+      'other income': ['income', 'receipt', 'received', 'miscellaneous']
     };
     
+    // Check if pattern matches any synonym group
     for (const [canonical, synonyms] of Object.entries(synonymMap)) {
-      if (synonyms.some(syn => pattern.includes(syn))) {
-        account = chartOfAccounts.find(acc => 
-          synonyms.some(syn => acc.accountName.toLowerCase().includes(syn)) ||
-          acc.accountName.toLowerCase().includes(canonical)
-        );
+      const canonicalLower = canonical.toLowerCase();
+      // Check if the pattern matches this synonym group
+      if (pattern.includes(canonicalLower) || canonicalLower.includes(pattern) || 
+          synonyms.some(syn => pattern.includes(syn))) {
+        // Find an account that matches any of the synonyms
+        account = chartOfAccounts.find(acc => {
+          const accLower = acc.accountName.toLowerCase();
+          return synonyms.some(syn => accLower.includes(syn)) ||
+                 accLower.includes(canonicalLower.replace(' & ', ' ').replace(' ', '')) ||
+                 canonicalLower.split(' ').some(word => accLower.includes(word));
+        });
         if (account) return account;
       }
+    }
+    
+    // Strategy 5: If still no match, try to find any account with overlapping words
+    const words = pattern.split(/[\s&-]+/).filter(w => w.length > 3);
+    if (words.length > 0) {
+      account = chartOfAccounts.find(acc => {
+        const accWords = acc.accountName.toLowerCase().split(/[\s&-]+/);
+        return words.some(w => accWords.some(aw => aw.includes(w) || w.includes(aw)));
+      });
+      if (account) return account;
     }
     
     return null;
