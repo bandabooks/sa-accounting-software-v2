@@ -476,81 +476,65 @@ export default function Dashboard() {
               {/* Notification Cards Removed - Now handled by dedicated Alerts page */}
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                {/* Profit & Loss Overview - Collapsible */}
+                {/* Profit & Loss Overview - Always show graph, collapsible amounts */}
                 <div className="xl:col-span-2">
                   <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-                    {/* Header with quick profit view */}
-                    <div 
-                      className="p-4 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
-                      onClick={() => setIsProfitOverviewExpanded(!isProfitOverviewExpanded)}
-                    >
+                    <CardHeader>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="p-1.5 bg-blue-100 rounded-lg">
-                            <BarChart3 className="h-4 w-4 text-blue-600" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-sm font-semibold text-gray-800">Profit & Loss Overview</CardTitle>
-                            <p className="text-xs text-gray-500">Revenue, expenses, and net profit summary</p>
-                          </div>
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-gray-800">Revenue Trends</CardTitle>
+                          <CardDescription>Monthly performance overview</CardDescription>
                         </div>
                         <div className="flex items-center gap-3">
-                          {/* Quick Summary */}
-                          <div className="flex items-center gap-4 text-xs">
+                          {/* Collapsible Amounts Section */}
+                          <div 
+                            className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() => setIsProfitOverviewExpanded(!isProfitOverviewExpanded)}
+                          >
+                            <span className="text-xs font-medium text-gray-700">Quick Amounts</span>
+                            <ChevronDown className={`h-3 w-3 text-gray-500 transition-transform ${isProfitOverviewExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setLocation('/reports/financial')}
+                              title="View detailed revenue reports"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" title="Download revenue report">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Expandable amounts summary */}
+                      {isProfitOverviewExpanded && (
+                        <div className="mt-4 pt-3 border-t border-gray-100">
+                          <div className="flex items-center gap-6 text-sm">
                             <div className="text-center">
                               <div className="font-semibold text-green-600">{formatCurrency(dashboardStats.totalRevenue)}</div>
-                              <div className="text-gray-500">Revenue</div>
+                              <div className="text-xs text-gray-500">Total Revenue</div>
                             </div>
                             <div className="text-center">
                               <div className="font-semibold text-red-600">{formatCurrency(dashboardStats.totalExpenses)}</div>
-                              <div className="text-gray-500">Expenses</div>
+                              <div className="text-xs text-gray-500">Total Expenses</div>
                             </div>
                             <div className="text-center">
                               <div className="font-bold text-blue-600">
                                 {formatCurrency((parseFloat(dashboardStats.totalRevenue) - parseFloat(dashboardStats.totalExpenses)).toString())}
                               </div>
-                              <div className="text-gray-500">Net Profit</div>
+                              <div className="text-xs text-gray-500">Net Profit</div>
                             </div>
                           </div>
-                          <Button 
-                            size="sm" 
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsProfitOverviewExpanded(true);
-                            }}
-                          >
-                            Quick Profit View
-                          </Button>
-                          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isProfitOverviewExpanded ? 'rotate-180' : ''}`} />
                         </div>
-                      </div>
-                    </div>
-                    
-                    {/* Expandable content */}
-                    {isProfitOverviewExpanded && (
-                      <div className="px-4 pb-4 border-t border-gray-100">
-                        <div className="pt-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <CardDescription>Monthly performance trends</CardDescription>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => setLocation('/reports/financial')}
-                                title="View detailed revenue reports"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="sm" title="Download revenue report">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          <ProfitLossChart data={dashboardStats.profitLossData || []} />
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <ProfitLossChart data={dashboardStats.profitLossData || []} />
+                    </CardContent>
                   </Card>
 
                 </div>
