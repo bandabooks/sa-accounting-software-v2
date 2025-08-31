@@ -127,74 +127,54 @@ export default function Customers() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
       <div className="container mx-auto px-4 py-6 space-y-8">
         
-        {/* Enhanced Header Section */}
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-3xl"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full blur-3xl"></div>
-          
-          <div className="relative p-8 lg:p-12 text-white">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-              <div className="space-y-4 flex-1">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-blue-100 text-lg font-medium">Customer Management</span>
-                </div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-white tracking-tight">
-                  Customer Network
-                </h1>
-                <p className="text-blue-100 text-xl font-medium">
-                  Manage relationships and track customer health
-                </p>
+        {/* Compact Header */}
+        <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 text-white">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="h-5 w-5" />
+              <span className="text-sm font-medium opacity-90">Customer Management</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Customer Network</CardTitle>
+            <CardDescription className="text-blue-100">Manage relationships and track customer health</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button asChild variant="secondary" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0">
+                  <Link href="/customers/new">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Customer
+                  </Link>
+                </Button>
+                <Button 
+                  onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
+                  variant="outline" 
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  {viewMode === "grid" ? "Table" : "Cards"}
+                </Button>
               </div>
-
-              {/* Quick Stats */}
               {stats && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:min-w-[400px]">
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">{stats.total}</div>
-                    <div className="text-blue-100 text-sm">Total</div>
+                <div className="flex items-center gap-3">
+                  <div className="text-center">
+                    <div className="text-xl font-bold">{stats.total}</div>
+                    <div className="text-xs opacity-90">Total</div>
                   </div>
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">{stats.active}</div>
-                    <div className="text-blue-100 text-sm">Active</div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold">{stats.active}</div>
+                    <div className="text-xs opacity-90">Active</div>
                   </div>
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">{stats.withPortalAccess}</div>
-                    <div className="text-blue-100 text-sm">Portal Access</div>
-                  </div>
-                  <div className="text-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">87%</div>
-                    <div className="text-blue-100 text-sm">Health Score</div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold">{stats.withPortalAccess}</div>
+                    <div className="text-xs opacity-90">Portal</div>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Action Bar */}
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button asChild className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link href="/customers/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Customer
-                </Link>
-              </Button>
-              <Button 
-                onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
-                className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                {viewMode === "grid" ? "Table View" : "Card View"}
-              </Button>
-              <Button className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Download className="h-4 w-4 mr-2" />
-                Export List
-              </Button>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Enhanced Stats Dashboard */}
         {stats && (
