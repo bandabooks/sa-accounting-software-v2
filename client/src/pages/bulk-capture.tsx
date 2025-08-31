@@ -1106,10 +1106,12 @@ const EnhancedBulkCapture = () => {
     mutationFn: async ({ entries, type }: { entries: (ExpenseEntry | IncomeEntry)[], type: 'expense' | 'income' }): Promise<any> => {
       const transactionsToMatch = entries.map((entry, index) => ({
         id: index,
-        description: entry.description,
-        amount: parseFloat(entry.amount),
+        description: entry.description || '',
+        amount: parseFloat(entry.amount || '0'),
         type: type
       }));
+      
+      console.log('Sending transactions for script matching:', transactionsToMatch);
 
       const response = await apiRequest('/api/script/match-transactions', 'POST', {
         transactions: transactionsToMatch
@@ -1120,6 +1122,9 @@ const EnhancedBulkCapture = () => {
       const { entries, type } = variables;
       const matches = response?.matches || [];
       
+      console.log('Script Match Response:', response);
+      console.log('Matches:', matches);
+      
       if (!Array.isArray(matches)) {
         toast({
           title: "Script Auto-Match Failed", 
@@ -1129,16 +1134,20 @@ const EnhancedBulkCapture = () => {
         return;
       }
 
+      let matchedCount = 0;
+      
       // Apply script-based suggestions to entries
       matches.forEach((match: any) => {
         const index = match.transactionId;
-        if (index >= 0 && index < entries.length && match.confidence > 0.6) {
+        if (index >= 0 && index < entries.length && match.confidence > 0.5) {
+          matchedCount++;
           const updatedEntry = { ...entries[index] };
           
           if (type === 'expense') {
             const expenseEntry = updatedEntry as ExpenseEntry;
             if (match.accountId) {
               expenseEntry.categoryId = match.accountId;
+              console.log(`Applied account ${match.accountId} to expense entry ${index}`);
             }
             if (match.vatRate !== undefined) {
               expenseEntry.vatRate = match.vatRate.toString();
@@ -1161,6 +1170,7 @@ const EnhancedBulkCapture = () => {
             const incomeEntry = updatedEntry as IncomeEntry;
             if (match.accountId) {
               incomeEntry.incomeAccountId = match.accountId;
+              console.log(`Applied account ${match.accountId} to income entry ${index}`);
             }
             if (match.vatRate !== undefined) {
               incomeEntry.vatRate = match.vatRate.toString();
@@ -1185,7 +1195,7 @@ const EnhancedBulkCapture = () => {
 
       toast({
         title: "Script Auto-Match Complete",
-        description: `Successfully matched ${matches.length} out of ${entries.length} transactions`,
+        description: `Successfully matched ${matchedCount} out of ${entries.length} transactions`,
         variant: "success" as any,
       });
     },
@@ -1203,10 +1213,12 @@ const EnhancedBulkCapture = () => {
     mutationFn: async ({ entries, type }: { entries: (ExpenseEntry | IncomeEntry)[], type: 'expense' | 'income' }): Promise<any[]> => {
       const transactionsToMatch = entries.map((entry, index) => ({
         id: index,
-        description: entry.description,
-        amount: parseFloat(entry.amount),
+        description: entry.description || '',
+        amount: parseFloat(entry.amount || '0'),
         type: type
       }));
+      
+      console.log('Sending transactions for script matching:', transactionsToMatch);
 
       const response = await apiRequest('/api/ai/match-transactions', 'POST', {
         transactions: transactionsToMatch

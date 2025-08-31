@@ -196,13 +196,31 @@ export class ScriptTransactionMatcher {
     chartOfAccounts: Array<{id: number; accountName: string; accountType: string}>
   ): Promise<Array<{transaction: TransactionForMatching; match: ScriptMatchResult | null}>> {
     
-    return transactions.map(transaction => {
+    console.log(`Script Matcher: Processing ${transactions.length} transactions`);
+    console.log(`Script Matcher: Available accounts: ${chartOfAccounts.length}`);
+    
+    // Log first few accounts for debugging
+    if (chartOfAccounts.length > 0) {
+      console.log('Sample accounts:', chartOfAccounts.slice(0, 5).map(a => `${a.accountName} (ID: ${a.id})`));
+    }
+    
+    const results = transactions.map(transaction => {
       const match = this.findBestMatch(transaction, chartOfAccounts);
+      if (match) {
+        console.log(`Matched: "${transaction.description}" → ${match.accountName} (confidence: ${match.confidence})`);
+      } else {
+        console.log(`No match found for: "${transaction.description}"`);
+      }
       return {
         transaction,
         match
       };
     });
+    
+    const matchedCount = results.filter(r => r.match !== null).length;
+    console.log(`Script Matcher: Matched ${matchedCount} out of ${transactions.length} transactions`);
+    
+    return results;
   }
 
   /**
@@ -215,6 +233,8 @@ export class ScriptTransactionMatcher {
     
     const description = transaction.description.toLowerCase();
     const patterns = transaction.type === 'expense' ? this.expensePatterns : this.incomePatterns;
+    
+    console.log(`\nMatching: "${transaction.description}" (${transaction.type}, amount: ${transaction.amount})`);
     
     // Enhanced pattern matching with word-level search and flexible matching
     let bestMatch: ScriptMatchResult | null = null;
@@ -236,19 +256,26 @@ export class ScriptTransactionMatcher {
       }
       
       if (matchFound) {
+        console.log(`  Pattern matched: ${pattern.accountName}`);
         // Enhanced flexible account matching - try multiple approaches
         let account = this.findMatchingAccount(pattern.accountName, chartOfAccounts);
         
-        if (account && pattern.confidence > highestConfidence) {
-          bestMatch = {
-            accountId: account.id,
-            accountName: account.accountName,
-            vatRate: pattern.vatRate,
-            vatType: pattern.vatType,
-            confidence: pattern.confidence,
-            reasoning: pattern.reasoning
-          };
-          highestConfidence = pattern.confidence;
+        if (account) {
+          console.log(`  Found account: ${account.accountName} (ID: ${account.id})`);
+          if (pattern.confidence > highestConfidence) {
+            bestMatch = {
+              accountId: account.id,
+              accountName: account.accountName,
+              vatRate: pattern.vatRate,
+              vatType: pattern.vatType,
+              confidence: pattern.confidence,
+              reasoning: pattern.reasoning
+            };
+            highestConfidence = pattern.confidence;
+            console.log(`  New best match with confidence: ${pattern.confidence}`);
+          }
+        } else {
+          console.log(`  No account found for pattern: ${pattern.accountName}`);
         }
       }
     }
