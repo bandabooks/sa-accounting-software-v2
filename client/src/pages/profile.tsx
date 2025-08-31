@@ -11,8 +11,6 @@ import { User, Mail, Phone, MapPin, Building, Save, Camera } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
-import { ImageUploader } from "@/components/profile/ImageUploader";
-import { SocialMediaLinks } from "@/components/profile/SocialMediaLinks";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -29,9 +27,7 @@ export default function Profile() {
     country: '',
     bio: '',
     position: '',
-    department: '',
-    profileImageUrl: user?.profileImageUrl || '',
-    socialMediaLinks: user?.socialMediaLinks || {}
+    department: ''
   });
 
   // Update profile mutation
@@ -98,17 +94,23 @@ export default function Profile() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Profile Picture & Basic Info */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1">
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <ImageUploader
-                  currentImageUrl={formData.profileImageUrl}
-                  onImageUpload={(imageUrl) => handleInputChange('profileImageUrl', imageUrl)}
-                  isEditing={isEditing}
-                  userInitials={user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                  className="mx-auto mb-4"
-                />
+                <div className="relative inline-block">
+                  <div className="w-32 h-32 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <User className="h-16 w-16 text-white" />
+                  </div>
+                  {isEditing && (
+                    <Button
+                      size="sm"
+                      className="absolute bottom-2 right-2 rounded-full h-8 w-8 p-0"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 
                 <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
                 <p className="text-gray-600">{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}</p>
@@ -127,13 +129,6 @@ export default function Profile() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Social Media Links */}
-          <SocialMediaLinks
-            socialLinks={formData.socialMediaLinks}
-            isEditing={isEditing}
-            onLinksChange={(links) => handleInputChange('socialMediaLinks', links)}
-          />
         </div>
 
         {/* Profile Details Form */}
