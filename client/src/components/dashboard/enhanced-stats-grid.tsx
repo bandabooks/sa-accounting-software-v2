@@ -222,13 +222,13 @@ export default function EnhancedStatsGrid({ stats }: EnhancedStatsGridProps) {
               
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Today's Inflow</span>
+                  <span className="text-gray-600 dark:text-gray-400">30-Day Inflow</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
                     +{formatCurrency(stats.cashFlowSummary.todayInflow)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Today's Outflow</span>
+                  <span className="text-gray-600 dark:text-gray-400">30-Day Outflow</span>
                   <span className="font-medium text-red-600 dark:text-red-400">
                     -{formatCurrency(stats.cashFlowSummary.todayOutflow)}
                   </span>

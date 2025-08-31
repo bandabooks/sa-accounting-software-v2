@@ -704,29 +704,29 @@ export default function Dashboard() {
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="text-lg font-bold text-green-700">R 0.00</div>
+                          <div className="text-lg font-bold text-green-700">{formatCurrency(dashboardStats.cashFlowSummary?.todayInflow || '0.00')}</div>
                           <div className="text-xs text-green-600 flex items-center justify-center gap-1">
                             <ArrowUpRight className="h-3 w-3" />
-                            Cash Inflow
+                            30-Day Inflow
                           </div>
                         </div>
                         <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
-                          <div className="text-lg font-bold text-red-700">R 0.00</div>
+                          <div className="text-lg font-bold text-red-700">{formatCurrency(dashboardStats.cashFlowSummary?.todayOutflow || '0.00')}</div>
                           <div className="text-xs text-red-600 flex items-center justify-center gap-1">
                             <ArrowDownRight className="h-3 w-3" />
-                            Cash Outflow
+                            30-Day Outflow
                           </div>
                         </div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="text-center">
-                          <div className="text-xl font-bold text-gray-800">R 0.00</div>
-                          <div className="text-xs text-gray-600">Net Cash Flow</div>
+                          <div className="text-xl font-bold text-gray-800">{formatCurrency(dashboardStats.cashFlowSummary?.currentCashPosition || '0.00')}</div>
+                          <div className="text-xs text-gray-600">Current Cash Position</div>
                         </div>
                       </div>
                       <div className="text-center">
                         <div className="text-sm font-semibold text-gray-600">
-                          Net: R 0.00
+                          Net: {formatCurrency(dashboardStats.cashFlowSummary?.netCashFlow || '0.00')}
                         </div>
                       </div>
                     </div>

@@ -50,20 +50,20 @@ export class FastStorage {
           FROM estimates 
           WHERE company_id = ${companyId}
         `),
-        // Real cash flow calculation from payments and expenses
+        // Real cash flow calculation from payments and expenses (last 30 days)
         db.execute(sql`
           SELECT 
             COALESCE((
               SELECT SUM(amount::numeric) 
               FROM payments 
               WHERE company_id = ${companyId} 
-              AND payment_date::date = CURRENT_DATE
+              AND payment_date >= CURRENT_DATE - INTERVAL '30 days'
             ), 0) as today_inflow,
             COALESCE((
               SELECT SUM(amount::numeric) 
               FROM expenses 
               WHERE company_id = ${companyId} 
-              AND expense_date::date = CURRENT_DATE 
+              AND expense_date >= CURRENT_DATE - INTERVAL '30 days'
               AND is_paid = true
             ), 0) as today_outflow
         `),

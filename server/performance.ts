@@ -40,20 +40,20 @@ export class PerformanceOptimizedStorage {
           FROM bank_accounts 
           WHERE company_id = ${companyId}
         `),
-        // Today's cash flow - Calculate from real transactions
+        // Cash flow - Calculate from real transactions (last 30 days for better visibility)
         db.execute(sql`
           SELECT 
             COALESCE((
               SELECT SUM(amount::numeric) 
               FROM payments 
               WHERE company_id = ${companyId} 
-              AND payment_date::date = CURRENT_DATE
+              AND payment_date >= CURRENT_DATE - INTERVAL '30 days'
             ), 0)::text as today_inflow,
             COALESCE((
               SELECT SUM(amount::numeric) 
               FROM expenses 
               WHERE company_id = ${companyId} 
-              AND expense_date::date = CURRENT_DATE 
+              AND expense_date >= CURRENT_DATE - INTERVAL '30 days'
               AND is_paid = true
             ), 0)::text as today_outflow,
             COALESCE((
