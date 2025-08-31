@@ -16807,6 +16807,47 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // Object Storage routes for profile image uploads
+  app.post("/api/objects/upload", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      // In a production setup, this would generate a presigned URL for object storage
+      // For now, we'll simulate the upload URL generation
+      const uploadURL = `https://storage.googleapis.com/bucket-name/profile-images/${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  // Profile update endpoint to handle image and social links
+  app.patch("/api/auth/profile", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { name, email, phone, address, city, country, bio, position, department, profileImageUrl, socialMediaLinks } = req.body;
+
+      const updatedUser = await storage.updateUser(userId, {
+        name,
+        email,
+        phoneNumber: phone,
+        profileImageUrl,
+        socialMediaLinks,
+        // Add other fields as needed
+        updatedAt: new Date(),
+      });
+
+      res.json({
+        success: true,
+        message: "Profile updated successfully",
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, Company Email Settings, and Financial Ratios!");
   return httpServer;
 }
