@@ -6,7 +6,8 @@ import {
   Landmark, BookOpenCheck, ReceiptText, ChevronDown, ChevronRight, 
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
-  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail, FileCheck, Calendar
+  Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail, FileCheck, Calendar,
+  ChevronLeft, Menu
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -580,9 +581,10 @@ interface NavigationGroupProps {
   userRole: string;
   isExpanded: boolean;
   onToggle: () => void;
+  isCollapsed?: boolean;
 }
 
-function NavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle }: NavigationGroupProps) {
+function NavigationGroup({ group, location, userPermissions, userRole, isExpanded, onToggle, isCollapsed = false }: NavigationGroupProps) {
   const { isModuleAvailable } = useCompanySubscription();
   const { canAccessPath, getUpgradeInfo, filterNavigationItems, isGroupVisible } = useSubscriptionNavigation();
   const [, setLocation] = useLocation();
@@ -708,11 +710,12 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
     return (
       <Link
         href={item.path}
-        className={`group relative flex items-center space-x-4 px-4 py-3 text-slate-700 rounded-xl transition-all duration-300 transform hover:scale-[1.02] ${
+        className={`group relative flex items-center ${isCollapsed ? 'justify-center px-2' : 'space-x-4 px-4'} py-3 text-slate-700 rounded-xl transition-all duration-300 transform hover:scale-[1.02] ${
           isActive 
             ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white shadow-lg shadow-blue-500/25" 
             : "hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:text-green-800 hover:shadow-md"
         }`}
+        title={isCollapsed ? item.label : undefined}
       >
         <div className={`p-2 rounded-lg transition-all duration-300 ${
           isActive 
@@ -721,8 +724,8 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
         }`}>
           <Icon size={18} className={isActive ? "text-white" : "text-slate-600 group-hover:text-slate-700"} />
         </div>
-        <span className="font-semibold tracking-tight">{item.label}</span>
-        {isActive && (
+        {!isCollapsed && <span className="font-semibold tracking-tight">{item.label}</span>}
+        {!isCollapsed && isActive && (
           <div className="absolute right-2 w-2 h-2 bg-white rounded-full shadow-sm"></div>
         )}
       </Link>
@@ -740,11 +743,12 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
           }
           onToggle(); // Always toggle the dropdown
         }}
-        className={`group w-full flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
+        className={`group w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
           hasActiveItem || isExpanded
             ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white shadow-lg shadow-blue-500/25" 
             : "text-slate-600 hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:text-green-800 hover:shadow-sm"
         }`}
+        title={isCollapsed ? group.label : undefined}
       >
         <div className="flex items-center space-x-3">
           <div className={`p-1.5 rounded-lg transition-all duration-300 ${
@@ -754,22 +758,25 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
           }`}>
             {group.icon && <group.icon size={16} />}
           </div>
-          <span className="tracking-tight">{group.label}</span>
+          {!isCollapsed && <span className="tracking-tight">{group.label}</span>}
         </div>
-        <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} ${
-          hasActiveItem || isExpanded ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'
-        }`}>
-          <ChevronDown size={16} />
-        </div>
+        {!isCollapsed && (
+          <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''} ${
+            hasActiveItem || isExpanded ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'
+          }`}>
+            <ChevronDown size={16} />
+          </div>
+        )}
       </button>
       
-      <div 
-        ref={dropdownRef}
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <div className="ml-6 space-y-1 rounded-lg p-2">
+      {!isCollapsed && (
+        <div 
+          ref={dropdownRef}
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isExpanded ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="ml-6 space-y-1 rounded-lg p-2">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
@@ -779,11 +786,12 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
                 key={item.path}
                 href={item.path}
                 data-onboarding={`nav-${item.path.split('/')[1]}`}
-                className={`group relative flex items-center space-x-3 px-3 py-2 text-xs rounded-md transition-all duration-200 border-l-3 ${
+                className={`group relative flex items-center ${isCollapsed ? 'justify-center px-2' : 'space-x-3 px-3'} py-2 text-xs rounded-md transition-all duration-200 border-l-3 ${
                   isActive 
                     ? "bg-blue-100 text-blue-900 border-l-blue-500 shadow-sm font-semibold" 
                     : "bg-green-50 text-slate-700 hover:bg-amber-50 hover:text-amber-900 hover:border-l-amber-300 border-l-transparent hover:shadow-sm border border-green-200"
                 }`}
+                title={isCollapsed ? item.label : undefined}
               >
                 <div className={`p-1 rounded transition-all duration-200 ${
                   isActive 
@@ -792,20 +800,26 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
                 }`}>
                   <Icon size={12} />
                 </div>
-                <span className="font-medium text-xs leading-tight">{item.label}</span>
+                {!isCollapsed && <span className="font-medium text-xs leading-tight">{item.label}</span>}
                 {isActive && (
                   <div className="absolute right-2 w-1 h-1 bg-blue-500 rounded-full"></div>
                 )}
               </Link>
             );
           })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  isCollapsed?: boolean;
+  onToggle?: () => void;
+}
+
+export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
   const { isModuleAvailable, currentPlan, subscription, planStatus, isSuperAdminOrOwner } = useCompanySubscription();
@@ -842,7 +856,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-72 bg-gradient-to-b from-slate-50 via-white to-slate-50 shadow-2xl border-r border-slate-200/60 fixed h-full z-30 hidden lg:flex lg:flex-col backdrop-blur-sm">
+    <aside className={`${isCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-slate-50 via-white to-slate-50 shadow-2xl border-r border-slate-200/60 fixed h-full z-30 hidden lg:flex lg:flex-col backdrop-blur-sm transition-all duration-300`}>
       {/* Header Section with Enhanced Gradient */}
       <div className="relative">
         {/* Gradient Background */}
@@ -855,9 +869,10 @@ export default function Sidebar() {
             <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30 shadow-lg">
               <Calculator className="text-white" size={24} />
             </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white tracking-tight">Taxnify</h1>
-              <p className="text-blue-100 text-sm font-medium">Business & Compliance</p>
+            {!isCollapsed && (
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-white tracking-tight">Taxnify</h1>
+                <p className="text-blue-100 text-sm font-medium">Business & Compliance</p>
               <div className="flex items-center gap-2 mt-2">
                 {isSuperAdminOrOwner ? (
                   <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-full font-semibold shadow-lg border border-white/20">
@@ -872,12 +887,23 @@ export default function Sidebar() {
                     ⚠ No Active Plan
                   </span>
                 )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
           
+          {/* Collapse Toggle Button */}
+          <button
+            onClick={onToggle}
+            className="absolute top-6 right-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/20"
+            data-testid="sidebar-toggle"
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? <Menu className="h-4 w-4 text-white" /> : <ChevronLeft className="h-4 w-4 text-white" />}
+          </button>
+          
           {/* Super Admin Quick Access */}
-          {(user?.role === "super_admin" || user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com") && (
+          {!isCollapsed && (user?.role === "super_admin" || user?.username === "sysadmin_7f3a2b8e" || user?.email === "accounts@thinkmybiz.com") && (
             <div className="mt-4">
               <Link
                 href="/super-admin"
@@ -890,7 +916,7 @@ export default function Sidebar() {
           )}
           
           {/* Subscription Plan Information */}
-          {!subscription && !isSuperAdminOrOwner && (
+          {!isCollapsed && !subscription && !isSuperAdminOrOwner && (
             <div className="mt-4">
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
                 <div className="flex items-center gap-3">
@@ -925,6 +951,7 @@ export default function Sidebar() {
             userRole={user?.role || ""}
             isExpanded={expandedGroup === group.id}
             onToggle={() => toggleGroup(group.id)}
+            isCollapsed={isCollapsed}
           />
         ))}
       </nav>

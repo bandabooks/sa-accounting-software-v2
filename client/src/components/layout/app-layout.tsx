@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import Sidebar from "./sidebar";
 import Header from "./header";
 import { MobileHeader } from "../mobile/mobile-header";
@@ -11,6 +11,10 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
   const [location] = useLocation();
 
   // Get page title based on current route
@@ -30,11 +34,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setIsMobileSidebarOpen(false);
   };
 
+  const handleSidebarToggle = () => {
+    const newCollapsed = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newCollapsed);
+    localStorage.setItem('sidebarCollapsed', String(newCollapsed));
+  };
+
   return (
     <div className="min-h-screen flex bg-gray-50">
       {/* Desktop Sidebar */}
-      <div className="desktop-sidebar hidden lg:block">
-        <Sidebar />
+      <div className={`desktop-sidebar hidden lg:block ${isSidebarCollapsed ? 'w-20' : 'w-72'} transition-all duration-300`}>
+        <Sidebar isCollapsed={isSidebarCollapsed} onToggle={handleSidebarToggle} />
       </div>
 
       {/* Mobile Header */}
@@ -59,7 +69,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </MobileSidebar>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-72">
+      <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
         {/* Desktop Header */}
         <div className="hidden lg:block">
           <Header />
