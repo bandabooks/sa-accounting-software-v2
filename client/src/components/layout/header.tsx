@@ -109,27 +109,95 @@ export default function Header() {
                 <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Create New</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-72 max-h-[500px] overflow-y-auto">
+              <DropdownMenuLabel className="text-center font-semibold">Create New</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/invoices/new" className="cursor-pointer">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Invoice
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/estimates/new" className="cursor-pointer">
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Estimate
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/customers/new" className="cursor-pointer">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Customer
-                </Link>
-              </DropdownMenuItem>
+              
+              {/* SALES Section */}
+              <div className="px-2 py-1">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sales</div>
+                <DropdownMenuItem asChild>
+                  <Link href="/invoices/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <FileText className="h-4 w-4 mr-3 text-blue-600" />
+                    <span>Invoice</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/estimates/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <Receipt className="h-4 w-4 mr-3 text-green-600" />
+                    <span>Estimate</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/customers/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <UserPlus className="h-4 w-4 mr-3 text-purple-600" />
+                    <span>Customer</span>
+                  </Link>
+                </DropdownMenuItem>
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              {/* PURCHASES Section */}
+              <div className="px-2 py-1">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Purchases</div>
+                <DropdownMenuItem asChild>
+                  <Link href="/expenses/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <Receipt className="h-4 w-4 mr-3 text-red-600" />
+                    <span>Expense</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/purchase-orders/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <FileText className="h-4 w-4 mr-3 text-orange-600" />
+                    <span>Purchase Order</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/suppliers/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <UserPlus className="h-4 w-4 mr-3 text-indigo-600" />
+                    <span>Supplier</span>
+                  </Link>
+                </DropdownMenuItem>
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              {/* BANKING Section */}
+              <div className="px-2 py-1">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Banking</div>
+                <DropdownMenuItem asChild>
+                  <Link href="/banking/transfer" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <RefreshCw className="h-4 w-4 mr-3 text-teal-600" />
+                    <span>Bank Transfer</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/banking/deposit" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <Plus className="h-4 w-4 mr-3 text-green-600" />
+                    <span>Deposit</span>
+                  </Link>
+                </DropdownMenuItem>
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              {/* PROJECTS Section */}
+              <div className="px-2 py-1">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Projects</div>
+                <DropdownMenuItem asChild>
+                  <Link href="/projects/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <Settings className="h-4 w-4 mr-3 text-blue-600" />
+                    <span>Project</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/tasks/new" className="cursor-pointer flex items-center px-2 py-1.5">
+                    <Bell className="h-4 w-4 mr-3 text-yellow-600" />
+                    <span>Task</span>
+                  </Link>
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
           
