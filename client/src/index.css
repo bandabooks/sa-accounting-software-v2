@@ -333,15 +333,3 @@
     max-width: calc(100vw - 20px) !important;
   }
 }
-
-/* Landing page full width override */
-.landing-page,
-.landing-page * {
-  max-width: 100% !important;
-  width: 100% !important;
-}
-
-.landing-page section {
-  width: 100vw !important;
-  max-width: 100vw !important;
-}
