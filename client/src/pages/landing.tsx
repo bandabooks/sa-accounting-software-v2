@@ -123,9 +123,10 @@ export default function Landing() {
   ];
 
   return (
+    <div className="landing-page">
     <MarketingLayout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
+      <section className="w-full bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-center text-center">
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
@@ -169,7 +170,7 @@ export default function Landing() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 bg-gray-50">
+      <section className="w-full py-20 bg-gray-50">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-center text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Everything You Need to Run Your Business</h2>
@@ -199,7 +200,7 @@ export default function Landing() {
       </section>
 
       {/* Social Proof */}
-      <section className="py-20">
+      <section className="w-full py-20">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-center text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by South African Professionals</h2>
@@ -229,7 +230,7 @@ export default function Landing() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-blue-600 text-white">
+      <section className="w-full py-20 bg-blue-600 text-white">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
@@ -253,7 +254,7 @@ export default function Landing() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="w-full py-20 bg-gray-50">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-center text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
@@ -302,7 +303,7 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <section className="w-full py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="w-full flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Business 1000 Times?</h2>
           <p className="text-xl text-blue-100 mb-8">
@@ -326,7 +327,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
+      <footer className="w-full bg-gray-900 text-white py-16">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Company Info */}
@@ -389,5 +390,6 @@ export default function Landing() {
         </div>
       </footer>
     </MarketingLayout>
+    </div>
   );
 }

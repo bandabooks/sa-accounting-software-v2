@@ -6,9 +6,9 @@ interface MarketingLayoutProps {
 
 export default function MarketingLayout({ children }: MarketingLayoutProps) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen w-full bg-white overflow-x-hidden">
       <MarketingHeader />
-      <main className="pt-0">
+      <main className="w-full pt-0">
         {children}
       </main>
     </div>
