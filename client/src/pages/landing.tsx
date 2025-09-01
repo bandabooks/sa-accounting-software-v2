@@ -126,7 +126,7 @@ export default function Landing() {
     <MarketingLayout>
       {/* Hero Section */}
       <section className="w-full bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
           <div className="text-center">
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               South Africa's Leading
@@ -170,7 +170,7 @@ export default function Landing() {
 
       {/* Features Grid */}
       <section className="w-full py-20 bg-gray-50">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Everything You Need to Run Your Business</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -200,7 +200,7 @@ export default function Landing() {
 
       {/* Social Proof */}
       <section className="w-full py-20">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by South African Professionals</h2>
             <p className="text-xl text-gray-600">Join hundreds of businesses and accounting firms who trust Taxnify</p>
@@ -230,7 +230,7 @@ export default function Landing() {
 
       {/* Stats Section */}
       <section className="w-full py-20 bg-blue-600 text-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-4xl font-bold mb-2">500+</div>
@@ -254,7 +254,7 @@ export default function Landing() {
 
       {/* Pricing Section */}
       <section className="w-full py-20 bg-gray-50">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
             <p className="text-xl text-gray-600">Choose the plan that's right for your business</p>
@@ -303,7 +303,7 @@ export default function Landing() {
 
       {/* CTA Section */}
       <section className="w-full py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="w-full text-center px-4 sm:px-6 lg:px-8">
+        <div className="w-full text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Business 1000 Times?</h2>
           <p className="text-xl text-blue-100 mb-8">
             Join thousands of South African businesses that trust Taxnify for their accounting and compliance needs.
@@ -327,7 +327,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="w-full bg-gray-900 text-white py-16">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Company Info */}
             <div className="col-span-1 md:col-span-2">

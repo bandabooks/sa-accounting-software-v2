@@ -27,7 +27,7 @@ export default function MarketingHeader() {
 
   return (
     <header className="w-full bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+      <div className="w-full">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
