@@ -1026,6 +1026,11 @@ function AuthenticatedApp() {
             <ComplianceClients />
           </ProtectedRoute>
         </Route>
+        <Route path="/compliance/clients/new">
+          <ProtectedRoute>
+            <ComplianceClients />
+          </ProtectedRoute>
+        </Route>
         <Route path="/compliance/tracker">
           <ProtectedRoute>
             <ComplianceTracker />
@@ -1048,6 +1053,11 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         <Route path="/compliance/tasks">
+          <ProtectedRoute>
+            <ComplianceTasks />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/compliance/tasks/new">
           <ProtectedRoute>
             <ComplianceTasks />
           </ProtectedRoute>

@@ -209,7 +209,7 @@ export default function ComplianceClients() {
     return matchesSearch && matchesBusinessType;
   }) || [];
 
-  const businessTypes = Array.from(new Set(clients?.map((c: Client) => c.businessType) || []));
+  const businessTypes = Array.from(new Set(clients?.map((c: Client) => c.businessType) || [])) as string[];
 
   if (isLoading) {
     return (
@@ -264,7 +264,7 @@ export default function ComplianceClients() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                {businessTypes.map((type) => (
+                {businessTypes.map((type: string) => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
               </SelectContent>
