@@ -31,6 +31,7 @@ import {
   ROLES,
   type AuthenticatedRequest 
 } from "./auth";
+import { complianceFeatureGates, billingFeatureGates, integrationFeatureGates, injectPackageInfo } from "./packageMiddleware";
 import {
   getEnhancedUsers,
   getPermissionsMatrix,
@@ -12729,7 +12730,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.post("/api/compliance/clients", authenticate, validateRequest({
+  app.post("/api/compliance/clients", authenticate, complianceFeatureGates.clientManagement(async (req) => {
+    const companyId = req.user.companyId;
+    return await storage.getClientCount(companyId);
+  }), injectPackageInfo(), validateRequest({
     body: z.object({
       name: z.string().min(1),
       businessType: z.string(),
@@ -12916,7 +12920,10 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  app.post("/api/compliance/tasks", authenticate, validateRequest({
+  app.post("/api/compliance/tasks", authenticate, complianceFeatureGates.taskTracking(async (req) => {
+    const companyId = req.user.companyId;
+    return await storage.getTaskCount(companyId);
+  }), injectPackageInfo(), validateRequest({
     body: z.object({
       title: z.string().min(1),
       description: z.string().optional(),
@@ -13644,6 +13651,115 @@ Format your response as a JSON array of tip objects with "title", "description",
     } catch (error) {
       console.error("Error fetching subscription modules:", error);
       res.status(500).json({ message: "Failed to fetch subscription modules" });
+    }
+  });
+
+  // ===== SERVICE PACKAGE MANAGEMENT API ROUTES =====
+  
+  // Get available service packages
+  app.get("/api/service-packages", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { servicePackageManager } = await import('./servicePackageManager');
+      const packages = await servicePackageManager.getAvailablePackages();
+      res.json(packages);
+    } catch (error) {
+      console.error("Error fetching service packages:", error);
+      res.status(500).json({ message: "Failed to fetch service packages" });
+    }
+  });
+
+  // Get features for a specific package
+  app.get("/api/service-packages/:packageType/features", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { servicePackageManager } = await import('./servicePackageManager');
+      const { packageType } = req.params;
+      const features = await servicePackageManager.getPackageFeatures(packageType);
+      res.json(features);
+    } catch (error) {
+      console.error("Error fetching package features:", error);
+      res.status(500).json({ message: "Failed to fetch package features" });
+    }
+  });
+
+  // Check feature access for a client
+  app.get("/api/clients/:clientId/feature-access/:featureKey", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { servicePackageManager } = await import('./servicePackageManager');
+      const { clientId, featureKey } = req.params;
+      const access = await servicePackageManager.checkFeatureAccess(parseInt(clientId), featureKey);
+      res.json(access);
+    } catch (error) {
+      console.error("Error checking feature access:", error);
+      res.status(500).json({ message: "Failed to check feature access" });
+    }
+  });
+
+  // Upgrade client package
+  app.post("/api/clients/:clientId/upgrade-package", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { servicePackageManager } = await import('./servicePackageManager');
+      const { clientId } = req.params;
+      const { packageType } = req.body;
+      
+      if (!packageType) {
+        return res.status(400).json({ message: "Package type is required" });
+      }
+
+      const success = await servicePackageManager.upgradeClientPackage(parseInt(clientId), packageType);
+      
+      if (success) {
+        res.json({ message: "Package upgraded successfully", packageType });
+      } else {
+        res.status(400).json({ message: "Failed to upgrade package" });
+      }
+    } catch (error) {
+      console.error("Error upgrading client package:", error);
+      res.status(500).json({ message: "Failed to upgrade package" });
+    }
+  });
+
+  // Get client subscription details
+  app.get("/api/clients/:clientId/subscription", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { servicePackageManager } = await import('./servicePackageManager');
+      const { clientId } = req.params;
+      const subscription = await servicePackageManager.getClientSubscription(parseInt(clientId));
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error fetching client subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  // Get package comparison for upgrade prompts
+  app.get("/api/service-packages/:currentPackage/compare", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { servicePackageManager } = await import('./servicePackageManager');
+      const { currentPackage } = req.params;
+      const comparison = await servicePackageManager.getPackageComparison(currentPackage);
+      res.json(comparison);
+    } catch (error) {
+      console.error("Error getting package comparison:", error);
+      res.status(500).json({ message: "Failed to get package comparison" });
+    }
+  });
+
+  // Check multiple features for a client
+  app.post("/api/clients/:clientId/check-features", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { servicePackageManager } = await import('./servicePackageManager');
+      const { clientId } = req.params;
+      const { features } = req.body;
+      
+      if (!Array.isArray(features)) {
+        return res.status(400).json({ message: "Features array is required" });
+      }
+
+      const results = await servicePackageManager.checkMultipleFeatures(parseInt(clientId), features);
+      res.json(results);
+    } catch (error) {
+      console.error("Error checking multiple features:", error);
+      res.status(500).json({ message: "Failed to check features" });
     }
   });
 

@@ -6510,3 +6510,92 @@ export type InsertSecurityPolicy = z.infer<typeof insertSecurityPolicySchema>;
 export type Department = typeof departments.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeAttendance = typeof employeeAttendance.$inferSelect;
+
+// Service Package Configuration Tables
+export const servicePackageFeatures = pgTable("service_package_features", {
+  id: serial("id").primaryKey(),
+  packageType: varchar("package_type", { length: 50 }).notNull(), // basic, standard, premium, enterprise
+  featureKey: varchar("feature_key", { length: 100 }).notNull(), // e.g., "compliance.advanced_reports", "billing.automated"
+  enabled: boolean("enabled").default(false),
+  limit: integer("limit"), // For features with usage limits (null = unlimited)
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  packageFeatureIdx: index("service_package_features_package_feature_idx").on(table.packageType, table.featureKey),
+  uniquePackageFeature: index("service_package_features_unique_idx").on(table.packageType, table.featureKey),
+}));
+
+export const servicePackagePricing = pgTable("service_package_pricing", {
+  id: serial("id").primaryKey(),
+  packageType: varchar("package_type", { length: 50 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  description: text("description"),
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(),
+  annualPrice: decimal("annual_price", { precision: 10, scale: 2 }),
+  setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).default("0.00"),
+  maxClients: integer("max_clients"), // null = unlimited
+  maxUsers: integer("max_users"), // null = unlimited
+  priority: integer("priority").default(1), // Display order
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const clientServiceSubscriptions = pgTable("client_service_subscriptions", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull().references(() => clients.id),
+  packageType: varchar("package_type", { length: 50 }).notNull(),
+  status: varchar("status", { length: 20 }).default("active"), // active, suspended, cancelled
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"),
+  billingCycle: varchar("billing_cycle", { length: 20 }).default("monthly"), // monthly, annual
+  monthlyRate: decimal("monthly_rate", { precision: 10, scale: 2 }).notNull(),
+  
+  // Billing tracking
+  lastBilledDate: date("last_billed_date"),
+  nextBillingDate: date("next_billing_date"),
+  totalPaid: decimal("total_paid", { precision: 10, scale: 2 }).default("0.00"),
+  outstandingAmount: decimal("outstanding_amount", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Usage tracking
+  currentClientCount: integer("current_client_count").default(0),
+  currentUserCount: integer("current_user_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  clientIdx: index("client_service_subscriptions_client_idx").on(table.clientId),
+  statusIdx: index("client_service_subscriptions_status_idx").on(table.status),
+  billingIdx: index("client_service_subscriptions_billing_idx").on(table.nextBillingDate),
+}));
+
+// Insert schemas for service package tables
+export const insertServicePackageFeatureSchema = createInsertSchema(servicePackageFeatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertServicePackagePricingSchema = createInsertSchema(servicePackagePricing).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClientServiceSubscriptionSchema = createInsertSchema(clientServiceSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Service package types
+export type ServicePackageFeature = typeof servicePackageFeatures.$inferSelect;
+export type InsertServicePackageFeature = z.infer<typeof insertServicePackageFeatureSchema>;
+
+export type ServicePackagePricing = typeof servicePackagePricing.$inferSelect;
+export type InsertServicePackagePricing = z.infer<typeof insertServicePackagePricingSchema>;
+
+export type ClientServiceSubscription = typeof clientServiceSubscriptions.$inferSelect;
+export type InsertClientServiceSubscription = z.infer<typeof insertClientServiceSubscriptionSchema>;

@@ -7958,6 +7958,20 @@ export class DatabaseStorage implements IStorage {
       .orderBy(clients.name);
   }
 
+  async getClientCount(companyId: number): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(clients)
+      .where(eq(clients.companyId, companyId));
+    return result[0]?.count || 0;
+  }
+
+  async getTaskCount(companyId: number): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(complianceTasks)
+      .where(eq(complianceTasks.companyId, companyId));
+    return result[0]?.count || 0;
+  }
+
   async getClient(id: number): Promise<Client | undefined> {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
     return client || undefined;
