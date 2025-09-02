@@ -27,7 +27,7 @@ export class ScriptTransactionMatcher {
     // Salary and Employee Costs
     {
       patterns: ['salary', 'salaries', 'wages', 'payroll', 'employee', 'staff', 'remuneration'],
-      accountName: 'Employee Costs',
+      accountName: 'Salaries & Wages - Admin',
       vatRate: 0,
       vatType: 'Exempt',
       confidence: 0.95,
@@ -47,7 +47,7 @@ export class ScriptTransactionMatcher {
     // Rent and Property
     {
       patterns: ['rent', 'rental', 'lease', 'property', 'premises', 'office rent', 'shop rent'],
-      accountName: 'Rent Expense',
+      accountName: 'Office Rent',
       vatRate: 15,
       vatType: 'Standard Rate',
       confidence: 0.95,
@@ -77,7 +77,7 @@ export class ScriptTransactionMatcher {
     // Transport and Fuel
     {
       patterns: ['fuel', 'petrol', 'diesel', 'transport', 'travel', 'uber', 'taxi', 'bolt', 'engen', 'shell', 'bp'],
-      accountName: 'Transport & Travel',
+      accountName: 'Fuel',
       vatRate: 15,
       vatType: 'Standard Rate',
       confidence: 0.90,
@@ -127,7 +127,7 @@ export class ScriptTransactionMatcher {
     // Equipment and Assets
     {
       patterns: ['equipment', 'computer', 'laptop', 'furniture', 'machinery', 'tools'],
-      accountName: 'Equipment & Furniture',
+      accountName: 'Administrative Expenses',
       vatRate: 15,
       vatType: 'Standard Rate',
       confidence: 0.85,
@@ -137,7 +137,7 @@ export class ScriptTransactionMatcher {
     // Repairs and Maintenance
     {
       patterns: ['repairs', 'maintenance', 'repair', 'service', 'fix', 'servicing'],
-      accountName: 'Repairs & Maintenance',
+      accountName: 'Cleaning & Maintenance',
       vatRate: 15,
       vatType: 'Standard Rate',
       confidence: 0.90,
@@ -157,17 +157,17 @@ export class ScriptTransactionMatcher {
     // App/Software related
     {
       patterns: ['app', 'software', 'subscription', 'license', 'saas', 'technology'],
-      accountName: 'Software & Technology',
+      accountName: 'Administrative Expenses',
       vatRate: 15,
       vatType: 'Standard Rate',
       confidence: 0.85,
       reasoning: 'Software and technology costs subject to 15% VAT'
     },
 
-    // Generic expense fallback
+    // Generic expense fallback - Updated to match actual account names
     {
       patterns: ['expense', 'cost', 'payment', 'purchase'],
-      accountName: 'General Expenses',
+      accountName: 'Administrative Expenses',
       vatRate: 15,
       vatType: 'Standard Rate',
       confidence: 0.60,
