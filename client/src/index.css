@@ -142,13 +142,13 @@
     @apply bg-gray-500;
   }
   
-  /* Professional hover animations and transitions */
+  /* Professional hover animations and transitions - REMOVED SCALING TO PREVENT OVERFLOW */
   .hover-scale {
     @apply transition-transform duration-200 ease-in-out;
   }
   
   .hover-scale:hover {
-    @apply scale-[1.02];
+    @apply transform-none;
   }
   
   /* Professional card shadows */
@@ -236,6 +236,13 @@
 
   /* PROFESSIONAL LAYOUT STABILITY - Prevent horizontal scrolling and sidebar movement */
   html, body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  /* Landing page specific overflow prevention */
+  .marketing-layout {
     overflow-x: hidden !important;
     width: 100% !important;
     max-width: 100vw !important;
