@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter, Edit, Trash2 } from "lucide-react";
+import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter, Edit, Trash2, Play, Pause, Square } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,13 +21,13 @@ const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   taskType: z.string().min(1, "Task type is required"),
-  priority: z.string().default("medium"),
+  status: z.enum(["todo", "in_progress", "review", "completed", "blocked"]).default("todo"),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   complianceType: z.string().optional(),
   assignedTo: z.number().optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
   notes: z.string().optional(),
-  status: z.string().optional(),
   completedAt: z.string().optional(),
   isRecurring: z.boolean().default(false),
   recurringType: z.string().optional(),
@@ -48,9 +48,13 @@ export default function ComplianceTasks() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch tasks
+  // Fetch tasks and active time entry
   const { data: tasks = [], isLoading } = useQuery<ComplianceTask[]>({
     queryKey: ["/api/tasks"],
+  });
+
+  const { data: activeTimeEntry } = useQuery<any>({
+    queryKey: ["/api/time-entries/active"],
   });
 
   // Create form
@@ -60,7 +64,8 @@ export default function ComplianceTasks() {
       title: "",
       description: "",
       taskType: "compliance",
-      priority: "medium",
+      status: "todo" as const,
+      priority: "medium" as const,
       complianceType: "",
       notes: "",
       startDate: "",
@@ -79,7 +84,8 @@ export default function ComplianceTasks() {
       title: "",
       description: "",
       taskType: "compliance",
-      priority: "medium",
+      status: "todo" as const,
+      priority: "medium" as const,
       complianceType: "",
       notes: "",
       startDate: "",
@@ -135,24 +141,151 @@ export default function ComplianceTasks() {
     },
   });
 
+  // Time tracking mutations
+  const startTimeMutation = useMutation({
+    mutationFn: async ({ taskId, description }: { taskId: number; description?: string }) => {
+      return await apiRequest("/api/time-entries", "POST", {
+        taskId,
+        description: description || "Working on task",
+        startTime: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      toast({
+        title: "Success",
+        description: "Time tracking started",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start time tracking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const stopTimeMutation = useMutation({
+    mutationFn: async (timeEntryId: number) => {
+      return await apiRequest(`/api/time-entries/${timeEntryId}`, "PUT", {
+        endTime: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Time tracking stopped",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to stop time tracking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: number; status: string }) => {
+      return await apiRequest(`/api/tasks/${taskId}`, "PUT", { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Task status updated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "todo": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
       case "in_progress": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "overdue": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "review": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "completed": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "blocked": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-      case "medium": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "low": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "low": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+      case "medium": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "high": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+      case "urgent": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
+
+  // Time tracking helper functions
+  const handleStartTime = (taskId: number) => {
+    if (activeTimeEntry) {
+      toast({
+        title: "Active Time Entry",
+        description: "Please stop the current time entry before starting a new one",
+        variant: "destructive",
+      });
+      return;
+    }
+    startTimeMutation.mutate({ taskId });
+  };
+
+  const handleStopTime = (timeEntryId: number) => {
+    stopTimeMutation.mutate(timeEntryId);
+  };
+
+  // Running Timer Component
+  const RunningTimer = ({ startTime }: { startTime: string }) => {
+    const [elapsed, setElapsed] = useState(0);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        const start = new Date(startTime).getTime();
+        const now = Date.now();
+        setElapsed(Math.floor((now - start) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }, [startTime]);
+
+    const formatElapsed = (seconds: number) => {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return <span>{formatElapsed(elapsed)}</span>;
+  };
+
+  const toggleTaskStatus = (task: ComplianceTask) => {
+    const newStatus = task.status === 'completed' ? 'todo' : 'completed';
+    updateStatusMutation.mutate({ taskId: task.id, status: newStatus });
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
+
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -203,7 +336,8 @@ export default function ComplianceTasks() {
       title: task.title,
       description: task.description || "",
       taskType: task.taskType,
-      priority: task.priority || "medium",
+      status: (task.status as any) || "todo",
+      priority: (task.priority as any) || "medium",
       complianceType: task.complianceType || "",
       startDate: (task as any).startDate ? new Date((task as any).startDate).toISOString().split('T')[0] : "",
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
@@ -283,7 +417,7 @@ export default function ComplianceTasks() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <FormField
                     control={createForm.control}
                     name="taskType"
@@ -301,6 +435,30 @@ export default function ComplianceTasks() {
                             <SelectItem value="review">Review</SelectItem>
                             <SelectItem value="follow_up">Follow Up</SelectItem>
                             <SelectItem value="document_request">Document Request</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select value={field.value || ""} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="todo">To Do</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="review">Review</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="blocked">Blocked</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -553,10 +711,11 @@ export default function ComplianceTasks() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="todo">To Do</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="review">Review</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -593,11 +752,11 @@ export default function ComplianceTasks() {
                             {task.complianceType.toUpperCase()}
                           </Badge>
                         )}
-                        <Badge className={getPriorityColor(task.priority || "medium")}>
-                          {task.priority || "medium"}
+                        <Badge className={getPriorityColor((task.priority as any) || "medium")}>
+                          {(task.priority as any) || "medium"}
                         </Badge>
-                        <Badge className={getStatusColor(task.status || "pending")}>
-                          {task.status || "pending"}
+                        <Badge className={getStatusColor((task.status as any) || "todo")}>
+                          {(task.status as any) || "todo"}
                         </Badge>
                       </div>
                     </div>
@@ -620,25 +779,53 @@ export default function ComplianceTasks() {
                       )}
                     </div>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    {/* Active timer display */}
+                    {activeTimeEntry && activeTimeEntry.taskId === task.id && (
+                      <div className="flex items-center bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-1 text-sm">
+                        <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 mr-2" />
+                        <span className="text-blue-700 dark:text-blue-300 font-medium">
+                          <RunningTimer startTime={activeTimeEntry.startTime} />
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Time tracking buttons */}
+                    {activeTimeEntry && activeTimeEntry.taskId === task.id ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleStopTime(activeTimeEntry.id)}
+                        disabled={stopTimeMutation.isPending}
+                        className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+                      >
+                        <Square className="h-4 w-4 mr-1" />
+                        Stop Timer
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleStartTime(task.id)}
+                        disabled={startTimeMutation.isPending}
+                        className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-950"
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Start Timer
+                      </Button>
+                    )}
+                    
                     <Button variant="outline" size="sm" onClick={() => handleEditClick(task)}>
                       <Edit className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
                     <Button 
                       size="sm" 
-                      onClick={() => {
-                        const newStatus = task.status === "completed" ? "pending" : "completed";
-                        updateMutation.mutate({ 
-                          id: task.id, 
-                          data: { 
-                            status: newStatus,
-                            completedAt: newStatus === "completed" ? new Date().toISOString() : undefined
-                          } 
-                        });
-                      }}
+                      onClick={() => toggleTaskStatus(task)}
+                      disabled={updateStatusMutation.isPending}
+                      className="text-sm"
                     >
-                      {task.status === "completed" ? "Reopen" : "Complete"}
+                      {(task.status as any) === "completed" ? "Mark Todo" : "Mark Complete"}
                     </Button>
                   </div>
                 </div>
@@ -702,7 +889,7 @@ export default function ComplianceTasks() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <FormField
                   control={editForm.control}
                   name="taskType"
@@ -720,6 +907,30 @@ export default function ComplianceTasks() {
                           <SelectItem value="review">Review</SelectItem>
                           <SelectItem value="follow_up">Follow Up</SelectItem>
                           <SelectItem value="document_request">Document Request</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="todo">To Do</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="review">Review</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
