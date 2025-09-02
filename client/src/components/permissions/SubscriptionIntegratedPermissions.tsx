@@ -453,24 +453,34 @@ export default function SubscriptionIntegratedPermissions({
     if (selectedRoleId) {
       const newStates: Record<string, boolean> = {};
       
-      // Load existing permissions if available
-      if (currentPermissions) {
+      // First, set defaults for all modules (false by default)
+      Object.values(AVAILABLE_MODULES).forEach(module => {
+        module.permissions.forEach(permission => {
+          const key = `${selectedRoleId}-${module.id}-${permission}`;
+          newStates[key] = false;
+        });
+      });
+
+      // Then, load actual permissions from database if available
+      if (currentPermissions && currentPermissions.length > 0) {
         currentPermissions.forEach((perm: any) => {
           const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
           newStates[key] = perm.enabled;
         });
+      } else {
+        // Only auto-enable essential permissions if NO permissions exist in database
+        Object.values(AVAILABLE_MODULES).forEach(module => {
+          if (module.essential) {
+            module.permissions.forEach(permission => {
+              const key = `${selectedRoleId}-${module.id}-${permission}`;
+              // Only set as default if no database value exists
+              if (!(key in newStates)) {
+                newStates[key] = true;
+              }
+            });
+          }
+        });
       }
-
-      // Auto-enable ALL essential permissions by default 
-      Object.values(AVAILABLE_MODULES).forEach(module => {
-        if (module.essential) {
-          module.permissions.forEach(permission => {
-            const key = `${selectedRoleId}-${module.id}-${permission}`;
-            // Enable ALL permissions for essential modules
-            newStates[key] = true;
-          });
-        }
-      });
 
       setPermissionStates(newStates);
     }
