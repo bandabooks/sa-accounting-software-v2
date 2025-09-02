@@ -499,6 +499,7 @@ export default function SubscriptionIntegratedPermissions({
       });
       
       // Refresh permissions data to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['/api/rbac/role-permissions', variables.roleId] });
       queryClient.invalidateQueries({ queryKey: ['/api/permissions'] });
     },
     onError: (error: any, variables) => {

@@ -13456,6 +13456,22 @@ Format your response as a JSON array of tip objects with "title", "description",
   
   // Permissions Matrix Routes - BRIDGED TO WORKING RBAC SYSTEM
   app.get("/api/permissions/matrix", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_GRANT), getBridgedPermissionsMatrix);
+
+  // Get role permissions for a specific role
+  app.get("/api/rbac/role-permissions/:roleId", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const roleId = parseInt(req.params.roleId);
+      if (isNaN(roleId)) {
+        return res.status(400).json({ message: "Invalid role ID" });
+      }
+
+      const permissions = await storage.getRolePermissions(roleId);
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching role permissions:", error);
+      res.status(500).json({ message: "Failed to fetch role permissions" });
+    }
+  });
   
   // Permission Toggle Route - Allow all authenticated users to manage permissions
   app.post("/api/permissions/toggle", authenticate, async (req: AuthenticatedRequest, res) => {

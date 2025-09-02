@@ -12914,6 +12914,61 @@ export class DatabaseStorage implements IStorage {
     await db.execute(updateQuery);
   }
 
+  // Get role permissions by role ID
+  async getRolePermissions(roleId: number): Promise<any[]> {
+    try {
+      const [role] = await db.select().from(systemRoles).where(eq(systemRoles.id, roleId));
+      
+      if (!role) {
+        return [];
+      }
+
+      let permissions = {};
+      try {
+        const rawPermissions = role.permissions;
+        
+        if (!rawPermissions) {
+          permissions = {};
+        } else if (typeof rawPermissions === 'string') {
+          permissions = JSON.parse(rawPermissions);
+        } else if (Array.isArray(rawPermissions)) {
+          // Convert array format to object format
+          permissions = {};
+          rawPermissions.forEach((perm: string) => {
+            const [module, action] = perm.split(':');
+            if (module && action) {
+              if (!permissions[module]) permissions[module] = {};
+              permissions[module][action] = true;
+            }
+          });
+        } else if (typeof rawPermissions === 'object') {
+          permissions = rawPermissions;
+        }
+      } catch (e) {
+        console.log(`Failed to parse permissions for role ${roleId}:`, e);
+        permissions = {};
+      }
+
+      // Convert to array format expected by frontend
+      const result = [];
+      for (const [moduleId, modulePerms] of Object.entries(permissions)) {
+        for (const [permissionType, enabled] of Object.entries(modulePerms as Record<string, boolean>)) {
+          result.push({
+            roleId,
+            moduleId,
+            permissionType,
+            enabled
+          });
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error getting role permissions:', error);
+      return [];
+    }
+  }
+
   // Update individual role permission
   async updateRolePermission(roleId: number, module: string, permission: string, enabled: boolean): Promise<void> {
     try {
