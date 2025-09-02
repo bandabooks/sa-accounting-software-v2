@@ -60,10 +60,7 @@ export default function ServicePackageAdmin() {
 
   const updatePackageMutation = useMutation({
     mutationFn: (data: { packageType: string } & PackageUpdateForm) =>
-      apiRequest(`/api/admin/service-packages/${data.packageType}/pricing`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
+      apiRequest(`/api/admin/service-packages/${data.packageType}/pricing`, "PUT", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/service-packages/pricing"] });
       setIsEditDialogOpen(false);
@@ -82,6 +79,25 @@ export default function ServicePackageAdmin() {
     },
   });
 
+  const togglePackageMutation = useMutation({
+    mutationFn: (data: { packageType: string; isActive: boolean }) =>
+      apiRequest(`/api/admin/service-packages/${data.packageType}/pricing`, "PUT", { isActive: data.isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/service-packages/pricing"] });
+      toast({
+        title: "Package Status Updated",
+        description: "Service package availability has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Toggle Failed",
+        description: error.message || "Failed to update package status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEdit = (pkg: ServicePackage) => {
     setEditingPackage(pkg);
     form.reset({
@@ -92,6 +108,13 @@ export default function ServicePackageAdmin() {
       isActive: pkg.isActive,
     });
     setIsEditDialogOpen(true);
+  };
+
+  const handleToggleActive = (pkg: ServicePackage, checked: boolean) => {
+    togglePackageMutation.mutate({
+      packageType: pkg.packageType,
+      isActive: checked,
+    });
   };
 
   const onSubmit = (data: PackageUpdateForm) => {
@@ -143,7 +166,11 @@ export default function ServicePackageAdmin() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">{pkg.displayName}</CardTitle>
-                <Switch checked={pkg.isActive} disabled />
+                <Switch 
+                  checked={pkg.isActive} 
+                  onCheckedChange={(checked) => handleToggleActive(pkg, checked)}
+                  data-testid={`toggle-${pkg.packageType}`}
+                />
               </div>
               <CardDescription className="text-sm">
                 {pkg.description || "No description"}
