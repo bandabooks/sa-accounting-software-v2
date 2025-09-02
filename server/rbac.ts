@@ -3,23 +3,33 @@ import { storage } from './storage';
 import { PERMISSIONS } from './auth';
 import { SystemRole, CompanyRole, UserPermission, InsertPermissionAuditLog } from '@shared/schema';
 
-// System Role Definitions with Permissions - Comprehensive Business Roles
+// System Role Definitions with Permissions - Authoritative Business Roles Hierarchy
+// Level 10-1 hierarchy matching database implementation
 export const SYSTEM_ROLES = {
-  // 1. Platform Owner/System Operator
+  // Level 10: Platform Owner/System Operator
   SUPER_ADMIN: {
     name: 'super_admin',
     displayName: 'Super Administrator',
-    description: 'Platform owner with full access to all companies, billing, subscription, platform settings, and global system management',
+    description: 'Platform & subscription owner. Global access to all companies, billing, plans, platform settings.',
     level: 10,
     permissions: Object.values(PERMISSIONS), // All permissions across the platform
   },
   
-  // 2. Company Admin/Owner - Full Company Access
+  // Level 9: System Administrator
+  SYSTEM_ADMIN: {
+    name: 'system_admin',
+    displayName: 'System Administrator',
+    description: 'System/integrations/configuration. No subscription billing authority.',
+    level: 9,
+    permissions: Object.values(PERMISSIONS), // Full system access but not billing
+  },
+  
+  // Level 8: Company Administrator
   COMPANY_ADMIN: {
     name: 'company_admin',
     displayName: 'Company Administrator',
-    description: 'Full access to all modules and settings within their company. Can invite, create, and manage users, assign roles and permissions, control billing',
-    level: 9,
+    description: 'Full control within their company (users, roles, company billing, settings).',
+    level: 8,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.COMPANIES_VIEW,
@@ -93,12 +103,91 @@ export const SYSTEM_ROLES = {
     ],
   },
 
-  // 3. Accountant - Core Accounting Features
+  // Level 7: Company Owner
+  COMPANY_OWNER: {
+    name: 'company_owner',
+    displayName: 'Company Owner',
+    description: 'Operational owner for a single company; full day-to-day business control.',
+    level: 7,
+    permissions: [
+      PERMISSIONS.DASHBOARD_VIEW,
+      PERMISSIONS.COMPANIES_VIEW,
+      PERMISSIONS.COMPANIES_UPDATE,
+      PERMISSIONS.USERS_VIEW,
+      PERMISSIONS.USERS_CREATE,
+      PERMISSIONS.USERS_UPDATE,
+      PERMISSIONS.USERS_DELETE,
+      PERMISSIONS.USERS_ASSIGN_ROLES,
+      PERMISSIONS.ROLES_VIEW,
+      PERMISSIONS.ROLES_CREATE,
+      PERMISSIONS.ROLES_UPDATE,
+      PERMISSIONS.PERMISSIONS_GRANT,
+      PERMISSIONS.PERMISSIONS_REVOKE,
+      PERMISSIONS.CUSTOMERS_VIEW,
+      PERMISSIONS.CUSTOMERS_CREATE,
+      PERMISSIONS.CUSTOMERS_UPDATE,
+      PERMISSIONS.CUSTOMERS_DELETE,
+      PERMISSIONS.SUPPLIERS_VIEW,
+      PERMISSIONS.SUPPLIERS_CREATE,
+      PERMISSIONS.SUPPLIERS_UPDATE,
+      PERMISSIONS.SUPPLIERS_DELETE,
+      PERMISSIONS.INVOICES_VIEW,
+      PERMISSIONS.INVOICES_CREATE,
+      PERMISSIONS.INVOICES_UPDATE,
+      PERMISSIONS.INVOICES_DELETE,
+      PERMISSIONS.INVOICES_SEND,
+      PERMISSIONS.INVOICES_APPROVE,
+      PERMISSIONS.ESTIMATES_VIEW,
+      PERMISSIONS.ESTIMATES_CREATE,
+      PERMISSIONS.ESTIMATES_UPDATE,
+      PERMISSIONS.ESTIMATES_DELETE,
+      PERMISSIONS.PRODUCTS_VIEW,
+      PERMISSIONS.PRODUCTS_CREATE,
+      PERMISSIONS.PRODUCTS_UPDATE,
+      PERMISSIONS.PRODUCTS_DELETE,
+      PERMISSIONS.INVENTORY_VIEW,
+      PERMISSIONS.INVENTORY_MANAGE,
+      PERMISSIONS.EXPENSES_VIEW,
+      PERMISSIONS.EXPENSES_CREATE,
+      PERMISSIONS.EXPENSES_UPDATE,
+      PERMISSIONS.EXPENSES_DELETE,
+      PERMISSIONS.PURCHASE_ORDERS_VIEW,
+      PERMISSIONS.PURCHASE_ORDERS_CREATE,
+      PERMISSIONS.PURCHASE_ORDERS_UPDATE,
+      PERMISSIONS.PURCHASE_ORDERS_DELETE,
+      PERMISSIONS.FINANCIAL_VIEW,
+      PERMISSIONS.FINANCIAL_EXPORT,
+      PERMISSIONS.CHART_OF_ACCOUNTS_VIEW,
+      PERMISSIONS.CHART_OF_ACCOUNTS_UPDATE,
+      PERMISSIONS.JOURNAL_ENTRIES_VIEW,
+      PERMISSIONS.JOURNAL_ENTRIES_CREATE,
+      PERMISSIONS.JOURNAL_ENTRIES_UPDATE,
+      PERMISSIONS.BANKING_VIEW,
+      PERMISSIONS.BANKING_CREATE,
+      PERMISSIONS.BANKING_UPDATE,
+      PERMISSIONS.POS_VIEW,
+      PERMISSIONS.POS_PROCESS_SALES,
+      PERMISSIONS.POS_HANDLE_RETURNS,
+      PERMISSIONS.POS_CASH_MANAGEMENT,
+      PERMISSIONS.POS_MANAGE_SHIFTS,
+      PERMISSIONS.POS_MANAGE_TERMINAL,
+      PERMISSIONS.POS_VIEW_REPORTS,
+      PERMISSIONS.REPORTS_VIEW,
+      PERMISSIONS.REPORTS_EXPORT,
+      PERMISSIONS.SETTINGS_VIEW,
+      PERMISSIONS.SETTINGS_UPDATE,
+      PERMISSIONS.AUDIT_VIEW,
+      PERMISSIONS.COMPLIANCE_VIEW,
+      PERMISSIONS.VAT_MANAGE,
+    ],
+  },
+
+  // Level 6: Accountant - Core Accounting Features
   ACCOUNTANT: {
     name: 'accountant',
     displayName: 'Accountant',
-    description: 'Access to core accounting features including invoicing, expenses, bank reconciliation, journals, VAT. Can view, create, and edit financial records',
-    level: 7,
+    description: 'Core accounting: invoicing, expenses, journals, bank rec, VAT; can edit financial data.',
+    level: 6,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.CUSTOMERS_VIEW,
@@ -137,12 +226,46 @@ export const SYSTEM_ROLES = {
     ],
   },
 
-  // 4. Bookkeeper - Day-to-day Transactions
+  // Level 6: Manager - Business Unit Access
+  MANAGER: {
+    name: 'manager',
+    displayName: 'Manager',
+    description: 'Department/business unit scope. Approvals, reports, limited edits.',
+    level: 6,
+    permissions: [
+      PERMISSIONS.DASHBOARD_VIEW,
+      PERMISSIONS.CUSTOMERS_VIEW,
+      PERMISSIONS.CUSTOMERS_CREATE,
+      PERMISSIONS.CUSTOMERS_UPDATE,
+      PERMISSIONS.SUPPLIERS_VIEW,
+      PERMISSIONS.INVOICES_VIEW,
+      PERMISSIONS.INVOICES_CREATE,
+      PERMISSIONS.INVOICES_UPDATE,
+      PERMISSIONS.INVOICES_APPROVE,
+      PERMISSIONS.ESTIMATES_VIEW,
+      PERMISSIONS.ESTIMATES_CREATE,
+      PERMISSIONS.ESTIMATES_UPDATE,
+      PERMISSIONS.PRODUCTS_VIEW,
+      PERMISSIONS.PRODUCTS_CREATE,
+      PERMISSIONS.PRODUCTS_UPDATE,
+      PERMISSIONS.INVENTORY_VIEW,
+      PERMISSIONS.EXPENSES_VIEW,
+      PERMISSIONS.EXPENSES_CREATE,
+      PERMISSIONS.EXPENSES_UPDATE,
+      PERMISSIONS.PURCHASE_ORDERS_VIEW,
+      PERMISSIONS.PURCHASE_ORDERS_CREATE,
+      PERMISSIONS.PURCHASE_ORDERS_UPDATE,
+      PERMISSIONS.REPORTS_VIEW,
+      PERMISSIONS.REPORTS_EXPORT,
+    ],
+  },
+
+  // Level 5: Bookkeeper - Day-to-day Transactions
   BOOKKEEPER: {
     name: 'bookkeeper',
     displayName: 'Bookkeeper',
-    description: 'Enter day-to-day transactions including sales, expenses, receipts, bills. Access to client, supplier, product, and transaction modules with limited reporting',
-    level: 6,
+    description: 'Daily entries: sales, expenses, receipts, bills. Limited reporting.',
+    level: 5,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.CUSTOMERS_VIEW,
@@ -173,12 +296,52 @@ export const SYSTEM_ROLES = {
     ],
   },
 
-  // 5. Auditor - Read-only Financial Access
+  // Level 5: Payroll Administrator - HR and Payroll Access
+  PAYROLL_ADMIN: {
+    name: 'payroll_admin',
+    displayName: 'Payroll Administrator',
+    description: 'Payroll/HR: employees, leave, salaries. No sales/supplier data.',
+    level: 5,
+    permissions: [
+      PERMISSIONS.DASHBOARD_VIEW,
+      PERMISSIONS.USERS_VIEW,
+      PERMISSIONS.EXPENSES_VIEW,
+      PERMISSIONS.EXPENSES_CREATE,
+      PERMISSIONS.EXPENSES_UPDATE,
+      PERMISSIONS.JOURNAL_ENTRIES_VIEW,
+      PERMISSIONS.JOURNAL_ENTRIES_CREATE,
+      PERMISSIONS.REPORTS_VIEW,
+      PERMISSIONS.BANKING_VIEW,
+    ],
+  },
+
+  // Level 5: Compliance Officer/Tax Practitioner - Compliance Focus
+  COMPLIANCE_OFFICER: {
+    name: 'compliance_officer',
+    displayName: 'Compliance Officer',
+    description: 'Compliance modules (SARS, CIPC, Labour, VAT). Submit/track filings.',
+    level: 5,
+    permissions: [
+      PERMISSIONS.DASHBOARD_VIEW,
+      PERMISSIONS.COMPLIANCE_VIEW,
+      PERMISSIONS.VAT_MANAGE,
+      PERMISSIONS.FINANCIAL_VIEW,
+      PERMISSIONS.FINANCIAL_EXPORT,
+      PERMISSIONS.REPORTS_VIEW,
+      PERMISSIONS.REPORTS_EXPORT,
+      PERMISSIONS.AUDIT_VIEW,
+      PERMISSIONS.INVOICES_VIEW,
+      PERMISSIONS.EXPENSES_VIEW,
+      PERMISSIONS.JOURNAL_ENTRIES_VIEW,
+    ],
+  },
+
+  // Level 4: Auditor - Read-only Financial Access
   AUDITOR: {
     name: 'auditor',
     displayName: 'Auditor',
-    description: 'Read-only access to financial data, transactions, and compliance modules. Can run and export reports, view logs, but cannot create or edit records',
-    level: 5,
+    description: 'Read-only; can run/export reports, view logs. No edits.',
+    level: 4,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.CUSTOMERS_VIEW,
@@ -200,46 +363,12 @@ export const SYSTEM_ROLES = {
     ],
   },
 
-  // 6. Manager/Department Manager - Business Unit Access
-  MANAGER: {
-    name: 'manager',
-    displayName: 'Manager',
-    description: 'Access to relevant business units or departments. Can approve transactions, view reports, limited edit rights for their area of responsibility',
-    level: 6,
-    permissions: [
-      PERMISSIONS.DASHBOARD_VIEW,
-      PERMISSIONS.CUSTOMERS_VIEW,
-      PERMISSIONS.CUSTOMERS_CREATE,
-      PERMISSIONS.CUSTOMERS_UPDATE,
-      PERMISSIONS.SUPPLIERS_VIEW,
-      PERMISSIONS.INVOICES_VIEW,
-      PERMISSIONS.INVOICES_CREATE,
-      PERMISSIONS.INVOICES_UPDATE,
-      PERMISSIONS.INVOICES_APPROVE,
-      PERMISSIONS.ESTIMATES_VIEW,
-      PERMISSIONS.ESTIMATES_CREATE,
-      PERMISSIONS.ESTIMATES_UPDATE,
-      PERMISSIONS.PRODUCTS_VIEW,
-      PERMISSIONS.PRODUCTS_CREATE,
-      PERMISSIONS.PRODUCTS_UPDATE,
-      PERMISSIONS.INVENTORY_VIEW,
-      PERMISSIONS.EXPENSES_VIEW,
-      PERMISSIONS.EXPENSES_CREATE,
-      PERMISSIONS.EXPENSES_UPDATE,
-      PERMISSIONS.PURCHASE_ORDERS_VIEW,
-      PERMISSIONS.PURCHASE_ORDERS_CREATE,
-      PERMISSIONS.PURCHASE_ORDERS_UPDATE,
-      PERMISSIONS.REPORTS_VIEW,
-      PERMISSIONS.REPORTS_EXPORT,
-    ],
-  },
-
-  // 7. Sales Representative - Sales Focused
+  // Level 3: Sales Representative - Sales Focused
   SALES_REPRESENTATIVE: {
     name: 'sales_representative',
     displayName: 'Sales Representative',
-    description: 'Access to sales-related modules including customers, invoices, estimates, products. Limited access to financial reports',
-    level: 4,
+    description: 'Sales/customer modules (customers, quotes, invoices, products). Limited reporting.',
+    level: 3,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
       PERMISSIONS.CUSTOMERS_VIEW,
@@ -259,12 +388,12 @@ export const SYSTEM_ROLES = {
     ],
   },
 
-  // 8. Cashier/POS Operator - Point of Sale Access
+  // Level 2: Cashier/POS Operator - Point of Sale Access
   CASHIER: {
     name: 'cashier',
     displayName: 'Cashier',
-    description: 'Use the Point of Sale module, process sales, print receipts. No access to back-office functions or sensitive financial data',
-    level: 3,
+    description: 'POS only; process sales/print receipts. No back-office access.',
+    level: 2,
     permissions: [
       PERMISSIONS.POS_VIEW,
       PERMISSIONS.POS_PROCESS_SALES,
@@ -276,51 +405,11 @@ export const SYSTEM_ROLES = {
     ],
   },
 
-  // 9. Payroll Admin - HR and Payroll Access
-  PAYROLL_ADMIN: {
-    name: 'payroll_admin',
-    displayName: 'Payroll Administrator',
-    description: 'Access to payroll, employee management, leave, and salary modules. No access to sales or supplier data',
-    level: 6,
-    permissions: [
-      PERMISSIONS.DASHBOARD_VIEW,
-      PERMISSIONS.USERS_VIEW,
-      PERMISSIONS.EXPENSES_VIEW,
-      PERMISSIONS.EXPENSES_CREATE,
-      PERMISSIONS.EXPENSES_UPDATE,
-      PERMISSIONS.JOURNAL_ENTRIES_VIEW,
-      PERMISSIONS.JOURNAL_ENTRIES_CREATE,
-      PERMISSIONS.REPORTS_VIEW,
-      PERMISSIONS.BANKING_VIEW,
-    ],
-  },
-
-  // 10. Compliance Officer/Tax Practitioner - Compliance Focus
-  COMPLIANCE_OFFICER: {
-    name: 'compliance_officer',
-    displayName: 'Compliance Officer',
-    description: 'Access to compliance modules including SARS, CIPC, Labour, VAT. Submit, track, and download compliance documents and reports',
-    level: 6,
-    permissions: [
-      PERMISSIONS.DASHBOARD_VIEW,
-      PERMISSIONS.COMPLIANCE_VIEW,
-      PERMISSIONS.VAT_MANAGE,
-      PERMISSIONS.FINANCIAL_VIEW,
-      PERMISSIONS.FINANCIAL_EXPORT,
-      PERMISSIONS.REPORTS_VIEW,
-      PERMISSIONS.REPORTS_EXPORT,
-      PERMISSIONS.AUDIT_VIEW,
-      PERMISSIONS.INVOICES_VIEW,
-      PERMISSIONS.EXPENSES_VIEW,
-      PERMISSIONS.JOURNAL_ENTRIES_VIEW,
-    ],
-  },
-
-  // 11. Employee/Staff/Operator - Limited Module Access
+  // Level 2: Employee/Staff/Operator - Limited Module Access
   EMPLOYEE: {
     name: 'employee',
     displayName: 'Employee',
-    description: 'Access to only the modules necessary for their job such as POS, sales entry, timesheets, tasks. Cannot view financial reports or manage company/users',
+    description: 'Only modules needed for tasks (POS, timesheets, tasks). No financial access.',
     level: 2,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
@@ -332,11 +421,11 @@ export const SYSTEM_ROLES = {
     ],
   },
 
-  // 12. Viewer/Read-Only User - View Only Access
+  // Level 1: Viewer/Read-Only User - View Only Access
   VIEWER: {
     name: 'viewer',
     displayName: 'Viewer',
-    description: 'Can only view data, reports, and dashboards. No editing or management rights whatsoever',
+    description: 'View-only dashboards/reports. No management or edits.',
     level: 1,
     permissions: [
       PERMISSIONS.DASHBOARD_VIEW,
