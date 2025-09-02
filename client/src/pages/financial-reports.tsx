@@ -405,9 +405,9 @@ export default function FinancialReports() {
             lastGenerated: format(new Date(), "yyyy-MM-dd"),
             summary: {
               totalExpenses: expenses?.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
-              operatingExpenses: expenses?.filter((exp: any) => exp.category?.toLowerCase().includes('operating')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
-              adminExpenses: expenses?.filter((exp: any) => exp.category?.toLowerCase().includes('admin')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
-              costOfSales: expenses?.filter((exp: any) => exp.category?.toLowerCase().includes('cost')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0
+              operatingExpenses: expenses?.filter((exp: any) => exp.category && typeof exp.category === 'string' && exp.category.toLowerCase().includes('operating')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
+              adminExpenses: expenses?.filter((exp: any) => exp.category && typeof exp.category === 'string' && exp.category.toLowerCase().includes('admin')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0,
+              costOfSales: expenses?.filter((exp: any) => exp.category && typeof exp.category === 'string' && exp.category.toLowerCase().includes('cost')).reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0) || 0
             },
             data: {
               categories: expenses?.length ? 
