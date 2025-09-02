@@ -50,7 +50,7 @@ export default function ComplianceTasks() {
 
   // Fetch tasks
   const { data: tasks = [], isLoading } = useQuery<ComplianceTask[]>({
-    queryKey: ["/api/compliance/tasks"],
+    queryKey: ["/api/tasks"],
   });
 
   // Create form
@@ -96,7 +96,6 @@ export default function ComplianceTasks() {
     mutationFn: (data: TaskFormData) => apiRequest("/api/tasks", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/compliance/tasks"] });
       setIsCreateDialogOpen(false);
       createForm.reset();
       toast({
@@ -119,7 +118,6 @@ export default function ComplianceTasks() {
       apiRequest(`/api/tasks/${id}`, "PUT", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/compliance/tasks"] });
       setIsEditDialogOpen(false);
       setEditingTask(null);
       editForm.reset();
