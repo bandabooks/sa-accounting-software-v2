@@ -810,46 +810,140 @@ SMART MATCHING RULES:
   }
 
   private fallbackMatching(request: BulkMatchRequest): TransactionMatch[] {
+    console.log(`🔧 Using fallback matching for ${request.transactions.length} transactions`);
+    
     return request.transactions.map(transaction => {
-      // Smart fallback rules
-      let suggestedAccount = { id: '4000', name: 'Sales Revenue', code: '4000', confidence: 0.7 };
-      let type: 'income' | 'expense' = 'income';
+      console.log(`🔍 Analyzing transaction: "${transaction.description}"`);
+      
+      // Default suggestion
+      let suggestedAccount = { id: '4000', name: 'Sales Revenue', code: '4000', confidence: 0.5 };
+      let type: 'income' | 'expense' = transaction.type === 'credit' ? 'income' : 'expense';
       let vatRate = 15;
-      let category = 'Revenue';
+      let category = 'General';
+      let reasoning = 'Default classification';
 
       const desc = transaction.description.toLowerCase();
+      console.log(`📝 Processing: ${desc}`);
 
-      // Pattern matching for common transaction types
-      if (desc.includes('salary') || desc.includes('wage')) {
-        suggestedAccount = { id: '6100', name: 'Employee Costs', code: '6100', confidence: 0.9 };
+      // Enhanced pattern matching for South African banking
+      if (desc.includes('salary') || desc.includes('salaries') || desc.includes('wage') || 
+          desc.includes('leseding salary') || desc.includes('f banda') || desc.includes('staff cost') ||
+          desc.includes('pmt to') && (desc.includes('salary') || desc.includes('staff'))) {
+        suggestedAccount = { id: '6100', name: 'Salaries & Wages', code: '6100', confidence: 0.95 };
         type = 'expense';
         category = 'Payroll';
-      } else if (desc.includes('ikhokha') || desc.includes('sales') || desc.includes('deposit')) {
-        suggestedAccount = { id: '4000', name: 'Sales Revenue', code: '4000', confidence: 0.8 };
+        reasoning = 'Salary/wage payment detected';
+        console.log(`✅ Matched salary pattern: ${reasoning}`);
+        
+      } else if (desc.includes('bank charges') || desc.includes('service fee') || desc.includes('monthly fee') ||
+                desc.includes('account fee') || desc.includes('transaction fee') || desc.includes('bank charge')) {
+        suggestedAccount = { id: '6300', name: 'Bank Charges', code: '6300', confidence: 0.92 };
+        type = 'expense';
+        vatRate = 0; // Bank charges usually VAT exempt
+        category = 'Bank Fees';
+        reasoning = 'Bank charge/fee detected';
+        console.log(`✅ Matched bank charges: ${reasoning}`);
+        
+      } else if (desc.includes('ikhokha') || desc.includes('yoco') || desc.includes('ozow') || 
+                desc.includes('deposit') || desc.includes('payment received') || desc.includes('transfer in')) {
+        suggestedAccount = { id: '4000', name: 'Sales Revenue', code: '4000', confidence: 0.88 };
         type = 'income';
         category = 'Revenue';
-      } else if (desc.includes('transfer')) {
-        suggestedAccount = { id: '1200', name: 'Bank Transfer', code: '1200', confidence: 0.8 };
+        reasoning = 'Payment/deposit received';
+        console.log(`✅ Matched income pattern: ${reasoning}`);
+        
+      } else if (desc.includes('transfer') || desc.includes('transfer to') || desc.includes('transfer from')) {
+        suggestedAccount = { id: '1200', name: 'Bank Account', code: '1200', confidence: 0.80 };
         type = transaction.type === 'credit' ? 'income' : 'expense';
-        vatRate = 0;
+        vatRate = 0; // Transfers are VAT exempt
         category = 'Transfer';
-      } else if (desc.includes('insurance') || desc.includes('bank') || desc.includes('charge')) {
-        suggestedAccount = { id: '6200', name: 'Operating Expenses', code: '6200', confidence: 0.8 };
+        reasoning = 'Bank transfer detected';
+        console.log(`✅ Matched transfer pattern: ${reasoning}`);
+        
+      } else if (desc.includes('rent') || desc.includes('rental') || desc.includes('lease')) {
+        suggestedAccount = { id: '6400', name: 'Rent Expense', code: '6400', confidence: 0.90 };
         type = 'expense';
-        category = 'Operating';
+        vatRate = 0; // Rent usually VAT exempt
+        category = 'Property';
+        reasoning = 'Rent/lease payment';
+        console.log(`✅ Matched rent pattern: ${reasoning}`);
+        
+      } else if (desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel') || 
+                desc.includes('motor') || desc.includes('vehicle')) {
+        suggestedAccount = { id: '6500', name: 'Motor Vehicle Expenses', code: '6500', confidence: 0.85 };
+        type = 'expense';
+        category = 'Transport';
+        reasoning = 'Motor vehicle expense';
+        console.log(`✅ Matched motor expenses: ${reasoning}`);
+        
+      } else if (desc.includes('telephone') || desc.includes('cell') || desc.includes('phone') || 
+                desc.includes('internet') || desc.includes('data')) {
+        suggestedAccount = { id: '6600', name: 'Communication Expenses', code: '6600', confidence: 0.83 };
+        type = 'expense';
+        category = 'Communication';
+        reasoning = 'Communication expense';
+        console.log(`✅ Matched communication: ${reasoning}`);
+        
+      } else if (desc.includes('insurance') || desc.includes('cover') || desc.includes('premium')) {
+        suggestedAccount = { id: '6700', name: 'Insurance', code: '6700', confidence: 0.88 };
+        type = 'expense';
+        vatRate = 0; // Insurance usually VAT exempt
+        category = 'Insurance';
+        reasoning = 'Insurance payment';
+        console.log(`✅ Matched insurance: ${reasoning}`);
+        
+      } else if (desc.includes('electricity') || desc.includes('eskom') || desc.includes('water') || 
+                desc.includes('municipal') || desc.includes('rates')) {
+        suggestedAccount = { id: '6800', name: 'Utilities', code: '6800', confidence: 0.85 };
+        type = 'expense';
+        category = 'Utilities';
+        reasoning = 'Utility payment';
+        console.log(`✅ Matched utilities: ${reasoning}`);
+        
+      } else if (desc.includes('drawings') || desc.includes('distribution') || desc.includes('dividend')) {
+        suggestedAccount = { id: '3200', name: 'Drawings', code: '3200', confidence: 0.85 };
+        type = 'expense';
+        vatRate = 0; // Drawings are VAT exempt
+        category = 'Equity';
+        reasoning = 'Owner drawings/distribution';
+        console.log(`✅ Matched drawings: ${reasoning}`);
+        
+      } else if (desc.includes('investment') && !desc.includes('drawings')) {
+        suggestedAccount = { id: '3100', name: 'Capital Investment', code: '3100', confidence: 0.80 };
+        type = 'income';
+        vatRate = 0; // Capital investments are VAT exempt
+        category = 'Equity';
+        reasoning = 'Capital investment';
+        console.log(`✅ Matched investment: ${reasoning}`);
+        
+      } else {
+        // Default based on transaction type
+        if (transaction.type === 'credit' || transaction.amount > 0) {
+          suggestedAccount = { id: '4000', name: 'General Income', code: '4000', confidence: 0.4 };
+          type = 'income';
+          reasoning = 'Credit transaction - likely income';
+        } else {
+          suggestedAccount = { id: '6200', name: 'General Expenses', code: '6200', confidence: 0.4 };
+          type = 'expense';
+          reasoning = 'Debit transaction - likely expense';
+        }
+        console.log(`⚠️  No specific pattern matched, using default: ${reasoning}`);
       }
 
-      return {
+      const result = {
         transactionId: transaction.id,
         description: transaction.description,
         amount: transaction.amount,
         type,
         suggestedAccount,
         vatRate,
-        vatType: vatRate === 15 ? 'standard' : 'zero_rated' as 'standard' | 'zero_rated' | 'exempt',
+        vatType: vatRate === 15 ? 'standard' : (vatRate === 0 ? 'exempt' : 'zero_rated') as 'standard' | 'zero_rated' | 'exempt',
         category,
-        reasoning: 'Pattern-based fallback matching'
+        reasoning: `${reasoning} (Fallback matching - AI unavailable)`
       };
+      
+      console.log(`✨ Result for "${transaction.description}": ${suggestedAccount.name} (${suggestedAccount.confidence * 100}% confidence)`);
+      return result;
     });
   }
 
