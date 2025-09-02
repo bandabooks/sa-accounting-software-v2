@@ -10,8 +10,8 @@ This service provides automatic failover between Anthropic Claude and OpenAI.
 
 // Model configurations
 const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
-const OPENAI_MODEL = "gpt-4-turbo-preview";
-const OPENAI_FALLBACK_MODEL = "gpt-3.5-turbo";
+const OPENAI_MODEL = "gpt-5"; // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+const OPENAI_FALLBACK_MODEL = "gpt-4o";
 
 export type AIProvider = 'anthropic' | 'openai' | 'none';
 
@@ -42,8 +42,8 @@ export class AIFailoverService {
 
   constructor() {
     this.config = {
-      primaryProvider: 'anthropic',
-      fallbackProvider: 'openai',
+      primaryProvider: 'openai',
+      fallbackProvider: 'anthropic',
       autoFailover: true,
       retryAttempts: 2,
       timeout: 30000

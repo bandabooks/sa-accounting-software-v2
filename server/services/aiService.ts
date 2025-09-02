@@ -27,7 +27,7 @@ export interface AIContext {
 export class AIService {
   private anthropic: Anthropic | null = null;
   private openai: OpenAI | null = null;
-  private preferredProvider: 'anthropic' | 'openai' = 'anthropic';
+  private preferredProvider: 'anthropic' | 'openai' = 'openai';
 
   constructor() {
     this.initializeProviders();
@@ -48,11 +48,11 @@ export class AIService {
       });
     }
 
-    // Set preferred provider based on availability
-    if (this.anthropic) {
-      this.preferredProvider = 'anthropic';
-    } else if (this.openai) {
+    // Set preferred provider based on availability (OpenAI primary, Anthropic backup)
+    if (this.openai) {
       this.preferredProvider = 'openai';
+    } else if (this.anthropic) {
+      this.preferredProvider = 'anthropic';
     }
   }
 
@@ -107,14 +107,14 @@ export class AIService {
       // Prepare messages for AI
       const messages = this.formatMessagesForAI(history, contextualInfo);
 
-      // Get AI response
+      // Get AI response (OpenAI primary, Anthropic backup)
       let response: string;
-      if (this.preferredProvider === 'anthropic' && this.anthropic) {
-        response = await this.getAnthropicResponse(messages);
-      } else if (this.openai) {
+      if (this.preferredProvider === 'openai' && this.openai) {
         response = await this.getOpenAIResponse(messages);
+      } else if (this.anthropic) {
+        response = await this.getAnthropicResponse(messages);
       } else {
-        throw new Error('No AI provider configured. Please set ANTHROPIC_API_KEY or OPENAI_API_KEY.');
+        throw new Error('No AI provider configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY.');
       }
 
       // Add AI response to conversation
@@ -153,7 +153,7 @@ export class AIService {
     }
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
       messages: [
         { role: 'system', content: this.getSystemPrompt() },
         ...messages,
