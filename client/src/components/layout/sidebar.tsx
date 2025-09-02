@@ -319,6 +319,7 @@ const getFullNavigationGroups = () => [
       { path: "/cipc-compliance", label: "CIPC Compliance", icon: Building, permission: "CIPC_COMPLIANCE_VIEW", module: "compliance" },
       { path: "/labour-compliance", label: "Labour Compliance", icon: Users, permission: "LABOUR_COMPLIANCE_VIEW", module: "compliance" },
       { path: "/task-management", label: "Task Management", icon: CheckSquare, permission: "TASK_MANAGEMENT_VIEW", module: "compliance" },
+      { path: "/admin/service-packages", label: "Service Package Management", icon: Package, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/calendar", label: "Calendar", icon: Calendar, permission: "CALENDAR_VIEW", module: "compliance" },
       { path: "/document-library", label: "Document Library", icon: FolderOpen, permission: "DOCUMENT_LIBRARY_VIEW", module: "compliance" }
     ]
@@ -382,7 +383,6 @@ const getFullNavigationGroups = () => [
       { path: "/enterprise-settings", label: "Enterprise Settings", icon: Settings, permission: "ENTERPRISE_SETTINGS_VIEW", module: "administration" },
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
       { path: "/super-admin", label: "Super Admin Panel", icon: UserCog, permission: "SUPER_ADMIN_VIEW", module: "administration" },
-      { path: "/admin/service-packages", label: "Service Package Pricing", icon: Package, permission: "SUPER_ADMIN_VIEW", module: "administration" },
       { path: "/smart-spending-wizard", label: "Smart Spending Wizard", icon: Zap, permission: "SMART_SPENDING_VIEW", module: "administration" }
     ]
   }

@@ -13762,12 +13762,12 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   // ===== SUPER ADMIN SERVICE PACKAGE MANAGEMENT =====
   
-  // SUPER ADMIN: Get all service package pricing for admin management
-  app.get("/api/admin/service-packages/pricing", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+  // COMPLIANCE: Get all service package pricing for management
+  app.get("/api/admin/service-packages/pricing", authenticate, requirePermission('compliance_management:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      // Only super admin can view all pricing
-      if (req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
+      // Allow compliance managers and super admins to view pricing
+      if (!req.user.permissions.includes('compliance_management:view') && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Compliance management access required" });
       }
 
       const packages = await db.select().from(servicePackagePricing).orderBy(servicePackagePricing.monthlyPrice);
@@ -13778,12 +13778,12 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  // SUPER ADMIN: Update service package pricing
-  app.put("/api/admin/service-packages/:packageType/pricing", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+  // COMPLIANCE: Update service package pricing
+  app.put("/api/admin/service-packages/:packageType/pricing", authenticate, requirePermission('compliance_management:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      // Only super admin can update pricing
-      if (req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
+      // Allow compliance managers and super admins to update pricing
+      if (!req.user.permissions.includes('compliance_management:view') && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Compliance management access required" });
       }
 
       const { packageType } = req.params;
