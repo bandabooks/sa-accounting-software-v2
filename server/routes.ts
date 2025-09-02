@@ -157,7 +157,8 @@ import {
   type SarsVendorConfig,
   type InsertSarsVendorConfig,
   type CompanySarsLink,
-  type InsertCompanySarsLink
+  type InsertCompanySarsLink,
+  servicePackagePricing
 } from "@shared/schema";
 import { z } from "zod";
 import { createPayFastService } from "./payfast";
