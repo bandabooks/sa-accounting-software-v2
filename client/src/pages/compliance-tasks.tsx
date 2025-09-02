@@ -24,10 +24,15 @@ const taskFormSchema = z.object({
   priority: z.string().default("medium"),
   complianceType: z.string().optional(),
   assignedTo: z.number().optional(),
+  startDate: z.string().optional(),
   dueDate: z.string().optional(),
   notes: z.string().optional(),
   status: z.string().optional(),
   completedAt: z.string().optional(),
+  isRecurring: z.boolean().default(false),
+  recurringType: z.string().optional(),
+  recurringInterval: z.number().optional(),
+  recurringEndDate: z.string().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -58,7 +63,12 @@ export default function ComplianceTasks() {
       priority: "medium",
       complianceType: "",
       notes: "",
+      startDate: "",
       dueDate: "",
+      isRecurring: false,
+      recurringType: "",
+      recurringInterval: 1,
+      recurringEndDate: "",
     },
   });
 
@@ -72,22 +82,20 @@ export default function ComplianceTasks() {
       priority: "medium",
       complianceType: "",
       notes: "",
+      startDate: "",
       dueDate: "",
+      isRecurring: false,
+      recurringType: "",
+      recurringInterval: 1,
+      recurringEndDate: "",
     },
   });
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: TaskFormData) => 
-      fetch(`/api/compliance/tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(res => {
-        if (!res.ok) throw new Error("Failed to create task");
-        return res.json();
-      }),
+    mutationFn: (data: TaskFormData) => apiRequest("/api/tasks", "POST", data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/tasks"] });
       setIsCreateDialogOpen(false);
       createForm.reset();
@@ -108,15 +116,9 @@ export default function ComplianceTasks() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<TaskFormData> }) => 
-      fetch(`/api/compliance/tasks/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(res => {
-        if (!res.ok) throw new Error("Failed to update task");
-        return res.json();
-      }),
+      apiRequest(`/api/tasks/${id}`, "PUT", data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/tasks"] });
       setIsEditDialogOpen(false);
       setEditingTask(null);
@@ -181,8 +183,12 @@ export default function ComplianceTasks() {
       taskType: task.taskType,
       priority: task.priority || "medium",
       complianceType: task.complianceType || "",
+      startDate: (task as any).startDate ? new Date((task as any).startDate).toISOString().split('T')[0] : "",
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
       notes: task.notes || "",
+      isRecurring: (task as any).isRecurring || false,
+      recurringType: (task as any).recurringType || "",
+      recurringEndDate: (task as any).recurringEndDate ? new Date((task as any).recurringEndDate).toISOString().split('T')[0] : "",
     });
     setIsEditDialogOpen(true);
   };
@@ -328,6 +334,42 @@ export default function ComplianceTasks() {
                   />
                   <FormField
                     control={createForm.control}
+                    name="isRecurring"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Task Type</FormLabel>
+                        <Select value={field.value ? "recurring" : "one-time"} onValueChange={(value) => field.onChange(value === "recurring")}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="one-time">One-time Task</SelectItem>
+                            <SelectItem value="recurring">Recurring Task</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
                     name="dueDate"
                     render={({ field }) => (
                       <FormItem>
@@ -340,6 +382,48 @@ export default function ComplianceTasks() {
                     )}
                   />
                 </div>
+                {createForm.watch("isRecurring") && (
+                  <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+                    <FormField
+                      control={createForm.control}
+                      name="recurringType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Repeat Every</FormLabel>
+                          <Select value={field.value || ""} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select frequency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="quarterly">Quarterly</SelectItem>
+                              <SelectItem value="annually">Annually</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="recurringEndDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date (Optional)</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={field.value || ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
                 <FormField
                   control={createForm.control}
                   name="notes"
