@@ -16509,8 +16509,8 @@ Format your response as a JSON array of tip objects with "title", "description",
         transactionsForMatching,
         chartOfAccounts.map(acc => ({
           id: acc.id,
-          accountName: acc.accountName,
-          accountType: acc.accountType
+          accountName: acc.name, // Storage returns 'name' field
+          accountType: acc.type  // Storage returns 'type' field
         }))
       );
 

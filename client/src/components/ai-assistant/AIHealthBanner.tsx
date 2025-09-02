@@ -18,13 +18,14 @@ export function AIHealthBanner() {
   const [isVisible, setIsVisible] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  // Query AI health status
+  // Query AI health status - Disabled since OpenAI is primary AI provider
   const { data: healthStatus, error, isLoading } = useQuery({
     queryKey: ['ai-health'],
     queryFn: () => AIClient.getHealthStatus(),
     refetchInterval: 30000, // Refetch every 30 seconds
     retry: 2,
-    staleTime: 25000 // Consider data stale after 25 seconds
+    staleTime: 25000, // Consider data stale after 25 seconds
+    enabled: false // Disable Anthropic health monitoring since OpenAI is primary
   });
 
   // Check if banner should be shown
