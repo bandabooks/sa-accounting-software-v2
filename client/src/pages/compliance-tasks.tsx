@@ -175,9 +175,13 @@ export default function ComplianceTasks() {
     onSuccess: () => {
       // Immediately clear the active time entry to stop the timer
       queryClient.setQueryData(["/api/time-entries/active"], null);
-      // Then invalidate to fetch fresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      // Add a small delay before invalidating to ensure backend has processed the stop
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      }, 500);
+      
       toast({
         title: "Success",
         description: "Time tracking stopped",
