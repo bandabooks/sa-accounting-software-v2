@@ -499,6 +499,12 @@ export default function SubscriptionIntegratedPermissions({
         return newSet;
       });
       
+      // Update local permission state immediately to reflect the change
+      setPermissionStates(prev => ({
+        ...prev,
+        [key]: variables.enabled
+      }));
+      
       toast({
         title: "Permission Updated",
         description: `${variables.permissionType} permission for ${variables.moduleId} ${variables.enabled ? 'enabled' : 'disabled'} successfully.`,
@@ -566,17 +572,14 @@ export default function SubscriptionIntegratedPermissions({
     // Create isolated state update that only affects this specific permission
     const key = `${selectedRoleId}-${moduleId}-${permission}`;
     
-    // Prevent multiple simultaneous toggles of the same permission
-    if (pendingToggles.has(key)) return;
-    
-    // Check if the permission is already in the desired state
-    if (permissionStates[key] === enabled) return;
-    
     // Optimistic update - immediately update the UI state
     setPermissionStates(prev => ({
       ...prev,
       [key]: enabled
     }));
+    
+    // Prevent multiple simultaneous toggles of the same permission
+    if (pendingToggles.has(key)) return;
     
     // Add to pending toggles
     setPendingToggles(prev => new Set([...prev, key]));
