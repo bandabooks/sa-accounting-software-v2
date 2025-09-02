@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Settings, DollarSign, Edit, Package } from "lucide-react";
+import { Settings, DollarSign, Edit, Package, Plus } from "lucide-react";
 
 interface ServicePackage {
   id: number;
@@ -35,13 +35,24 @@ const packageUpdateSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+const packageCreateSchema = z.object({
+  packageType: z.string().min(1, "Package type is required").regex(/^[a-z0-9_]+$/, "Package type must be lowercase letters, numbers, and underscores only"),
+  displayName: z.string().min(1, "Display name is required"),
+  description: z.string().optional(),
+  monthlyPrice: z.number().min(0, "Monthly price must be positive"),
+  annualPrice: z.number().optional(),
+  isActive: z.boolean().default(true),
+});
+
 type PackageUpdateForm = z.infer<typeof packageUpdateSchema>;
+type PackageCreateForm = z.infer<typeof packageCreateSchema>;
 
 export default function ServicePackageAdmin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const { data: packages, isLoading } = useQuery<ServicePackage[]>({
     queryKey: ["/api/admin/service-packages/pricing"],
@@ -50,6 +61,18 @@ export default function ServicePackageAdmin() {
   const form = useForm<PackageUpdateForm>({
     resolver: zodResolver(packageUpdateSchema),
     defaultValues: {
+      displayName: "",
+      description: "",
+      monthlyPrice: 0,
+      annualPrice: undefined,
+      isActive: true,
+    },
+  });
+
+  const createForm = useForm<PackageCreateForm>({
+    resolver: zodResolver(packageCreateSchema),
+    defaultValues: {
+      packageType: "",
       displayName: "",
       description: "",
       monthlyPrice: 0,
@@ -98,6 +121,27 @@ export default function ServicePackageAdmin() {
     },
   });
 
+  const createPackageMutation = useMutation({
+    mutationFn: (data: PackageCreateForm) =>
+      apiRequest("/api/admin/service-packages", "POST", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/service-packages/pricing"] });
+      setIsCreateDialogOpen(false);
+      createForm.reset();
+      toast({
+        title: "Package Created",
+        description: "New service package has been created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Creation Failed",
+        description: error.message || "Failed to create service package",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEdit = (pkg: ServicePackage) => {
     setEditingPackage(pkg);
     form.reset({
@@ -126,6 +170,10 @@ export default function ServicePackageAdmin() {
     });
   };
 
+  const onCreateSubmit = (data: PackageCreateForm) => {
+    createPackageMutation.mutate(data);
+  };
+
   const formatCurrency = (amount: string) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -151,12 +199,23 @@ export default function ServicePackageAdmin() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Package className="h-8 w-8 text-blue-600" />
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Service Package Management</h1>
-          <p className="text-gray-600">Manage pricing and settings for all service packages</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Package className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Service Package Management</h1>
+            <p className="text-gray-600">Manage pricing and settings for all service packages</p>
+          </div>
         </div>
+        
+        <Button
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+          data-testid="button-add-package"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Package
+        </Button>
       </div>
 
       {/* Package Grid */}
@@ -324,6 +383,153 @@ export default function ServicePackageAdmin() {
                 >
                   <DollarSign className="h-4 w-4 mr-2" />
                   {updatePackageMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Package Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Service Package</DialogTitle>
+            <DialogDescription>
+              Add a new service package with pricing and settings.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...createForm}>
+            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+              <FormField
+                control={createForm.control}
+                name="packageType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Package Type (ID)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="e.g., professional, custom" 
+                        data-testid="input-package-type"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={createForm.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="e.g., Professional Plus"
+                        data-testid="input-create-display-name" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={createForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        rows={2} 
+                        placeholder="Brief description of package features"
+                        data-testid="input-create-description" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={createForm.control}
+                name="monthlyPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Monthly Price (ZAR)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        data-testid="input-create-monthly-price"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={createForm.control}
+                name="annualPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Annual Price (ZAR) - Optional</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        data-testid="input-create-annual-price"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={createForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between">
+                    <FormLabel>Active Package</FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createPackageMutation.isPending}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-create-package"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {createPackageMutation.isPending ? "Creating..." : "Create Package"}
                 </Button>
               </div>
             </form>

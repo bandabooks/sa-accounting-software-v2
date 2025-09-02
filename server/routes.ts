@@ -13790,15 +13790,19 @@ Format your response as a JSON array of tip objects with "title", "description",
       const { packageType } = req.params;
       const { displayName, description, monthlyPrice, annualPrice, isActive } = req.body;
 
+      // Build update object with only provided fields
+      const updateData: any = {
+        updatedAt: new Date()
+      };
+      
+      if (displayName !== undefined) updateData.displayName = displayName;
+      if (description !== undefined) updateData.description = description;
+      if (monthlyPrice !== undefined) updateData.monthlyPrice = monthlyPrice.toString();
+      if (annualPrice !== undefined) updateData.annualPrice = annualPrice ? annualPrice.toString() : null;
+      if (isActive !== undefined) updateData.isActive = isActive;
+
       const updatedPackage = await db.update(servicePackagePricing)
-        .set({
-          displayName,
-          description,
-          monthlyPrice: monthlyPrice.toString(),
-          annualPrice: annualPrice ? annualPrice.toString() : null,
-          isActive,
-          updatedAt: new Date()
-        })
+        .set(updateData)
         .where(eq(servicePackagePricing.packageType, packageType))
         .returning();
 
@@ -13810,6 +13814,44 @@ Format your response as a JSON array of tip objects with "title", "description",
     } catch (error) {
       console.error("Error updating service package:", error);
       res.status(500).json({ message: "Failed to update service package" });
+    }
+  });
+
+  // COMPLIANCE: Create new service package
+  app.post("/api/admin/service-packages", authenticate, requirePermission('compliance_management:view'), async (req: AuthenticatedRequest, res) => {
+    try {
+      // Allow compliance managers and super admins to create packages
+      if (!req.user.permissions.includes('compliance_management:view') && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Compliance management access required" });
+      }
+
+      const { packageType, displayName, description, monthlyPrice, annualPrice, isActive } = req.body;
+
+      // Check if package type already exists
+      const existingPackage = await db.select().from(servicePackagePricing)
+        .where(eq(servicePackagePricing.packageType, packageType));
+      
+      if (existingPackage.length > 0) {
+        return res.status(400).json({ message: "Package type already exists" });
+      }
+
+      const newPackage = await db.insert(servicePackagePricing)
+        .values({
+          packageType,
+          displayName,
+          description: description || null,
+          monthlyPrice: monthlyPrice.toString(),
+          annualPrice: annualPrice ? annualPrice.toString() : null,
+          isActive: isActive !== undefined ? isActive : true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+
+      res.status(201).json(newPackage[0]);
+    } catch (error) {
+      console.error("Error creating service package:", error);
+      res.status(500).json({ message: "Failed to create service package" });
     }
   });
 
