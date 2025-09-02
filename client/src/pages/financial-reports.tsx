@@ -50,6 +50,7 @@ import { PageLoader } from "@/components/ui/global-loader";
 interface ReportData {
   id: string;
   title: string;
+  description?: string;
   data: any;
   lastGenerated: string;
   summary?: {
@@ -62,6 +63,30 @@ interface ReportData {
     cashInflow?: number;
     cashOutflow?: number;
     netCashFlow?: number;
+    // Aged Reports
+    total?: number;
+    current?: number;
+    overdue30?: number;
+    overdue60?: number;
+    overdue90?: number;
+    // Expense Analysis
+    totalExpenses?: number;
+    operatingExpenses?: number;
+    adminExpenses?: number;
+    costOfSales?: number;
+    // VAT Reports
+    vatInput?: number;
+    vatOutput?: number;
+    vatPayable?: number;
+    // Tax Liability
+    totalTaxLiability?: number;
+    incomeTax?: number;
+    paye?: number;
+    // Bank Reconciliation
+    bookBalance?: number;
+    bankBalance?: number;
+    reconcileItems?: number;
+    unreconciled?: number;
   };
 }
 
