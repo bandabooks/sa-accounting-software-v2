@@ -5218,13 +5218,11 @@ export const clients = pgTable("clients", {
   
   // Metadata
   notes: text("notes"),
-  assignedTo: integer("assigned_to"), // User ID of assigned accountant
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyIdx: index("clients_company_idx").on(table.companyId),
   statusIdx: index("clients_status_idx").on(table.status),
-  assignedIdx: index("clients_assigned_idx").on(table.assignedTo),
 }));
 
 // Client Onboarding Workflows

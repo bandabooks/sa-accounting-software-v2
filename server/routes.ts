@@ -12764,18 +12764,7 @@ Format your response as a JSON array of tip objects with "title", "description",
       res.status(201).json(client);
     } catch (error) {
       console.error("Error creating client:", error);
-      console.error("Client data being passed:", clientData);
-      
-      // Provide more detailed error information
-      if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-      }
-      
-      res.status(500).json({ 
-        message: "Failed to create client",
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      res.status(500).json({ message: "Failed to create client" });
     }
   });
 
@@ -13768,6 +13757,58 @@ Format your response as a JSON array of tip objects with "title", "description",
     } catch (error) {
       console.error("Error getting package comparison:", error);
       res.status(500).json({ message: "Failed to get package comparison" });
+    }
+  });
+
+  // ===== SUPER ADMIN SERVICE PACKAGE MANAGEMENT =====
+  
+  // SUPER ADMIN: Get all service package pricing for admin management
+  app.get("/api/admin/service-packages/pricing", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+    try {
+      // Only super admin can view all pricing
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const packages = await db.select().from(servicePackagePricing).orderBy(servicePackagePricing.monthlyPrice);
+      res.json(packages);
+    } catch (error) {
+      console.error("Error fetching service package pricing:", error);
+      res.status(500).json({ message: "Failed to fetch service package pricing" });
+    }
+  });
+
+  // SUPER ADMIN: Update service package pricing
+  app.put("/api/admin/service-packages/:packageType/pricing", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
+    try {
+      // Only super admin can update pricing
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { packageType } = req.params;
+      const { displayName, description, monthlyPrice, annualPrice, isActive } = req.body;
+
+      const updatedPackage = await db.update(servicePackagePricing)
+        .set({
+          displayName,
+          description,
+          monthlyPrice: monthlyPrice.toString(),
+          annualPrice: annualPrice ? annualPrice.toString() : null,
+          isActive,
+          updatedAt: new Date()
+        })
+        .where(eq(servicePackagePricing.packageType, packageType))
+        .returning();
+
+      if (!updatedPackage.length) {
+        return res.status(404).json({ message: "Service package not found" });
+      }
+
+      res.json(updatedPackage[0]);
+    } catch (error) {
+      console.error("Error updating service package:", error);
+      res.status(500).json({ message: "Failed to update service package" });
     }
   });
 

@@ -67,6 +67,7 @@ import SuperAdminUserDetail from "@/pages/super-admin-user-detail";
 import SuperAdminPlanEdit from "@/pages/super-admin-plan-edit";
 import SuperAdminAuditLogs from "@/pages/super-admin-audit-logs";
 import ProfessionalIdsManagement from "@/pages/admin/professional-ids";
+import ServicePackageAdmin from "@/pages/service-package-admin";
 import Subscription from "@/pages/subscription";
 import AdminSubscriptions from "@/pages/admin-subscriptions";
 import SubscriptionSuccess from "@/pages/subscription-success";
@@ -951,6 +952,11 @@ function AuthenticatedApp() {
         <Route path="/super-admin/plans/:id">
           <ProtectedRoute requiredRole="super_admin">
             <SuperAdminPlanEdit />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/admin/service-packages">
+          <ProtectedRoute requiredRole="super_admin">
+            <ServicePackageAdmin />
           </ProtectedRoute>
         </Route>
         <Route path="/admin/professional-ids">

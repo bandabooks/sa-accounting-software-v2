@@ -382,6 +382,7 @@ const getFullNavigationGroups = () => [
       { path: "/enterprise-settings", label: "Enterprise Settings", icon: Settings, permission: "ENTERPRISE_SETTINGS_VIEW", module: "administration" },
       { path: "/subscription", label: "Subscription", icon: CreditCard, permission: null, module: "dashboard" },
       { path: "/super-admin", label: "Super Admin Panel", icon: UserCog, permission: "SUPER_ADMIN_VIEW", module: "administration" },
+      { path: "/admin/service-packages", label: "Service Package Pricing", icon: Package, permission: "SUPER_ADMIN_VIEW", module: "administration" },
       { path: "/smart-spending-wizard", label: "Smart Spending Wizard", icon: Zap, permission: "SMART_SPENDING_VIEW", module: "administration" }
     ]
   }
