@@ -330,16 +330,19 @@ export class AITransactionMatcher {
     const prompt = this.buildMatchingPrompt(request);
 
     try {
-      const response = await anthropic.messages.create({
-        model: DEFAULT_MODEL_STR, // "claude-sonnet-4-20250514"
+      const response = await openai.chat.completions.create({
+        model: DEFAULT_MODEL_STR, // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         max_tokens: 4000,
-        system: this.getEnhancedSystemPrompt(),
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: this.getEnhancedSystemPrompt() },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        const matches = this.parseAIResponse(content.text, request.transactions);
+      const content = response.choices[0].message.content;
+      if (content) {
+        const matches = this.parseAIResponse(content, request.transactions);
         return Array.isArray(matches) ? matches : [];
       }
       throw new Error('Unexpected response format from AI');
@@ -362,18 +365,22 @@ Find similar patterns from these existing transactions:
 ${existingTransactions.map(t => `- "${t.description}" → ${t.accountName}`).join('\n')}
 
 Return similar transactions as JSON array with: description, account, frequency (how often this pattern appears).
-Focus on keywords like: salary, ikhokha, deposit, transfer, payment, etc.`;
+Focus on keywords like: salary, ikhokha, deposit, transfer, payment, etc.
+
+Respond with JSON only.`;
 
     try {
-      const response = await anthropic.messages.create({
-        model: DEFAULT_MODEL_STR, // "claude-sonnet-4-20250514"
+      const response = await openai.chat.completions.create({
+        model: DEFAULT_MODEL_STR, // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }],
+        response_format: { type: "json_object" }
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        return JSON.parse(content.text);
+      const content = response.choices[0].message.content;
+      if (content) {
+        const result = JSON.parse(content);
+        return result.transactions || result.similar_transactions || result;
       }
     } catch (error) {
       console.error('Similar transaction search failed:', error);
@@ -403,16 +410,19 @@ South African VAT Rules:
 Return JSON with: rate (number), type (string), reasoning (string)`;
 
     try {
-      const response = await anthropic.messages.create({
-        model: DEFAULT_MODEL_STR, // "claude-sonnet-4-20250514"
+      const response = await openai.chat.completions.create({
+        model: DEFAULT_MODEL_STR, // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         max_tokens: 500,
-        system: "You are a South African VAT expert. Apply SARS VAT regulations accurately.",
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: "You are a South African VAT expert. Apply SARS VAT regulations accurately." },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        return JSON.parse(content.text);
+      const content = response.choices[0].message.content;
+      if (content) {
+        return JSON.parse(content);
       }
     } catch (error) {
       console.error('VAT detection failed:', error);
@@ -523,16 +533,19 @@ Return JSON with: rate (number), type (string), reasoning (string)`;
     const enhancedPrompt = this.buildEnhancedMatchingPrompt(request);
     
     try {
-      const response = await anthropic.messages.create({
-        model: DEFAULT_MODEL_STR,
+      const response = await openai.chat.completions.create({
+        model: DEFAULT_MODEL_STR, // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
         max_tokens: 4000,
-        system: this.getEnhancedSystemPrompt(),
-        messages: [{ role: 'user', content: enhancedPrompt }],
+        messages: [
+          { role: 'system', content: this.getEnhancedSystemPrompt() },
+          { role: 'user', content: enhancedPrompt }
+        ],
+        response_format: { type: "json_object" }
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        const matches = this.parseAIResponse(content.text, request.transactions);
+      const content = response.choices[0].message.content;
+      if (content) {
+        const matches = this.parseAIResponse(content, request.transactions);
         return Array.isArray(matches) ? matches : [];
       }
       throw new Error('Unexpected response format from AI');

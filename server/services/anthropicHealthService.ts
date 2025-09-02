@@ -483,7 +483,11 @@ export class AnthropicHealthService {
    * Check if AI is available
    */
   isAvailable(): boolean {
-    return !!(this.anthropic && this.lastHealthCheck?.status === 'healthy');
+    // Check if OpenAI is available first (primary), then Anthropic (backup)
+    const openaiAvailable = !!process.env.OPENAI_API_KEY;
+    const anthropicAvailable = !!(this.anthropic && this.lastHealthCheck?.status === 'healthy');
+    
+    return openaiAvailable || anthropicAvailable;
   }
 
   /**
