@@ -419,11 +419,9 @@ export default function SubscriptionIntegratedPermissions({
       if (!selectedRoleId) return [];
       const response = await fetch(`/api/rbac/role-permissions/${selectedRoleId}`);
       if (!response.ok) {
-        console.error('Failed to fetch permissions:', response.status);
         return [];
       }
       const data = await response.json();
-      console.log(`Loaded ${data.length} permissions for role ${selectedRoleId}:`, data);
       return data;
     },
     enabled: !!selectedRoleId,
@@ -470,14 +468,10 @@ export default function SubscriptionIntegratedPermissions({
 
       // Then, load actual permissions from database if available
       if (currentPermissions && currentPermissions.length > 0) {
-        console.log(`Setting permission states for role ${selectedRoleId} with ${currentPermissions.length} permissions`);
         currentPermissions.forEach((perm: any) => {
           const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
-          console.log(`Setting ${key} = ${perm.enabled}`);
           newStates[key] = perm.enabled;
         });
-      } else {
-        console.log(`No permissions found for role ${selectedRoleId}, using defaults`);
       }
 
       setPermissionStates(newStates);
