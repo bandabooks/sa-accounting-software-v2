@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter, Edit, Trash2, Play, Pause, Square } from "lucide-react";
+import { CheckSquare, Clock, AlertTriangle, Plus, Search, Filter, Edit, Trash2, Play, Pause, Square, UserCheck, Building, Tag, Calendar } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,8 +27,10 @@ const taskFormSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   complianceType: z.string().optional(),
   assignedTo: z.number().optional(),
+  assignedCustomerId: z.number().optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
+  tags: z.string().optional(),
   notes: z.string().optional(),
   completedAt: z.string().optional(),
   isRecurring: z.boolean().default(false),
@@ -57,6 +61,16 @@ export default function ComplianceTasks() {
     queryKey: ["/api/time-entries/active"],
   });
 
+  // Fetch users for assignment dropdown
+  const { data: users = [] } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+  });
+
+  // Fetch customers for assignment dropdown  
+  const { data: customers = [] } = useQuery<any[]>({
+    queryKey: ["/api/customers"],
+  });
+
   // Create form
   const createForm = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -70,6 +84,7 @@ export default function ComplianceTasks() {
       notes: "",
       startDate: "",
       dueDate: "",
+      tags: "",
       isRecurring: false,
       recurringType: "",
       recurringInterval: 1,
@@ -90,6 +105,7 @@ export default function ComplianceTasks() {
       notes: "",
       startDate: "",
       dueDate: "",
+      tags: "",
       isRecurring: false,
       recurringType: "",
       recurringInterval: 1,
@@ -758,147 +774,182 @@ export default function ComplianceTasks() {
         </CardContent>
       </Card>
 
-      {/* Tasks List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="grid gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredTasks.length > 0 ? (
-          filteredTasks.map((task: ComplianceTask) => (
-            <Card key={task.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{task.title}</h3>
-                      <div className="flex space-x-2">
-                        {task.complianceType && (
-                          <Badge className={getTypeColor(task.complianceType)}>
-                            {task.complianceType.toUpperCase()}
-                          </Badge>
+      {/* Perfex CRM-Style Tasks Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 dark:bg-gray-800">
+                <TableHead className="w-12 text-center">#</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Start Date</TableHead>
+                <TableHead className="text-center">Due Date</TableHead>
+                <TableHead className="text-center">Assigned to</TableHead>
+                <TableHead className="text-center">Tags</TableHead>
+                <TableHead className="text-center">Priority</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell className="text-center">{i + 1}</TableCell>
+                    <TableCell>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                    </TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 mx-auto"></div></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mx-auto"></div></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mx-auto"></div></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 mx-auto"></div></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 mx-auto"></div></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 mx-auto"></div></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 mx-auto"></div></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredTasks.length > 0 ? (
+                filteredTasks.map((task: ComplianceTask, index: number) => {
+                  const assignedUser = users.find(u => u.id === task.assignedTo);
+                  const assignedCustomer = customers.find(c => c.id === (task as any).assignedCustomerId);
+                  
+                  return (
+                    <TableRow key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <TableCell className="text-center font-medium text-gray-600 dark:text-gray-400">
+                        {index + 1}
+                      </TableCell>
+                      
+                      {/* Task Name */}
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {task.title}
+                          </div>
+                          {task.description && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {task.description.length > 50 
+                                ? `${task.description.substring(0, 50)}...` 
+                                : task.description}
+                            </div>
+                          )}
+                          {task.complianceType && (
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {task.complianceType.toUpperCase()}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      
+                      {/* Status */}
+                      <TableCell className="text-center">
+                        <Select 
+                          value={(task.status as any) || "todo"} 
+                          onValueChange={(newStatus) => updateStatusMutation.mutate({ taskId: task.id, status: newStatus })}
+                        >
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todo">To Do</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="review">Review</SelectItem>
+                            <SelectItem value="completed">Complete</SelectItem>
+                            <SelectItem value="blocked">Blocked</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      
+                      {/* Start Date */}
+                      <TableCell className="text-center text-sm">
+                        {task.startDate ? new Date(task.startDate).toLocaleDateString() : "-"}
+                      </TableCell>
+                      
+                      {/* Due Date */}
+                      <TableCell className="text-center text-sm">
+                        {task.dueDate ? (
+                          <span className={new Date(task.dueDate) < new Date() ? "text-red-600 dark:text-red-400 font-medium" : ""}>
+                            {new Date(task.dueDate).toLocaleDateString()}
+                          </span>
+                        ) : "-"}
+                      </TableCell>
+                      
+                      {/* Assigned To */}
+                      <TableCell className="text-center">
+                        {assignedUser ? (
+                          <div className="flex items-center justify-center space-x-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {assignedUser.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm truncate max-w-20" title={assignedUser.name}>
+                              {assignedUser.name}
+                            </span>
+                          </div>
+                        ) : assignedCustomer ? (
+                          <div className="flex items-center justify-center space-x-2">
+                            <Building className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm truncate max-w-20" title={assignedCustomer.name}>
+                              {assignedCustomer.name}
+                            </span>
+                          </div>
+                        ) : (
+                          "-"
                         )}
-                        <Badge className={getPriorityColor((task.priority as any) || "medium")}>
-                          {(task.priority as any) || "medium"}
+                      </TableCell>
+                      
+                      {/* Tags */}
+                      <TableCell className="text-center">
+                        {(task as any).tags ? (
+                          <Badge variant="secondary" className="text-xs">
+                            {(task as any).tags}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                      
+                      {/* Priority */}
+                      <TableCell className="text-center">
+                        <Badge className={`text-xs ${getPriorityColor((task.priority as any) || "medium")}`}>
+                          {((task.priority as any) || "medium").charAt(0).toUpperCase() + ((task.priority as any) || "medium").slice(1)}
                         </Badge>
-                        <Badge className={getStatusColor((task.status as any) || "todo")}>
-                          {(task.status as any) || "todo"}
-                        </Badge>
-                      </div>
-                    </div>
-                    {task.description && (
-                      <p className="text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
-                    )}
-                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
-                      {task.dueDate && (
-                        <>
-                          <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                          <span>•</span>
-                        </>
-                      )}
-                      <span>Task Type: {task.taskType}</span>
-                      {task.assignedTo && (
-                        <>
-                          <span>•</span>
-                          <span>Assigned to: User {task.assignedTo}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    {/* Active timer display */}
-                    {activeTimeEntry && activeTimeEntry.taskId === task.id && (
-                      <div className="flex items-center bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-1 text-sm">
-                        <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 mr-2" />
-                        <span className="text-blue-700 dark:text-blue-300 font-medium">
-                          <RunningTimer 
-                            startTime={activeTimeEntry.startTime} 
-                            timeEntryId={activeTimeEntry.id}
-                          />
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Time tracking buttons */}
-                    {activeTimeEntry && activeTimeEntry.taskId === task.id ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleStopTime(activeTimeEntry.id)}
-                        disabled={stopTimeMutation.isPending}
-                        className="border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
-                      >
-                        <Square className="h-4 w-4 mr-1" />
-                        Stop Timer
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleStartTime(task.id)}
-                        disabled={startTimeMutation.isPending}
-                        className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-950"
-                      >
-                        <Play className="h-4 w-4 mr-1" />
-                        Start Timer
-                      </Button>
-                    )}
-                    
-                    <Button variant="outline" size="sm" onClick={() => handleEditClick(task)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-
-                    {/* Status Change Dropdown */}
-                    <Select 
-                      value={(task.status as any) || "todo"} 
-                      onValueChange={(newStatus) => updateStatusMutation.mutate({ taskId: task.id, status: newStatus })}
+                      </TableCell>
+                      
+                      {/* Actions */}
+                      <TableCell className="text-center">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditClick(task)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <CheckSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Tasks Found</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      You haven't created any compliance tasks yet, or no tasks match your current filters.
+                    </p>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => setIsCreateDialogOpen(true)}
                     >
-                      <SelectTrigger className="w-32 h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todo">To Do</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="review">Review</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="blocked">Blocked</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <CheckSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Tasks Found</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                You haven't created any compliance tasks yet, or no tasks match your current filters.
-              </p>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => setIsCreateDialogOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Task
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Task
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Edit Task Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

@@ -5446,6 +5446,7 @@ export const complianceTasks = pgTable("compliance_tasks", {
   attachments: text("attachments").array(),
   notes: text("notes"),
   workLog: jsonb("work_log"), // Array of work entries with timestamps
+  tags: text("tags").array(), // Tags for task categorization
   
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
