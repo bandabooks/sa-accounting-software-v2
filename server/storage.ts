@@ -31,6 +31,11 @@ import {
   emailReminders,
   currencyRates,
   aiSettings,
+  // AI Learning imports
+  aiMatchingCorrections,
+  aiTransactionPatterns,
+  aiMatchingMetrics,
+  aiDuplicateDetection,
   notificationSettings,
   chartOfAccounts,
   journalEntries,
@@ -457,6 +462,15 @@ import {
   type InsertSarsPayrollSubmission,
   type IsvClientAccess,
   type InsertIsvClientAccess,
+  // AI Learning types
+  type AiMatchingCorrection,
+  type InsertAiMatchingCorrection,
+  type AiTransactionPattern,
+  type InsertAiTransactionPattern,
+  type AiMatchingMetrics,
+  type InsertAiMatchingMetrics,
+  type AiDuplicateDetection,
+  type InsertAiDuplicateDetection,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, isNotNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
@@ -1166,6 +1180,49 @@ export interface IStorage {
   createComplianceActivity(data: InsertComplianceActivity): Promise<ComplianceActivity>;
   getComplianceActivities(companyId: number, userId: number): Promise<ComplianceActivity[]>;
   getRecentComplianceActivities(companyId: number, userId: number, limit?: number): Promise<ComplianceActivity[]>;
+
+  // AI Learning Methods
+  getAiSettings(companyId: number): Promise<any>;
+  saveAiSettings(companyId: number, settings: any): Promise<void>;
+  
+  // AI Transaction Matching Corrections
+  createAiMatchingCorrection(correction: InsertAiMatchingCorrection): Promise<AiMatchingCorrection>;
+  getAiMatchingCorrections(companyId: number, limit?: number): Promise<AiMatchingCorrection[]>;
+  getUserMatchingCorrections(companyId: number, userId: number, limit?: number): Promise<AiMatchingCorrection[]>;
+
+  // User Correction Learning methods
+  storeUserCorrection(correction: UserCorrection): Promise<UserCorrection>;
+  getUserCorrections(companyId: number, options?: { limit?: number; offset?: number }): Promise<UserCorrection[]>;
+  markCorrectionAsProcessed(correctionId: string): Promise<void>;
+  storeLearningPattern(pattern: LearningPattern): Promise<LearningPattern>;
+  getLearningPatterns(companyId: number): Promise<LearningPattern[]>;
+  findLearningPattern(companyId: number, pattern: string, accountId: number): Promise<LearningPattern | undefined>;
+  findLearningPatternsByPattern(companyId: number, pattern: string): Promise<LearningPattern[]>;
+  updateLearningPattern(pattern: LearningPattern): Promise<void>;
+  storeMatchingRule(rule: MatchingRule): Promise<MatchingRule>;
+  getMatchingRules(companyId: number): Promise<MatchingRule[]>;
+  getActiveMatchingRules(companyId: number): Promise<MatchingRule[]>;
+  findMatchingRuleByPattern(companyId: number, pattern: string): Promise<MatchingRule | undefined>;
+  updateRuleUsage(ruleId: string): Promise<void>;
+  storeLearningMetrics(companyId: number, metrics: LearningMetrics): Promise<void>;
+  
+  // AI Transaction Patterns
+  createAiTransactionPattern(pattern: InsertAiTransactionPattern): Promise<AiTransactionPattern>;
+  updateAiTransactionPattern(id: number, pattern: Partial<InsertAiTransactionPattern>): Promise<AiTransactionPattern | undefined>;
+  getAiTransactionPatterns(companyId: number, transactionType?: string): Promise<AiTransactionPattern[]>;
+  getMatchingPatterns(companyId: number, description: string, transactionType: string, limit?: number): Promise<AiTransactionPattern[]>;
+  incrementPatternUsage(patternId: number): Promise<void>;
+  
+  // AI Matching Metrics
+  createAiMatchingMetrics(metrics: InsertAiMatchingMetrics): Promise<AiMatchingMetrics>;
+  getAiMatchingMetrics(companyId: number, startDate?: Date, endDate?: Date): Promise<AiMatchingMetrics[]>;
+  getCompanyMatchingPerformance(companyId: number): Promise<{ averageAccuracy: number; totalTransactions: number; totalCorrections: number }>;
+  
+  // AI Duplicate Detection
+  createAiDuplicateDetection(detection: InsertAiDuplicateDetection): Promise<AiDuplicateDetection>;
+  getAiDuplicateDetections(companyId: number, transactionId?: string): Promise<AiDuplicateDetection[]>;
+  updateDuplicateVerification(id: number, isVerified: boolean, action?: string): Promise<AiDuplicateDetection | undefined>;
+  getPendingDuplicates(companyId: number): Promise<AiDuplicateDetection[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -16452,6 +16509,189 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // ===========================
+  // AI LEARNING METHODS
+  // ===========================
+
+  // AI Transaction Matching Corrections
+  async createAiMatchingCorrection(correction: InsertAiMatchingCorrection): Promise<AiMatchingCorrection> {
+    const [newCorrection] = await db.insert(aiMatchingCorrections).values(correction).returning();
+    return newCorrection;
+  }
+
+  async getAiMatchingCorrections(companyId: number, limit: number = 100): Promise<AiMatchingCorrection[]> {
+    return await db.select()
+      .from(aiMatchingCorrections)
+      .where(eq(aiMatchingCorrections.companyId, companyId))
+      .orderBy(desc(aiMatchingCorrections.createdAt))
+      .limit(limit);
+  }
+
+  async getUserMatchingCorrections(companyId: number, userId: number, limit: number = 50): Promise<AiMatchingCorrection[]> {
+    return await db.select()
+      .from(aiMatchingCorrections)
+      .where(and(
+        eq(aiMatchingCorrections.companyId, companyId),
+        eq(aiMatchingCorrections.userId, userId)
+      ))
+      .orderBy(desc(aiMatchingCorrections.createdAt))
+      .limit(limit);
+  }
+
+  // AI Transaction Patterns
+  async createAiTransactionPattern(pattern: InsertAiTransactionPattern): Promise<AiTransactionPattern> {
+    const [newPattern] = await db.insert(aiTransactionPatterns).values(pattern).returning();
+    return newPattern;
+  }
+
+  async updateAiTransactionPattern(id: number, pattern: Partial<InsertAiTransactionPattern>): Promise<AiTransactionPattern | undefined> {
+    const [updated] = await db
+      .update(aiTransactionPatterns)
+      .set({ ...pattern, updatedAt: new Date() })
+      .where(eq(aiTransactionPatterns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAiTransactionPatterns(companyId: number, transactionType?: string): Promise<AiTransactionPattern[]> {
+    let query = db.select()
+      .from(aiTransactionPatterns)
+      .where(eq(aiTransactionPatterns.companyId, companyId));
+
+    if (transactionType) {
+      query = query.where(and(
+        eq(aiTransactionPatterns.companyId, companyId),
+        eq(aiTransactionPatterns.transactionType, transactionType)
+      )) as any;
+    }
+
+    return await query
+      .orderBy(desc(aiTransactionPatterns.confidence), desc(aiTransactionPatterns.frequency))
+      .limit(500);
+  }
+
+  async getMatchingPatterns(companyId: number, description: string, transactionType: string, limit: number = 10): Promise<AiTransactionPattern[]> {
+    // Normalize the description for pattern matching
+    const normalizedDesc = description.toLowerCase().trim();
+    
+    return await db.select()
+      .from(aiTransactionPatterns)
+      .where(and(
+        eq(aiTransactionPatterns.companyId, companyId),
+        eq(aiTransactionPatterns.transactionType, transactionType),
+        or(
+          like(aiTransactionPatterns.patternText, `%${normalizedDesc}%`),
+          like(aiTransactionPatterns.rawDescription, `%${normalizedDesc}%`)
+        )
+      ))
+      .orderBy(desc(aiTransactionPatterns.confidence), desc(aiTransactionPatterns.frequency))
+      .limit(limit);
+  }
+
+  async incrementPatternUsage(patternId: number): Promise<void> {
+    await db
+      .update(aiTransactionPatterns)
+      .set({ 
+        frequency: sql`${aiTransactionPatterns.frequency} + 1`,
+        lastUsed: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(aiTransactionPatterns.id, patternId));
+  }
+
+  // AI Matching Metrics
+  async createAiMatchingMetrics(metrics: InsertAiMatchingMetrics): Promise<AiMatchingMetrics> {
+    const [newMetrics] = await db.insert(aiMatchingMetrics).values(metrics).returning();
+    return newMetrics;
+  }
+
+  async getAiMatchingMetrics(companyId: number, startDate?: Date, endDate?: Date): Promise<AiMatchingMetrics[]> {
+    let query = db.select()
+      .from(aiMatchingMetrics)
+      .where(eq(aiMatchingMetrics.companyId, companyId));
+
+    if (startDate) {
+      query = query.where(and(
+        eq(aiMatchingMetrics.companyId, companyId),
+        gte(aiMatchingMetrics.createdAt, startDate)
+      )) as any;
+    }
+
+    if (endDate) {
+      query = query.where(and(
+        eq(aiMatchingMetrics.companyId, companyId),
+        lte(aiMatchingMetrics.createdAt, endDate)
+      )) as any;
+    }
+
+    return await query
+      .orderBy(desc(aiMatchingMetrics.createdAt))
+      .limit(100);
+  }
+
+  async getCompanyMatchingPerformance(companyId: number): Promise<{ averageAccuracy: number; totalTransactions: number; totalCorrections: number }> {
+    const [performance] = await db.select({
+      averageAccuracy: sql<number>`AVG(${aiMatchingMetrics.accuracyScore})`,
+      totalTransactions: sql<number>`SUM(${aiMatchingMetrics.totalTransactions})`,
+      totalCorrections: sql<number>`SUM(${aiMatchingMetrics.userCorrections})`
+    })
+    .from(aiMatchingMetrics)
+    .where(eq(aiMatchingMetrics.companyId, companyId));
+
+    return {
+      averageAccuracy: performance?.averageAccuracy || 0,
+      totalTransactions: performance?.totalTransactions || 0,
+      totalCorrections: performance?.totalCorrections || 0
+    };
+  }
+
+  // AI Duplicate Detection
+  async createAiDuplicateDetection(detection: InsertAiDuplicateDetection): Promise<AiDuplicateDetection> {
+    const [newDetection] = await db.insert(aiDuplicateDetection).values(detection).returning();
+    return newDetection;
+  }
+
+  async getAiDuplicateDetections(companyId: number, transactionId?: string): Promise<AiDuplicateDetection[]> {
+    let query = db.select()
+      .from(aiDuplicateDetection)
+      .where(eq(aiDuplicateDetection.companyId, companyId));
+
+    if (transactionId) {
+      query = query.where(and(
+        eq(aiDuplicateDetection.companyId, companyId),
+        eq(aiDuplicateDetection.transactionId, transactionId)
+      )) as any;
+    }
+
+    return await query
+      .orderBy(desc(aiDuplicateDetection.createdAt))
+      .limit(100);
+  }
+
+  async updateDuplicateVerification(id: number, isVerified: boolean, action?: string): Promise<AiDuplicateDetection | undefined> {
+    const [updated] = await db
+      .update(aiDuplicateDetection)
+      .set({ 
+        userVerified: isVerified,
+        action: action || undefined,
+        verifiedAt: new Date()
+      })
+      .where(eq(aiDuplicateDetection.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getPendingDuplicates(companyId: number): Promise<AiDuplicateDetection[]> {
+    return await db.select()
+      .from(aiDuplicateDetection)
+      .where(and(
+        eq(aiDuplicateDetection.companyId, companyId),
+        isNull(aiDuplicateDetection.userVerified)
+      ))
+      .orderBy(desc(aiDuplicateDetection.confidence), desc(aiDuplicateDetection.createdAt))
+      .limit(50);
+  }
+
   // Employee Management & Payroll Implementation
   async getEmployees(companyId: number): Promise<Employee[]> {
     return await db.select()
@@ -17057,6 +17297,72 @@ export class DatabaseStorage implements IStorage {
       overdueBills: metrics.overdueBills || 0,
       vatOnBills: (metrics.vatOnBills || 0).toFixed(2)
     };
+  }
+  // User Correction Learning methods (stub implementations for now)
+  async storeUserCorrection(correction: UserCorrection): Promise<UserCorrection> {
+    console.log('Storing user correction:', correction.id);
+    return correction;
+  }
+
+  async getUserCorrections(companyId: number, options?: { limit?: number; offset?: number }): Promise<UserCorrection[]> {
+    console.log(`Getting user corrections for company ${companyId}`);
+    return [];
+  }
+
+  async markCorrectionAsProcessed(correctionId: string): Promise<void> {
+    console.log(`Marking correction ${correctionId} as processed`);
+  }
+
+  async storeLearningPattern(pattern: LearningPattern): Promise<LearningPattern> {
+    console.log('Storing learning pattern:', pattern.id);
+    return pattern;
+  }
+
+  async getLearningPatterns(companyId: number): Promise<LearningPattern[]> {
+    console.log(`Getting learning patterns for company ${companyId}`);
+    return [];
+  }
+
+  async findLearningPattern(companyId: number, pattern: string, accountId: number): Promise<LearningPattern | undefined> {
+    console.log(`Finding learning pattern for company ${companyId}, pattern: ${pattern}, account: ${accountId}`);
+    return undefined;
+  }
+
+  async findLearningPatternsByPattern(companyId: number, pattern: string): Promise<LearningPattern[]> {
+    console.log(`Finding learning patterns by pattern for company ${companyId}, pattern: ${pattern}`);
+    return [];
+  }
+
+  async updateLearningPattern(pattern: LearningPattern): Promise<void> {
+    console.log('Updating learning pattern:', pattern.id);
+  }
+
+  async storeMatchingRule(rule: MatchingRule): Promise<MatchingRule> {
+    console.log('Storing matching rule:', rule.id);
+    return rule;
+  }
+
+  async getMatchingRules(companyId: number): Promise<MatchingRule[]> {
+    console.log(`Getting matching rules for company ${companyId}`);
+    return [];
+  }
+
+  async getActiveMatchingRules(companyId: number): Promise<MatchingRule[]> {
+    console.log(`Getting active matching rules for company ${companyId}`);
+    return [];
+  }
+
+  async findMatchingRuleByPattern(companyId: number, pattern: string): Promise<MatchingRule | undefined> {
+    console.log(`Finding matching rule by pattern for company ${companyId}, pattern: ${pattern}`);
+    return undefined;
+  }
+
+  async updateRuleUsage(ruleId: string): Promise<void> {
+    console.log(`Updating rule usage for rule ${ruleId}`);
+  }
+
+  async storeLearningMetrics(companyId: number, metrics: LearningMetrics): Promise<void> {
+    console.log(`Storing learning metrics for company ${companyId}:`, metrics);
   }
 }
 

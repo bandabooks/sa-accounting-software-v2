@@ -6509,6 +6509,182 @@ export type Department = typeof departments.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeAttendance = typeof employeeAttendance.$inferSelect;
 
+// === AI TRANSACTION LEARNING TABLES ===
+
+// Store user corrections to AI transaction matching suggestions
+export const aiMatchingCorrections = pgTable("ai_matching_corrections", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  userId: integer("user_id").notNull(),
+  transactionDescription: text("transaction_description").notNull(),
+  transactionAmount: decimal("transaction_amount", { precision: 10, scale: 2 }).notNull(),
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // 'income' | 'expense'
+  transactionDate: date("transaction_date").notNull(),
+  
+  // Original AI suggestion
+  originalAccountId: varchar("original_account_id", { length: 50 }).notNull(),
+  originalAccountName: text("original_account_name").notNull(),
+  originalConfidence: decimal("original_confidence", { precision: 3, scale: 2 }).notNull(),
+  
+  // User's corrected choice
+  correctedAccountId: varchar("corrected_account_id", { length: 50 }).notNull(),
+  correctedAccountName: text("corrected_account_name").notNull(),
+  
+  // Context and metadata
+  context: jsonb("context").default({}), // Additional context like VAT info, category, etc.
+  source: varchar("source", { length: 50 }).default("bulk_capture"), // bulk_capture, manual_entry, bank_import
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("ai_corrections_company_idx").on(table.companyId),
+  userIdx: index("ai_corrections_user_idx").on(table.userId),
+  descriptionIdx: index("ai_corrections_description_idx").on(table.transactionDescription),
+  createdAtIdx: index("ai_corrections_created_idx").on(table.createdAt),
+}));
+
+// Store historical transaction patterns for learning
+export const aiTransactionPatterns = pgTable("ai_transaction_patterns", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  
+  // Pattern definition
+  patternText: text("pattern_text").notNull(), // Processed keywords from descriptions
+  rawDescription: text("raw_description"), // Original description for debugging
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(), // 'income' | 'expense'
+  
+  // Matched account
+  accountId: varchar("account_id", { length: 50 }).notNull(),
+  accountName: text("account_name").notNull(),
+  accountType: varchar("account_type", { length: 50 }),
+  
+  // Learning metrics
+  frequency: integer("frequency").default(1), // How many times this pattern has been used
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.70"), // Confidence level
+  accuracy: decimal("accuracy", { precision: 3, scale: 2 }), // Accuracy based on user corrections
+  
+  // Transaction details
+  averageAmount: decimal("average_amount", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
+  transactionCount: integer("transaction_count").default(1),
+  
+  // VAT information
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).default("15.00"),
+  vatType: varchar("vat_type", { length: 20 }).default("standard"), // standard, zero_rated, exempt
+  
+  // Metadata
+  lastUsed: timestamp("last_used").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("ai_patterns_company_idx").on(table.companyId),
+  patternIdx: index("ai_patterns_pattern_idx").on(table.patternText),
+  frequencyIdx: index("ai_patterns_frequency_idx").on(table.frequency),
+  confidenceIdx: index("ai_patterns_confidence_idx").on(table.confidence),
+  lastUsedIdx: index("ai_patterns_last_used_idx").on(table.lastUsed),
+}));
+
+// Store AI matching performance metrics for continuous improvement
+export const aiMatchingMetrics = pgTable("ai_matching_metrics", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  userId: integer("user_id").notNull(),
+  
+  // Session information
+  sessionId: varchar("session_id", { length: 100 }), // For bulk matching sessions
+  matchingType: varchar("matching_type", { length: 50 }).notNull(), // 'ai_enhanced', 'script_based', 'manual'
+  
+  // Performance metrics
+  totalTransactions: integer("total_transactions").notNull(),
+  successfulMatches: integer("successful_matches").notNull(),
+  userCorrections: integer("user_corrections").notNull(),
+  averageConfidence: decimal("average_confidence", { precision: 3, scale: 2 }),
+  processingTimeMs: integer("processing_time_ms"),
+  
+  // Quality metrics
+  accuracyScore: decimal("accuracy_score", { precision: 3, scale: 2 }), // Based on user acceptance
+  precisionScore: decimal("precision_score", { precision: 3, scale: 2 }), // True positives / (True positives + False positives)
+  
+  // Context
+  source: varchar("source", { length: 50 }).default("bulk_capture"), // bulk_capture, bank_import, manual_entry
+  metadata: jsonb("metadata").default({}), // Additional context
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("ai_metrics_company_idx").on(table.companyId),
+  sessionIdx: index("ai_metrics_session_idx").on(table.sessionId),
+  createdAtIdx: index("ai_metrics_created_idx").on(table.createdAt),
+}));
+
+// Store duplicate detection results and patterns
+export const aiDuplicateDetection = pgTable("ai_duplicate_detection", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  
+  // Transaction details
+  transactionId: varchar("transaction_id", { length: 100 }).notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  transactionDate: date("transaction_date").notNull(),
+  
+  // Duplicate match details
+  duplicateTransactionId: varchar("duplicate_transaction_id", { length: 100 }),
+  isDuplicate: boolean("is_duplicate").default(false),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(),
+  reason: text("reason").notNull(), // Description of why it's considered a duplicate
+  
+  // Resolution
+  userVerified: boolean("user_verified"), // null = pending, true = confirmed duplicate, false = not duplicate
+  action: varchar("action", { length: 50 }), // 'merged', 'ignored', 'kept_separate'
+  
+  // Metadata
+  detectionMethod: varchar("detection_method", { length: 50 }).default("ai_enhanced"), // ai_enhanced, rule_based
+  metadata: jsonb("metadata").default({}),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  verifiedAt: timestamp("verified_at"),
+}, (table) => ({
+  companyIdx: index("ai_duplicates_company_idx").on(table.companyId),
+  transactionIdx: index("ai_duplicates_transaction_idx").on(table.transactionId),
+  duplicateIdx: index("ai_duplicates_duplicate_idx").on(table.duplicateTransactionId),
+  createdAtIdx: index("ai_duplicates_created_idx").on(table.createdAt),
+}));
+
+// Schema validation for AI learning tables
+export const insertAiMatchingCorrectionSchema = createInsertSchema(aiMatchingCorrections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAiTransactionPatternSchema = createInsertSchema(aiTransactionPatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiMatchingMetricsSchema = createInsertSchema(aiMatchingMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAiDuplicateDetectionSchema = createInsertSchema(aiDuplicateDetection).omit({
+  id: true,
+  createdAt: true,
+  verifiedAt: true,
+});
+
+// Types for AI learning tables
+export type InsertAiMatchingCorrection = z.infer<typeof insertAiMatchingCorrectionSchema>;
+export type AiMatchingCorrection = typeof aiMatchingCorrections.$inferSelect;
+
+export type InsertAiTransactionPattern = z.infer<typeof insertAiTransactionPatternSchema>;
+export type AiTransactionPattern = typeof aiTransactionPatterns.$inferSelect;
+
+export type InsertAiMatchingMetrics = z.infer<typeof insertAiMatchingMetricsSchema>;
+export type AiMatchingMetrics = typeof aiMatchingMetrics.$inferSelect;
+
+export type InsertAiDuplicateDetection = z.infer<typeof insertAiDuplicateDetectionSchema>;
+export type AiDuplicateDetection = typeof aiDuplicateDetection.$inferSelect;
+
 // Service Package Configuration Tables
 export const servicePackageFeatures = pgTable("service_package_features", {
   id: serial("id").primaryKey(),
