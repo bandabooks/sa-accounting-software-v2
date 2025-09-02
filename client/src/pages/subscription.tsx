@@ -62,7 +62,7 @@ export default function Subscription() {
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>("monthly");
 
   // Fetch current subscription
-  const { data: currentSubscription, isLoading: subscriptionLoading, error: subscriptionError } = useQuery<CompanySubscription>({
+  const { data: currentSubscription, isLoading: subscriptionLoading, error: subscriptionError } = useQuery<CompanySubscription | null>({
     queryKey: ["/api/company/subscription"],
     retry: (failureCount, error) => {
       // Don't retry on authentication errors
@@ -164,23 +164,15 @@ export default function Subscription() {
     return `R ${parseFloat(price).toFixed(2)}`;
   };
 
-  // Handle authentication errors gracefully
-  if (subscriptionError || plansError) {
-    const subscriptionErrorMsg = subscriptionError?.message || '';
+  // Handle authentication errors gracefully - but only show errors for plans, not subscription
+  if (plansError) {
     const plansErrorMsg = plansError?.message || '';
     
-    console.log('Subscription Error:', subscriptionErrorMsg);
     console.log('Plans Error:', plansErrorMsg);
-    console.log('Auth Token:', localStorage.getItem('authToken'));
-    console.log('Session Token:', localStorage.getItem('sessionToken'));
     
-    const isAuthError = subscriptionErrorMsg.includes('401') || 
-                       plansErrorMsg.includes('401') ||
-                       subscriptionErrorMsg.includes('authentication') ||
+    const isAuthError = plansErrorMsg.includes('401') ||
                        plansErrorMsg.includes('authentication') ||
-                       subscriptionErrorMsg.includes('Authentication failed') ||
                        plansErrorMsg.includes('Authentication failed') ||
-                       subscriptionErrorMsg.includes('Invalid or expired token') ||
                        plansErrorMsg.includes('Invalid or expired token');
     
     if (isAuthError) {
@@ -205,18 +197,17 @@ export default function Subscription() {
       );
     }
     
-    // For non-authentication errors, show a generic error with more helpful info
+    // For non-authentication errors with plans, show a generic error
     return (
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
           <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Subscription Data</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Subscription Plans</h2>
           <p className="text-gray-600 mb-4">
-            There was an error loading your subscription information. This might be due to a temporary network issue.
+            There was an error loading the available subscription plans. This might be due to a temporary network issue.
           </p>
           <div className="space-y-2">
             <Button onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/company/subscription"] });
               queryClient.invalidateQueries({ queryKey: ["/api/subscription-plans"] });
             }}>
               Try Again
@@ -229,6 +220,50 @@ export default function Subscription() {
         </div>
       </div>
     );
+  }
+
+  // Handle subscription errors separately - but only for real API errors, not "no subscription found"
+  if (subscriptionError) {
+    const subscriptionErrorMsg = subscriptionError?.message || '';
+    
+    // Only show error if it's a real API error, not a "no subscription" case
+    const isRealError = subscriptionErrorMsg.includes('401') ||
+                       subscriptionErrorMsg.includes('500') ||
+                       subscriptionErrorMsg.includes('authentication') ||
+                       subscriptionErrorMsg.includes('Authentication failed') ||
+                       subscriptionErrorMsg.includes('Invalid or expired token') ||
+                       subscriptionErrorMsg.includes('Network Error') ||
+                       subscriptionErrorMsg.includes('Failed to fetch');
+    
+    if (isRealError) {
+      console.log('Real Subscription Error:', subscriptionErrorMsg);
+      
+      const isAuthError = subscriptionErrorMsg.includes('401') ||
+                         subscriptionErrorMsg.includes('authentication') ||
+                         subscriptionErrorMsg.includes('Authentication failed') ||
+                         subscriptionErrorMsg.includes('Invalid or expired token');
+      
+      if (isAuthError) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('userData');
+        
+        return (
+          <div className="container mx-auto p-6">
+            <div className="text-center py-12">
+              <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Session Expired</h2>
+              <p className="text-gray-600 mb-4">
+                Your session has expired. Please log in again to view your subscription details.
+              </p>
+              <Button onClick={() => navigate('/login')}>
+                Go to Login
+              </Button>
+            </div>
+          </div>
+        );
+      }
+    }
   }
 
   if (subscriptionLoading || plansLoading) {
