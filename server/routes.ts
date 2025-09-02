@@ -16340,23 +16340,97 @@ Format your response as a JSON array of tip objects with "title", "description",
         return res.status(400).json({ message: "Transactions array required" });
       }
 
+      console.log(`🤖 AI Auto-Match: Processing ${transactions.length} transactions for company ${companyId}`);
+
       // Get chart of accounts for the company
       const chartOfAccounts = await storage.getChartOfAccounts(companyId);
+      console.log(`📊 Found ${chartOfAccounts.length} chart of accounts for AI matching`);
       
       // Get existing transaction patterns for learning
       const existingTransactions = await storage.getRecentTransactionPatterns(companyId, 100);
+      console.log(`📚 Found ${existingTransactions.length} existing transaction patterns for learning`);
 
-      // Perform AI matching
-      const matches = await aiMatcher.matchTransactionsBulk({
-        transactions,
-        chartOfAccounts,
-        existingTransactions
-      });
+      // Perform AI matching with fallback
+      let matches = [];
+      try {
+        matches = await aiMatcher.matchTransactionsBulk({
+          transactions,
+          chartOfAccounts,
+          existingTransactions
+        });
+        console.log(`✅ AI matching completed successfully for ${matches.length} transactions`);
+      } catch (aiError) {
+        console.error('AI matching failed, using fallback:', aiError);
+        
+        // Fallback to rule-based matching
+        matches = transactions.map((transaction, index) => {
+          const description = (transaction.description || '').toLowerCase();
+          let suggestedAccount = null;
+          let confidence = 0.5;
+          
+          // Simple rule-based matching
+          if (description.includes('salary') || description.includes('employee')) {
+            suggestedAccount = chartOfAccounts.find(acc => 
+              acc.accountName.toLowerCase().includes('employee') || 
+              acc.accountName.toLowerCase().includes('salary')
+            );
+            confidence = 0.8;
+          } else if (description.includes('bank') || description.includes('charge')) {
+            suggestedAccount = chartOfAccounts.find(acc => 
+              acc.accountName.toLowerCase().includes('bank') || 
+              acc.accountType === 'expense'
+            );
+            confidence = 0.7;
+          } else if (transaction.type === 'expense') {
+            suggestedAccount = chartOfAccounts.find(acc => acc.accountType === 'expense');
+            confidence = 0.6;
+          } else if (transaction.type === 'income') {
+            suggestedAccount = chartOfAccounts.find(acc => 
+              acc.accountName.toLowerCase().includes('sales') || 
+              acc.accountType === 'revenue'
+            );
+            confidence = 0.6;
+          }
+
+          return {
+            transactionId: transaction.id.toString(),
+            description: transaction.description,
+            amount: transaction.amount,
+            type: transaction.type,
+            suggestedAccount: suggestedAccount ? {
+              id: suggestedAccount.id.toString(),
+              name: suggestedAccount.accountName,
+              code: suggestedAccount.accountCode || '',
+              confidence: confidence
+            } : null,
+            vatRate: 15,
+            vatType: 'standard',
+            category: 'General',
+            reasoning: 'Fallback rule-based matching'
+          };
+        });
+        console.log(`🔄 Fallback matching completed for ${matches.length} transactions`);
+      }
+
+      // Transform matches to expected frontend format
+      const transformedMatches = matches.map((match, index) => ({
+        suggestion: match.suggestedAccount ? {
+          accountId: match.suggestedAccount.id,
+          accountName: match.suggestedAccount.name,
+          vatRate: match.vatRate || 15
+        } : null,
+        confidence: match.suggestedAccount?.confidence || 0,
+        reasoning: match.reasoning || 'AI-generated match',
+        description: match.description,
+        originalTransaction: transactions[index]
+      }));
+
+      console.log(`🎯 Returning ${transformedMatches.length} transformed matches to frontend`);
 
       res.json({
         success: true,
-        matches,
-        message: `AI matched ${matches.length} transactions with smart categorization`
+        matches: transformedMatches,
+        message: `AI matched ${transformedMatches.filter(m => m.suggestion).length}/${transformedMatches.length} transactions with smart categorization`
       });
 
     } catch (error) {
@@ -16419,8 +16493,10 @@ Format your response as a JSON array of tip objects with "title", "description",
       const chartOfAccounts = await storage.getChartOfAccounts(companyId);
 
       // Script-based matching
-      const { ScriptTransactionMatcher } = await import('./script-transaction-matcher.js');
+      const { ScriptTransactionMatcher } = await import('./script-transaction-matcher');
       const matcher = new ScriptTransactionMatcher();
+      
+      console.log(`📋 Script Auto-Match: Processing ${transactions.length} transactions for company ${companyId}`);
       
       const transactionsForMatching = transactions.map(t => ({
         id: t.id,
