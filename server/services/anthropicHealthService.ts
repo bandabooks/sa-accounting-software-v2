@@ -165,10 +165,18 @@ export class AnthropicHealthService {
       const responseTime = Date.now() - startTime;
       this.updateMetrics(false, responseTime, error);
       
+      // Provide user-friendly messages for common issues
+      let friendlyMessage = `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      if (error instanceof Error && error.message.includes('credit balance is too low')) {
+        friendlyMessage = 'AI service unavailable: Insufficient API credits. Script Auto-Match is still available for transaction matching.';
+      } else if (error instanceof Error && error.message.includes('API key')) {
+        friendlyMessage = 'AI service unavailable: API key issue. Script Auto-Match is still available for transaction matching.';
+      }
+
       const healthResult: HealthCheckResult = {
         status: 'down',
         responseTime,
-        message: `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: friendlyMessage,
         timestamp: new Date(),
         features: {
           basicChat: false,
