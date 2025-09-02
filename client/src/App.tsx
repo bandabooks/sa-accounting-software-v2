@@ -178,6 +178,8 @@ import POSTerminals from "@/pages/pos-terminals";
 // import POSReports from "@/pages/pos-reports";
 // import PayFastPayments from "@/pages/payfast-payments";
 // import POSShiftManagement from "@/pages/pos-shift-management";
+// import '@/styles/globals.css'
+
 import ProfessionalServices from "@/pages/professional-services";
 import FinancialReportsPage from "@/pages/reports/financial";
 import ProfitLossDetailedPage from "@/pages/reports/profit-loss-detailed";

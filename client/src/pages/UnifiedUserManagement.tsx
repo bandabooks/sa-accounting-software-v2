@@ -246,19 +246,19 @@ export default function UnifiedUserManagement() {
   const updatePermissionMutation = useMutation({
     mutationFn: async ({
       roleId,
-      module,
-      permission,
+      moduleId,
+      permissionType,
       enabled,
     }: {
       roleId: number;
-      module: string;
-      permission: string;
+      moduleId: string;
+      permissionType: string;
       enabled: boolean;
     }) => {
       return apiRequest("/api/permissions/update", "POST", {
         roleId,
-        module,
-        permission,
+        moduleId,
+        permissionType,
         enabled,
       });
     },
@@ -266,7 +266,7 @@ export default function UnifiedUserManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/permissions/matrix"] });
       showSuccess({
         title: "Permission Updated",
-        description: `${variables.enabled ? "Granted" : "Revoked"} ${variables.permission} permission for ${variables.module} module`,
+        description: `${variables.enabled ? "Granted" : "Revoked"} ${variables.permissionType} permission for ${variables.moduleId} module`,
       });
     },
     onError: (error) => {
@@ -393,8 +393,8 @@ export default function UnifiedUserManagement() {
     console.log('Permission toggle:', { roleId, module, permission, enabled });
     updatePermissionMutation.mutate({
       roleId: parseInt(roleId),
-      module,
-      permission,
+      moduleId: module,
+      permissionType: permission,
       enabled,
     });
   };
@@ -729,7 +729,21 @@ export default function UnifiedUserManagement() {
                     }
                   };
 
-                  const rolePermissions = getDefaultPermissions(role.name);
+                  // Use actual stored permissions from database, fall back to defaults if none exist
+                  const storedPermissions = role.permissions || {};
+                  const defaultPermissions = getDefaultPermissions(role.name);
+                  const rolePermissions = {
+                    dashboard: storedPermissions.dashboard?.view || defaultPermissions.dashboard,
+                    sales: storedPermissions.invoicing?.view || defaultPermissions.sales,
+                    purchases: storedPermissions.expenses?.view || defaultPermissions.purchases,
+                    products: storedPermissions.inventory_management?.view || defaultPermissions.products,
+                    accounting: storedPermissions.chart_of_accounts?.view || defaultPermissions.accounting,
+                    pos: storedPermissions.pos_sales?.view || defaultPermissions.pos,
+                    reports: storedPermissions.financial_reports?.view || defaultPermissions.reports,
+                    user_management: storedPermissions.user_management?.view || defaultPermissions.user_management,
+                    settings: storedPermissions.system_settings?.view || defaultPermissions.settings,
+                    compliance: storedPermissions.vat_management?.view || defaultPermissions.compliance
+                  };
 
                   return (
                     <tr key={role.id} className="hover:bg-gray-50">
