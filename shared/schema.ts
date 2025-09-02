@@ -5218,7 +5218,6 @@ export const clients = pgTable("clients", {
   
   // Metadata
   notes: text("notes"),
-  tags: text("tags").array(),
   assignedTo: integer("assigned_to"), // User ID of assigned accountant
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
