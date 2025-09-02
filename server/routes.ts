@@ -12764,7 +12764,18 @@ Format your response as a JSON array of tip objects with "title", "description",
       res.status(201).json(client);
     } catch (error) {
       console.error("Error creating client:", error);
-      res.status(500).json({ message: "Failed to create client" });
+      console.error("Client data being passed:", clientData);
+      
+      // Provide more detailed error information
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to create client",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

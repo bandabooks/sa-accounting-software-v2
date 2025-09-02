@@ -7978,21 +7978,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createClient(data: InsertClient): Promise<Client> {
-    const [client] = await db.insert(clients).values(data).returning();
-    
-    // Create audit log
-    await this.createAuditLog({
-      companyId: data.companyId,
-      userId: data.assignedTo || 1,
-      action: "CREATE",
-      resource: "client",
-      resourceId: client.id.toString(),
-      oldValues: {},
-      newValues: data,
-      metadata: { module: "compliance_management" }
-    });
-    
-    return client;
+    try {
+      console.log("Creating client with data:", JSON.stringify(data, null, 2));
+      const [client] = await db.insert(clients).values(data).returning();
+      console.log("Client created successfully:", JSON.stringify(client, null, 2));
+      
+      // Create audit log
+      await this.createAuditLog({
+        companyId: data.companyId,
+        userId: data.assignedTo || 1,
+        action: "CREATE",
+        resource: "client",
+        resourceId: client.id.toString(),
+        oldValues: {},
+        newValues: data,
+        metadata: { module: "compliance_management" }
+      });
+      
+      return client;
+    } catch (error) {
+      console.error("Database error in createClient:", error);
+      console.error("Failed data:", JSON.stringify(data, null, 2));
+      throw error;
+    }
   }
 
   async updateClient(id: number, data: Partial<InsertClient>): Promise<Client | undefined> {
