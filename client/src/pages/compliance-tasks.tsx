@@ -173,6 +173,9 @@ export default function ComplianceTasks() {
       });
     },
     onSuccess: () => {
+      // Immediately clear the active time entry to stop the timer
+      queryClient.setQueryData(["/api/time-entries/active"], null);
+      // Then invalidate to fetch fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
@@ -233,7 +236,7 @@ export default function ComplianceTasks() {
 
   // Time tracking helper functions
   const handleStartTime = (taskId: number) => {
-    if (activeTimeEntry) {
+    if (activeTimeEntry && activeTimeEntry.taskId !== taskId) {
       toast({
         title: "Active Time Entry",
         description: "Please stop the current time entry before starting a new one",
@@ -249,17 +252,29 @@ export default function ComplianceTasks() {
   };
 
   // Running Timer Component
-  const RunningTimer = ({ startTime }: { startTime: string }) => {
+  const RunningTimer = ({ startTime, timeEntryId }: { startTime: string; timeEntryId: number }) => {
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
+      // Check if this time entry is still active
+      if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+        return;
+      }
+
       const interval = setInterval(() => {
+        // Double-check the time entry is still active
+        if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+          clearInterval(interval);
+          return;
+        }
+        
         const start = new Date(startTime).getTime();
         const now = Date.now();
         setElapsed(Math.floor((now - start) / 1000));
       }, 1000);
+
       return () => clearInterval(interval);
-    }, [startTime]);
+    }, [startTime, timeEntryId, activeTimeEntry]);
 
     const formatElapsed = (seconds: number) => {
       const hours = Math.floor(seconds / 3600);
@@ -271,6 +286,11 @@ export default function ComplianceTasks() {
       }
       return `${minutes}:${secs.toString().padStart(2, '0')}`;
     };
+
+    // Don't render if this time entry is no longer active
+    if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+      return null;
+    }
 
     return <span>{formatElapsed(elapsed)}</span>;
   };
@@ -785,7 +805,10 @@ export default function ComplianceTasks() {
                       <div className="flex items-center bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-1 text-sm">
                         <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 mr-2" />
                         <span className="text-blue-700 dark:text-blue-300 font-medium">
-                          <RunningTimer startTime={activeTimeEntry.startTime} />
+                          <RunningTimer 
+                            startTime={activeTimeEntry.startTime} 
+                            timeEntryId={activeTimeEntry.id}
+                          />
                         </span>
                       </div>
                     )}
