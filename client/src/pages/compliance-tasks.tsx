@@ -172,15 +172,13 @@ export default function ComplianceTasks() {
         endTime: new Date().toISOString(),
       });
     },
-    onSuccess: () => {
-      // Immediately clear the active time entry to stop the timer
+    onSuccess: (data, timeEntryId) => {
+      // Immediately clear the active time entry to stop the timer completely
       queryClient.setQueryData(["/api/time-entries/active"], null);
       
-      // Add a small delay before invalidating to ensure backend has processed the stop
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      }, 500);
+      // Force a re-render to stop all timer components
+      queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       
       toast({
         title: "Success",
@@ -258,16 +256,21 @@ export default function ComplianceTasks() {
   // Running Timer Component
   const RunningTimer = ({ startTime, timeEntryId }: { startTime: string; timeEntryId: number }) => {
     const [elapsed, setElapsed] = useState(0);
+    const [isActive, setIsActive] = useState(true);
 
     useEffect(() => {
       // Check if this time entry is still active
       if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+        setIsActive(false);
         return;
       }
 
+      setIsActive(true);
+      
       const interval = setInterval(() => {
         // Double-check the time entry is still active
         if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+          setIsActive(false);
           clearInterval(interval);
           return;
         }
@@ -277,7 +280,10 @@ export default function ComplianceTasks() {
         setElapsed(Math.floor((now - start) / 1000));
       }, 1000);
 
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        setIsActive(false);
+      };
     }, [startTime, timeEntryId, activeTimeEntry]);
 
     const formatElapsed = (seconds: number) => {
@@ -292,7 +298,7 @@ export default function ComplianceTasks() {
     };
 
     // Don't render if this time entry is no longer active
-    if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+    if (!isActive || !activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
       return null;
     }
 
