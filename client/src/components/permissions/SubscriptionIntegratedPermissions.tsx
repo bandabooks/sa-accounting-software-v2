@@ -408,29 +408,22 @@ export default function SubscriptionIntegratedPermissions({
     }
   };
 
-  // Enhanced permission state management
+  // Simple permission state management
   const [permissionStates, setPermissionStates] = useState<Record<string, boolean>>({});
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
-  const [savingStates, setSavingStates] = useState<Set<string>>(new Set());
-  
-  // Debouncing for rapid toggle clicks
-  const [debounceTimers, setDebounceTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
-  // Load current permissions matrix (contains all roles and their permissions)
-  const { data: permissionsMatrix } = useQuery({
-    queryKey: ['/api/permissions/matrix'],
+  // Load current permissions for selected role
+  const { data: currentPermissions } = useQuery({
+    queryKey: ['/api/rbac/role-permissions', selectedRoleId],
     queryFn: async () => {
-      const response = await fetch('/api/permissions/matrix');
-      if (!response.ok) return { roles: [] };
+      if (!selectedRoleId) return [];
+      const response = await fetch(`/api/rbac/role-permissions/${selectedRoleId}`);
+      if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!selectedRoleId,
     staleTime: 30000,
   });
-
-  // Extract current role's permissions from the matrix
-  const currentPermissions = selectedRoleId 
-    ? permissionsMatrix?.roles?.find((role: any) => role.id === selectedRoleId)?.permissions || {}
-    : {};
 
   // Check if module is active in subscription
   const isModuleActiveInSubscription = (moduleId: string): boolean => {
@@ -455,33 +448,33 @@ export default function SubscriptionIntegratedPermissions({
     return subscriptionData.plan.modules?.[subscriptionKey] === true;
   };
 
-  // Initialize permission states from current permissions saved in database
+  // Initialize permission states from current permissions and subscription
   useEffect(() => {
-    if (selectedRoleId && currentPermissions) {
+    if (selectedRoleId) {
       const newStates: Record<string, boolean> = {};
       
-      // Load actual saved permissions from database
-      Object.values(AVAILABLE_MODULES).forEach(module => {
-        module.permissions.forEach(permission => {
-          const key = `${selectedRoleId}-${module.id}-${permission}`;
-          // Check if this permission is actually enabled in the saved permissions
-          const isEnabled = currentPermissions[module.id]?.[permission] || false;
-          newStates[key] = isEnabled;
+      // Load existing permissions if available
+      if (currentPermissions) {
+        currentPermissions.forEach((perm: any) => {
+          const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
+          newStates[key] = perm.enabled;
         });
+      }
+
+      // Auto-enable ALL essential permissions by default 
+      Object.values(AVAILABLE_MODULES).forEach(module => {
+        if (module.essential) {
+          module.permissions.forEach(permission => {
+            const key = `${selectedRoleId}-${module.id}-${permission}`;
+            // Enable ALL permissions for essential modules
+            newStates[key] = true;
+          });
+        }
       });
 
       setPermissionStates(newStates);
     }
-  }, [currentPermissions, selectedRoleId]);
-
-  // Cleanup effect to clear timers on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(debounceTimers).forEach(timer => {
-        if (timer) clearTimeout(timer);
-      });
-    };
-  }, [debounceTimers]);
+  }, [currentPermissions, subscriptionData, selectedRoleId]);
 
   // Direct permission toggle mutation with better error handling
   const togglePermissionMutation = useMutation({
@@ -492,36 +485,26 @@ export default function SubscriptionIntegratedPermissions({
       return response.json();
     },
     onSuccess: (result, variables) => {
-      // Remove from both pending toggles and saving states
+      // Remove from pending toggles
       const key = variables._key || `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
       setPendingToggles(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(key);
-        return newSet;
-      });
-      setSavingStates(prev => {
         const newSet = new Set(prev);
         newSet.delete(key);
         return newSet;
       });
       
       toast({
-        title: "Permission Saved",
+        title: "Permission Updated",
         description: `${variables.permissionType} permission for ${variables.moduleId} ${variables.enabled ? 'enabled' : 'disabled'} successfully.`,
       });
       
       // Refresh permissions data to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/permissions'] });
     },
     onError: (error: any, variables) => {
-      // Remove from both pending toggles and saving states, and revert the optimistic update
+      // Remove from pending toggles and revert the optimistic update on error
       const key = variables._key || `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
       setPendingToggles(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(key);
-        return newSet;
-      });
-      setSavingStates(prev => {
         const newSet = new Set(prev);
         newSet.delete(key);
         return newSet;
@@ -533,8 +516,8 @@ export default function SubscriptionIntegratedPermissions({
       }));
       
       toast({
-        title: "Error Saving Permission",
-        description: error.message || "Failed to save permission. Changes have been reverted.",
+        title: "Error",
+        description: error.message || "Failed to update permission",
         variant: "destructive",
       });
     }
@@ -570,56 +553,34 @@ export default function SubscriptionIntegratedPermissions({
     }
   };
 
-  // Enhanced permission toggle with debouncing and proper error handling
+  // Handle permission toggle with better isolation
   const handlePermissionToggle = (moduleId: string, permission: string, enabled: boolean) => {
     if (!selectedRoleId) return;
     
+    // Create isolated state update that only affects this specific permission
     const key = `${selectedRoleId}-${moduleId}-${permission}`;
     
     // Prevent multiple simultaneous toggles of the same permission
-    if (pendingToggles.has(key) || savingStates.has(key)) return;
+    if (pendingToggles.has(key)) return;
     
-    // Clear existing debounce timer for this permission
-    if (debounceTimers[key]) {
-      clearTimeout(debounceTimers[key]);
-    }
+    // Add to pending toggles
+    setPendingToggles(prev => new Set([...prev, key]));
     
-    // Optimistic UI update
-    setPermissionStates(prev => ({
-      ...prev,
-      [key]: enabled
-    }));
-    
-    // Add to saving states to show loading indicator
-    setSavingStates(prev => new Set([...prev, key]));
-    
-    // Debounce the API call (300ms delay)
-    const timer = setTimeout(() => {
-      // Add to pending toggles after debounce
-      setPendingToggles(prev => new Set([...prev, key]));
-      
-      // Make the API call
-      togglePermissionMutation.mutate({
-        roleId: selectedRoleId,
-        moduleId,
-        permissionType: permission,
-        enabled,
-        _key: key
-      });
-      
-      // Clean up timer
-      setDebounceTimers(prev => {
-        const newTimers = { ...prev };
-        delete newTimers[key];
-        return newTimers;
-      });
-    }, 300);
-    
-    // Store the timer
-    setDebounceTimers(prev => ({
-      ...prev,
-      [key]: timer
-    }));
+    // Use functional update to ensure we don't interfere with other toggles
+    setPermissionStates(prev => {
+      const newState = { ...prev };
+      newState[key] = enabled;
+      return newState;
+    });
+
+    // Use a unique mutation key to prevent interference
+    togglePermissionMutation.mutate({
+      roleId: selectedRoleId,
+      moduleId,
+      permissionType: permission,
+      enabled,
+      _key: key // Add unique identifier
+    });
   };
 
   // Get current role permissions for display
@@ -845,38 +806,22 @@ export default function SubscriptionIntegratedPermissions({
                                   const isEnabled = isPermissionEnabled(module.id, permission);
                                   const switchKey = `${selectedRoleId}-${module.id}-${permission}`;
                                   
-                                  const isSaving = savingStates.has(switchKey);
-                                  const isPending = pendingToggles.has(switchKey);
-                                  
                                   return (
                                     <div key={`${module.id}-${permission}-container`} className="flex items-center space-x-2">
-                                      <div className="relative">
-                                        <Switch
-                                          key={switchKey}
-                                          id={`switch-${switchKey}`}
-                                          checked={isEnabled}
-                                          onCheckedChange={(checked) => 
-                                            handlePermissionToggle(module.id, permission, checked)
-                                          }
-                                          disabled={isSaving || isPending}
-                                          className={`${isSaving ? 'opacity-60' : ''}`}
-                                        />
-                                        {isSaving && (
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <RefreshCw className="h-3 w-3 animate-spin text-blue-600" />
-                                          </div>
-                                        )}
-                                      </div>
+                                      <Switch
+                                        key={switchKey}
+                                        id={`switch-${switchKey}`}
+                                        checked={isEnabled}
+                                        onCheckedChange={(checked) => 
+                                          handlePermissionToggle(module.id, permission, checked)
+                                        }
+                                        disabled={false}
+                                      />
                                       <Label
                                         htmlFor={`switch-${switchKey}`}
-                                        className={`text-sm capitalize cursor-pointer flex items-center space-x-1 ${
-                                          isSaving ? 'opacity-60' : ''
-                                        }`}
+                                        className="text-sm capitalize cursor-pointer"
                                       >
-                                        <span>{permission.replace('_', ' ')}</span>
-                                        {isSaving && (
-                                          <span className="text-xs text-blue-600">Saving...</span>
-                                        )}
+                                        {permission.replace('_', ' ')}
                                       </Label>
                                     </div>
                                   );

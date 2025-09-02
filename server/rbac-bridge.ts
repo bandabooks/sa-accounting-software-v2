@@ -10,36 +10,21 @@ export async function getBridgedPermissionsMatrix(req: AuthenticatedRequest, res
     const systemRoles = await storage.getSystemRoles();
     const companyRoles = await storage.getCompanyRoles(req.user?.companyId || 1);
     
-    // Transform system roles to match matrix format and load actual permissions
-    const bridgedRoles = systemRoles.map(role => {
-      // Parse permissions from JSON field if it exists
-      let rolePermissions = {};
-      if (role.permissions) {
-        try {
-          rolePermissions = typeof role.permissions === 'string' 
-            ? JSON.parse(role.permissions) 
-            : role.permissions;
-        } catch (e) {
-          console.warn(`Failed to parse permissions for role ${role.id}:`, e);
-          rolePermissions = {};
-        }
-      }
-      
-      return {
-        id: role.id,
-        name: role.name,
-        displayName: role.displayName,
-        description: role.description,
-        level: role.level,
-        color: 'from-blue-500 to-indigo-500',
-        icon: 'Shield',
-        isSystemRole: role.isSystemRole,
-        maxUsers: 50,
-        securityLevel: 'standard',
-        currentUsers: 0, // Will be populated by actual user count
-        permissions: rolePermissions
-      };
-    });
+    // Transform system roles to match matrix format
+    const bridgedRoles = systemRoles.map(role => ({
+      id: role.id,
+      name: role.name,
+      displayName: role.displayName,
+      description: role.description,
+      level: role.level,
+      color: 'from-blue-500 to-indigo-500',
+      icon: 'Shield',
+      isSystemRole: role.isSystemRole,
+      maxUsers: 50,
+      securityLevel: 'standard',
+      currentUsers: 0, // Will be populated by actual user count
+      permissions: role.permissions || {}
+    }));
 
     // Transform modules to match UI expectations
     const bridgedModules = [
