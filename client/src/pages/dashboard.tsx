@@ -555,20 +555,40 @@ export default function Dashboard() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-gray-600">Current Account</span>
-                          <span className="text-sm font-semibold text-green-600">R 256,090.63</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-gray-600">Savings Account</span>
-                          <span className="text-sm font-semibold text-green-600">R 85,750.00</span>
-                        </div>
-                        <div className="border-t pt-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-medium text-gray-700">Total Available</span>
-                            <span className="text-sm font-bold text-gray-900">R 341,840.63</span>
+                        {dashboardStats.bankBalances && dashboardStats.bankBalances.length > 0 ? (
+                          <>
+                            {dashboardStats.bankBalances.slice(0, 2).map((account: any, index: number) => (
+                              <div key={account.id || index} className="flex justify-between items-center">
+                                <span className="text-xs text-gray-600">
+                                  {account.name || account.account_name || `Account ${index + 1}`}
+                                </span>
+                                <span className="text-sm font-semibold text-green-600">
+                                  {formatCurrency(account.balance || "0.00")}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="border-t pt-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-700">Total Available</span>
+                                <span className="text-sm font-bold text-gray-900">
+                                  {formatCurrency(
+                                    dashboardStats.bankBalances.reduce(
+                                      (sum: number, acc: any) => sum + parseFloat(acc.balance || "0"),
+                                      0
+                                    ).toFixed(2)
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center py-4">
+                            <p className="text-xs text-gray-500">No bank accounts found</p>
+                            <Link href="/banking" className="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block">
+                              Add Bank Account
+                            </Link>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
