@@ -413,16 +413,23 @@ export default function SubscriptionIntegratedPermissions({
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
 
   // Load current permissions for selected role
-  const { data: currentPermissions } = useQuery({
+  const { data: currentPermissions, refetch: refetchPermissions, isLoading: permissionsLoading } = useQuery({
     queryKey: ['/api/rbac/role-permissions', selectedRoleId],
     queryFn: async () => {
       if (!selectedRoleId) return [];
       const response = await fetch(`/api/rbac/role-permissions/${selectedRoleId}`);
-      if (!response.ok) return [];
-      return response.json();
+      if (!response.ok) {
+        console.error('Failed to fetch permissions:', response.status);
+        return [];
+      }
+      const data = await response.json();
+      console.log(`Loaded ${data.length} permissions for role ${selectedRoleId}:`, data);
+      return data;
     },
     enabled: !!selectedRoleId,
-    staleTime: 30000,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Check if module is active in subscription
@@ -450,7 +457,7 @@ export default function SubscriptionIntegratedPermissions({
 
   // Initialize permission states from current permissions and subscription
   useEffect(() => {
-    if (selectedRoleId) {
+    if (selectedRoleId && currentPermissions !== undefined && !permissionsLoading) {
       const newStates: Record<string, boolean> = {};
       
       // First, set defaults for all modules (false by default)
@@ -463,28 +470,19 @@ export default function SubscriptionIntegratedPermissions({
 
       // Then, load actual permissions from database if available
       if (currentPermissions && currentPermissions.length > 0) {
+        console.log(`Setting permission states for role ${selectedRoleId} with ${currentPermissions.length} permissions`);
         currentPermissions.forEach((perm: any) => {
           const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
+          console.log(`Setting ${key} = ${perm.enabled}`);
           newStates[key] = perm.enabled;
         });
       } else {
-        // Only auto-enable essential permissions if NO permissions exist in database
-        Object.values(AVAILABLE_MODULES).forEach(module => {
-          if (module.essential) {
-            module.permissions.forEach(permission => {
-              const key = `${selectedRoleId}-${module.id}-${permission}`;
-              // Only set as default if no database value exists
-              if (!(key in newStates)) {
-                newStates[key] = true;
-              }
-            });
-          }
-        });
+        console.log(`No permissions found for role ${selectedRoleId}, using defaults`);
       }
 
       setPermissionStates(newStates);
     }
-  }, [currentPermissions, subscriptionData, selectedRoleId]);
+  }, [currentPermissions, selectedRoleId, permissionsLoading]);
 
   // Direct permission toggle mutation with better error handling
   const togglePermissionMutation = useMutation({
@@ -494,7 +492,7 @@ export default function SubscriptionIntegratedPermissions({
       const response = await apiRequest('/api/permissions/toggle', 'POST', apiData);
       return response.json();
     },
-    onSuccess: (result, variables) => {
+    onSuccess: async (result, variables) => {
       // Remove from pending toggles
       const key = variables._key || `${variables.roleId}-${variables.moduleId}-${variables.permissionType}`;
       setPendingToggles(prev => {
@@ -509,7 +507,8 @@ export default function SubscriptionIntegratedPermissions({
       });
       
       // Refresh permissions data to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['/api/rbac/role-permissions', variables.roleId] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/rbac/role-permissions', variables.roleId] });
+      await refetchPermissions();
       queryClient.invalidateQueries({ queryKey: ['/api/permissions'] });
     },
     onError: (error: any, variables) => {
