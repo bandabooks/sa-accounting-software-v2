@@ -116,7 +116,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
     if (!apiKeyValue) {
       toast({
         title: "API Key Required",
-        description: "Please enter your Anthropic API key first",
+        description: `Please enter your ${providerValue === 'openai' ? 'OpenAI' : 'Anthropic'} API key first`,
         variant: "destructive",
       });
       return;
@@ -125,6 +125,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
     setTestingAI(true);
     try {
       const response = await apiRequest('/api/ai/test-connection', 'POST', {
+        provider: providerValue,
         apiKey: apiKeyValue,
         model: modelValue,
       });
@@ -152,6 +153,12 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
         break;
       case 'provider':
         setProviderValue(value);
+        // Set default model based on provider
+        if (value === 'openai') {
+          setModelValue('gpt-5');
+        } else if (value === 'anthropic') {
+          setModelValue('claude-3-5-sonnet-20241022');
+        }
         break;
       case 'contextSharing':
         setContextSharingValue(value);
@@ -285,7 +292,7 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
                   </p>
                 </div>
 
-                {/* API Configuration */}
+                {/* API Configuration - Anthropic */}
                 {providerValue === 'anthropic' && (
                   <Card className="p-4 bg-gray-50">
                     <div className="space-y-4">
@@ -370,6 +377,138 @@ export default function AISettings({ systemConfig, aiSettings }: AISettingsProps
                             step="0.1"
                           />
                           <p className="text-xs text-gray-600">Response creativity (0-1)</p>
+                        </div>
+                      </div>
+
+                      {/* Save and Test Buttons */}
+                      <div className="flex gap-2 pt-2">
+                        <Button 
+                          onClick={handleSaveApiConfig}
+                          disabled={updateAISettingsMutation.isPending}
+                          size="sm"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Save Configuration
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={testAIConnection}
+                          disabled={testingAI || !apiKeyValue}
+                          size="sm"
+                        >
+                          {testingAI ? (
+                            <>
+                              <div className="animate-spin h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full" />
+                              Testing...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="h-4 w-4 mr-2" />
+                              Test Connection
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Test Response */}
+                      {aiResponse && (
+                        <Alert>
+                          <Info className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>Test Response:</strong> {aiResponse}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </Card>
+                )}
+
+                {/* API Configuration - OpenAI */}
+                {providerValue === 'openai' && (
+                  <Card className="p-4 bg-blue-50">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm text-gray-900">API Configuration</h4>
+                        <Badge variant="outline" className="text-xs">OpenAI GPT</Badge>
+                      </div>
+                      
+                      {/* API Key */}
+                      <div className="space-y-2">
+                        <Label htmlFor="openai-api-key">API Key</Label>
+                        <div className="relative">
+                          <Input
+                            id="openai-api-key"
+                            type={showApiKey ? "text" : "password"}
+                            value={apiKeyValue}
+                            onChange={(e) => setApiKeyValue(e.target.value)}
+                            placeholder="sk-..."
+                            className="pr-10"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3"
+                            onClick={() => setShowApiKey(!showApiKey)}
+                          >
+                            {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          Your OpenAI API key. Get one from{' '}
+                          <a 
+                            href="https://platform.openai.com/api-keys" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            OpenAI Platform
+                          </a>
+                        </p>
+                      </div>
+
+                      {/* Model Selection */}
+                      <div className="space-y-2">
+                        <Label htmlFor="openai-model">Model</Label>
+                        <Select value={modelValue} onValueChange={setModelValue}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gpt-5">GPT-5 (Latest)</SelectItem>
+                            <SelectItem value="gpt-4o">GPT-4o (Vision)</SelectItem>
+                            <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                            <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-600">Choose the OpenAI model for your assistant</p>
+                      </div>
+
+                      {/* Advanced Settings */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="openai-max-tokens">Max Tokens</Label>
+                          <Input
+                            id="openai-max-tokens"
+                            type="number"
+                            value={maxTokensValue}
+                            onChange={(e) => setMaxTokensValue(parseInt(e.target.value) || 4096)}
+                            min="1"
+                            max="16384"
+                          />
+                          <p className="text-xs text-gray-600">Maximum response length</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="openai-temperature">Temperature</Label>
+                          <Input
+                            id="openai-temperature"
+                            type="number"
+                            value={temperatureValue}
+                            onChange={(e) => setTemperatureValue(parseFloat(e.target.value) || 0.7)}
+                            min="0"
+                            max="2"
+                            step="0.1"
+                          />
+                          <p className="text-xs text-gray-600">Response creativity (0-2)</p>
                         </div>
                       </div>
 
