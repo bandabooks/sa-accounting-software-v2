@@ -139,10 +139,10 @@ export default function Landing() {
   return (
     <MarketingLayout>
       {/* Root guard against horizontal overflow */}
-      <div className="w-full max-w-full overflow-x-hidden supports-[overflow:clip]:overflow-x-clip box-border">
+      <div className="w-full overflow-x-hidden supports-[overflow:clip]:overflow-x-clip">
         {/* Hero Section */}
-        <section className="relative isolate bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20 w-full overflow-x-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full box-border">
+        <section className="relative isolate bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h1 className="text-5xl md:text-6xl font-bold mb-6">
                 South Africa&apos;s Leading
@@ -193,8 +193,8 @@ export default function Landing() {
         </section>
 
         {/* Features Grid */}
-        <section className="relative isolate py-20 bg-gray-50 w-full overflow-x-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full box-border">
+        <section className="relative isolate py-20 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-gray-900 mb-4">
                 Everything You Need to Run Your Business
@@ -231,8 +231,8 @@ export default function Landing() {
         </section>
 
         {/* Social Proof */}
-        <section className="relative isolate py-20 w-full overflow-x-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full box-border">
+        <section className="relative isolate py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-gray-900 mb-4">
                 Trusted by South African Professionals
@@ -279,8 +279,8 @@ export default function Landing() {
         </section>
 
         {/* Stats Section */}
-        <section className="relative isolate py-20 bg-blue-600 text-white w-full overflow-x-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full box-border">
+        <section className="relative isolate py-20 bg-blue-600 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div>
                 <div className="text-4xl font-bold mb-2">500+</div>
@@ -303,8 +303,8 @@ export default function Landing() {
         </section>
 
         {/* Pricing Section */}
-        <section className="relative isolate py-20 bg-gray-50 w-full overflow-x-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full box-border">
+        <section className="relative isolate py-20 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-gray-900 mb-4">
                 Simple, Transparent Pricing
@@ -374,8 +374,8 @@ export default function Landing() {
         </section>
 
         {/* CTA Section */}
-        <section className="relative isolate py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white w-full overflow-x-hidden">
-          <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 w-full box-border">
+        <section className="relative isolate py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+          <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
             <h2 className="text-4xl font-bold mb-6">
               Ready to Transform Your Business 1000 Times?
             </h2>
@@ -410,8 +410,8 @@ export default function Landing() {
         </section>
 
         {/* Footer */}
-        <footer className="relative isolate bg-gray-900 text-white py-16 w-full overflow-x-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full box-border">
+        <footer className="relative isolate bg-gray-900 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {/* Company Info */}
               <div className="col-span-1 md:col-span-2">
