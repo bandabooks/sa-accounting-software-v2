@@ -32,11 +32,14 @@ import {
   Zap,
   Bot,
   Edit2,
-  Trash2
+  Trash2,
+  History,
+  FileText
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { UNIFIED_VAT_TYPES, calculateVATAmount, calculateNetAmount } from "@shared/vat-constants";
+import BankStatementHistory from "@/components/BankStatementHistory";
 
 interface ExpenseEntry {
   id?: number;
@@ -110,7 +113,7 @@ const EnhancedBulkCapture = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'bank-import'>('income');
+  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'bank-import' | 'statement-history'>('income');
   const [expenseEntries, setExpenseEntries] = useState<ExpenseEntry[]>([]);
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
   const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -1447,14 +1450,21 @@ const EnhancedBulkCapture = () => {
       </div>
 
       {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense' | 'bank-import')}>
-        <TabsList className="grid w-full grid-cols-3 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense' | 'bank-import' | 'statement-history')}>
+        <TabsList className="grid w-full grid-cols-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
           <TabsTrigger 
             value="bank-import" 
             className="flex items-center space-x-2 rounded-lg px-4 py-3 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-blue-500"
           >
             <Upload className="w-4 h-4" />
             <span className="font-medium">Bank Import</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="statement-history" 
+            className="flex items-center space-x-2 rounded-lg px-4 py-3 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-indigo-500"
+          >
+            <History className="w-4 h-4" />
+            <span className="font-medium">Statement History</span>
           </TabsTrigger>
           <TabsTrigger 
             value="expense" 
@@ -2241,6 +2251,12 @@ const EnhancedBulkCapture = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Statement History Tab */}
+        <TabsContent value="statement-history" className="space-y-6">
+          <BankStatementHistory />
+        </TabsContent>
+
       </Tabs>
 
       {/* Note: Bulk Capture Sessions removed - all transactions are now processed directly to Journal Entries */}

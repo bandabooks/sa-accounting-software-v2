@@ -6685,6 +6685,157 @@ export type AiMatchingMetrics = typeof aiMatchingMetrics.$inferSelect;
 export type InsertAiDuplicateDetection = z.infer<typeof insertAiDuplicateDetectionSchema>;
 export type AiDuplicateDetection = typeof aiDuplicateDetection.$inferSelect;
 
+// Bank Statement Import Management
+export const bankStatementImports = pgTable('bank_statement_imports', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  bankName: varchar('bank_name', { length: 100 }), // FNB, ABSA, Standard Bank, Nedbank
+  accountNumber: varchar('account_number', { length: 50 }),
+  importDate: timestamp('import_date').defaultNow(),
+  statementPeriod: varchar('statement_period', { length: 100 }), // "May 2024", "2024-05-01 to 2024-05-31"
+  totalTransactions: integer('total_transactions').notNull().default(0),
+  processedTransactions: integer('processed_transactions').notNull().default(0),
+  matchedTransactions: integer('matched_transactions').notNull().default(0),
+  duplicatesFound: integer('duplicates_found').notNull().default(0),
+  status: varchar('status', { length: 50 }).notNull().default('processing'), // processing, completed, error, review_required
+  errorMessage: text('error_message'),
+  importedBy: integer('imported_by').references(() => users.id).notNull(),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+}, (table) => ({
+  companyIdx: index('bank_statement_imports_company_idx').on(table.companyId),
+  statusIdx: index('bank_statement_imports_status_idx').on(table.status),
+  importDateIdx: index('bank_statement_imports_date_idx').on(table.importDate)
+}));
+
+// Transaction Status Tracking for Review Workflow  
+export const transactionStatuses = pgTable('transaction_statuses', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  importId: integer('import_id').references(() => bankStatementImports.id).notNull(),
+  transactionId: varchar('transaction_id', { length: 255 }).notNull(), // Unique ID from bank file
+  description: text('description').notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  transactionDate: timestamp('transaction_date').notNull(),
+  transactionType: varchar('transaction_type', { length: 20 }).notNull().default('expense'), // income, expense
+  bankReference: varchar('bank_reference', { length: 255 }),
+  status: varchar('status', { length: 50 }).notNull().default('needs_review'), // needs_review, in_review, completed, duplicate, rejected
+  reviewedBy: integer('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  assignedAccountId: integer('assigned_account_id').references(() => chartOfAccounts.id),
+  assignedAccountName: varchar('assigned_account_name', { length: 255 }),
+  vatRate: decimal('vat_rate', { precision: 5, scale: 2 }).default('15.00'),
+  vatType: varchar('vat_type', { length: 20 }).default('standard'), // standard, zero_rated, exempt
+  notes: text('notes'),
+  isDuplicate: boolean('is_duplicate').default(false),
+  duplicateOfTransactionId: varchar('duplicate_of_transaction_id', { length: 255 }),
+  confidenceScore: decimal('confidence_score', { precision: 5, scale: 2 }).default('0.00'),
+  aiReasoning: text('ai_reasoning'),
+  journalEntryId: integer('journal_entry_id').references(() => journalEntries.id), // Link to created journal entry
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+}, (table) => ({
+  companyIdx: index('transaction_statuses_company_idx').on(table.companyId),
+  importIdx: index('transaction_statuses_import_idx').on(table.importId),
+  statusIdx: index('transaction_statuses_status_idx').on(table.status),
+  transactionIdIdx: index('transaction_statuses_transaction_id_idx').on(table.transactionId)
+}));
+
+// Enhanced Duplicate Detection for Cross-Import Prevention
+export const transactionFingerprints = pgTable('transaction_fingerprints', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').references(() => companies.id).notNull(),
+  transactionId: varchar('transaction_id', { length: 255 }).notNull(),
+  importId: integer('import_id').references(() => bankStatementImports.id).notNull(),
+  fingerprint: varchar('fingerprint', { length: 64 }).notNull(), // SHA-256 hash of key fields
+  description: text('description').notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  transactionDate: timestamp('transaction_date').notNull(),
+  bankReference: varchar('bank_reference', { length: 255 }),
+  isProcessed: boolean('is_processed').default(false),
+  createdAt: timestamp('created_at').defaultNow()
+}, (table) => ({
+  fingerprintIdx: index('transaction_fingerprints_fingerprint_idx').on(table.fingerprint),
+  companyDateIdx: index('transaction_fingerprints_company_date_idx').on(table.companyId, table.transactionDate),
+  companyFingerprintIdx: index('transaction_fingerprints_company_fp_idx').on(table.companyId, table.fingerprint)
+}));
+
+// Bank Statement Import Relations
+export const bankStatementImportsRelations = relations(bankStatementImports, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [bankStatementImports.companyId],
+    references: [companies.id]
+  }),
+  importedByUser: one(users, {
+    fields: [bankStatementImports.importedBy],
+    references: [users.id]
+  }),
+  transactions: many(transactionStatuses),
+  fingerprints: many(transactionFingerprints)
+}));
+
+export const transactionStatusesRelations = relations(transactionStatuses, ({ one }) => ({
+  company: one(companies, {
+    fields: [transactionStatuses.companyId],
+    references: [companies.id]
+  }),
+  import: one(bankStatementImports, {
+    fields: [transactionStatuses.importId],
+    references: [bankStatementImports.id]
+  }),
+  reviewedByUser: one(users, {
+    fields: [transactionStatuses.reviewedBy],
+    references: [users.id]
+  }),
+  assignedAccount: one(chartOfAccounts, {
+    fields: [transactionStatuses.assignedAccountId],
+    references: [chartOfAccounts.id]
+  }),
+  journalEntry: one(journalEntries, {
+    fields: [transactionStatuses.journalEntryId],
+    references: [journalEntries.id]
+  })
+}));
+
+export const transactionFingerprintsRelations = relations(transactionFingerprints, ({ one }) => ({
+  company: one(companies, {
+    fields: [transactionFingerprints.companyId],
+    references: [companies.id]
+  }),
+  import: one(bankStatementImports, {
+    fields: [transactionFingerprints.importId],
+    references: [bankStatementImports.id]
+  })
+}));
+
+// Bank Statement Import Schemas
+export const insertBankStatementImportSchema = createInsertSchema(bankStatementImports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertTransactionStatusSchema = createInsertSchema(transactionStatuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertTransactionFingerprintSchema = createInsertSchema(transactionFingerprints).omit({
+  id: true,
+  createdAt: true
+});
+
+// Bank Statement Import Types
+export type BankStatementImport = typeof bankStatementImports.$inferSelect;
+export type InsertBankStatementImport = z.infer<typeof insertBankStatementImportSchema>;
+export type TransactionStatus = typeof transactionStatuses.$inferSelect;
+export type InsertTransactionStatus = z.infer<typeof insertTransactionStatusSchema>;
+export type TransactionFingerprint = typeof transactionFingerprints.$inferSelect;
+export type InsertTransactionFingerprint = z.infer<typeof insertTransactionFingerprintSchema>;
+
 // Service Package Configuration Tables
 export const servicePackageFeatures = pgTable("service_package_features", {
   id: serial("id").primaryKey(),

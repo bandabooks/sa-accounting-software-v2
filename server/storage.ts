@@ -471,6 +471,15 @@ import {
   type InsertAiMatchingMetrics,
   type AiDuplicateDetection,
   type InsertAiDuplicateDetection,
+  bankStatementImports,
+  transactionStatuses,
+  transactionFingerprints,
+  type BankStatementImport,
+  type InsertBankStatementImport,
+  type TransactionStatus,
+  type InsertTransactionStatus,
+  type TransactionFingerprint,
+  type InsertTransactionFingerprint,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, isNotNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
@@ -17363,6 +17372,296 @@ export class DatabaseStorage implements IStorage {
 
   async storeLearningMetrics(companyId: number, metrics: LearningMetrics): Promise<void> {
     console.log(`Storing learning metrics for company ${companyId}:`, metrics);
+  }
+
+  // Bank Statement Import Management Methods
+  async createBankStatementImport(importData: InsertBankStatementImport): Promise<BankStatementImport> {
+    const [createdImport] = await db
+      .insert(bankStatementImports)
+      .values(importData)
+      .returning();
+    return createdImport;
+  }
+
+  async updateBankStatementImport(id: number, updateData: Partial<InsertBankStatementImport>): Promise<BankStatementImport | undefined> {
+    const [updatedImport] = await db
+      .update(bankStatementImports)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(bankStatementImports.id, id))
+      .returning();
+    return updatedImport;
+  }
+
+  async getBankStatementImports(companyId: number, options?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<BankStatementImport[]> {
+    let query = db
+      .select()
+      .from(bankStatementImports)
+      .where(eq(bankStatementImports.companyId, companyId));
+
+    if (options?.status) {
+      query = query.where(eq(bankStatementImports.status, options.status));
+    }
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    if (options?.offset) {
+      query = query.offset(options.offset);
+    }
+
+    return await query.orderBy(desc(bankStatementImports.importDate));
+  }
+
+  async getBankStatementImport(id: number, companyId: number): Promise<BankStatementImport | undefined> {
+    const [importRecord] = await db
+      .select()
+      .from(bankStatementImports)
+      .where(and(
+        eq(bankStatementImports.id, id),
+        eq(bankStatementImports.companyId, companyId)
+      ));
+    return importRecord;
+  }
+
+  // Transaction Status Management Methods
+  async createTransactionStatus(statusData: InsertTransactionStatus): Promise<TransactionStatus> {
+    const [createdStatus] = await db
+      .insert(transactionStatuses)
+      .values(statusData)
+      .returning();
+    return createdStatus;
+  }
+
+  async batchCreateTransactionStatuses(statusDataArray: InsertTransactionStatus[]): Promise<TransactionStatus[]> {
+    return await db
+      .insert(transactionStatuses)
+      .values(statusDataArray)
+      .returning();
+  }
+
+  async updateTransactionStatus(id: number, updateData: Partial<InsertTransactionStatus>): Promise<TransactionStatus | undefined> {
+    const [updatedStatus] = await db
+      .update(transactionStatuses)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(transactionStatuses.id, id))
+      .returning();
+    return updatedStatus;
+  }
+
+  async getTransactionsByImport(importId: number, companyId: number, options?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<TransactionStatus[]> {
+    let query = db
+      .select()
+      .from(transactionStatuses)
+      .where(and(
+        eq(transactionStatuses.importId, importId),
+        eq(transactionStatuses.companyId, companyId)
+      ));
+
+    if (options?.status) {
+      query = query.where(eq(transactionStatuses.status, options.status));
+    }
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    if (options?.offset) {
+      query = query.offset(options.offset);
+    }
+
+    return await query.orderBy(desc(transactionStatuses.transactionDate));
+  }
+
+  async getTransactionStatus(id: number, companyId: number): Promise<TransactionStatus | undefined> {
+    const [status] = await db
+      .select()
+      .from(transactionStatuses)
+      .where(and(
+        eq(transactionStatuses.id, id),
+        eq(transactionStatuses.companyId, companyId)
+      ));
+    return status;
+  }
+
+  async getTransactionStatusByTransactionId(transactionId: string, companyId: number): Promise<TransactionStatus | undefined> {
+    const [status] = await db
+      .select()
+      .from(transactionStatuses)
+      .where(and(
+        eq(transactionStatuses.transactionId, transactionId),
+        eq(transactionStatuses.companyId, companyId)
+      ));
+    return status;
+  }
+
+  async getTransactionsByStatus(companyId: number, status: string, options?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<TransactionStatus[]> {
+    let query = db
+      .select()
+      .from(transactionStatuses)
+      .where(and(
+        eq(transactionStatuses.companyId, companyId),
+        eq(transactionStatuses.status, status)
+      ));
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    if (options?.offset) {
+      query = query.offset(options.offset);
+    }
+
+    return await query.orderBy(desc(transactionStatuses.transactionDate));
+  }
+
+  async bulkUpdateTransactionStatuses(
+    transactionIds: number[],
+    updateData: Partial<InsertTransactionStatus>,
+    companyId: number
+  ): Promise<TransactionStatus[]> {
+    return await db
+      .update(transactionStatuses)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(and(
+        inArray(transactionStatuses.id, transactionIds),
+        eq(transactionStatuses.companyId, companyId)
+      ))
+      .returning();
+  }
+
+  // Transaction Fingerprint Methods for Duplicate Prevention
+  async createTransactionFingerprint(fingerprintData: InsertTransactionFingerprint): Promise<TransactionFingerprint> {
+    const [createdFingerprint] = await db
+      .insert(transactionFingerprints)
+      .values(fingerprintData)
+      .returning();
+    return createdFingerprint;
+  }
+
+  async batchCreateTransactionFingerprints(fingerprintDataArray: InsertTransactionFingerprint[]): Promise<TransactionFingerprint[]> {
+    return await db
+      .insert(transactionFingerprints)
+      .values(fingerprintDataArray)
+      .returning();
+  }
+
+  async findDuplicatesByFingerprint(fingerprint: string, companyId: number): Promise<TransactionFingerprint[]> {
+    return await db
+      .select()
+      .from(transactionFingerprints)
+      .where(and(
+        eq(transactionFingerprints.fingerprint, fingerprint),
+        eq(transactionFingerprints.companyId, companyId)
+      ));
+  }
+
+  async getTransactionFingerprints(companyId: number, importId?: number): Promise<TransactionFingerprint[]> {
+    let query = db
+      .select()
+      .from(transactionFingerprints)
+      .where(eq(transactionFingerprints.companyId, companyId));
+
+    if (importId) {
+      query = query.where(eq(transactionFingerprints.importId, importId));
+    }
+
+    return await query.orderBy(desc(transactionFingerprints.createdAt));
+  }
+
+  // Analytics and Reporting for Statement Processing
+  async getImportStatistics(companyId: number, fromDate?: Date, toDate?: Date): Promise<{
+    totalImports: number;
+    totalTransactions: number;
+    processedTransactions: number;
+    duplicatesFound: number;
+    successRate: number;
+  }> {
+    let query = db
+      .select({
+        totalImports: count(bankStatementImports.id),
+        totalTransactions: sum(bankStatementImports.totalTransactions),
+        processedTransactions: sum(bankStatementImports.processedTransactions),
+        duplicatesFound: sum(bankStatementImports.duplicatesFound)
+      })
+      .from(bankStatementImports)
+      .where(eq(bankStatementImports.companyId, companyId));
+
+    if (fromDate) {
+      query = query.where(gte(bankStatementImports.importDate, fromDate));
+    }
+
+    if (toDate) {
+      query = query.where(lte(bankStatementImports.importDate, toDate));
+    }
+
+    const result = await query;
+    const stats = result[0];
+
+    const successRate = stats.totalTransactions && stats.processedTransactions 
+      ? (Number(stats.processedTransactions) / Number(stats.totalTransactions)) * 100 
+      : 0;
+
+    return {
+      totalImports: Number(stats.totalImports) || 0,
+      totalTransactions: Number(stats.totalTransactions) || 0,
+      processedTransactions: Number(stats.processedTransactions) || 0,
+      duplicatesFound: Number(stats.duplicatesFound) || 0,
+      successRate: Math.round(successRate * 100) / 100
+    };
+  }
+
+  async getReviewQueueSummary(companyId: number): Promise<{
+    needsReview: number;
+    inReview: number;
+    completed: number;
+    duplicates: number;
+    rejected: number;
+  }> {
+    const result = await db
+      .select({
+        status: transactionStatuses.status,
+        count: count(transactionStatuses.id)
+      })
+      .from(transactionStatuses)
+      .where(eq(transactionStatuses.companyId, companyId))
+      .groupBy(transactionStatuses.status);
+
+    const summary = {
+      needsReview: 0,
+      inReview: 0,
+      completed: 0,
+      duplicates: 0,
+      rejected: 0
+    };
+
+    result.forEach(row => {
+      const status = row.status as keyof typeof summary;
+      if (status === 'needs_review') {
+        summary.needsReview = Number(row.count);
+      } else if (status === 'in_review') {
+        summary.inReview = Number(row.count);
+      } else if (status === 'completed') {
+        summary.completed = Number(row.count);
+      } else if (status === 'duplicate') {
+        summary.duplicates = Number(row.count);
+      } else if (status === 'rejected') {
+        summary.rejected = Number(row.count);
+      }
+    });
+
+    return summary;
   }
 }
 
