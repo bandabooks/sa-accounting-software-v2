@@ -412,19 +412,18 @@ export default function SubscriptionIntegratedPermissions({
   const [permissionStates, setPermissionStates] = useState<Record<string, boolean>>({});
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
 
-  // Load current permissions from the working permissions matrix
-  const { data: permissionsMatrix } = useQuery({
-    queryKey: ['/api/permissions/matrix'],
+  // Load current permissions for selected role
+  const { data: currentPermissions } = useQuery({
+    queryKey: ['/api/rbac/role-permissions', selectedRoleId],
     queryFn: async () => {
-      const response = await fetch('/api/permissions/matrix');
-      if (!response.ok) return { roles: [] };
+      if (!selectedRoleId) return [];
+      const response = await fetch(`/api/rbac/role-permissions/${selectedRoleId}`);
+      if (!response.ok) return [];
       return response.json();
     },
+    enabled: !!selectedRoleId,
     staleTime: 30000,
   });
-
-  // Extract current permissions for selected role from the matrix
-  const currentPermissions = permissionsMatrix?.roles?.find((role: any) => role.id === selectedRoleId)?.permissions || {};
 
   // Check if module is active in subscription
   const isModuleActiveInSubscription = (moduleId: string): boolean => {
@@ -454,16 +453,11 @@ export default function SubscriptionIntegratedPermissions({
     if (selectedRoleId) {
       const newStates: Record<string, boolean> = {};
       
-      // Load existing permissions if available - currentPermissions is now an object
-      if (currentPermissions && typeof currentPermissions === 'object') {
-        Object.keys(currentPermissions).forEach(moduleId => {
-          const modulePermissions = currentPermissions[moduleId];
-          if (modulePermissions && typeof modulePermissions === 'object') {
-            Object.keys(modulePermissions).forEach(permissionType => {
-              const key = `${selectedRoleId}-${moduleId}-${permissionType}`;
-              newStates[key] = modulePermissions[permissionType];
-            });
-          }
+      // Load existing permissions if available
+      if (currentPermissions) {
+        currentPermissions.forEach((perm: any) => {
+          const key = `${selectedRoleId}-${perm.moduleId}-${perm.permissionType}`;
+          newStates[key] = perm.enabled;
         });
       }
 
@@ -499,19 +493,13 @@ export default function SubscriptionIntegratedPermissions({
         return newSet;
       });
       
-      // Update local permission state immediately to reflect the change
-      setPermissionStates(prev => ({
-        ...prev,
-        [key]: variables.enabled
-      }));
-      
       toast({
         title: "Permission Updated",
         description: `${variables.permissionType} permission for ${variables.moduleId} ${variables.enabled ? 'enabled' : 'disabled'} successfully.`,
       });
       
       // Refresh permissions data to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['/api/permissions/matrix'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/permissions'] });
     },
     onError: (error: any, variables) => {
       // Remove from pending toggles and revert the optimistic update on error
@@ -571,12 +559,6 @@ export default function SubscriptionIntegratedPermissions({
     
     // Create isolated state update that only affects this specific permission
     const key = `${selectedRoleId}-${moduleId}-${permission}`;
-    
-    // Optimistic update - immediately update the UI state
-    setPermissionStates(prev => ({
-      ...prev,
-      [key]: enabled
-    }));
     
     // Prevent multiple simultaneous toggles of the same permission
     if (pendingToggles.has(key)) return;
