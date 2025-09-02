@@ -1,0 +1,58 @@
+Task: Normalize and fix System Roles hierarchy (remove duplicates, correct levels, update seeds/UI).
+
+Goals
+1) Enforce a single, consistent RBAC ladder from Level 10 (highest) to Level 1 (lowest).
+2) Remove duplicate roles (there must be only ONE “Sales Representative”).
+3) Ensure Company Admin is below System Admin. The subscription-paying platform owner remains top.
+4) Update database seeds/migrations and UI labels to match the new mapping.
+
+Authoritative Role Mapping (use exactly these names, levels, and descriptions)
+- Super Administrator — Level 10
+  Platform & subscription owner. Global access to all companies, billing, plans, platform settings.
+- System Administrator — Level 9
+  System/integrations/configuration. No subscription billing authority.
+- Company Administrator — Level 8
+  Full control within their company (users, roles, company billing, settings).
+- Company Owner — Level 7
+  Operational owner for a single company; full day-to-day business control.
+- Accountant — Level 6
+  Core accounting: invoicing, expenses, journals, bank rec, VAT; can edit financial data.
+- Manager — Level 6
+  Department/business unit scope. Approvals, reports, limited edits.
+- Bookkeeper — Level 5
+  Daily entries: sales, expenses, receipts, bills. Limited reporting.
+- Payroll Administrator — Level 5
+  Payroll/HR: employees, leave, salaries. No sales/supplier data.
+- Compliance Officer — Level 5
+  Compliance modules (SARS, CIPC, Labour, VAT). Submit/track filings.
+- Auditor — Level 4
+  Read-only; can run/export reports, view logs. No edits.
+- Sales Representative — Level 3
+  Sales/customer modules (customers, quotes, invoices, products). Limited reporting.
+- Cashier — Level 2
+  POS only; process sales/print receipts. No back-office access.
+- Employee — Level 2
+  Only modules needed for tasks (POS, timesheets, tasks). No financial access.
+- Viewer — Level 1
+  View-only dashboards/reports. No management or edits.
+
+Required Changes
+- Create a DB migration that:
+  a) Updates existing role records to the exact mapping above (names, levels, descriptions).
+  b) Merges duplicate “Sales Representative” roles into a single record at Level 3, reassigning users to the surviving ID; remove the duplicate.
+  c) Adds UNIQUE constraint on role name (case-insensitive).
+  d) Optionally add a CHECK constraint that role_level BETWEEN 1 AND 10.
+- Update seed script to insert the mapping above idempotently (upsert by name).
+- Update any RBAC policy code to use numeric comparison (higher level = more privilege).
+- Update the System Roles UI list to display the new order (desc by level), with counts preserved after merges.
+- Ensure any references (enums/constants) match the new names exactly.
+
+Acceptance Criteria
+- No duplicate role names in DB; “Sales Representative” exists once at Level 3.
+- Company Administrator shows Level 8; System Administrator shows Level 9.
+- Super Administrator remains Level 10 and retains subscription/billing control.
+- UI shows roles sorted 10→1 with the exact titles/levels/descriptions above.
+- All existing users retain access; users from deleted duplicate roles are mapped to the surviving role.
+- Seeds are safe to re-run (no duplicates).
+
+Please implement migration, seeds, and UI updates accordingly, then run tests/verification to confirm the hierarchy and user counts.

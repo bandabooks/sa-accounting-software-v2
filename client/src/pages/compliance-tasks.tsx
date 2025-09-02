@@ -30,7 +30,7 @@ const taskFormSchema = z.object({
   assignedCustomerId: z.number().optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   completedAt: z.string().optional(),
   isRecurring: z.boolean().default(false),
@@ -84,7 +84,7 @@ export default function ComplianceTasks() {
       notes: "",
       startDate: "",
       dueDate: "",
-      tags: "",
+      tags: [],
       isRecurring: false,
       recurringType: "",
       recurringInterval: 1,
@@ -105,7 +105,7 @@ export default function ComplianceTasks() {
       notes: "",
       startDate: "",
       dueDate: "",
-      tags: "",
+      tags: [],
       isRecurring: false,
       recurringType: "",
       recurringInterval: 1,
@@ -900,10 +900,19 @@ export default function ComplianceTasks() {
                       
                       {/* Tags */}
                       <TableCell className="text-center">
-                        {(task as any).tags ? (
-                          <Badge variant="secondary" className="text-xs">
-                            {(task as any).tags}
-                          </Badge>
+                        {(task as any).tags && (task as any).tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 justify-center">
+                            {(task as any).tags.slice(0, 2).map((tag: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {(task as any).tags.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{(task as any).tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
                         ) : "-"}
                       </TableCell>
                       
