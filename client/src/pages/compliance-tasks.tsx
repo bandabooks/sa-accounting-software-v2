@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -256,22 +256,26 @@ export default function ComplianceTasks() {
   // Running Timer Component
   const RunningTimer = ({ startTime, timeEntryId }: { startTime: string; timeEntryId: number }) => {
     const [elapsed, setElapsed] = useState(0);
-    const [isActive, setIsActive] = useState(true);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-      // Check if this time entry is still active
-      if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
-        setIsActive(false);
-        return;
+      // Clear any existing interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
 
-      setIsActive(true);
+      // Check if this time entry is still active
+      if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+        return;
+      }
       
-      const interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         // Double-check the time entry is still active
         if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
-          setIsActive(false);
-          clearInterval(interval);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
           return;
         }
         
@@ -281,8 +285,10 @@ export default function ComplianceTasks() {
       }, 1000);
 
       return () => {
-        clearInterval(interval);
-        setIsActive(false);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       };
     }, [startTime, timeEntryId, activeTimeEntry]);
 
@@ -298,7 +304,7 @@ export default function ComplianceTasks() {
     };
 
     // Don't render if this time entry is no longer active
-    if (!isActive || !activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
+    if (!activeTimeEntry || activeTimeEntry.id !== timeEntryId) {
       return null;
     }
 
@@ -852,14 +858,23 @@ export default function ComplianceTasks() {
                       <Edit className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => toggleTaskStatus(task)}
-                      disabled={updateStatusMutation.isPending}
-                      className="text-sm"
+
+                    {/* Status Change Dropdown */}
+                    <Select 
+                      value={(task.status as any) || "todo"} 
+                      onValueChange={(newStatus) => updateStatusMutation.mutate({ taskId: task.id, status: newStatus })}
                     >
-                      {(task.status as any) === "completed" ? "Mark Todo" : "Mark Complete"}
-                    </Button>
+                      <SelectTrigger className="w-32 h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todo">To Do</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="review">Review</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="blocked">Blocked</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
