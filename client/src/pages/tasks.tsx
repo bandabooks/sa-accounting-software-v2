@@ -39,7 +39,35 @@ import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Label } from "@/components/ui/label";
 
-const formSchema = insertTaskSchema.omit({ companyId: true, createdBy: true });
+// Create a proper form schema with correct types
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  status: z.enum(["todo", "in_progress", "review", "completed", "blocked"]).default("todo"),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  projectId: z.number().optional(),
+  customerId: z.number().optional(),
+  parentTaskId: z.number().optional(),
+  assignedToId: z.number().optional(),
+  startDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  completedDate: z.string().optional(),
+  estimatedHours: z.string().optional(),
+  actualHours: z.string().optional(),
+  isInternal: z.boolean().default(false),
+  isBillable: z.boolean().default(true),
+  hourlyRate: z.string().optional(),
+  progress: z.number().min(0).max(100).default(0),
+  tags: z.array(z.string()).optional(),
+  isRecurring: z.boolean().default(false),
+  recurringType: z.string().optional(),
+  recurringInterval: z.number().optional(),
+  recurringDaysOfWeek: z.array(z.number()).optional(),
+  recurringDayOfMonth: z.number().optional(),
+  recurringEndDate: z.string().optional(),
+  recurringCount: z.number().optional(),
+  parentRecurringTaskId: z.number().optional()
+});
 
 export default function TasksPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -48,23 +76,23 @@ export default function TasksPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: tasks = [], isLoading } = useQuery({
+  const { data: tasks = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/tasks"],
   });
 
-  const { data: projects = [] } = useQuery({
+  const { data: projects = [] } = useQuery<any[]>({
     queryKey: ["/api/projects"],
   });
 
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [] } = useQuery<any[]>({
     queryKey: ["/api/customers"],
   });
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
 
-  const { data: activeTimeEntry } = useQuery({
+  const { data: activeTimeEntry } = useQuery<any>({
     queryKey: ["/api/time-entries/active"],
   });
 
@@ -172,8 +200,10 @@ export default function TasksPage() {
       isBillable: true,
       progress: 0,
       isRecurring: false,
-      estimatedHours: "0",
-      hourlyRate: "0",
+      estimatedHours: "",
+      actualHours: "",
+      hourlyRate: "",
+      tags: []
     },
   });
 
@@ -626,14 +656,14 @@ export default function TasksPage() {
                 <div>
                   <p className="font-medium">Time tracking active</p>
                   <p className="text-sm text-muted-foreground">
-                    {activeTimeEntry.description || "Current task"}
+                    {activeTimeEntry?.description || "Current task"}
                   </p>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleStopTime}
+                onClick={() => handleStopTime(activeTimeEntry?.id)}
                 disabled={stopTimeMutation.isPending}
               >
                 <Pause className="h-4 w-4 mr-2" />
