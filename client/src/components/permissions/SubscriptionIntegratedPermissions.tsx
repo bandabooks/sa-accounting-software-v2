@@ -417,7 +417,7 @@ export default function SubscriptionIntegratedPermissions({
     queryKey: ['/api/rbac/role-permissions', selectedRoleId],
     queryFn: async () => {
       if (!selectedRoleId) return [];
-      const response = await fetch(`/api/rbac/role-permissions/${selectedRoleId}`);
+      const response = await apiRequest(`/api/rbac/role-permissions/${selectedRoleId}`, 'GET');
       if (!response.ok) {
         return [];
       }
