@@ -166,12 +166,36 @@ export default function ComplianceTasks() {
   };
 
   const handleCreateTask = (data: TaskFormData) => {
-    createMutation.mutate(data);
+    // Transform empty strings to undefined for optional fields to avoid database errors
+    const transformedData = {
+      ...data,
+      startDate: data.startDate && data.startDate.trim() !== "" ? data.startDate : undefined,
+      dueDate: data.dueDate && data.dueDate.trim() !== "" ? data.dueDate : undefined,
+      recurringEndDate: data.recurringEndDate && data.recurringEndDate.trim() !== "" ? data.recurringEndDate : undefined,
+      // Transform empty strings to undefined for optional fields
+      description: data.description && data.description.trim() !== "" ? data.description : undefined,
+      notes: data.notes && data.notes.trim() !== "" ? data.notes : undefined,
+      complianceType: data.complianceType && data.complianceType.trim() !== "" ? data.complianceType : undefined,
+      recurringType: data.recurringType && data.recurringType.trim() !== "" ? data.recurringType : undefined,
+    };
+    createMutation.mutate(transformedData);
   };
 
   const handleEditTask = (data: TaskFormData) => {
     if (editingTask) {
-      updateMutation.mutate({ id: editingTask.id, data });
+      // Transform empty strings to undefined for optional fields to avoid database errors
+      const transformedData = {
+        ...data,
+        startDate: data.startDate && data.startDate.trim() !== "" ? data.startDate : undefined,
+        dueDate: data.dueDate && data.dueDate.trim() !== "" ? data.dueDate : undefined,
+        recurringEndDate: data.recurringEndDate && data.recurringEndDate.trim() !== "" ? data.recurringEndDate : undefined,
+        // Transform empty strings to undefined for optional fields
+        description: data.description && data.description.trim() !== "" ? data.description : undefined,
+        notes: data.notes && data.notes.trim() !== "" ? data.notes : undefined,
+        complianceType: data.complianceType && data.complianceType.trim() !== "" ? data.complianceType : undefined,
+        recurringType: data.recurringType && data.recurringType.trim() !== "" ? data.recurringType : undefined,
+      };
+      updateMutation.mutate({ id: editingTask.id, data: transformedData });
     }
   };
 
