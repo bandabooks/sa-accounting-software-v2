@@ -1,360 +1,532 @@
-import { Link } from "wouter";
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Link } from 'wouter';
+import { Button } from '@/components/ui/button';
 import { 
-  CheckCircle, ArrowRight, Star, Play, Shield, Users, Award,
-  TrendingUp, Calculator, FileText, Clock, Phone, Mail, Building2,
-  Zap, Globe
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import MarketingLayout from "@/components/layout/marketing-layout";
+  ArrowRight, 
+  Menu, 
+  X,
+  CheckCircle,
+  BarChart3,
+  Shield,
+  Zap,
+  Globe,
+  Users,
+  TrendingUp,
+  Lock,
+  Clock,
+  Phone,
+  Mail,
+  Award,
+  Briefcase,
+  FileText,
+  Calculator,
+  CreditCard,
+  Target,
+  Star,
+  Play
+} from 'lucide-react';
 
 export default function Landing() {
-  const features = [
-    {
-      icon: Calculator,
-      title: "Complete Accounting Suite",
-      description: "Full-featured accounting with invoicing, expenses, and financial reports",
-      href: "/features/accounting"
-    },
-    {
-      icon: Shield,
-      title: "South African VAT Compliance",
-      description: "Automated VAT calculations and SARS-ready reporting",
-      href: "/features/compliance"
-    },
-    {
-      icon: FileText,
-      title: "SARS Integration",
-      description: "Direct submission of VAT201 returns and tax documents",
-      href: "/features/sars-integration"
-    },
-    {
-      icon: Building2,
-      title: "CIPC Compliance",
-      description: "Annual returns and company registry compliance",
-      href: "/features/cipc-compliance"
-    },
-    {
-      icon: Users,
-      title: "Multi-Company Management",
-      description: "Manage multiple businesses from a single dashboard",
-      href: "/features/multi-company"
-    },
-    {
-      icon: TrendingUp,
-      title: "Advanced Reporting",
-      description: "Real-time insights and professional financial reports",
-      href: "/features/reporting"
-    }
-  ];
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  
+  // Handle scroll effect for header
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  const testimonials = [
-    {
-      name: "Sarah Johnson",
-      role: "CA(SA), Managing Partner",
-      company: "Johnson & Associates",
-      content: "Taxnify has revolutionized our practice. We've reduced our compliance work by 60% and can now focus on growing our client base.",
-      rating: 5
-    },
-    {
-      name: "Michael Chen",
-      role: "Financial Director",
-      company: "Cape Town Retailers",
-      content: "The VAT compliance features are exceptional. We haven't had a single SARS query since switching to Taxnify.",
-      rating: 5
-    },
-    {
-      name: "Nomsa Mthembu",
-      role: "Small Business Owner",
-      company: "Mthembu Consulting",
-      content: "Finally, accounting software that understands South African business needs. The support team is outstanding.",
-      rating: 5
-    }
-  ];
+  // Reduced motion detection
+  const shouldReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const pricingPlans = [
-    {
-      name: "Basic Plan",
-      price: "R299.99",
-      period: "/month",
-      description: "Perfect for small businesses getting started",
-      features: [
-        "Customer Management",
-        "Basic Invoicing",
-        "Expense Tracking",
-        "Financial Reports",
-        "VAT Management",
-        "Chart of Accounts"
-      ],
-      cta: "Start Free Trial",
-      popular: false
-    },
-    {
-      name: "Professional Plan",
-      price: "R679.99",
-      period: "/month",
-      description: "Advanced features for growing businesses",
-      features: [
-        "Everything in Basic",
-        "Advanced Invoicing",
-        "Inventory Management",
-        "VAT Management",
-        "Advanced Analytics",
-        "Compliance Management"
-      ],
-      cta: "Start Free Trial",
-      popular: true
-    },
-    {
-      name: "Enterprise Plan",
-      price: "R1199.99",
-      period: "/month",
-      description: "Full-featured solution for large organizations",
-      features: [
-        "Everything in Professional",
-        "Multi-Company",
-        "Payroll Management",
-        "Point of Sale",
-        "API Access",
-        "Dedicated Support"
-      ],
-      cta: "Contact Sales",
-      popular: false
+  const fadeInVariant = {
+    hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 30 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: shouldReduceMotion ? { duration: 0 } : { duration: 0.8, ease: "easeOut" } 
     }
-  ];
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: shouldReduceMotion ? { duration: 0 } : { staggerChildren: 0.2, delayChildren: 0.3 }
+    }
+  };
 
   return (
-    <MarketingLayout>
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              South Africa's Leading
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-300">
-                Business Management Platform
+    <div className="min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden">
+      {/* Navigation */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled ? 'bg-white/95 backdrop-blur-lg shadow-xl border-b border-slate-200/50' : 'bg-transparent'
+      }`}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-3 group">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                  <span className="text-white font-bold text-lg">T</span>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                Taxnify
               </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-blue-100 max-w-4xl mx-auto mb-8">
-              Unified accounting, compliance, and business intelligence designed specifically for South African enterprises. 
-              SARS-ready, CIPC-compliant, and built for growth.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-1">
+              {[
+                { name: 'Features', href: '/features' },
+                { name: 'Solutions', href: '/solutions' },
+                { name: 'Pricing', href: '/pricing' },
+                { name: 'Resources', href: '/resources' }
+              ].map((item) => (
+                <Link key={item.name} href={item.href}>
+                  <div className="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium transition-all duration-200 hover:bg-slate-100/70 rounded-lg">
+                    {item.name}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop CTA */}
+            <div className="hidden lg:flex items-center space-x-4">
               <Link href="/login">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg">
-                  Start Free Trial
-                  <ArrowRight className="ml-2" size={20} />
+                <Button variant="ghost" className="text-slate-600 hover:text-slate-900 font-medium">
+                  Sign In
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-4 text-lg">
-                <Play className="mr-2" size={20} />
+              <Link href="/login">
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2.5 font-medium shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl">
+                  Start Free Trial
+                </Button>
+              </Link>
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <motion.div 
+              className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/50 py-6"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="space-y-4">
+                {[
+                  { name: 'Features', href: '/features' },
+                  { name: 'Solutions', href: '/solutions' },
+                  { name: 'Pricing', href: '/pricing' },
+                  { name: 'Resources', href: '/resources' }
+                ].map((item) => (
+                  <Link key={item.name} href={item.href}>
+                    <div className="block text-slate-600 hover:text-slate-900 font-medium py-2">
+                      {item.name}
+                    </div>
+                  </Link>
+                ))}
+                <div className="pt-4 border-t border-slate-200 space-y-3">
+                  <Link href="/login">
+                    <Button variant="ghost" className="w-full justify-start">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                      Start Free Trial
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 w-full max-w-full overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl"></div>
+          <div className="absolute top-20 right-1/4 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-purple-400/20 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div 
+            className="text-center max-w-4xl mx-auto"
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+          >
+            {/* Badge */}
+            <motion.div variants={fadeInVariant} className="mb-8">
+              <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-full px-6 py-3 shadow-lg">
+                <Award className="w-5 h-5 text-blue-600" />
+                <span className="text-slate-700 font-medium">South Africa's #1 Business Platform</span>
+              </div>
+            </motion.div>
+
+            {/* Main Headline */}
+            <motion.h1 
+              variants={fadeInVariant}
+              className="text-5xl lg:text-7xl font-bold text-slate-900 mb-8 leading-tight"
+            >
+              Transform Your
+              <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Business Operations
+              </span>
+            </motion.h1>
+
+            {/* Subtitle */}
+            <motion.p 
+              variants={fadeInVariant}
+              className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed max-w-3xl mx-auto"
+            >
+              Complete accounting, compliance, and business intelligence platform designed specifically for South African enterprises. SARS-ready, CIPC-compliant, and built for growth.
+            </motion.p>
+
+            {/* CTA Buttons */}
+            <motion.div 
+              variants={fadeInVariant}
+              className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
+            >
+              <Link href="/login">
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl group"
+                >
+                  Start Free Trial
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="border-2 border-slate-300 text-slate-700 hover:bg-slate-50 px-8 py-4 text-lg font-semibold rounded-xl backdrop-blur-sm group"
+              >
+                <Play className="mr-2 w-5 h-5" />
                 Watch Demo
               </Button>
-            </div>
-            <div className="flex items-center justify-center space-x-8 text-blue-100">
-              <div className="flex items-center space-x-2">
-                <Shield size={20} />
-                <span>SARS Integrated</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Award size={20} />
-                <span>CIPC Compliant</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Users size={20} />
-                <span>500+ SA Firms</span>
-              </div>
-            </div>
-          </div>
+            </motion.div>
+
+            {/* Trust Indicators */}
+            <motion.div 
+              variants={fadeInVariant}
+              className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-2xl mx-auto"
+            >
+              {[
+                { icon: Shield, text: "SARS Integrated", desc: "Direct compliance" },
+                { icon: CheckCircle, text: "CIPC Compliant", desc: "Full regulatory support" },
+                { icon: Users, text: "500+ SA Firms", desc: "Trusted nationwide" }
+              ].map((item, index) => (
+                <div key={index} className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center mb-3">
+                    <item.icon className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mb-1">{item.text}</h3>
+                  <p className="text-slate-600 text-sm">{item.desc}</p>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Everything You Need to Run Your Business</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+      {/* Features Section */}
+      <section className="py-24 bg-white w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-20"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInVariant}
+          >
+            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
+              Everything Your Business Needs
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
               Comprehensive tools designed specifically for South African businesses and accounting practices
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Link key={index} href={feature.href}>
-                <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 group cursor-pointer">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-600 transition-colors">
-                    <feature.icon className="text-blue-600 group-hover:text-white" size={24} />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
-                  <div className="mt-4 flex items-center text-blue-600 group-hover:text-blue-700">
-                    <span className="text-sm font-medium">Learn more</span>
-                    <ArrowRight className="ml-1" size={16} />
-                  </div>
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            {[
+              {
+                icon: Calculator,
+                title: "Complete Accounting Suite",
+                description: "IFRS-compliant Chart of Accounts, Journal Entries, Fixed Assets Management, and comprehensive financial reporting.",
+                color: "from-blue-500 to-blue-600"
+              },
+              {
+                icon: FileText,
+                title: "South African VAT Compliance",
+                description: "Automated VAT calculations, VAT201 returns, and intelligent compliance guidance with SARS integration.",
+                color: "from-indigo-500 to-indigo-600"
+              },
+              {
+                icon: Shield,
+                title: "SARS API Integration",
+                description: "Direct integration with SARS systems for automated submissions, returns, and real-time compliance monitoring.",
+                color: "from-purple-500 to-purple-600"
+              },
+              {
+                icon: Briefcase,
+                title: "Business Operations",
+                description: "Complete transaction management including invoices, estimates, purchase orders, and credit notes.",
+                color: "from-emerald-500 to-emerald-600"
+              },
+              {
+                icon: BarChart3,
+                title: "Advanced Reporting",
+                description: "Professional financial reports, dashboards, and business intelligence with PDF export capabilities.",
+                color: "from-orange-500 to-orange-600"
+              },
+              {
+                icon: CreditCard,
+                title: "Payment Processing",
+                description: "Integrated South African payment gateways including PayFast, Peach Payments, and Yoco.",
+                color: "from-pink-500 to-pink-600"
+              }
+            ].map((feature, index) => (
+              <motion.div 
+                key={index}
+                variants={fadeInVariant}
+                className="group relative bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-xl transition-all duration-300"
+              >
+                <div className={`inline-flex w-14 h-14 bg-gradient-to-br ${feature.color} rounded-xl items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <feature.icon className="w-7 h-7 text-white" />
                 </div>
-              </Link>
+                <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">
+                  {feature.title}
+                </h3>
+                <p className="text-slate-600 leading-relaxed">
+                  {feature.description}
+                </p>
+              </motion.div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by South African Professionals</h2>
-            <p className="text-xl text-gray-600">Join hundreds of businesses and accounting firms who trust Taxnify</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-                <div className="flex items-center mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="text-yellow-400 fill-current" size={20} />
-                  ))}
-                </div>
-                <blockquote className="text-gray-700 mb-6 italic">
-                  "{testimonial.content}"
-                </blockquote>
-                <div className="border-t pt-4">
-                  <div className="font-semibold text-gray-900">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600">{testimonial.role}</div>
-                  <div className="text-sm text-blue-600">{testimonial.company}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20 bg-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold mb-2">500+</div>
-              <div className="text-blue-200">Active Firms</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">50K+</div>
-              <div className="text-blue-200">Transactions</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">99.9%</div>
-              <div className="text-blue-200">Uptime</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">R2B+</div>
-              <div className="text-blue-200">Managed</div>
-            </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-xl text-gray-600">Choose the plan that's right for your business</p>
-          </div>
+      <section className="py-24 bg-slate-50 w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-20"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInVariant}
+          >
+            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
+              Choose Your Plan
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Flexible pricing designed for businesses of all sizes, from startups to enterprises
+            </p>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {pricingPlans.map((plan, index) => (
-              <div key={index} className={`bg-white rounded-xl shadow-lg border-2 p-8 relative ${
-                plan.popular ? 'border-blue-500 transform scale-105' : 'border-gray-200'
-              }`}>
+          <motion.div 
+            className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            {[
+              {
+                name: "Starter",
+                price: "R299",
+                period: "/month",
+                description: "Perfect for small businesses and freelancers",
+                features: [
+                  "Up to 5 users",
+                  "Basic accounting features",
+                  "VAT compliance",
+                  "Standard reporting",
+                  "Email support"
+                ],
+                cta: "Start Free Trial",
+                popular: false
+              },
+              {
+                name: "Professional",
+                price: "R799",
+                period: "/month",
+                description: "Ideal for growing businesses and accounting practices",
+                features: [
+                  "Up to 25 users",
+                  "Full accounting suite",
+                  "SARS integration",
+                  "Advanced reporting",
+                  "Priority support",
+                  "Multi-company support"
+                ],
+                cta: "Start Free Trial",
+                popular: true
+              },
+              {
+                name: "Enterprise",
+                price: "Custom",
+                period: "",
+                description: "For large organizations with complex needs",
+                features: [
+                  "Unlimited users",
+                  "Custom integrations",
+                  "Dedicated support",
+                  "Advanced security",
+                  "Custom reporting",
+                  "SLA guarantee"
+                ],
+                cta: "Contact Sales",
+                popular: false
+              }
+            ].map((plan, index) => (
+              <motion.div 
+                key={index}
+                variants={fadeInVariant}
+                className={`relative bg-white rounded-2xl border-2 p-8 ${
+                  plan.popular 
+                    ? 'border-blue-600 shadow-2xl scale-105' 
+                    : 'border-slate-200 shadow-lg hover:shadow-xl'
+                } transition-all duration-300`}
+              >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                      Most Popular
-                    </span>
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-full text-sm font-semibold flex items-center space-x-1">
+                      <Star className="w-4 h-4" />
+                      <span>Most Popular</span>
+                    </div>
                   </div>
                 )}
+                
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                  <div className="text-4xl font-bold text-gray-900 mb-2">
-                    {plan.price}
-                    <span className="text-lg text-gray-500">{plan.period}</span>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+                  <div className="flex items-end justify-center mb-2">
+                    <span className="text-4xl font-bold text-slate-900">{plan.price}</span>
+                    <span className="text-slate-600 ml-1">{plan.period}</span>
                   </div>
-                  <p className="text-gray-600">{plan.description}</p>
+                  <p className="text-slate-600">{plan.description}</p>
                 </div>
+                
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-center space-x-3">
-                      <CheckCircle className="text-green-500 flex-shrink-0" size={20} />
-                      <span className="text-gray-700">{feature}</span>
+                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <span className="text-slate-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
-                <Button className={`w-full py-3 ${
-                  plan.popular 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-900 hover:bg-gray-800 text-white'
-                }`}>
+                
+                <Button 
+                  className={`w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 ${
+                    plan.popular 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl' 
+                      : 'bg-slate-900 hover:bg-slate-800 text-white'
+                  }`}
+                >
                   {plan.cta}
                 </Button>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Business 1000 Times?</h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join thousands of South African businesses that trust Taxnify for their accounting and compliance needs.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/login">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4">
-                Start Your Free Trial
-                <ArrowRight className="ml-2" size={20} />
-              </Button>
-            </Link>
-            <Link href="/contact">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-4">
-                Contact Sales
-              </Button>
-            </Link>
-          </div>
-          <p className="text-blue-200 mt-6 text-sm">No credit card required • 30-day free trial • Cancel anytime</p>
-          <div className="mt-4">
-            <Link href="/landingpage-pro">
-              <Button size="sm" variant="outline" className="border-white/50 text-white/80 hover:bg-white/10 px-6 py-2 text-sm">
-                View Professional Version
-              </Button>
-            </Link>
-          </div>
+      {/* Final CTA Section */}
+      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-white relative overflow-hidden w-full max-w-full">
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative max-w-4xl mx-auto text-center px-6 lg:px-8 w-full">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInVariant}
+          >
+            <h2 className="text-4xl lg:text-5xl font-bold mb-8">
+              Ready to Transform Your Business?
+            </h2>
+            <p className="text-xl text-blue-100 mb-12 leading-relaxed max-w-2xl mx-auto">
+              Join hundreds of South African businesses that trust Taxnify for their accounting and compliance needs. Start your free trial today.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center mb-8">
+              <Link href="/login">
+                <Button 
+                  size="lg" 
+                  className="bg-white text-slate-900 hover:bg-gray-50 px-8 py-4 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl group"
+                >
+                  Start Your Free Trial
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link href="/contact">
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="border-2 border-white text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-xl backdrop-blur-sm transition-all duration-300"
+                >
+                  Contact Sales
+                </Button>
+              </Link>
+            </div>
+            <p className="text-blue-200 text-sm">
+              No credit card required • 30-day free trial • Cancel anytime
+            </p>
+          </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer className="bg-slate-900 text-white py-20 w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             {/* Company Info */}
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">T</span>
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-xl">T</span>
                 </div>
-                <span className="text-xl font-bold">Taxnify</span>
+                <span className="text-2xl font-bold">Taxnify</span>
               </div>
-              <p className="text-gray-400 mb-6 max-w-md">
+              <p className="text-slate-400 mb-8 max-w-md leading-relaxed">
                 South Africa's premier business management platform. Comprehensive accounting, 
                 compliance, and business intelligence solutions built for local enterprises.
               </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 text-gray-400">
-                  <Phone size={16} />
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3 text-slate-400 hover:text-white transition-colors">
+                  <Phone size={18} />
                   <span>+27 11 123 4567</span>
                 </div>
-                <div className="flex items-center space-x-2 text-gray-400">
-                  <Mail size={16} />
+                <div className="flex items-center space-x-3 text-slate-400 hover:text-white transition-colors">
+                  <Mail size={18} />
                   <span>hello@taxnify.com</span>
                 </div>
               </div>
@@ -362,8 +534,8 @@ export default function Landing() {
 
             {/* Quick Links */}
             <div>
-              <h4 className="text-lg font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400">
+              <h4 className="text-lg font-bold mb-6">Product</h4>
+              <ul className="space-y-3 text-slate-400">
                 <li><Link href="/features" className="hover:text-white transition-colors">Features</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
                 <li><Link href="/integrations" className="hover:text-white transition-colors">Integrations</Link></li>
@@ -373,8 +545,8 @@ export default function Landing() {
 
             {/* Support */}
             <div>
-              <h4 className="text-lg font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
+              <h4 className="text-lg font-bold mb-6">Support</h4>
+              <ul className="space-y-3 text-slate-400">
                 <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
                 <li><Link href="/status" className="hover:text-white transition-colors">System Status</Link></li>
@@ -383,18 +555,21 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <div className="text-gray-400 text-sm">
-              © 2025 Taxnify. All rights reserved.
-            </div>
-            <div className="flex space-x-6 text-gray-400 text-sm mt-4 md:mt-0">
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-              <Link href="/cookies" className="hover:text-white transition-colors">Cookie Policy</Link>
+          <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-slate-400 text-sm">
+              © 2024 Taxnify. All rights reserved.
+            </p>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              <Link href="/privacy" className="text-slate-400 hover:text-white text-sm transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-slate-400 hover:text-white text-sm transition-colors">
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>
       </footer>
-    </MarketingLayout>
+    </div>
   );
 }
