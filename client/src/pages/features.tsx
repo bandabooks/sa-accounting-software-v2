@@ -6,7 +6,6 @@ import {
   Smartphone, Lock, Award, TrendingUp, Mail, Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function Features() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -131,7 +130,7 @@ export default function Features() {
   ];
 
   return (
-    <MarketingLayout>
+    <div className="min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden">
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -315,6 +314,6 @@ export default function Features() {
           </div>
         </div>
       </section>
-    </MarketingLayout>
+    </div>
   );
 }
