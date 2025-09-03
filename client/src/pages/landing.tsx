@@ -85,9 +85,11 @@ export default function Landing() {
             <div className="hidden lg:flex items-center space-x-1">
               {[
                 { name: 'Features', href: '/features' },
-                { name: 'Solutions', href: '/solutions' },
+                { name: 'Small Business', href: '/small-business' },
+                { name: 'Accountants', href: '/accountants' },
+                { name: 'Resources', href: '/resources' },
                 { name: 'Pricing', href: '/pricing' },
-                { name: 'Resources', href: '/resources' }
+                { name: 'Contact', href: '/contact' }
               ].map((item) => (
                 <Link key={item.name} href={item.href}>
                   <div className="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium transition-all duration-200 hover:bg-slate-100/70 rounded-lg">
@@ -131,9 +133,11 @@ export default function Landing() {
               <div className="space-y-4">
                 {[
                   { name: 'Features', href: '/features' },
-                  { name: 'Solutions', href: '/solutions' },
+                  { name: 'Small Business', href: '/small-business' },
+                  { name: 'Accountants', href: '/accountants' },
+                  { name: 'Resources', href: '/resources' },
                   { name: 'Pricing', href: '/pricing' },
-                  { name: 'Resources', href: '/resources' }
+                  { name: 'Contact', href: '/contact' }
                 ].map((item) => (
                   <Link key={item.name} href={item.href}>
                     <div className="block text-slate-600 hover:text-slate-900 font-medium py-2">
@@ -188,9 +192,9 @@ export default function Landing() {
               variants={fadeInVariant}
               className="text-5xl lg:text-7xl font-bold text-slate-900 mb-8 leading-tight"
             >
-              Transform Your
+              Everything Your Business Needs
               <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Business Operations
+                in One Platform
               </span>
             </motion.h1>
 
@@ -199,7 +203,7 @@ export default function Landing() {
               variants={fadeInVariant}
               className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed max-w-3xl mx-auto"
             >
-              Complete accounting, compliance, and business intelligence platform designed specifically for South African enterprises. SARS-ready, CIPC-compliant, and built for growth.
+              Discover how Taxnify's comprehensive feature set transforms business management, ensures South African compliance, and drives growth for companies of all sizes.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -268,66 +272,125 @@ export default function Landing() {
           </motion.div>
 
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={staggerContainer}
           >
-            {[
-              {
-                icon: Calculator,
-                title: "Complete Accounting Suite",
-                description: "IFRS-compliant Chart of Accounts, Journal Entries, Fixed Assets Management, and comprehensive financial reporting.",
-                color: "from-blue-500 to-blue-600"
-              },
-              {
-                icon: FileText,
-                title: "South African VAT Compliance",
-                description: "Automated VAT calculations, VAT201 returns, and intelligent compliance guidance with SARS integration.",
-                color: "from-indigo-500 to-indigo-600"
-              },
-              {
-                icon: Shield,
-                title: "SARS API Integration",
-                description: "Direct integration with SARS systems for automated submissions, returns, and real-time compliance monitoring.",
-                color: "from-purple-500 to-purple-600"
-              },
-              {
-                icon: Briefcase,
-                title: "Business Operations",
-                description: "Complete transaction management including invoices, estimates, purchase orders, and credit notes.",
-                color: "from-emerald-500 to-emerald-600"
-              },
-              {
-                icon: BarChart3,
-                title: "Advanced Reporting",
-                description: "Professional financial reports, dashboards, and business intelligence with PDF export capabilities.",
-                color: "from-orange-500 to-orange-600"
-              },
-              {
-                icon: CreditCard,
-                title: "Payment Processing",
-                description: "Integrated South African payment gateways including PayFast, Peach Payments, and Yoco.",
-                color: "from-pink-500 to-pink-600"
-              }
-            ].map((feature, index) => (
-              <motion.div 
-                key={index}
-                variants={fadeInVariant}
-                className="group relative bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-xl transition-all duration-300"
-              >
-                <div className={`inline-flex w-14 h-14 bg-gradient-to-br ${feature.color} rounded-xl items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">
-                  {feature.title}
-                </h3>
-                <p className="text-slate-600 leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
+            {/* Complete Accounting Suite */}
+            <motion.div 
+              variants={fadeInVariant}
+              className="group relative bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-xl transition-all duration-300"
+            >
+              <div className="inline-flex w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Calculator className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">
+                Complete Accounting Suite
+              </h3>
+              <p className="text-slate-600 leading-relaxed mb-6">
+                Full double-entry bookkeeping with invoicing, expenses, and financial management
+              </p>
+              <ul className="space-y-3 text-sm text-slate-600">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Professional invoice generation and tracking</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Comprehensive expense management</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Bank reconciliation and cash flow monitoring</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Chart of accounts management</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Journal entries and general ledger</span>
+                </li>
+              </ul>
+            </motion.div>
+
+            {/* South African VAT Compliance */}
+            <motion.div 
+              variants={fadeInVariant}
+              className="group relative bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-xl transition-all duration-300"
+            >
+              <div className="inline-flex w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Shield className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">
+                South African VAT Compliance
+              </h3>
+              <p className="text-slate-600 leading-relaxed mb-6">
+                Automated VAT calculations and SARS-ready reporting for full compliance
+              </p>
+              <ul className="space-y-3 text-sm text-slate-600">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Automatic VAT rate application</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>VAT201 return preparation</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Input and output VAT tracking</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Zero-rated and exempt transaction handling</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>SARS e-filing integration</span>
+                </li>
+              </ul>
+            </motion.div>
+
+            {/* SARS Integration */}
+            <motion.div 
+              variants={fadeInVariant}
+              className="group relative bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-xl transition-all duration-300"
+            >
+              <div className="inline-flex w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <FileText className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">
+                SARS Integration
+              </h3>
+              <p className="text-slate-600 leading-relaxed mb-6">
+                Direct submission of tax documents and seamless government compliance
+              </p>
+              <ul className="space-y-3 text-sm text-slate-600">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Electronic VAT201 submissions</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Income tax return preparation</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>PAYE submissions and tracking</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>UIF and SDL compliance</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>Real-time SARS status updates</span>
+                </li>
+              </ul>
+            </motion.div>
           </motion.div>
         </div>
       </section>
