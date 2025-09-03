@@ -153,7 +153,7 @@ export default function LandingPagePro() {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
+    <div className="min-h-screen bg-white w-full max-w-full overflow-x-hidden">
       {/* Skip to main content link */}
       <a 
         href="#main-content" 
@@ -164,11 +164,11 @@ export default function LandingPagePro() {
       </a>
 
       {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+      <header className={`fixed top-0 left-0 right-0 z-40 w-full transition-all duration-300 ${
         isScrolled ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-transparent'
       }`}>
-        <div className="mx-auto max-w-screen-xl px-4">
-          <div className="flex items-center justify-between h-16">
+        <div className="mx-auto max-w-screen-xl px-4 w-full">
+          <div className="flex items-center justify-between h-16 w-full">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2 group">
               <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -254,9 +254,9 @@ export default function LandingPagePro() {
 
       <main id="main-content" role="main">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white pt-24 pb-20 overflow-hidden">
+        <section className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white pt-24 pb-20 overflow-hidden w-full max-w-full">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 via-purple-600/20 to-indigo-800/20"></div>
-          <div className="relative mx-auto max-w-screen-xl px-4">
+          <div className="relative mx-auto max-w-screen-xl px-4 w-full">
             <motion.div 
               className="text-center"
               initial="hidden"
@@ -326,8 +326,8 @@ export default function LandingPagePro() {
         </section>
 
         {/* Features Grid */}
-        <section className="py-24 bg-gray-50" aria-labelledby="features-heading">
-          <div className="mx-auto max-w-screen-xl px-4">
+        <section className="py-24 bg-gray-50 w-full max-w-full overflow-hidden" aria-labelledby="features-heading">
+          <div className="mx-auto max-w-screen-xl px-4 w-full">
             <motion.div 
               className="text-center mb-20"
               initial="hidden"
@@ -454,8 +454,8 @@ export default function LandingPagePro() {
         </section>
 
         {/* Pricing Section */}
-        <section className="py-24 bg-gray-50" aria-labelledby="pricing-heading">
-          <div className="mx-auto max-w-screen-xl px-4">
+        <section className="py-24 bg-gray-50 w-full max-w-full overflow-hidden" aria-labelledby="pricing-heading">
+          <div className="mx-auto max-w-screen-xl px-4 w-full">
             <motion.div 
               className="text-center mb-20"
               initial="hidden"
@@ -525,9 +525,9 @@ export default function LandingPagePro() {
         </section>
 
         {/* Final CTA Section */}
-        <section className="py-24 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white relative overflow-hidden">
+        <section className="py-24 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 text-white relative overflow-hidden w-full max-w-full">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 via-purple-600/20 to-indigo-800/20"></div>
-          <div className="relative mx-auto max-w-4xl text-center px-4">
+          <div className="relative mx-auto max-w-4xl text-center px-4 w-full">
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -569,8 +569,8 @@ export default function LandingPagePro() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-20" role="contentinfo">
-        <div className="mx-auto max-w-screen-xl px-4">
+      <footer className="bg-gray-900 text-white py-20 w-full max-w-full overflow-hidden" role="contentinfo">
+        <div className="mx-auto max-w-screen-xl px-4 w-full">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             {/* Company Info */}
             <div className="col-span-1 md:col-span-2">
