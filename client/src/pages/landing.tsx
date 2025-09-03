@@ -322,6 +322,13 @@ export default function Landing() {
             </Link>
           </div>
           <p className="text-blue-200 mt-6 text-sm">No credit card required • 30-day free trial • Cancel anytime</p>
+          <div className="mt-4">
+            <Link href="/landingpage-pro">
+              <Button size="sm" variant="outline" className="border-white/50 text-white/80 hover:bg-white/10 px-6 py-2 text-sm">
+                View Professional Version
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 

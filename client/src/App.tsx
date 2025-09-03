@@ -91,6 +91,7 @@ import VATHistory from "@/pages/vat-history";
 
 import EnterpriseSettings from "@/pages/enterprise-settings";
 import Landing from "@/pages/landing";
+import LandingPagePro from "@/pages/landingpage-pro";
 import Features from "@/pages/features";
 import AccountingFeatures from "@/pages/features/accounting";
 import Activities from "@/pages/activities";
@@ -1116,6 +1117,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/landingpage-pro" component={LandingPagePro} />
         <Route path="/features" component={Features} />
         <Route path="/features/accounting" component={AccountingFeatures} />
         <Route path="/features/compliance" component={ComplianceFeatures} />

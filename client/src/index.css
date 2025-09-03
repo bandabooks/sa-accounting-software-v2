@@ -51,6 +51,10 @@
 }
 
 @layer base {
+  html, body {
+    overflow-x: hidden;
+  }
+  
   * {
     @apply border-border;
   }

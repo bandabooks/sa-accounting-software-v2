@@ -1,0 +1,104 @@
+Prompt (paste into Replit AI / Ghostwriter):
+
+Act as a senior Next.js + TypeScript + Tailwind UI engineer and redesign our landing page using the same copy, links, and images that exist today.
+
+Create a new component file:
+
+If using App Router: app/landingpage-pro/page.tsx
+
+If using Pages Router: pages/landingpage-pro.tsx
+Export a default React component named LandingPagePro.
+
+Design goals
+
+Professional, modern, and unique—clean typography, generous white space, subtle motion, and consistent spacing.
+
+Fully centered layout: no right-side whitespace, no horizontal scroll. Use a centered container mx-auto max-w-screen-xl px-4 (or equivalent) and never use 100vw for sections.
+
+Responsive: great on 320px → 1440px.
+
+Accessible: semantic HTML, labeled controls, focus states, contrast ≥ WCAG 2.2 AA, skip-to-content link.
+
+Tech & libraries
+
+Tailwind CSS (preferred)
+
+lucide-react for icons
+
+framer-motion for gentle fade/slide on hero, features, and CTA (reduced motion respected)
+
+Optional: shadcn/ui components (Buttons, Cards, Badge)
+
+Content
+
+Reuse all current text and links from the existing landing page (headlines, subhead, CTAs like “Start Free Trial”, trust badges: “SARS Integrated”, “CIPC Compliant”, “500+ SA Firms”, features, etc.). If any asset path is unknown, keep the same visible text and use a placeholder image block.
+
+Sections to include (same content, improved layout)
+
+Header: logo left, compact nav with dropdowns, “Sign In” + primary CTA (“Start Free Trial”) right. Sticky on scroll.
+
+Hero: gradient background, bold headline + subhead (existing text), primary CTA, secondary CTA, small trust indicators.
+
+Feature grid (3–6 cards): icons + titles + short blurbs (reuse existing copy).
+
+Compliance/Integrations: SARS/CIPC badges with short reassurance text.
+
+Social proof: “500+ SA Firms” with small logo row or stat highlights.
+
+Pricing teaser: brief summary with link to full pricing.
+
+Final CTA bar: centered, high-contrast.
+
+Footer: compact columns, legal, and contact.
+
+Styling direction
+
+Palette: keep brand purple/indigo; add a tasteful accent (e.g., gold for emphasis).
+
+Cards: rounded-2xl, soft shadow, 1px border on light surfaces.
+
+Buttons: solid primary, subtle hover/pressed states, focus-visible rings.
+
+Typography: use system stack or Inter; clear hierarchy (text-4xl/5xl hero, text-lg body).
+
+Animation
+
+framer-motion fade/slide in on viewport; disable when prefers-reduced-motion.
+
+Overflow & centering rules (must-haves)
+
+Global: html, body { overflow-x: hidden; }
+
+All sections w-full (not 100vw).
+
+Containerized layout with mx-auto max-w-screen-xl px-4.
+
+Deliverables
+
+The new page file with all sections implemented.
+
+Any minor Tailwind config additions if needed.
+
+Update the nav to include a link to /landingpage-pro.
+
+Add basic <Head>/metadata (title, description) copied from the current page.
+
+Ensure build runs with no TypeScript errors.
+
+Acceptance criteria
+
+Visually centered at all breakpoints; no horizontal scrollbar.
+
+Reuses exact copy from current landing.
+
+Lighthouse Accessibility ≥ 90 on desktop.
+
+CTAs clearly visible and keyboard navigable.
+
+Suggestions
+
+Name it landing-pro.tsx or route it at /pro for easy A/B testing.
+
+Keep the old page live; add a feature flag or query param to toggle between versions.
+
+After generation, run a quick pass for real device widths (375, 768, 1024, 1440).
