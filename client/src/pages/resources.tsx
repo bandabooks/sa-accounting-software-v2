@@ -4,6 +4,7 @@ import {
   ArrowRight, Clock, Users, Star, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function Resources() {
   const guides = [
@@ -105,7 +106,7 @@ export default function Resources() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden">
+    <MarketingLayout>
       {/* Header */}
       <header className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -352,6 +353,6 @@ export default function Resources() {
           </div>
         </div>
       </section>
-    </div>
+    </MarketingLayout>
   );
 }

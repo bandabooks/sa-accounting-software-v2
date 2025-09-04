@@ -1,38 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Link } from 'wouter';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from "react";
 import { 
-  ArrowRight, 
-  Menu, 
-  X,
-  Phone, 
-  Mail, 
-  MapPin, 
-  Clock, 
-  MessageSquare, 
-  Send,
-  CheckCircle,
-  Users, 
-  Shield, 
-  Award
-} from 'lucide-react';
+  Phone, Mail, MapPin, Clock, MessageSquare, Send,
+  CheckCircle, ArrowRight, Users, Shield, Award
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import MarketingLayout from "@/components/layout/marketing-layout";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Contact() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  
-  // Handle scroll effect for header
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const [formData, setFormData] = useState({
     name: "",
     email: "",
