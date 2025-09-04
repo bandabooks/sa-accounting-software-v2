@@ -133,7 +133,7 @@ export default function Features() {
   return (
     <MarketingLayout>
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl font-bold mb-6">
@@ -297,7 +297,7 @@ export default function Features() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-blue-600 text-white">
+      <section className="py-20 bg-blue-600 text-white w-full">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold mb-6">Ready to Experience All Features?</h2>
           <p className="text-xl text-blue-100 mb-8">
