@@ -1,12 +1,22 @@
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
 import { 
   BookOpen, Download, Calendar, Video, FileText, CheckCircle,
-  ArrowRight, Clock, Users, Star, ExternalLink
+  ArrowRight, Clock, Users, Star, ExternalLink, Menu, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import MarketingLayout from "@/components/layout/marketing-layout";
 
 export default function Resources() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   const guides = [
     {
       title: "Complete Guide to South African VAT Compliance",
@@ -106,9 +116,104 @@ export default function Resources() {
   ];
 
   return (
-    <MarketingLayout>
+    <div className="min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden">
+      {/* Navigation */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled ? 'bg-white/95 backdrop-blur-lg shadow-xl border-b border-slate-200/50' : 'bg-transparent'
+      }`}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-3 group">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                  <span className="text-white font-bold text-lg">T</span>
+                </div>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                Taxnify
+              </span>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center space-x-8">
+              {[
+                { name: 'Features', href: '/features' },
+                { name: 'Small Business', href: '/small-business' },
+                { name: 'Accountants', href: '/accountants' },
+                { name: 'Resources', href: '/resources' },
+                { name: 'Pricing', href: '/pricing' },
+                { name: 'Contact', href: '/contact' }
+              ].map((item) => (
+                <Link key={item.name} href={item.href}>
+                  <div className="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium transition-all duration-200 hover:bg-slate-100/70 rounded-lg">
+                    {item.name}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop CTA */}
+            <div className="hidden lg:flex items-center space-x-4">
+              <Link href="/login">
+                <Button variant="ghost" className="text-slate-600 hover:text-slate-900 font-medium">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2.5 font-medium shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl">
+                  Start Free Trial
+                </Button>
+              </Link>
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/50 py-6">
+              <div className="space-y-4">
+                {[
+                  { name: 'Features', href: '/features' },
+                  { name: 'Small Business', href: '/small-business' },
+                  { name: 'Accountants', href: '/accountants' },
+                  { name: 'Resources', href: '/resources' },
+                  { name: 'Pricing', href: '/pricing' },
+                  { name: 'Contact', href: '/contact' }
+                ].map((item) => (
+                  <Link key={item.name} href={item.href}>
+                    <div className="block text-slate-600 hover:text-slate-900 font-medium py-2">
+                      {item.name}
+                    </div>
+                  </Link>
+                ))}
+                <div className="pt-4 border-t border-slate-200 space-y-3">
+                  <Link href="/login">
+                    <Button variant="ghost" className="w-full justify-start">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                      Start Free Trial
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
+
       {/* Header */}
-      <header className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-20 w-full">
+      <header className="relative pt-32 pb-20 w-full max-w-full overflow-hidden bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl font-bold mb-6">
@@ -353,6 +458,6 @@ export default function Resources() {
           </div>
         </div>
       </section>
-    </MarketingLayout>
+    </div>
   );
 }
