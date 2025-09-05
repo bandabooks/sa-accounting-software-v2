@@ -1,0 +1,248 @@
+# SPEC-3-Contracts Module (Engagement Letters) — SA V1
+
+## Background
+
+You need a **professional Contracts module** for tax practitioners/accountants to issue and manage **engagement letters** and related agreements inside the unified platform. It should work like a modern CRM contract tool (e.g., templating, merge fields, versioning, e‑signature, reminders) but remain **in‑product** (no context switching), integrate with **Client Management, Projects/Tasks, Time Tracking, and Compliance items**, and support **email/SMS** notifications via your existing providers (SendGrid, Twilio/Clickatell). South Africa is V1 focus; ensure sensible defaults aligned with local practice (e.g., ECTA‑compatible e‑signature methods), with POPIA considerations.
+
+## Requirements (MoSCoW)
+
+**Must have**
+
+* **Templates & Merge Fields**: library of firm templates (Engagement Letter – Individual, Company, VAT201, Payroll, Bookkeeping), dynamic merge fields (client names, IDs, addresses, services, fees, billing cadence), and conditional sections.
+* **Versioning & Audit**: draft/review/issued/signed/countersigned/active states; every revision stored as a new version with diff and immutable audit trail.
+* **E‑Signature (in‑app)**: client signs via **secure link** (email/SMS), with optional **OTP (SMS/email)** before signing, capture of **IP, user‑agent, timestamp**, and a **PDF evidence file** (hash, events) stored.
+* **Countersign**: firm countersignature to activate agreement.
+* **Reminders**: automatic reminders for **viewed but unsigned** and **expiring contracts** (pg‑boss), via email/SMS.
+* **CRM Integration**: link contracts to **Client** and **Contacts**; on countersign, auto‑create **Project** and seed **Tasks** from the selected service package.
+* **Document Library**: final signed PDF + evidence bundle stored and linked to the client and project.
+* **RBAC**: Admin/Partner (manage templates, countersign), Practitioner (issue, track), Client (view/sign/download).
+
+**Should have**
+
+* **Fee Schedules** with simple rate cards and billable toggles (align with Time Tracking export).
+* **Multi‑signer** (client representative + director).
+* **Template Blocks**: reusable paragraphs (Scope, Confidentiality, Limitation of Liability, Termination, POPIA addendum).
+* **Watermark & Branding**: firm logo, color tokens, footer details.
+
+**Could have**
+
+* **Clause Library search** with tags.
+* **Approvals workflow** (internal reviewer sign‑off) before issuing.
+* **Payment link** for retainer/deposit after countersign.
+
+**Won’t have (V1)**
+
+* External provider dependency (DocuSign/Adobe Sign) as mandatory; we ship **in‑house** e‑signature using email/SMS OTP and click‑to‑sign.
+* Complex pricing models or invoicing automation (beyond simple fee schedules/exports) in V1.
+
+## Method
+
+### Architecture Overview
+
+```plantuml
+@startuml
+skinparam componentStyle rectangle
+actor Practitioner
+actor Client
+actor Partner
+
+package "Frontend" {
+  [Back Office (React)]
+  [Client Portal (React)]
+}
+
+package "Backend (Express TS/ESM)" {
+  component "Contracts API" as API
+  component "Templates Engine" as TPL
+  component "PDF Service" as PDF
+  component "OTP & Magic Links" as OTP
+  component "Evidence Builder" as EVD
+  component "Automation Hooks" as HOOKS
+}
+
+node "Postgres (Neon/DO)" as PG
+component "pg-boss Scheduler" as BOSS
+component "SendGrid" as SG
+component "SMS (Twilio/Clickatell)" as SMS
+
+Practitioner --> [Back Office (React)]
+Client --> [Client Portal (React)]
+[Back Office (React)] --> API : REST/JSON
+[Client Portal (React)] --> API : REST/JSON (magic link)
+API --> PG : Drizzle ORM
+API --> TPL
+API --> PDF
+API --> OTP
+API --> EVD
+API --> HOOKS
+API --> BOSS : schedule reminders
+BOSS --> SG
+BOSS --> SMS
+@enduml
+```
+
+**Key choices (V1, SA‑only):**
+
+* **In‑house e‑signature** with **OTP (SMS preferred, email fallback)** and **click‑to‑sign**. Evidence bundle records IP, UA, timestamps, hash of PDF.
+* **PDF generation** via `@react-pdf/renderer` (pure Node, avoids headless Chrome). Branding via firm logo/colors.
+* **Scheduler** uses **pg-boss** (Postgres‑backed) for reminders and expiry checks.
+* **On countersign**, auto‑create **Project** and seed **Tasks** from the chosen service package; attach PDFs to Document Library.
+
+### Data Model (Drizzle)
+
+```sql
+-- Contract templates and reusable blocks
+CREATE TABLE contract_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  version INT NOT NULL DEFAULT 1,
+  body_md TEXT NOT NULL,                 -- markdown with handlebars-style {{fields}}
+  fields JSONB NOT NULL DEFAULT '[]',    -- [{ key, label, type, required, default }]
+  created_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE contract_blocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  body_md TEXT NOT NULL,
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Contracts and versions
+CREATE TABLE contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  client_id UUID NOT NULL REFERENCES clients(id),
+  template_id UUID NOT NULL REFERENCES contract_templates(id),
+  status TEXT NOT NULL DEFAULT 'draft',  -- draft|issued|signed|countersigned|active|expired|void
+  expires_at TIMESTAMPTZ NULL,
+  current_version INT NOT NULL DEFAULT 1,
+  project_id UUID NULL REFERENCES projects(id),
+  created_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE contract_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  version INT NOT NULL,
+  body_md TEXT NOT NULL,
+  merge_data JSONB NOT NULL,            -- resolved field values
+  pdf_url TEXT NULL,                    -- final PDF (on sign)
+  evidence_url TEXT NULL,               -- evidence PDF
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Signers and signatures
+CREATE TABLE contract_signers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,                   -- client|client_representative|partner
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NULL,
+  order_index INT NOT NULL DEFAULT 1,
+  has_signed BOOLEAN NOT NULL DEFAULT FALSE,
+  signed_at TIMESTAMPTZ NULL,
+  signature_method TEXT NULL,           -- typed|drawn
+  signature_data JSONB NULL,            -- {text:"", svgPath:""}
+  ip TEXT NULL,
+  user_agent TEXT NULL
+);
+
+CREATE TABLE contract_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,                   -- issued|viewed|otp_sent|otp_verified|signed|countersigned|reminder_sent
+  actor TEXT NOT NULL,                  -- system|user:<id>|signer:<id>
+  meta JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- OTP and magic links
+CREATE TABLE contract_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  signer_id UUID NOT NULL REFERENCES contract_signers(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,             -- hash of magic link token
+  otp_hash TEXT NULL,                   -- hash of 6-digit OTP
+  otp_expires_at TIMESTAMPTZ NULL,
+  used BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### API (Express + Zod)
+
+**Templates**
+
+* `POST /v1/contracts/templates` – create/update body & fields.
+* `GET /v1/contracts/templates` – list.
+* `POST /v1/contracts/templates/:id/preview` – returns rendered HTML/PDF from `body_md` + sample data.
+
+**Compose & Issue**
+
+* `POST /v1/contracts` – create contract from template + merge data + signers + expiry.
+* `POST /v1/contracts/:id/issue` – freeze version, create magic-link token(s), send invites via SendGrid/SMS; enqueue reminders.
+
+**Signing (Client Portal)**
+
+* `GET /v1/contracts/:id/view?token=...` – validate token (not used/expired), return render payload.
+* `POST /v1/contracts/:id/send-otp` – (optional) send 6‑digit OTP via SMS/email; store `otp_hash` with TTL.
+* `POST /v1/contracts/:id/verify-otp` – verify code; log event.
+* `POST /v1/contracts/:id/sign` – payload `{ method:'typed'|'drawn', data, signerId }`; generate PDF + evidence, mark signer signed.
+* `POST /v1/contracts/:id/countersign` – partner countersign.
+* `GET /v1/contracts/:id/pdf` and `/evidence` – secure download.
+
+**Automation**
+
+* On **countersign**:
+
+  * Create **Project** (if none) and seed **Tasks** from service package mapping.
+  * Store PDFs in **Document Library**, link to Client & Project.
+
+### Template Engine
+
+* Store Markdown with **Handlebars-style** placeholders `{{client.name}}`, `{{service.vatNumber}}`, conditional blocks `{{#if includePayroll}}...{{/if}}`.
+* Server renders to HTML then to PDF via `@react-pdf/renderer` React template equivalent (mapping Markdown → React elements) or via prebuilt React PDF templates keyed by template name.
+
+### Evidence Bundle
+
+* JSON timeline → render to PDF (Evidence) with: hash of final PDF (SHA-256), signers, methods, IP/UA, timestamps, OTP event markers.
+
+### Security & POPIA
+
+* Hash magic link tokens and OTPs (never store raw). Token TTL configurable (default 14 days). Max 5 OTP attempts → lock.
+* Encrypt PII columns where feasible. Audit everything in `contract_events`.
+
+### Reminders
+
+* Jobs: `contracts.remindUnsigned` (24h after issue, 48h, and 3 days before expiry), `contracts.expire`.
+* Channels: email/SMS from org settings; respect **quiet hours**.
+
+## Implementation
+
+* **Migrations**: add tables above.
+* **Providers**: reuse SendGrid/Twilio/Clickatell via existing abstraction.
+* **Worker**: add boss jobs for reminders & expiry.
+* **API**: implement routes with Zod schemas, RBAC checks.
+* **UI (Back Office)**: templates CRUD, issue wizard, contracts list with statuses.
+* **UI (Portal)**: sign page w/ OTP, typed/drawn signature components, download links after sign.
+
+## Milestones
+
+1. **DB + API skeletons** (templates, contracts, versions, signers) – compile & migrate.
+2. **Issue & Invite** (magic links + email/SMS) – preview & send.
+3. **Portal Signing** (OTP + typed/drawn signature) – generate PDFs & evidence.
+4. **Countersign + Automation** (project/tasks + document library attach).
+5. **Reminders + Expiry** (pg‑boss jobs) – audit trail and metrics.
+
+## Gathering Results
+
+* Contract issue→sign median time, reminder delivery success %, % countersigned within SLA, support tickets about signing, and data integrity (audit completeness).
