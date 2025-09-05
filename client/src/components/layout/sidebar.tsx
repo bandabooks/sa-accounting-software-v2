@@ -107,7 +107,20 @@ const getNavigationGroupsForRole = (userRole: string) => {
       ]
     },
 
-    // 7. VAT & Tax Compliance - Essential for South African tax professionals
+    // 7. Contracts & Engagements - Essential for professional practices
+    {
+      id: "contracts",
+      label: "Contracts & Engagements",
+      icon: FileText,
+      module: "contracts",
+      roleTypes: ["all"],
+      items: [
+        { path: "/contracts", label: "Contract Management", icon: FileText, permission: "CONTRACTS_VIEW", module: "contracts" },
+        { path: "/contracts?tab=templates", label: "Contract Templates", icon: Archive, permission: "CONTRACTS_VIEW", module: "contracts" }
+      ]
+    },
+
+    // 8. VAT & Tax Compliance - Essential for South African tax professionals
     {
       id: "tax_compliance",
       label: "VAT & Tax Compliance",
@@ -122,7 +135,7 @@ const getNavigationGroupsForRole = (userRole: string) => {
       ]
     },
 
-    // 8. Settings - Always needed
+    // 9. Settings - Always needed
     {
       id: "settings",
       label: "Settings",

@@ -119,6 +119,7 @@ import CommunicationCenter from "@/pages/communication-center";
 import CustomerSegments from "@/pages/customer-segments";
 import CustomerInsights from "@/pages/customer-insights";
 import AgingReports from "@/pages/aging-reports";
+import Contracts from "@/pages/Contracts";
 
 import Integrations from "@/pages/integrations";
 import CIPCCompliance from "@/pages/cipc-compliance";
@@ -217,6 +218,8 @@ const PERMISSIONS = {
   BULK_CAPTURE_VIEW: 'bulk_capture:view',
   BANKING_VIEW: 'banking:view',
   GENERAL_LEDGER_VIEW: 'general_ledger:view',
+  CONTRACTS_VIEW: 'contracts:view',
+  CONTRACTS_CREATE: 'contracts:create',
   PROJECTS_VIEW: 'projects:view',
   PROJECTS_CREATE: 'projects:create',
   TASKS_VIEW: 'tasks:view',
@@ -796,6 +799,11 @@ function AuthenticatedApp() {
         <Route path="/banking">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
             <Banking />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/contracts">
+          <ProtectedRoute permission={PERMISSIONS.CONTRACTS_VIEW}>
+            <Contracts />
           </ProtectedRoute>
         </Route>
         <Route path="/banking/:accountId">

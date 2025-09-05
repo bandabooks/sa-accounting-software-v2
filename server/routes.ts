@@ -73,6 +73,7 @@ import { registerChartManagementRoutes } from "./routes/chartManagementRoutes";
 import emailRoutes from "./routes/emailRoutes";
 import integrationsRoutes from "./routes/integrationsRoutes";
 import payrollRoutes from "./routes/payroll";
+import { contractService } from "./contracts";
 import { registerEmployeeRoutes } from "./routes/employees";
 import { sarsService } from "./sarsService";
 import { 
@@ -17642,6 +17643,307 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, Company Email Settings, and Financial Ratios!");
+  // ===========================
+  // CONTRACTS MODULE (ENGAGEMENT LETTERS)
+  // ===========================
+
+  // Contract Templates Management
+  app.get("/api/contracts/templates", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const templates = await contractService.getTemplates(req.user.companyId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching contract templates:", error);
+      res.status(500).json({ error: "Failed to fetch contract templates" });
+    }
+  });
+
+  app.post("/api/contracts/templates", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const template = await contractService.createTemplate(req.user.companyId, req.body);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating contract template:", error);
+      res.status(500).json({ error: "Failed to create contract template" });
+    }
+  });
+
+  app.get("/api/contracts/templates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const template = await contractService.getTemplate(req.user.companyId, parseInt(req.params.id));
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching contract template:", error);
+      res.status(500).json({ error: "Failed to fetch contract template" });
+    }
+  });
+
+  app.put("/api/contracts/templates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const template = await contractService.updateTemplate(req.user.companyId, parseInt(req.params.id), req.body);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating contract template:", error);
+      res.status(500).json({ error: "Failed to update contract template" });
+    }
+  });
+
+  app.delete("/api/contracts/templates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const deleted = await contractService.deleteTemplate(req.user.companyId, parseInt(req.params.id));
+      if (!deleted) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting contract template:", error);
+      res.status(500).json({ error: "Failed to delete contract template" });
+    }
+  });
+
+  // Contract Management
+  app.get("/api/contracts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status } = req.query;
+      const contracts = await contractService.getContracts(req.user.companyId, status as string);
+      res.json(contracts);
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+      res.status(500).json({ error: "Failed to fetch contracts" });
+    }
+  });
+
+  app.post("/api/contracts", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contract = await contractService.createContract(req.user.companyId, {
+        ...req.body,
+        createdBy: req.user.id
+      });
+      res.status(201).json(contract);
+    } catch (error) {
+      console.error("Error creating contract:", error);
+      res.status(500).json({ error: "Failed to create contract" });
+    }
+  });
+
+  app.get("/api/contracts/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractDetails = await contractService.getContractWithDetails(req.user.companyId, parseInt(req.params.id));
+      if (!contractDetails) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      res.json(contractDetails);
+    } catch (error) {
+      console.error("Error fetching contract:", error);
+      res.status(500).json({ error: "Failed to fetch contract" });
+    }
+  });
+
+  app.put("/api/contracts/:id/status", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status } = req.body;
+      const updated = await contractService.updateContractStatus(
+        req.user.companyId, 
+        parseInt(req.params.id), 
+        status, 
+        `user:${req.user.id}`
+      );
+      if (!updated) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating contract status:", error);
+      res.status(500).json({ error: "Failed to update contract status" });
+    }
+  });
+
+  // Contract Issuance
+  app.post("/api/contracts/:id/issue", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+      const { signers, expiresAt } = req.body;
+
+      // Add signers to contract
+      for (const signerData of signers) {
+        await contractService.addSigner(contractId, signerData);
+      }
+
+      // Update contract status and expiry
+      await contractService.updateContractStatus(
+        req.user.companyId, 
+        contractId, 
+        'issued', 
+        `user:${req.user.id}`
+      );
+
+      // Generate magic link tokens for each signer
+      const contractSigners = await contractService.getSigners(contractId);
+      const tokens = await Promise.all(
+        contractSigners.map(async (signer) => ({
+          signerId: signer.id,
+          token: await contractService.generateToken(contractId, signer.id),
+          email: signer.email
+        }))
+      );
+
+      // TODO: Send email/SMS invitations with magic links
+      await contractService.logEvent(contractId, 'issued', `user:${req.user.id}`, { signerCount: signers.length });
+
+      res.json({ 
+        success: true, 
+        message: "Contract issued successfully",
+        tokens // In production, don't return tokens, send them via email/SMS
+      });
+    } catch (error) {
+      console.error("Error issuing contract:", error);
+      res.status(500).json({ error: "Failed to issue contract" });
+    }
+  });
+
+  // Contract Signing (Client Portal)
+  app.get("/api/contracts/:id/view", async (req, res) => {
+    try {
+      const { token } = req.query;
+      if (!token) {
+        return res.status(400).json({ error: "Token required" });
+      }
+
+      const tokenData = await contractService.validateToken(token as string);
+      if (!tokenData) {
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+
+      const contractDetails = await contractService.getContractWithDetails(0, tokenData.contractId);
+      if (!contractDetails) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+
+      await contractService.logEvent(tokenData.contractId, 'viewed', `signer:${tokenData.signerId}`, {});
+
+      res.json({
+        contract: contractDetails.contract,
+        template: contractDetails.template,
+        version: contractDetails.version,
+        signer: contractDetails.signers.find(s => s.id === tokenData.signerId)
+      });
+    } catch (error) {
+      console.error("Error viewing contract:", error);
+      res.status(500).json({ error: "Failed to view contract" });
+    }
+  });
+
+  app.post("/api/contracts/:id/send-otp", async (req, res) => {
+    try {
+      const { signerId } = req.body;
+      const contractId = parseInt(req.params.id);
+
+      const otp = await contractService.generateOTP(contractId, signerId);
+      
+      // TODO: Send OTP via SMS/Email
+      console.log(`OTP for contract ${contractId}, signer ${signerId}: ${otp}`);
+
+      res.json({ success: true, message: "OTP sent successfully" });
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      res.status(500).json({ error: "Failed to send OTP" });
+    }
+  });
+
+  app.post("/api/contracts/:id/verify-otp", async (req, res) => {
+    try {
+      const { signerId, otp } = req.body;
+      const contractId = parseInt(req.params.id);
+
+      const verified = await contractService.verifyOTP(contractId, signerId, otp);
+      if (!verified) {
+        return res.status(400).json({ error: "Invalid or expired OTP" });
+      }
+
+      res.json({ success: true, message: "OTP verified successfully" });
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      res.status(500).json({ error: "Failed to verify OTP" });
+    }
+  });
+
+  app.post("/api/contracts/:id/sign", async (req, res) => {
+    try {
+      const { signerId, signatureData, token } = req.body;
+      const contractId = parseInt(req.params.id);
+
+      // Validate token
+      const tokenData = await contractService.validateToken(token);
+      if (!tokenData || tokenData.contractId !== contractId || tokenData.signerId !== signerId) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      const ip = req.ip || req.connection.remoteAddress || '';
+      const userAgent = req.get('User-Agent') || '';
+
+      const signed = await contractService.signContract(contractId, signerId, signatureData, ip, userAgent);
+      if (!signed) {
+        return res.status(400).json({ error: "Failed to sign contract" });
+      }
+
+      // Use token to prevent reuse
+      await contractService.useToken(token);
+
+      res.json({ success: true, message: "Contract signed successfully" });
+    } catch (error) {
+      console.error("Error signing contract:", error);
+      res.status(500).json({ error: "Failed to sign contract" });
+    }
+  });
+
+  app.post("/api/contracts/:id/countersign", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+
+      // Check if contract is fully signed by clients
+      const signers = await contractService.getSigners(contractId);
+      const clientSigners = signers.filter(s => s.role === 'client' || s.role === 'client_representative');
+      const allClientsSigned = clientSigners.every(s => s.hasSigned);
+
+      if (!allClientsSigned) {
+        return res.status(400).json({ error: "All clients must sign before countersigning" });
+      }
+
+      // Update contract status to countersigned/active
+      await contractService.updateContractStatus(
+        req.user.companyId, 
+        contractId, 
+        'active', 
+        `user:${req.user.id}`
+      );
+
+      // Trigger automation hooks
+      await contractService.onContractCountersigned(contractId, req.user.companyId);
+
+      res.json({ success: true, message: "Contract countersigned and activated" });
+    } catch (error) {
+      console.error("Error countersigning contract:", error);
+      res.status(500).json({ error: "Failed to countersign contract" });
+    }
+  });
+
+  // Contract Events and Audit Trail
+  app.get("/api/contracts/:id/events", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const events = await contractService.getEvents(parseInt(req.params.id));
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching contract events:", error);
+      res.status(500).json({ error: "Failed to fetch contract events" });
+    }
+  });
+
+  console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, Company Email Settings, Financial Ratios, and Contracts Module!");
   return httpServer;
 }
