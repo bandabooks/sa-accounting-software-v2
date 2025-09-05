@@ -107,18 +107,6 @@ const getNavigationGroupsForRole = (userRole: string) => {
       ]
     },
 
-    // 7. Contracts & Engagements - Essential for professional practices
-    {
-      id: "contracts",
-      label: "Contracts & Engagements",
-      icon: FileText,
-      module: "contracts",
-      roleTypes: ["all"],
-      items: [
-        { path: "/contracts", label: "Contract Management", icon: FileText, permission: "CONTRACTS_VIEW", module: "contracts" },
-        { path: "/contracts?tab=templates", label: "Contract Templates", icon: Archive, permission: "CONTRACTS_VIEW", module: "contracts" }
-      ]
-    },
 
     // 8. VAT & Tax Compliance - Essential for South African tax professionals
     {
@@ -492,12 +480,16 @@ const navigationGroups = [
     module: "compliance",
     items: [
       { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/audit-trail", label: "Audit Trail", icon: FileCheck, permission: "AUDIT_VIEW", module: "compliance" },
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/calendar", label: "Calendar", icon: Clock, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" }
+      { path: "/professional-services", label: "Service Package Management", icon: Briefcase, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/calendar", label: "Calendar", icon: Calendar, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/contracts", label: "Contract Management", icon: FileText, permission: "CONTRACTS_VIEW", module: "contracts" }
     ]
   },
   // 8.5. Practice Management (for accounting professionals)
