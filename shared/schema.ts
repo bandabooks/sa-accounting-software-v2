@@ -6924,3 +6924,220 @@ export type InsertServicePackagePricing = z.infer<typeof insertServicePackagePri
 
 export type ClientServiceSubscription = typeof clientServiceSubscriptions.$inferSelect;
 export type InsertClientServiceSubscription = z.infer<typeof insertClientServiceSubscriptionSchema>;
+
+// ===========================
+// CONTRACTS MODULE (ENGAGEMENT LETTERS)
+// ===========================
+
+// Contract templates and reusable blocks
+export const contractTemplates = pgTable("contract_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  name: text("name").notNull(),
+  version: integer("version").notNull().default(1),
+  bodyMd: text("body_md").notNull(), // markdown with handlebars-style {{fields}}
+  fields: jsonb("fields").notNull().default([]), // [{ key, label, type, required, default }]
+  servicePackage: text("service_package"), // basic, standard, premium, enterprise
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("contract_templates_company_idx").on(table.companyId),
+  nameIdx: index("contract_templates_name_idx").on(table.name),
+}));
+
+export const contractBlocks = pgTable("contract_blocks", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  name: text("name").notNull(),
+  bodyMd: text("body_md").notNull(),
+  tags: text("tags").array().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("contract_blocks_company_idx").on(table.companyId),
+}));
+
+// Contracts and versions
+export const contracts = pgTable("contracts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  templateId: integer("template_id").references(() => contractTemplates.id).notNull(),
+  status: text("status").notNull().default("draft"), // draft|issued|signed|countersigned|active|expired|void
+  expiresAt: timestamp("expires_at"),
+  currentVersion: integer("current_version").notNull().default(1),
+  projectId: integer("project_id").references(() => projects.id),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("contracts_company_idx").on(table.companyId),
+  clientIdx: index("contracts_client_idx").on(table.clientId),
+  statusIdx: index("contracts_status_idx").on(table.status),
+}));
+
+export const contractVersions = pgTable("contract_versions", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
+  version: integer("version").notNull(),
+  bodyMd: text("body_md").notNull(),
+  mergeData: jsonb("merge_data").notNull(), // resolved field values
+  pdfUrl: text("pdf_url"), // final PDF (on sign)
+  evidenceUrl: text("evidence_url"), // evidence PDF
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  contractIdx: index("contract_versions_contract_idx").on(table.contractId),
+}));
+
+// Signers and signatures
+export const contractSigners = pgTable("contract_signers", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
+  role: text("role").notNull(), // client|client_representative|partner
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  orderIndex: integer("order_index").notNull().default(1),
+  hasSigned: boolean("has_signed").notNull().default(false),
+  signedAt: timestamp("signed_at"),
+  signatureMethod: text("signature_method"), // typed|drawn
+  signatureData: jsonb("signature_data"), // {text:"", svgPath:""}
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+}, (table) => ({
+  contractIdx: index("contract_signers_contract_idx").on(table.contractId),
+}));
+
+export const contractEvents = pgTable("contract_events", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
+  kind: text("kind").notNull(), // issued|viewed|otp_sent|otp_verified|signed|countersigned|reminder_sent
+  actor: text("actor").notNull(), // system|user:<id>|signer:<id>
+  meta: jsonb("meta").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  contractIdx: index("contract_events_contract_idx").on(table.contractId),
+  kindIdx: index("contract_events_kind_idx").on(table.kind),
+}));
+
+// OTP and magic links
+export const contractTokens = pgTable("contract_tokens", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
+  signerId: integer("signer_id").references(() => contractSigners.id, { onDelete: "cascade" }).notNull(),
+  tokenHash: text("token_hash").notNull(), // hash of magic link token
+  otpHash: text("otp_hash"), // hash of 6-digit OTP
+  otpExpiresAt: timestamp("otp_expires_at"),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  contractIdx: index("contract_tokens_contract_idx").on(table.contractId),
+  signerIdx: index("contract_tokens_signer_idx").on(table.signerId),
+  tokenHashIdx: index("contract_tokens_token_hash_idx").on(table.tokenHash),
+}));
+
+// Contract relations
+export const contractRelations = relations(contracts, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [contracts.companyId],
+    references: [companies.id],
+  }),
+  client: one(clients, {
+    fields: [contracts.clientId],
+    references: [clients.id],
+  }),
+  template: one(contractTemplates, {
+    fields: [contracts.templateId],
+    references: [contractTemplates.id],
+  }),
+  project: one(projects, {
+    fields: [contracts.projectId],
+    references: [projects.id],
+  }),
+  versions: many(contractVersions),
+  signers: many(contractSigners),
+  events: many(contractEvents),
+  tokens: many(contractTokens),
+}));
+
+export const contractTemplateRelations = relations(contractTemplates, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [contractTemplates.companyId],
+    references: [companies.id],
+  }),
+  contracts: many(contracts),
+}));
+
+export const contractVersionRelations = relations(contractVersions, ({ one }) => ({
+  contract: one(contracts, {
+    fields: [contractVersions.contractId],
+    references: [contracts.id],
+  }),
+}));
+
+export const contractSignerRelations = relations(contractSigners, ({ one, many }) => ({
+  contract: one(contracts, {
+    fields: [contractSigners.contractId],
+    references: [contracts.id],
+  }),
+  tokens: many(contractTokens),
+}));
+
+// Insert schemas for contracts
+export const insertContractTemplateSchema = createInsertSchema(contractTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContractBlockSchema = createInsertSchema(contractBlocks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertContractSchema = createInsertSchema(contracts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContractVersionSchema = createInsertSchema(contractVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertContractSignerSchema = createInsertSchema(contractSigners).omit({
+  id: true,
+});
+
+export const insertContractEventSchema = createInsertSchema(contractEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertContractTokenSchema = createInsertSchema(contractTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Contract types
+export type ContractTemplate = typeof contractTemplates.$inferSelect;
+export type InsertContractTemplate = z.infer<typeof insertContractTemplateSchema>;
+
+export type ContractBlock = typeof contractBlocks.$inferSelect;
+export type InsertContractBlock = z.infer<typeof insertContractBlockSchema>;
+
+export type Contract = typeof contracts.$inferSelect;
+export type InsertContract = z.infer<typeof insertContractSchema>;
+
+export type ContractVersion = typeof contractVersions.$inferSelect;
+export type InsertContractVersion = z.infer<typeof insertContractVersionSchema>;
+
+export type ContractSigner = typeof contractSigners.$inferSelect;
+export type InsertContractSigner = z.infer<typeof insertContractSignerSchema>;
+
+export type ContractEvent = typeof contractEvents.$inferSelect;
+export type InsertContractEvent = z.infer<typeof insertContractEventSchema>;
+
+export type ContractToken = typeof contractTokens.$inferSelect;
+export type InsertContractToken = z.infer<typeof insertContractTokenSchema>;
