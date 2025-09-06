@@ -86,33 +86,9 @@ export default function CreateContract() {
     queryKey: ["/api/customers"],
   });
 
-  // Debug template loading
-  if (templatesError) {
-    console.error('Templates loading error:', templatesError);
-  }
-
-  // Ensure data is array - handle both array and object responses
-  let templates: ContractTemplate[] = [];
-  if (Array.isArray(templatesData)) {
-    templates = templatesData;
-  } else if (templatesData && typeof templatesData === 'object' && Object.keys(templatesData).length > 0) {
-    // If it's an object, try to extract templates
-    templates = Object.values(templatesData).filter((item): item is ContractTemplate => 
-      item && typeof item === 'object' && 'id' in item && 'name' in item
-    );
-  }
-  
+  // Ensure data is array
+  const templates = Array.isArray(templatesData) ? templatesData : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
-
-  // Log template loading status
-  console.log('CreateContract Debug:', {
-    templatesCount: templates.length,
-    isLoading: isLoadingTemplates,
-    hasError: !!templatesError,
-    templatesData: templatesData,
-    templatesDataType: typeof templatesData,
-    isArray: Array.isArray(templatesData)
-  });
 
   // Create contract mutation
   const createContractMutation = useMutation({

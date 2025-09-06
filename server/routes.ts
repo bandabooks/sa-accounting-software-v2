@@ -17650,10 +17650,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Contract Templates Management
   app.get("/api/contracts/templates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      console.log(`🔍 GET /api/contracts/templates called for companyId: ${req.user.companyId}`);
       const templates = await contractService.getTemplates(req.user.companyId);
-      console.log(`📄 Templates found: ${templates.length} templates`);
-      console.log(`📄 First template sample:`, templates[0] ? { id: templates[0].id, name: templates[0].name } : 'No templates');
       res.json(templates);
     } catch (error) {
       console.error("Error fetching contract templates:", error);
