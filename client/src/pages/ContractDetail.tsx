@@ -75,13 +75,13 @@ export default function ContractDetail() {
   const [activeTab, setActiveTab] = useState("contract-info");
 
   // Fetch contract details
-  const { data: contract, isLoading: contractLoading } = useQuery({
+  const { data: contract, isLoading: contractLoading } = useQuery<Contract>({
     queryKey: [`/api/contracts/${contractId}`],
     enabled: !!contractId,
   });
 
   // Fetch all SA professional templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<ContractTemplate[]>({
     queryKey: ["/api/contracts/templates"],
   });
 
@@ -302,19 +302,19 @@ export default function ContractDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Title</label>
-                  <p className="text-gray-900">{contract.title}</p>
+                  <p className="text-gray-900">{contract?.title}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Status</label>
-                  <p className="text-gray-900">{contract.status}</p>
+                  <p className="text-gray-900">{contract?.status}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Value</label>
-                  <p className="text-gray-900">{contract.currency} {contract.value?.toLocaleString()}</p>
+                  <p className="text-gray-900">{contract?.currency} {contract?.value?.toLocaleString()}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Created</label>
-                  <p className="text-gray-900">{format(new Date(contract.createdAt), "PPP")}</p>
+                  <p className="text-gray-900">{contract?.createdAt ? format(new Date(contract.createdAt), "PPP") : 'N/A'}</p>
                 </div>
               </div>
             </CardContent>
@@ -399,7 +399,7 @@ export default function ContractDetail() {
               <Card>
                 <CardContent className="py-12">
                   <div className="text-center">
-                    <Template className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Templates Available</h3>
                     <p className="text-gray-600">No professional templates have been set up yet.</p>
                   </div>
