@@ -17666,7 +17666,7 @@ Format your response as a JSON array of tip objects with "title", "description",
         return res.status(403).json({ error: "Insufficient permissions" });
       }
 
-      const { seedContractTemplates } = await import('./contractTemplatesSeeder');
+      const { seedContractTemplates } = await import('./contractTemplatesSeeder.js');
       await seedContractTemplates(req.user.companyId, req.user.id);
       
       res.json({ 
