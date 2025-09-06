@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, TrendingUp, BarChart3, Calendar, Filter } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 export default function ContractsNew() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("contracts");
@@ -84,10 +86,12 @@ export default function ContractsNew() {
   const contracts = Array.isArray(contractsResponse) ? contractsResponse : [];
 
   // Fetch templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+  const { data: templatesResponse = [], isLoading: templatesLoading } = useQuery({
     queryKey: ["/api/contracts/templates"],
     queryFn: () => apiRequest("/api/contracts/templates"),
   });
+
+  const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
 
   // Filter contracts by search term
   const filteredContracts = contracts.filter((contract: Contract) =>
@@ -164,8 +168,8 @@ export default function ContractsNew() {
   ];
 
   const handleCreateContract = () => {
-    // Navigate to create contract page
-    window.location.href = "/contracts/create";
+    // Navigate to create contract page immediately without delay
+    navigate("/contracts/create");
   };
 
   const DashboardCard = ({ title, count, icon: Icon, color, bgColor }: any) => (

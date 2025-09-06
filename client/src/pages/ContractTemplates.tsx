@@ -86,10 +86,12 @@ export default function ContractTemplates() {
   });
 
   // Fetch templates
-  const { data: templates = [], isLoading } = useQuery({
+  const { data: templatesResponse = [], isLoading } = useQuery({
     queryKey: ["/api/contracts/templates"],
     queryFn: () => apiRequest("/api/contracts/templates"),
   });
+
+  const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
 
   // Create template mutation
   const createTemplateMutation = useMutation({

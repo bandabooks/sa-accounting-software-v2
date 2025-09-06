@@ -65,16 +65,20 @@ export default function CreateContract() {
   });
 
   // Fetch templates
-  const { data: templates = [] } = useQuery({
+  const { data: templatesResponse = [] } = useQuery({
     queryKey: ["/api/contracts/templates"],
     queryFn: () => apiRequest("/api/contracts/templates"),
   });
 
+  const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
+
   // Fetch clients
-  const { data: clients = [] } = useQuery({
+  const { data: clientsResponse = [] } = useQuery({
     queryKey: ["/api/clients"],
     queryFn: () => apiRequest("/api/clients"),
   });
+
+  const clients = Array.isArray(clientsResponse) ? clientsResponse : [];
 
   // Create contract mutation
   const createContractMutation = useMutation({
