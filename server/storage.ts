@@ -198,6 +198,10 @@ import {
   type InsertPayment,
   type Expense,
   type InsertExpense,
+  type Bill,
+  type InsertBill,
+  type BillItem,
+  type InsertBillItem,
   type VatReturn,
   type InsertVatReturn,
   type Supplier,
@@ -1416,25 +1420,28 @@ export class DatabaseStorage implements IStorage {
           userEmail: users.email,
         })
         .from(auditLogs)
-        .leftJoin(users, eq(auditLogs.userId, users.id))
-        .where(eq(auditLogs.companyId, filters.companyId));
+        .leftJoin(users, eq(auditLogs.userId, users.id));
 
       // Apply additional filters
+      const conditions = [eq(auditLogs.companyId, filters.companyId)];
+      
       if (filters.startDate) {
-        query = query.where(gte(auditLogs.timestamp, filters.startDate));
+        conditions.push(gte(auditLogs.timestamp, filters.startDate));
       }
       if (filters.endDate) {
-        query = query.where(lte(auditLogs.timestamp, filters.endDate));
+        conditions.push(lte(auditLogs.timestamp, filters.endDate));
       }
       if (filters.userId) {
-        query = query.where(eq(auditLogs.userId, filters.userId));
+        conditions.push(eq(auditLogs.userId, filters.userId));
       }
       if (filters.resource) {
-        query = query.where(eq(auditLogs.resource, filters.resource));
+        conditions.push(eq(auditLogs.resource, filters.resource));
       }
       if (filters.action) {
-        query = query.where(eq(auditLogs.action, filters.action));
+        conditions.push(eq(auditLogs.action, filters.action));
       }
+      
+      query = query.where(and(...conditions));
 
       const result = await query
         .orderBy(desc(auditLogs.timestamp))
