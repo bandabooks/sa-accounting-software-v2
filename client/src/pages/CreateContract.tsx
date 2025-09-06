@@ -65,7 +65,7 @@ export default function CreateContract() {
   });
 
   // Fetch templates
-  const { data: templatesResponse = [] } = useQuery({
+  const { data: templatesResponse = [], isLoading: isLoadingTemplates } = useQuery({
     queryKey: ["/api/contracts/templates"],
     queryFn: async () => {
       const response = await apiRequest("/api/contracts/templates");
@@ -73,10 +73,10 @@ export default function CreateContract() {
     },
   });
 
-  const templates = templatesResponse as ContractTemplate[];
+  const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
 
   // Fetch clients
-  const { data: clientsResponse = [] } = useQuery({
+  const { data: clientsResponse = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ["/api/customers"],
     queryFn: async () => {
       const response = await apiRequest("/api/customers");
@@ -148,6 +148,20 @@ export default function CreateContract() {
     "Audit Services",
     "Other Professional Services"
   ];
+
+  // Show loading state while data is being fetched
+  if (isLoadingTemplates || isLoadingClients) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading contract data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
