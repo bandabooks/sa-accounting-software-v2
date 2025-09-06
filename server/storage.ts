@@ -519,7 +519,7 @@ export interface IStorage {
   getCompanyAuditLogs(companyId: number, limit?: number): Promise<AuditLog[]>;
 
   // Customers
-  getAllCustomers(): Promise<Customer[]>;
+  getAllCustomers(companyId?: number): Promise<Customer[]>;
   getCustomer(id: number): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
@@ -529,7 +529,7 @@ export interface IStorage {
   getInvoicesByCustomer(customerId: number): Promise<InvoiceWithCustomer[]>;
 
   // Invoices
-  getAllInvoices(): Promise<InvoiceWithCustomer[]>;
+  getAllInvoices(companyId: number): Promise<InvoiceWithCustomer[]>;
   getInvoice(id: number): Promise<InvoiceWithItems | undefined>;
   getInvoiceByNumber(invoiceNumber: string): Promise<InvoiceWithItems | undefined>;
   createInvoice(invoice: InsertInvoice, items: Omit<InsertInvoiceItem, 'invoiceId'>[]): Promise<InvoiceWithItems>;
@@ -546,7 +546,7 @@ export interface IStorage {
   deleteInvoiceItems(invoiceId: number): Promise<boolean>;
 
   // Estimates
-  getAllEstimates(): Promise<EstimateWithCustomer[]>;
+  getAllEstimates(companyId?: number): Promise<EstimateWithCustomer[]>;
   getEstimate(id: number): Promise<EstimateWithItems | undefined>;
   createEstimate(estimate: InsertEstimate, items: Omit<InsertEstimateItem, 'estimateId'>[]): Promise<EstimateWithItems>;
   updateEstimate(id: number, estimate: Partial<InsertEstimate>): Promise<Estimate | undefined>;
