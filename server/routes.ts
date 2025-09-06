@@ -17676,60 +17676,6 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   // Insert template into contract
-  // PDF generation endpoint
-  app.get("/api/contracts/:id/pdf", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const contractId = parseInt(req.params.id);
-      const companyId = req.user!.companyId;
-      const download = req.query.download === 'true';
-      
-      const contract = await storage.getContract(companyId, contractId);
-      if (!contract) {
-        return res.status(404).json({ error: "Contract not found" });
-      }
-
-      // Simple PDF content for now - can be enhanced with actual PDF library
-      const pdfContent = `
-        <html>
-          <head>
-            <title>Contract ${contract.id}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 40px; }
-              .header { text-align: center; margin-bottom: 30px; }
-              .content { line-height: 1.6; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>Contract ${contract.id}</h1>
-              <p>${contract.title}</p>
-            </div>
-            <div class="content">
-              <p><strong>Status:</strong> ${contract.status}</p>
-              <p><strong>Value:</strong> ${contract.currency} ${contract.value?.toLocaleString()}</p>
-              <p><strong>Created:</strong> ${new Date(contract.createdAt).toLocaleDateString()}</p>
-              ${contract.expiresAt ? `<p><strong>Expires:</strong> ${new Date(contract.expiresAt).toLocaleDateString()}</p>` : ''}
-              <hr>
-              <div class="contract-content">
-                <p>Contract content with merge fields would be displayed here.</p>
-              </div>
-            </div>
-          </body>
-        </html>
-      `;
-
-      res.setHeader('Content-Type', 'text/html');
-      if (download) {
-        res.setHeader('Content-Disposition', `attachment; filename="contract-${contractId}.html"`);
-      }
-      res.send(pdfContent);
-
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      res.status(500).json({ error: "Failed to generate PDF" });
-    }
-  });
-
   app.post("/api/contracts/:id/insert-template", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const contractId = parseInt(req.params.id);
