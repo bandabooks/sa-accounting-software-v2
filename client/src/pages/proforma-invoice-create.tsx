@@ -13,7 +13,9 @@ import {
   Calendar,
   User,
   FileText,
-  DollarSign
+  DollarSign,
+  Search,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,12 +37,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 
 // Form schema
 const proformaInvoiceItemSchema = z.object({
+  productId: z.number().optional(),
   description: z.string().min(1, "Description is required"),
   quantity: z.string().min(1, "Quantity is required"),
   unitPrice: z.string().min(1, "Unit price is required"),
@@ -65,12 +82,22 @@ type Customer = {
   email: string;
 };
 
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  unitPrice: string;
+  vatRate: string;
+  category?: string;
+};
+
 export default function ProformaInvoiceCreate() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const { id } = useParams();
   const isEditing = !!id;
+  const [openProductDropdowns, setOpenProductDropdowns] = useState<boolean[]>([]);
 
   const form = useForm<ProformaInvoiceForm>({
     resolver: zodResolver(proformaInvoiceSchema),
@@ -82,6 +109,7 @@ export default function ProformaInvoiceCreate() {
       notes: "",
       items: [
         {
+          productId: undefined,
           description: "",
           quantity: "1",
           unitPrice: "0",
@@ -106,6 +134,15 @@ export default function ProformaInvoiceCreate() {
     }
   });
 
+  // Fetch products
+  const { data: productsData = [] } = useQuery({
+    queryKey: ["/api/products"],
+    retry: 1,
+    onError: (error: any) => {
+      console.error("Failed to fetch products:", error);
+    }
+  });
+
   // Fetch existing proforma invoice if editing
   const { data: proformaInvoice } = useQuery({
     queryKey: ["/api/proforma-invoices", id],
@@ -115,6 +152,11 @@ export default function ProformaInvoiceCreate() {
       console.error("Failed to fetch proforma invoice:", error);
     }
   });
+
+  // Initialize product dropdown states
+  useEffect(() => {
+    setOpenProductDropdowns(new Array(fields.length).fill(false));
+  }, [fields.length]);
 
   // Populate form when editing
   useEffect(() => {
@@ -126,6 +168,7 @@ export default function ProformaInvoiceCreate() {
         status: proformaInvoice.status,
         notes: proformaInvoice.notes || "",
         items: proformaInvoice.items.map((item: any) => ({
+          productId: item.productId,
           description: item.description,
           quantity: item.quantity.toString(),
           unitPrice: item.unitPrice.toString(),
@@ -160,6 +203,7 @@ export default function ProformaInvoiceCreate() {
         }
         
         return {
+          productId: item.productId,
           description: item.description,
           quantity: quantity.toString(),
           unitPrice: unitPrice.toString(),
@@ -208,6 +252,32 @@ export default function ProformaInvoiceCreate() {
 
   const onSubmit = (data: ProformaInvoiceForm) => {
     saveProformaMutation.mutate(data);
+  };
+
+  // Handle product selection
+  const handleProductSelect = (index: number, product: Product) => {
+    const currentItems = form.getValues("items");
+    currentItems[index] = {
+      ...currentItems[index],
+      productId: product.id,
+      description: product.description || product.name,
+      unitPrice: product.unitPrice,
+      vatRate: product.vatRate || "15",
+    };
+    
+    form.setValue("items", currentItems);
+    
+    // Close the dropdown
+    const newOpenStates = [...openProductDropdowns];
+    newOpenStates[index] = false;
+    setOpenProductDropdowns(newOpenStates);
+  };
+
+  // Toggle product dropdown
+  const toggleProductDropdown = (index: number, open: boolean) => {
+    const newOpenStates = [...openProductDropdowns];
+    newOpenStates[index] = open;
+    setOpenProductDropdowns(newOpenStates);
   };
 
   // Calculate totals for display
@@ -389,13 +459,17 @@ export default function ProformaInvoiceCreate() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({
-                    description: "",
-                    quantity: "1",
-                    unitPrice: "0",
-                    vatRate: "15",
-                    vatInclusive: true,
-                  })}
+                  onClick={() => {
+                    append({
+                      productId: undefined,
+                      description: "",
+                      quantity: "1",
+                      unitPrice: "0",
+                      vatRate: "15",
+                      vatInclusive: true,
+                    });
+                    setOpenProductDropdowns([...openProductDropdowns, false]);
+                  }}
                   data-testid="button-add-item"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -406,128 +480,195 @@ export default function ProformaInvoiceCreate() {
             <CardContent>
               <div className="space-y-4">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-12 gap-2 items-end p-4 border rounded-lg">
-                    <div className="col-span-4">
-                      <Label>Description *</Label>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.description`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                placeholder="Item description"
-                                data-testid={`input-description-${index}`}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <Label>Quantity *</Label>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                data-testid={`input-quantity-${index}`}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <Label>Unit Price *</Label>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.unitPrice`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                data-testid={`input-unit-price-${index}`}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <Label>VAT Rate (%)</Label>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.vatRate`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                data-testid={`input-vat-rate-${index}`}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="col-span-1">
-                      <Label>VAT Incl.</Label>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.vatInclusive`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <input
-                                type="checkbox"
-                                checked={field.value}
-                                onChange={field.onChange}
-                                className="w-4 h-4"
-                                data-testid={`checkbox-vat-inclusive-${index}`}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="col-span-1">
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => remove(index)}
-                          data-testid={`button-remove-item-${index}`}
+                  <div key={field.id} className="p-4 border rounded-lg space-y-4">
+                    {/* Product Selection Row */}
+                    <div className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-6">
+                        <Label>Select Product (Optional)</Label>
+                        <Popover 
+                          open={openProductDropdowns[index]} 
+                          onOpenChange={(open) => toggleProductDropdown(index, open)}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={openProductDropdowns[index]}
+                              className="w-full justify-between"
+                              data-testid={`button-select-product-${index}`}
+                            >
+                              <span className="truncate">
+                                {form.watch(`items.${index}.productId`) ? 
+                                  productsData.find((p: Product) => p.id === form.watch(`items.${index}.productId`))?.name || "Select product..." :
+                                  "Select product..."
+                                }
+                              </span>
+                              <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search products..." className="h-9" />
+                              <CommandEmpty>No products found.</CommandEmpty>
+                              <CommandList>
+                                <CommandGroup>
+                                  {productsData.map((product: Product) => (
+                                    <CommandItem
+                                      key={product.id}
+                                      value={`${product.name} ${product.description}`}
+                                      onSelect={() => handleProductSelect(index, product)}
+                                      className="cursor-pointer"
+                                    >
+                                      <div className="flex-1">
+                                        <div className="font-medium">{product.name}</div>
+                                        <div className="text-sm text-gray-500">{product.description}</div>
+                                        <div className="text-sm text-green-600">R {parseFloat(product.unitPrice || "0").toFixed(2)}</div>
+                                      </div>
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          form.watch(`items.${index}.productId`) === product.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="col-span-6"></div>
+                    </div>
+
+                    {/* Item Details Row */}
+                    <div className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-4">
+                        <Label>Description *</Label>
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.description`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Textarea 
+                                  {...field} 
+                                  placeholder="Item description"
+                                  className="min-h-[60px]"
+                                  data-testid={`input-description-${index}`}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <Label>Quantity *</Label>
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.quantity`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  data-testid={`input-quantity-${index}`}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <Label>Unit Price *</Label>
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.unitPrice`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  data-testid={`input-unit-price-${index}`}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <Label>VAT Rate (%)</Label>
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.vatRate`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.01"
+                                  data-testid={`input-vat-rate-${index}`}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="col-span-1">
+                        <Label>VAT Incl.</Label>
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.vatInclusive`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <input
+                                  type="checkbox"
+                                  checked={field.value}
+                                  onChange={field.onChange}
+                                  className="w-4 h-4 mt-2"
+                                  data-testid={`checkbox-vat-inclusive-${index}`}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="col-span-1 flex justify-center">
+                        {fields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              remove(index);
+                              setOpenProductDropdowns(prev => prev.filter((_, i) => i !== index));
+                            }}
+                            data-testid={`button-remove-item-${index}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
