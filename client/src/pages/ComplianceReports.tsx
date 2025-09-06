@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { 
   FileText, 
   Download, 
@@ -19,9 +25,12 @@ import {
   TrendingUp,
   BarChart3,
   Users,
-  Building2
+  Building2,
+  Sparkles,
+  Settings
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ComplianceReport {
   id: string;
@@ -35,11 +44,40 @@ interface ComplianceReport {
   downloadUrl?: string;
 }
 
+// Form schema for generate report dialog
+const generateReportSchema = z.object({
+  reportType: z.string().min(1, "Report type is required"),
+  reportName: z.string().min(1, "Report name is required"),
+  dateRange: z.object({
+    from: z.date(),
+    to: z.date(),
+  }).optional(),
+  priority: z.enum(["high", "medium", "low"]).default("medium"),
+  includeArchived: z.boolean().default(false),
+});
+
+type GenerateReportForm = z.infer<typeof generateReportSchema>;
+
 export default function ComplianceReports() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+
+  // Generate report form
+  const generateForm = useForm<GenerateReportForm>({
+    resolver: zodResolver(generateReportSchema),
+    defaultValues: {
+      reportType: "",
+      reportName: "",
+      priority: "medium",
+      includeArchived: false,
+    },
+  });
 
   // Mock data - replace with actual API call
   const mockReports: ComplianceReport[] = [
@@ -147,11 +185,97 @@ export default function ComplianceReports() {
     }
   };
 
+  // Mutations
+  const generateReportMutation = useMutation({
+    mutationFn: async (data: GenerateReportForm) => {
+      return apiRequest("/api/compliance/reports/generate", "POST", data);
+    },
+    onSuccess: (newReport) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/compliance/reports"] });
+      setShowGenerateDialog(false);
+      generateForm.reset();
+      toast({
+        title: "Report Generation Started",
+        description: "Your compliance report is being generated and will be available shortly.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const downloadReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      const response = await fetch(`/api/compliance/reports/${reportId}/download`);
+      if (!response.ok) throw new Error("Download failed");
+      return response.blob();
+    },
+    onSuccess: (blob, reportId) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `compliance-report-${reportId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Download Started",
+        description: "Your compliance report is downloading.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download report. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle generate report form submission
+  const handleGenerateReport = (data: GenerateReportForm) => {
+    generateReportMutation.mutate(data);
+  };
+
+  // Handle download report
+  const handleDownloadReport = (reportId: string) => {
+    downloadReportMutation.mutate(reportId);
+  };
+
+  // Handle analytics view
+  const handleViewAnalytics = () => {
+    setShowAnalytics(!showAnalytics);
+    toast({
+      title: "Analytics View",
+      description: showAnalytics ? "Analytics view disabled" : "Analytics view enabled - showing detailed report metrics.",
+    });
+  };
+
   const reportStats = {
     total: reports.length,
     generated: reports.filter(r => r.status === "generated").length,
     pending: reports.filter(r => r.status === "pending").length,
     overdue: reports.filter(r => r.status === "overdue").length,
+  };
+
+  // Analytics data (when enabled)
+  const analyticsData = {
+    completionRate: Math.round((reportStats.generated / reportStats.total) * 100) || 0,
+    avgGenerationTime: "2.3 hours",
+    mostFrequentType: "VAT Reports",
+    upcomingDeadlines: reports.filter(r => {
+      const dueDate = new Date(r.dueDate);
+      const now = new Date();
+      const daysDiff = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+      return daysDiff <= 7 && daysDiff > 0;
+    }).length,
   };
 
   return (
@@ -168,16 +292,172 @@ export default function ComplianceReports() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={handleViewAnalytics}
+            className={showAnalytics ? "bg-blue-50 border-blue-200" : ""}
+            data-testid="analytics-button"
+          >
             <TrendingUp className="h-4 w-4 mr-2" />
             Analytics
           </Button>
-          <Button>
-            <Download className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
+          <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+            <DialogTrigger asChild>
+              <Button data-testid="generate-report-button">
+                <Download className="h-4 w-4 mr-2" />
+                Generate Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Generate Compliance Report</DialogTitle>
+                <DialogDescription>
+                  Create a new compliance report for your business requirements.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...generateForm}>
+                <form onSubmit={generateForm.handleSubmit(handleGenerateReport)} className="space-y-4">
+                  <FormField
+                    control={generateForm.control}
+                    name="reportType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Report Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select report type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="vat">VAT Report (VAT201)</SelectItem>
+                            <SelectItem value="tax">Tax Report (EMP501)</SelectItem>
+                            <SelectItem value="cipc">CIPC Annual Return</SelectItem>
+                            <SelectItem value="labour">Labour Compliance</SelectItem>
+                            <SelectItem value="audit">Audit Trail Report</SelectItem>
+                            <SelectItem value="comprehensive">Comprehensive Report</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={generateForm.control}
+                    name="reportName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Report Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Monthly VAT Return - January 2025" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={generateForm.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Priority</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="high">High Priority</SelectItem>
+                            <SelectItem value="medium">Medium Priority</SelectItem>
+                            <SelectItem value="low">Low Priority</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex items-center space-x-2">
+                    <FormField
+                      control={generateForm.control}
+                      name="includeArchived"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <input
+                              type="checkbox"
+                              checked={field.value}
+                              onChange={field.onChange}
+                              className="mt-1"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-normal">
+                              Include archived records
+                            </FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={generateReportMutation.isPending}
+                  >
+                    {generateReportMutation.isPending ? (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Generate Report
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
+
+      {/* Analytics Panel (when enabled) */}
+      {showAnalytics && (
+        <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              Compliance Analytics Dashboard
+            </CardTitle>
+            <CardDescription>
+              Advanced insights and metrics for your compliance reporting
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-white rounded-lg border">
+                <div className="text-2xl font-bold text-green-600">{analyticsData.completionRate}%</div>
+                <div className="text-sm text-muted-foreground">Completion Rate</div>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg border">
+                <div className="text-2xl font-bold text-blue-600">{analyticsData.avgGenerationTime}</div>
+                <div className="text-sm text-muted-foreground">Avg Generation Time</div>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg border">
+                <div className="text-lg font-bold text-purple-600">{analyticsData.mostFrequentType}</div>
+                <div className="text-sm text-muted-foreground">Most Frequent Type</div>
+              </div>
+              <div className="text-center p-4 bg-white rounded-lg border">
+                <div className="text-2xl font-bold text-orange-600">{analyticsData.upcomingDeadlines}</div>
+                <div className="text-sm text-muted-foreground">Upcoming Deadlines</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -350,9 +630,14 @@ export default function ComplianceReports() {
 
                     <div className="flex items-center gap-2 ml-4">
                       {report.status === "generated" && report.downloadUrl && (
-                        <Button size="sm" data-testid={`download-report-${report.id}`}>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleDownloadReport(report.id)}
+                          disabled={downloadReportMutation.isPending}
+                          data-testid={`download-report-${report.id}`}
+                        >
                           <Download className="h-4 w-4 mr-2" />
-                          Download
+                          {downloadReportMutation.isPending ? "Downloading..." : "Download"}
                         </Button>
                       )}
                       {report.status === "pending" && (
