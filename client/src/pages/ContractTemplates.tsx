@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -93,12 +93,17 @@ export default function ContractTemplates() {
 
   const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
 
+  // Auto-seed templates when no templates exist
+  useEffect(() => {
+    if (!isLoading && templates.length === 0) {
+      // Automatically add South African professional templates
+      seedTemplatesMutation.mutate();
+    }
+  }, [templates.length, isLoading, seedTemplatesMutation]);
+
   // Create template mutation
   const createTemplateMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/contracts/templates", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: any) => apiRequest("/api/contracts/templates", "POST", data),
     onSuccess: () => {
       toast({
         title: "Template Created",
@@ -119,9 +124,7 @@ export default function ContractTemplates() {
 
   // Delete template mutation
   const deleteTemplateMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/contracts/templates/${id}`, {
-      method: "DELETE",
-    }),
+    mutationFn: (id: number) => apiRequest(`/api/contracts/templates/${id}`, "DELETE"),
     onSuccess: () => {
       toast({
         title: "Template Deleted",
@@ -133,9 +136,7 @@ export default function ContractTemplates() {
 
   // Seed South African professional templates
   const seedTemplatesMutation = useMutation({
-    mutationFn: () => apiRequest("/api/contracts/templates/seed", {
-      method: "POST",
-    }),
+    mutationFn: () => apiRequest("/api/contracts/templates/seed", "POST"),
     onSuccess: () => {
       toast({
         title: "Templates Added",
@@ -215,26 +216,7 @@ export default function ContractTemplates() {
             Manage professional engagement letter templates
           </p>
         </div>
-        <div className="ml-auto flex gap-3">
-          {templates.length === 0 && (
-            <Button 
-              onClick={() => seedTemplatesMutation.mutate()}
-              disabled={seedTemplatesMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {seedTemplatesMutation.isPending ? (
-                <>
-                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Adding Templates...
-                </>
-              ) : (
-                <>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Add SA Professional Templates
-                </>
-              )}
-            </Button>
-          )}
+        <div className="ml-auto">
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700">
@@ -520,17 +502,31 @@ We are pleased to confirm our engagement to provide professional services..."
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
                       <div className="flex flex-col items-center">
-                        <FileText className="w-12 h-12 text-gray-400 mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          No templates found
-                        </h3>
-                        <p className="text-gray-600 mb-4">
-                          Create your first professional template to get started
-                        </p>
-                        <Button onClick={() => setIsCreateDialogOpen(true)}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create Template
-                        </Button>
+                        {seedTemplatesMutation.isPending ? (
+                          <>
+                            <div className="w-8 h-8 mb-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                              Loading Professional Templates...
+                            </h3>
+                            <p className="text-gray-600">
+                              Adding South African engagement letter templates for Tax Practitioners and Accountants
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-12 h-12 text-gray-400 mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                              No templates found
+                            </h3>
+                            <p className="text-gray-600 mb-4">
+                              Create your first professional template to get started
+                            </p>
+                            <Button onClick={() => setIsCreateDialogOpen(true)}>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Create Template
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
