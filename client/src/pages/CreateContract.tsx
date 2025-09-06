@@ -144,7 +144,7 @@ export default function CreateContract() {
     const contractData = {
       ...data,
       templateId: parseInt(data.templateId),
-      clientId: parseInt(data.clientId),
+      customerId: parseInt(data.customerId),
       projectId: data.projectId ? parseInt(data.projectId) : null,
       mergeData: mergeFields,
     };
