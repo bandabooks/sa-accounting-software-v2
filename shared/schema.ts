@@ -6961,7 +6961,7 @@ export const contractBlocks = pgTable("contract_blocks", {
 export const contracts = pgTable("contracts", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
-  clientId: integer("client_id").references(() => clients.id).notNull(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
   templateId: integer("template_id").references(() => contractTemplates.id).notNull(),
   status: text("status").notNull().default("draft"), // draft|issued|signed|countersigned|active|expired|void
   expiresAt: timestamp("expires_at"),
@@ -6972,7 +6972,7 @@ export const contracts = pgTable("contracts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   companyIdx: index("contracts_company_idx").on(table.companyId),
-  clientIdx: index("contracts_client_idx").on(table.clientId),
+  customerIdx: index("contracts_customer_idx").on(table.customerId),
   statusIdx: index("contracts_status_idx").on(table.status),
 }));
 

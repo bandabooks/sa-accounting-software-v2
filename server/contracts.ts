@@ -410,17 +410,17 @@ export class ContractService {
 
     // Create project if none exists
     if (!contract.projectId) {
-      const client = await db.select()
-        .from(clients)
-        .where(eq(clients.id, contract.clientId))
+      const customer = await db.select()
+        .from(customers)
+        .where(eq(customers.id, contract.customerId))
         .limit(1);
 
-      if (client.length > 0) {
+      if (customer.length > 0) {
         const [project] = await db.insert(projects)
           .values({
             companyId,
-            customerId: contract.clientId, // Assuming client is customer
-            name: `Engagement - ${client[0].name}`,
+            customerId: contract.customerId,
+            name: `Engagement - ${customer[0].name}`,
             description: `Auto-created from contract #${contractId}`,
             status: 'active',
             createdBy: contract.createdBy
