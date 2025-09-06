@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, TrendingUp, BarChart3, Calendar, Filter } from "lucide-react";
 import { useLocation } from "wouter";
@@ -148,24 +148,55 @@ export default function ContractsNew() {
     }
   ];
 
-  // Contract types data for charts
-  const contractTypeData = [
-    { name: "Engagement Letters", value: 30, amount: 821600 },
-    { name: "VAT Practitioner", value: 20, amount: 450000 },
-    { name: "Tax Compliance", value: 15, amount: 380000 },
-    { name: "Annual Financials", value: 10, amount: 290000 },
-    { name: "Advisory Services", value: 8, amount: 150000 },
-    { name: "Payroll Services", value: 7, amount: 120000 }
-  ];
+  // Real contract types data based on actual templates and contracts
+  const contractTypeData = React.useMemo(() => {
+    if (!templates.length && !contracts.length) return [];
+    
+    // Get contract types from templates
+    const typeMap = new Map();
+    
+    // Initialize with template names
+    templates.forEach((template: ContractTemplate) => {
+      const typeName = template.name;
+      if (!typeMap.has(typeName)) {
+        typeMap.set(typeName, { name: typeName, value: 0, amount: 0 });
+      }
+    });
+    
+    // Count actual contracts if any exist
+    contracts.forEach((contract: Contract) => {
+      const template = templates.find((t: ContractTemplate) => t.id === contract.templateId);
+      if (template) {
+        const typeName = template.name;
+        const existing = typeMap.get(typeName) || { name: typeName, value: 0, amount: 0 };
+        existing.value += 1;
+        // For now, use a default contract value since we don't have contract values in the schema yet
+        existing.amount += 25000; // Average professional service contract value
+        typeMap.set(typeName, existing);
+      }
+    });
+    
+    return Array.from(typeMap.values()).filter(item => item.value > 0 || templates.length > 0);
+  }, [templates, contracts]);
 
-  const monthlyData = [
-    { month: "Jan", contracts: 12, value: 234000 },
-    { month: "Feb", contracts: 15, value: 280000 },
-    { month: "Mar", contracts: 18, value: 350000 },
-    { month: "Apr", contracts: 14, value: 290000 },
-    { month: "May", contracts: 20, value: 410000 },
-    { month: "Jun", contracts: 16, value: 320000 }
-  ];
+  // Real monthly data based on actual contract creation dates
+  const monthlyData = React.useMemo(() => {
+    if (!contracts.length) return [];
+    
+    const monthMap = new Map();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    contracts.forEach((contract: Contract) => {
+      const date = new Date(contract.createdAt);
+      const monthKey = months[date.getMonth()];
+      const existing = monthMap.get(monthKey) || { month: monthKey, contracts: 0, value: 0 };
+      existing.contracts += 1;
+      existing.value += 25000; // Average contract value
+      monthMap.set(monthKey, existing);
+    });
+    
+    return Array.from(monthMap.values());
+  }, [contracts]);
 
   const handleCreateContract = () => {
     // Navigate to create contract page immediately without delay
@@ -282,14 +313,24 @@ export default function ContractsNew() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={contractTypeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                <YAxis />
-                <Bar dataKey="value" fill="#3B82F6" />
-              </BarChart>
-            </ResponsiveContainer>
+            {contractTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={contractTypeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Bar dataKey="value" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                <div className="text-center">
+                  <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p>No contract data available</p>
+                  <p className="text-sm">Create contracts to see analytics</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -302,20 +343,30 @@ export default function ContractsNew() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={contractTypeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                <YAxis />
-                <Line 
-                  type="monotone" 
-                  dataKey="amount" 
-                  stroke="#10B981" 
-                  strokeWidth={2}
-                  dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {contractTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={contractTypeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Line 
+                    type="monotone" 
+                    dataKey="amount" 
+                    stroke="#10B981" 
+                    strokeWidth={2}
+                    dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                <div className="text-center">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p>No contract value data available</p>
+                  <p className="text-sm">Create contracts to see value analytics</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
