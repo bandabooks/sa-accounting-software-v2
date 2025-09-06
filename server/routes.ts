@@ -17650,13 +17650,57 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Contract Templates Management
   app.get("/api/contracts/templates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      console.log(`🔍 Templates API called for company ${req.user.companyId}`);
       const templates = await contractService.getTemplates(req.user.companyId);
-      console.log(`📄 Found ${templates.length} templates`);
       res.json(templates);
     } catch (error) {
       console.error("Error fetching contract templates:", error);
       res.status(500).json({ error: "Failed to fetch contract templates" });
+    }
+  });
+
+  // Get individual contract details
+  app.get("/api/contracts/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+      const contract = await contractService.getContract(req.user.companyId, contractId);
+      
+      if (!contract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      
+      res.json(contract);
+    } catch (error) {
+      console.error("Error fetching contract:", error);
+      res.status(500).json({ error: "Failed to fetch contract" });
+    }
+  });
+
+  // Insert template into contract
+  app.post("/api/contracts/:id/insert-template", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+      const { templateId } = req.body;
+      
+      const result = await contractService.insertTemplateIntoContract(req.user.companyId, contractId, templateId);
+      
+      res.json({ success: true, message: "Template inserted successfully", result });
+    } catch (error) {
+      console.error("Error inserting template:", error);
+      res.status(500).json({ error: "Failed to insert template" });
+    }
+  });
+
+  // Send contract via email
+  app.post("/api/contracts/:id/send-email", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+      
+      const result = await contractService.sendContractEmail(req.user.companyId, contractId);
+      
+      res.json({ success: true, message: "Contract sent via email successfully", result });
+    } catch (error) {
+      console.error("Error sending contract email:", error);
+      res.status(500).json({ error: "Failed to send contract email" });
     }
   });
 

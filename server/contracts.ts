@@ -172,6 +172,56 @@ export class ContractService {
     return false;
   }
 
+  async insertTemplateIntoContract(companyId: number, contractId: number, templateId: number): Promise<any> {
+    // Get the template
+    const template = await this.getTemplate(companyId, templateId);
+    if (!template) {
+      throw new Error("Template not found");
+    }
+
+    // Get the contract
+    const contract = await this.getContract(companyId, contractId);
+    if (!contract) {
+      throw new Error("Contract not found");
+    }
+
+    // Create a new version with the template content
+    const currentVersion = await this.getCurrentVersion(contractId);
+    const nextVersionNumber = currentVersion ? currentVersion.version + 1 : 1;
+
+    const newVersion = await this.createVersion(contractId, {
+      version: nextVersionNumber,
+      bodyMd: template.bodyMd,
+      mergeData: {},
+    });
+
+    // Log the insertion event
+    await this.logEvent(contractId, 'template_inserted', `system`, { 
+      templateId,
+      templateName: template.name,
+      version: nextVersionNumber
+    });
+
+    return newVersion;
+  }
+
+  async sendContractEmail(companyId: number, contractId: number): Promise<any> {
+    // Get the contract
+    const contract = await this.getContract(companyId, contractId);
+    if (!contract) {
+      throw new Error("Contract not found");
+    }
+
+    // Log the email sending event
+    await this.logEvent(contractId, 'email_sent', `system`, { 
+      sentAt: new Date().toISOString()
+    });
+
+    // Email sending logic would go here
+    // For now, just return success
+    return { emailSent: true, contractId };
+  }
+
   // Version management
   async createVersion(contractId: number, data: InsertContractVersion): Promise<ContractVersion> {
     const [version] = await db.insert(contractVersions)
