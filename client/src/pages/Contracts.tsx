@@ -75,18 +75,18 @@ export default function Contracts() {
   });
 
   // Filter contracts by search term
-  const filteredContracts = contracts.filter((contract: Contract) =>
-    contract.title.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredContracts = (contracts || []).filter((contract: Contract) =>
+    contract.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Status statistics
   const statusStats = {
-    total: contracts.length,
-    draft: contracts.filter((c: Contract) => c.status === "draft").length,
-    issued: contracts.filter((c: Contract) => c.status === "issued").length,
-    signed: contracts.filter((c: Contract) => c.status === "signed").length,
-    active: contracts.filter((c: Contract) => c.status === "active").length,
-    completed: contracts.filter((c: Contract) => c.status === "completed").length,
+    total: (contracts || []).length,
+    draft: (contracts || []).filter((c: Contract) => c.status === "draft").length,
+    issued: (contracts || []).filter((c: Contract) => c.status === "issued").length,
+    signed: (contracts || []).filter((c: Contract) => c.status === "signed").length,
+    active: (contracts || []).filter((c: Contract) => c.status === "active").length,
+    completed: (contracts || []).filter((c: Contract) => c.status === "completed").length,
   };
 
   const handleCreateContract = () => {
