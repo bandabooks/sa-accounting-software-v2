@@ -1231,7 +1231,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const user = await storage.getUser(req.user!.id);
+      if (!req.user?.id) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -1771,8 +1774,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { search } = req.query;
       // Get current user's full info to access activeCompanyId
-      const user = await storage.getUser(req.user!.id);
-      const companyId = user?.activeCompanyId || req.user.companyId;
+      if (!req.user?.id) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const user = await storage.getUser(req.user.id);
+      const companyId = user?.activeCompanyId || req.user?.companyId;
       
       console.log(`→ Fetching customers for company ${companyId}, user: ${req.user?.username}`);
       
@@ -1807,7 +1813,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/customers/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const customer = await storage.getCustomer(id);
       
       // Verify customer belongs to user's company
@@ -1886,7 +1895,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/invoices", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const invoices = await storage.getAllInvoices(companyId);
       
       if (search && typeof search === 'string') {
@@ -1907,7 +1919,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/invoices/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const invoice = await storage.getInvoice(id);
       
       // Verify invoice belongs to user's company
@@ -2049,7 +2064,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/estimates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const estimates = await storage.getAllEstimates(companyId);
       
       if (search && typeof search === 'string') {
@@ -2070,7 +2088,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/estimates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       console.log(`Fetching estimate ${id} for company ${companyId}`);
       
       const estimate = await storage.getEstimate(id);
@@ -2152,7 +2173,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/estimates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const validatedData = updateEstimateSchema.parse(req.body);
       
       // Check if estimate exists and belongs to company
@@ -2197,7 +2221,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/estimates/:id/convert-to-invoice", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const invoice = await storage.convertEstimateToInvoice(id, userId);
       res.json(invoice);
     } catch (error) {
@@ -2210,7 +2237,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { status, notes } = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       if (!["draft", "sent", "viewed", "accepted", "rejected", "expired"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
@@ -2229,7 +2259,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/estimates/:id/send", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const estimate = await storage.sendEstimate(id, userId);
       if (!estimate) {
         return res.status(404).json({ message: "Estimate not found" });
@@ -2257,7 +2290,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { notes } = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const estimate = await storage.acceptEstimate(id, userId, notes);
       if (!estimate) {
         return res.status(404).json({ message: "Estimate not found" });
@@ -2272,7 +2308,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { reason } = req.body;
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const estimate = await storage.rejectEstimate(id, userId, reason);
       if (!estimate) {
         return res.status(404).json({ message: "Estimate not found" });
@@ -2285,7 +2324,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/estimates/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const stats = await storage.getEstimateStats(companyId);
       res.json(stats);
     } catch (error) {
@@ -2297,7 +2339,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/estimates/:id/send-email", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { to, subject, message } = req.body;
       
       const estimate = await storage.getEstimate(id);
@@ -2342,7 +2387,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/estimates/:id/pdf", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const estimate = await storage.getEstimate(id);
       
       if (!estimate || estimate.companyId !== companyId) {
@@ -2365,7 +2413,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/estimates/:id/duplicate", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const originalEstimate = await storage.getEstimate(id);
       
       if (!originalEstimate || originalEstimate.companyId !== companyId) {
@@ -2405,7 +2456,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/estimates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const estimate = await storage.getEstimate(id);
       
       if (!estimate || estimate.companyId !== companyId) {
@@ -2469,7 +2523,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard Stats Routes for List Pages
   app.get("/api/customers/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const stats = await storage.getCustomerStats(companyId);
       res.json(stats);
     } catch (error) {
@@ -2499,7 +2556,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const stats = await storage.getProductStats(companyId);
       res.json(stats);
     } catch (error) {
@@ -2625,7 +2685,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const existingPayment = await storage.getAllPayments();
       const payment = existingPayment.find(p => p.id === id && p.companyId === companyId);
       if (!payment) {
@@ -2654,7 +2717,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/payments/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const existingPayments = await storage.getAllPayments();
       const payment = existingPayments.find(p => p.id === id && p.companyId === companyId);
       if (!payment) {
@@ -2877,7 +2943,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       // CRITICAL: Always use actual companyId to prevent data leaks
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -2892,7 +2961,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       // CRITICAL: Always use actual companyId to prevent data leaks
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -2909,7 +2981,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses/metrics/:dateFilter", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       // CRITICAL: Always use actual companyId to prevent data leaks
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -2929,7 +3004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses/:dateFilter/:statusFilter/:supplierFilter/:categoryFilter", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       // CRITICAL: Always use actual companyId to prevent data leaks
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3214,7 +3292,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bills metrics endpoint
   app.get("/api/bills/metrics/:period?", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3230,7 +3311,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all bills with filters
   app.get("/api/bills", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3246,7 +3330,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new bill with enhanced validation
   app.post("/api/bills", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3301,7 +3388,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Validate GL account for bills
   app.post("/api/bills/validate-gl-account", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3325,7 +3415,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/bills/:id/pay", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const billId = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
@@ -3360,7 +3453,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export bills to CSV
   app.get("/api/bills/export", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3489,7 +3585,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recurring expenses metrics
   app.get("/api/recurring-expenses/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3513,7 +3612,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all recurring expenses with filters
   app.get("/api/recurring-expenses", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3575,7 +3677,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get recently generated expenses from templates
   app.get("/api/recurring-expenses/recent-generated", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3682,7 +3787,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Approval metrics
   app.get("/api/approvals/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3706,7 +3814,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending approvals with filters
   app.get("/api/approvals/pending", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -3758,7 +3869,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get approval history
   app.get("/api/approvals/history", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -5948,7 +6062,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sales Orders Management
   app.get("/api/sales-orders", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       // Simple implementation for now
       res.json([]);
     } catch (error) {
@@ -5960,7 +6077,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Deliveries Management
   app.get("/api/deliveries", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       res.json([]);
     } catch (error) {
       console.error("Error fetching deliveries:", error);
@@ -5987,7 +6107,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Credit Notes Management
   app.get("/api/credit-notes", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       res.json([]);
     } catch (error) {
       console.error("Error fetching credit notes:", error);
@@ -6013,7 +6136,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer Payments Management
   app.get("/api/customer-payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Get all payments for this company with customer and invoice details
       const payments = await storage.getPaymentsByCompany(companyId);
@@ -6043,7 +6169,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/customer-payments/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Get all payments for stats calculation
       const payments = await storage.getPaymentsByCompany(companyId);
@@ -6133,7 +6262,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sales Leads Management
   app.get("/api/sales-leads", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const leads = await storage.getSalesLeads(companyId);
       res.json(leads);
     } catch (error) {
@@ -6158,7 +6290,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/sales-leads", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const validatedData = insertSalesLeadSchema.parse({
         ...req.body,
         companyId,
@@ -6217,7 +6352,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sales-leads/:id/convert-to-customer", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const leadId = parseInt(req.params.id);
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       const customer = await storage.convertLeadToCustomer(leadId, userId);
       await logAudit(req.user.id, 'CONVERT', 'sales_lead', leadId, 'Converted lead to customer');
@@ -6231,7 +6369,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sales Pipeline Stages Management
   app.get("/api/sales-pipeline-stages", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const stages = await storage.getSalesPipelineStages(companyId);
       res.json(stages);
     } catch (error) {
@@ -6242,7 +6383,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/sales-pipeline-stages", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const validatedData = insertSalesPipelineStageSchema.parse({
         ...req.body,
         companyId
@@ -6262,7 +6406,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/sales-pipeline-stages/reorder", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { stageOrders } = req.body;
       
       const success = await storage.reorderPipelineStages(companyId, stageOrders);
@@ -6281,7 +6428,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sales Opportunities Management
   app.get("/api/sales-opportunities", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const opportunities = await storage.getSalesOpportunities(companyId);
       res.json(opportunities);
     } catch (error) {
@@ -6306,7 +6456,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/sales-opportunities", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const validatedData = insertSalesOpportunitySchema.parse({
         ...req.body,
         companyId,
@@ -6368,7 +6521,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quote Templates Management
   app.get("/api/quote-templates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const templates = await storage.getQuoteTemplates(companyId);
       res.json(templates);
     } catch (error) {
@@ -6379,7 +6535,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/quote-templates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const validatedData = insertQuoteTemplateSchema.parse({
         ...req.body,
         companyId
@@ -6400,7 +6559,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dynamic Pricing Rules Management
   app.get("/api/pricing-rules", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const rules = await storage.getPricingRules(companyId);
       res.json(rules);
     } catch (error) {
@@ -6411,7 +6573,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/pricing-rules", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const validatedData = insertPricingRuleSchema.parse({
         ...req.body,
         companyId
@@ -6431,7 +6596,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/pricing-rules/calculate", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { productId, customerId, quantity } = req.body;
       
       const pricing = await storage.calculateDynamicPrice(companyId, productId, customerId, quantity);
@@ -6643,7 +6811,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/sales-orders/status/:status", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const status = req.params.status;
       const salesOrders = await storage.getSalesOrdersByStatus(companyId, status);
       res.json(salesOrders);
@@ -6661,7 +6832,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sales-orders", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = createSalesOrderSchema.parse(req.body);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Ensure sales order belongs to user's company
       const salesOrderData = {
@@ -6866,7 +7040,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Deliveries Management
   app.get("/api/deliveries", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const deliveries = await storage.getDeliveries(companyId);
       res.json(deliveries);
     } catch (error) {
@@ -6909,7 +7086,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/deliveries/status/:status", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const status = req.params.status;
       const deliveries = await storage.getDeliveriesByStatus(companyId, status);
       res.json(deliveries);
@@ -6927,7 +7107,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/deliveries", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const validatedData = createDeliverySchema.parse(req.body);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Ensure delivery belongs to user's company
       const deliveryData = {
@@ -7266,7 +7449,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Company Settings routes - Context-aware
   app.get('/api/settings/company', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const settings = await storage.getCompanySettings(companyId);
       res.json(settings);
     } catch (error) {
@@ -7277,7 +7463,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/settings/company', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const settingsData = req.body;
       const settings = await storage.updateCompanySettings(companyId, settingsData);
       res.json(settings);
@@ -7291,7 +7480,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/companies/:id/settings', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = parseInt(req.params.id);
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       // Verify user has access to this company
       const hasAccess = await storage.checkUserAccess(userId, companyId);
@@ -7310,7 +7502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/companies/:id/settings', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = parseInt(req.params.id);
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       // Verify user has access to this company
       const hasAccess = await storage.checkUserAccess(userId, companyId);
@@ -9638,7 +9833,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Get payment exceptions for a company
   app.get("/api/payment-exceptions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const filters = {
         status: req.query.status as string,
         severity: req.query.severity as string,
@@ -9745,7 +9943,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Get exception alerts
   app.get("/api/exception-alerts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const userId = req.query.userId ? parseInt(req.query.userId as string) : req.user.id;
       
       const alerts = await storage.getExceptionAlerts(companyId, userId);
@@ -9775,7 +9976,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Run automated exception detection
   app.post("/api/payment-exceptions/detect", authenticate, requirePermission(PERMISSIONS.MANAGE_FINANCE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       const detectedExceptions = await storage.runAutomatedExceptionDetection(companyId);
       
@@ -9921,7 +10125,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Enhanced Payment Flow Routes
   app.get("/api/payment-flows", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Get all purchase orders with their payment status
       const purchaseOrders = await storage.getPurchaseOrdersByCompany(companyId);
@@ -9950,7 +10157,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // 3-Way Matching Routes
   app.get("/api/three-way-matches", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const matches = await storage.getThreeWayMatches(companyId);
       res.json(matches);
     } catch (error) {
@@ -9977,7 +10187,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Goods Receipt Routes
   app.get("/api/goods-receipts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const receipts = await storage.getGoodsReceipts(companyId);
       res.json(receipts);
     } catch (error) {
@@ -10011,7 +10224,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Enhanced Supplier Payment Routes with Approval Integration
   app.get("/api/supplier-payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const payments = await storage.getSupplierPaymentsByCompany(companyId);
       res.json(payments);
     } catch (error) {
@@ -10537,7 +10753,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   app.get("/api/search", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { q: query, limit = 10 } = req.query;
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const userPermissions = req.user.permissions || [];
       
       if (!query || typeof query !== 'string' || query.trim().length < 2) {
@@ -10926,7 +11145,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
         return res.status(500).json({ message: "Payment Setup Failed: PayFast service not configured" });
       }
 
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "No active company" });
       }
@@ -11093,7 +11315,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Fixed Assets Management
   app.get("/api/fixed-assets", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const assets = await storage.getFixedAssets(companyId);
       res.json(assets);
     } catch (error) {
@@ -11186,7 +11411,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Budgeting Routes
   app.get("/api/budgets", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const budgets = await storage.getBudgets(companyId);
       res.json(budgets);
     } catch (error) {
@@ -11270,7 +11498,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Cash Flow Forecasting Routes
   app.get("/api/cash-flow-forecasts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const forecasts = await storage.getCashFlowForecasts(companyId);
       res.json(forecasts);
     } catch (error) {
@@ -11308,7 +11539,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.get("/api/cash-flow-projections", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { months = 12 } = req.query;
       const projections = await storage.generateCashFlowProjections(companyId, parseInt(months as string));
       res.json(projections);
@@ -11321,7 +11555,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Advanced Reporting Routes
   app.get("/api/advanced-reports", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const reports = await storage.getAdvancedReports(companyId);
       res.json(reports);
     } catch (error) {
@@ -11377,7 +11614,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Get all import batches for a company
   app.get("/api/bank/import-batches", authenticate, requireAnyPermission(['bank_capture:view', 'admin']), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const bankAccountId = req.query.bankAccountId ? parseInt(req.query.bankAccountId as string) : undefined;
       const batches = await storage.getImportBatches(companyId, bankAccountId);
       res.json(batches);
@@ -11407,8 +11647,14 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Create new import batch (file upload initiation)
   app.post("/api/bank/import-batches", authenticate, requireAnyPermission(['bank_capture:create', 'admin']), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const { bankAccountId, fileName, fileSize, fileType } = req.body;
 
       // Validate bank account access
@@ -11688,7 +11934,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   app.get("/api/bank-accounts/:id/unmatched-transactions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const transactions = await storage.getUnmatchedTransactions(companyId, parseInt(id));
       res.json(transactions);
     } catch (error) {
@@ -11704,7 +11953,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const companies = await storage.getUserCompanies(userId);
       res.json(companies);
     } catch (error) {
@@ -11719,7 +11971,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const activeCompany = await storage.getUserActiveCompany(userId);
       if (!activeCompany) {
         return res.status(404).json({ message: "No active company found" });
@@ -11737,7 +11992,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const { companyId } = req.body;
       
       if (!companyId) {
@@ -11809,7 +12067,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const validatedData = insertCompanySchema.parse(req.body);
       
       // Create the company
@@ -11838,7 +12099,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Projects
   app.get("/api/projects", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -11853,7 +12117,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.get("/api/projects/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const projectId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -11874,7 +12141,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.post("/api/projects", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -11908,7 +12178,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.put("/api/projects/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const projectId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -11943,7 +12216,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.delete("/api/projects/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const projectId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -11974,7 +12250,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Tasks
   app.get("/api/tasks", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -11990,7 +12269,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.get("/api/tasks/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const taskId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -12011,7 +12293,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.post("/api/tasks", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -12045,7 +12330,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.put("/api/tasks/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const taskId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -12080,7 +12368,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.delete("/api/tasks/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const taskId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -12111,7 +12402,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
   // Time Entries
   app.get("/api/time-entries", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -12130,8 +12424,14 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.get("/api/time-entries/active", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
@@ -12147,7 +12447,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.post("/api/time-entries", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID is required" });
       }
@@ -12181,7 +12484,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.put("/api/time-entries/:id/stop", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const timeEntryId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -12211,7 +12517,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.put("/api/time-entries/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const timeEntryId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -12246,7 +12555,10 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
 
   app.delete("/api/time-entries/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const timeEntryId = parseInt(req.params.id);
       
       if (!companyId) {
@@ -12636,7 +12948,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Credit Notes Routes - Critical missing feature
   app.get("/api/credit-notes", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const creditNotes = await storage.getCreditNotes(companyId);
       res.json(creditNotes);
     } catch (error) {
@@ -12662,7 +12977,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/credit-notes", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const formData = req.body;
       
       // Calculate totals from items
@@ -12767,7 +13085,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Invoice Reminders Routes - Critical missing feature
   app.get("/api/invoice-reminders", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const reminders = await storage.getInvoiceReminders(companyId);
       res.json(reminders);
     } catch (error) {
@@ -12806,7 +13127,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/invoice-reminders/overdue", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const overdueInvoices = await storage.getOverdueInvoicesForReminders(companyId);
       res.json(overdueInvoices);
     } catch (error) {
@@ -12817,7 +13141,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/invoice-reminders/process-automatic", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const processedCount = await storage.processAutomaticReminders(companyId);
       await logAudit(req.user.id, 'CREATE', 'automatic_reminders', 0, null, { processedCount });
       res.json({ processedCount });
@@ -12830,7 +13157,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Invoice Aging Reports Routes - Critical missing feature
   app.get("/api/invoice-aging-reports", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const reports = await storage.getInvoiceAgingReports(companyId);
       res.json(reports);
     } catch (error) {
@@ -12841,7 +13171,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/invoice-aging-reports/generate", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { reportName, agingPeriods = [30, 60, 90, 120] } = req.body;
       const report = await storage.generateInvoiceAgingReport(companyId, reportName || 'Monthly Aging Report', agingPeriods);
       await logAudit(req.user.id, 'CREATE', 'aging_report', report.id, null, report);
@@ -12854,7 +13187,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/invoice-aging-reports/latest", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const report = await storage.getLatestAgingReport(companyId);
       if (!report) {
         return res.status(404).json({ message: "No aging reports found" });
@@ -12869,7 +13205,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Approval Workflows Routes - Critical missing feature
   app.get("/api/approval-workflows", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const workflows = await storage.getApprovalWorkflows(companyId);
       res.json(workflows);
     } catch (error) {
@@ -12940,7 +13279,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Approval Requests Routes
   app.get("/api/approval-requests", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { userId } = req.query;
       const requests = await storage.getApprovalRequests(companyId, userId ? parseInt(userId as string) : undefined);
       res.json(requests);
@@ -12987,7 +13329,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Bank Integrations Routes - Critical missing feature
   app.get("/api/bank-integrations", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const integrations = await storage.getBankIntegrations(companyId);
       res.json(integrations);
     } catch (error) {
@@ -13063,8 +13408,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Wizard Profile Routes
   app.get("/api/wizard/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const profile = await storage.getWizardProfile(companyId, userId);
       res.json(profile);
     } catch (error) {
@@ -13075,8 +13426,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/wizard/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const profileData = { ...req.body, companyId, userId };
       const profile = await storage.createWizardProfile(profileData);
       await logAudit(userId, 'CREATE', 'wizard_profile', profile.id, null, profileData);
@@ -13089,8 +13446,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.put("/api/wizard/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const updatedProfile = await storage.updateWizardProfile(companyId, userId, req.body);
       if (!updatedProfile) {
         return res.status(404).json({ message: "Wizard profile not found" });
@@ -13106,8 +13469,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Conversation Routes
   app.get("/api/wizard/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const conversations = await storage.getWizardConversations(companyId, userId);
       res.json(conversations);
     } catch (error) {
@@ -13118,8 +13487,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/wizard/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const conversationData = { ...req.body, companyId, userId, sessionId };
       const conversation = await storage.createWizardConversation(conversationData);
@@ -13172,8 +13547,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Insights Routes
   app.get("/api/wizard/insights", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const { status } = req.query;
       const insights = await storage.getWizardInsights(companyId, userId, status as string);
       res.json(insights);
@@ -13185,8 +13566,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/wizard/insights/generate", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const insights = await storage.generateFinancialInsights(companyId, userId);
       await logAudit(userId, 'CREATE', 'wizard_insights_generated', null, null, { insightCount: insights.length });
       res.json(insights);
@@ -13242,7 +13629,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Client Management Routes
   app.get("/api/compliance/clients", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const clients = await storage.getAllClients(companyId);
       res.json(clients);
     } catch (error) {
@@ -13285,8 +13675,14 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       const clientData = {
         ...req.body,
@@ -13442,7 +13838,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Task Management Routes
   app.get("/api/compliance/tasks", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
       const assignedTo = req.query.assignedTo ? parseInt(req.query.assignedTo as string) : undefined;
       
@@ -13471,8 +13870,14 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       const taskData = {
         ...req.body,
@@ -13516,7 +13921,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Compliance Calendar Routes
   app.get("/api/compliance/calendar", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
       const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
       
@@ -13540,8 +13948,14 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       const eventData = {
         ...req.body,
@@ -13587,8 +14001,14 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       const documentData = {
         ...req.body,
@@ -13607,7 +14027,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Compliance Dashboard Routes
   app.get("/api/compliance/dashboard", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const stats = await storage.getComplianceDashboardStats(companyId);
       res.json(stats);
     } catch (error) {
@@ -13619,8 +14042,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   // AI Assistant Routes for Compliance
   app.get("/api/compliance/ai/conversations", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
-      const companyId = req.user.companyId;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       const conversations = await storage.getAiAssistantConversations(userId, companyId);
       res.json(conversations);
@@ -13639,8 +14068,14 @@ Format your response as a JSON array of tip objects with "title", "description",
     })
   }), async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
-      const companyId = req.user.companyId;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       const conversationData = {
         ...req.body,
@@ -13733,7 +14168,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Company Roles Management
   app.get("/api/rbac/company-roles", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const roles = await storage.getCompanyRoles(companyId);
       res.json(roles);
     } catch (error) {
@@ -13744,7 +14182,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/rbac/company-roles", authenticate, requirePermission(PERMISSIONS.ROLES_CREATE), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const roleData = { ...req.body, companyId };
       const role = await storage.createCompanyRole(roleData);
       
@@ -13770,7 +14211,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.get("/api/rbac/user-permissions/:userId", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Check if user can view this user's permissions
       if (userId !== req.user.id && !await PermissionManager.hasPermission(req.user.id, companyId, PERMISSIONS.USERS_VIEW)) {
@@ -13812,7 +14256,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.post("/api/rbac/check-permission", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { userId, permission } = req.body;
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const targetUserId = userId || req.user.id;
       
       const hasPermission = await PermissionManager.hasPermission(targetUserId, companyId, permission);
@@ -13825,8 +14272,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/rbac/my-permissions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
-      const companyId = req.user.companyId;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       const permissions = await PermissionManager.getUserPermissions(userId, companyId);
       const userLevel = await PermissionManager.getUserLevel(userId, companyId);
@@ -13841,7 +14294,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Permission Audit Logs
   app.get("/api/rbac/audit-logs", authenticate, requirePermission(PERMISSIONS.PERMISSIONS_VIEW_AUDIT), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { limit = 100 } = req.query;
       
       const auditLogs = await storage.getPermissionAuditLogs(companyId, parseInt(limit as string));
@@ -13856,7 +14312,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.post("/api/rbac/assign-role", authenticate, requireSuperAdmin(), async (req: AuthenticatedRequest, res) => {
     try {
       const { userId, systemRoleId, companyRoleId, reason } = req.body;
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Map role names to IDs if needed
       const roleNameToId = {
@@ -14662,7 +15121,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Real-time reports data refresh endpoint
   app.get("/api/reports/real-time", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       // Get live business metrics
       const liveData = {
@@ -14683,7 +15145,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // User bookmarks management
   app.get("/api/reports/bookmarks", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const bookmarks = await storage.getUserReportBookmarks(userId);
       res.json(bookmarks);
     } catch (error) {
@@ -14694,7 +15159,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/reports/bookmarks/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const reportId = req.params.reportId;
       
       await storage.addReportBookmark(userId, reportId);
@@ -14709,7 +15177,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.delete("/api/reports/bookmarks/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const reportId = req.params.reportId;
       
       await storage.removeReportBookmark(userId, reportId);
@@ -14725,7 +15196,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Audit Trail Report endpoint
   app.get("/api/reports/audit-trail", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { 
         startDate, 
         endDate, 
@@ -14779,8 +15253,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Report generation with audit logging
   app.post("/api/reports/generate/:reportId", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
-      const companyId = req.user.companyId;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const reportId = req.params.reportId;
       const { companies, customBranding } = req.body;
       
@@ -14857,7 +15337,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Report scheduling functionality
   app.post("/api/reports/schedule", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const { reportId, frequency, recipients } = req.body;
       
       const schedule = await storage.createReportSchedule({
@@ -14881,7 +15364,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Audit trail for report access
   app.post("/api/audit/report-access", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const { reportId, reportTitle, action, timestamp } = req.body;
       
       await logAudit(userId, action.toUpperCase(), 'report_access', reportId, {
@@ -14900,7 +15386,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Companies list for multi-company reports
   app.get("/api/companies", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const companies = await storage.getUserAccessibleCompanies(userId);
       res.json(companies);
     } catch (error) {
@@ -14962,7 +15451,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/bulk-capture/sessions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const sessions = await storage.getBulkCaptureSessions(companyId);
       res.json(sessions);
     } catch (error) {
@@ -14973,8 +15465,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/bulk-capture/sessions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const { sessionType, totalEntries, batchNotes, entries } = req.body;
 
       // Create the session
@@ -15028,7 +15526,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/bulk-capture/sessions/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const sessionId = parseInt(req.params.id);
       
       const session = await storage.getBulkCaptureSession(sessionId, companyId);
@@ -15052,8 +15553,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/bulk-capture/sessions/:id/process", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const sessionId = parseInt(req.params.id);
       
       const result = await storage.processBulkEntries(sessionId, companyId);
@@ -15073,7 +15580,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // POS Terminals API
   app.get("/api/pos/terminals", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const terminals = await storage.getPosTerminals(companyId);
       res.json(terminals);
     } catch (error) {
@@ -15084,8 +15594,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/pos/terminals", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       const terminalData = {
         ...req.body,
         companyId,
@@ -15104,8 +15620,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/pos/terminals/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const terminalId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const companyId = req.user.companyId;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       const terminal = await storage.updatePosTerminal(terminalId, req.body, companyId);
       if (!terminal) {
@@ -15123,8 +15645,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.delete("/api/pos/terminals/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const terminalId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const companyId = req.user.companyId;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       const deleted = await storage.deletePosTerminal(terminalId, companyId);
       if (!deleted) {
@@ -15142,7 +15670,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // POS Shifts API
   app.get("/api/pos/shifts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const status = req.query.status as string;
       const terminalId = req.query.terminalId ? parseInt(req.query.terminalId as string) : undefined;
       
@@ -15156,7 +15687,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/pos/shifts/current", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const shifts = await storage.getCurrentPosShifts(companyId);
       res.json(shifts);
     } catch (error) {
@@ -15167,8 +15701,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/pos/shifts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       const shiftData = {
         ...req.body,
@@ -15189,8 +15729,14 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/pos/shifts/:id/close", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const shiftId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const companyId = req.user.companyId;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       
       const closingData = {
         ...req.body,
@@ -15214,7 +15760,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // POS Sales API
   app.get("/api/pos/sales", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const shiftId = req.query.shiftId ? parseInt(req.query.shiftId as string) : undefined;
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
@@ -15229,7 +15778,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/pos/sales/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const date = req.query.date as string;
       
       const stats = await storage.getPosSalesStats(companyId, date);
@@ -15242,8 +15794,14 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/pos/sales", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
       
       const saleData = {
         ...req.body,
@@ -15387,7 +15945,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Sales Pipeline Management
   app.get('/api/sales-pipeline-stages', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       // Return sample pipeline stages
@@ -15407,7 +15968,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Sales Leads Management
   app.get('/api/sales-leads', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       // Return sample leads
@@ -15450,7 +16014,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Sales Forecasting Data
   app.get('/api/sales-forecasting', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       // Return sample forecasting data
@@ -15481,7 +16048,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Quote Templates
   app.get('/api/quote-templates', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       const templates = [
@@ -15513,7 +16083,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Pricing Rules
   app.get('/api/pricing-rules', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       const pricingRules = [
@@ -15555,7 +16128,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Customer Price Tiers
   app.get('/api/customer-price-tiers', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       const tiers = [
@@ -15601,7 +16177,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Customer Price Lists
   app.get('/api/customer-price-lists', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       const priceLists = [
@@ -15635,7 +16214,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Pricing Statistics
   app.get('/api/pricing-rules/stats', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) return res.status(401).json({ message: 'Company ID required' });
 
       const stats = {
@@ -16758,7 +17340,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Employee routes
   app.get("/api/employees", authenticate, requirePermission('employees:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16773,7 +17358,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.get("/api/employees/:id", authenticate, requirePermission('employees:view'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16790,7 +17378,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/employees", authenticate, requirePermission('employees:create'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16807,7 +17398,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/employees/:id", authenticate, requirePermission('employees:update'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16826,7 +17420,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.delete("/api/employees/:id", authenticate, requirePermission('employees:delete'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16845,7 +17442,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Payroll routes
   app.get("/api/payroll", authenticate, requirePermission('payroll:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16860,7 +17460,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/payroll/process", authenticate, requirePermission('payroll:create'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16876,7 +17479,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/payroll/:id/approve", authenticate, requirePermission('payroll:approve'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const approvedBy = req.user.id;
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
@@ -16896,7 +17502,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Employee leave routes
   app.get("/api/employee-leave", authenticate, requirePermission('employees:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16911,7 +17520,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/employee-leave", authenticate, requirePermission('employees:create'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16928,7 +17540,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Employee Attendance API Routes
   app.get("/api/attendance", authenticate, requirePermission('attendance:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16943,7 +17558,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/attendance/clock-in", authenticate, requirePermission('attendance:manage'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16960,7 +17578,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.post("/api/attendance/:id/clock-out", authenticate, requirePermission('attendance:manage'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -16978,7 +17599,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/attendance/manual", authenticate, requirePermission('attendance:manage'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17012,7 +17636,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/employee-leave/:id/approve", authenticate, requirePermission('employees:approve'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const approvedBy = req.user.id;
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
@@ -17032,7 +17659,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/employee-leave/:id/reject", authenticate, requirePermission('employees:approve'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const approvedBy = req.user.id;
       const { rejectionReason } = req.body;
       if (!companyId) {
@@ -17053,7 +17683,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Employee Attendance API Routes
   app.get("/api/attendance", authenticate, requirePermission('employees:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17069,7 +17702,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/attendance/clock-in", authenticate, requirePermission('employees:edit'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17098,7 +17734,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/attendance/:id/clock-out", authenticate, requirePermission('employees:edit'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17119,7 +17758,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.put("/api/attendance/:id/break", authenticate, requirePermission('employees:edit'), async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17143,7 +17785,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Alerts API Routes
   app.get("/api/alerts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const alerts = await alertsService.generateSystemAlerts(companyId);
       res.json(alerts);
     } catch (error) {
@@ -17154,7 +17799,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.get("/api/alerts/counts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const counts = await alertsService.getAlertCounts(companyId);
       res.json(counts);
     } catch (error) {
@@ -17468,7 +18116,10 @@ Format your response as a JSON array of tip objects with "title", "description",
   // Company Email Settings API Routes
   app.get("/api/company-email-settings", authenticate, requirePermission('settings:view'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17483,7 +18134,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/company-email-settings", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17508,7 +18162,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.put("/api/company-email-settings", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17531,7 +18188,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.delete("/api/company-email-settings", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -17552,7 +18212,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/company-email-settings/test", authenticate, requirePermission('settings:update'), async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user.companyId;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
