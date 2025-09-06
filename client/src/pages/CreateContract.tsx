@@ -59,6 +59,15 @@ export default function CreateContract() {
   const form = useForm<ContractForm>({
     resolver: zodResolver(contractSchema),
     defaultValues: {
+      templateId: "",
+      clientId: "",
+      subject: "",
+      contractValue: "",
+      contractType: "",
+      startDate: "",
+      endDate: "",
+      projectId: "",
+      description: "",
       hideFromCustomer: false,
       trash: false,
     },
@@ -242,14 +251,18 @@ export default function CreateContract() {
                       <Users className="w-4 h-4" />
                       Customer
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select and begin typing" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {clients.length === 0 ? (
+                        {isLoadingClients ? (
+                          <SelectItem value="loading" disabled>
+                            Loading customers...
+                          </SelectItem>
+                        ) : clients.length === 0 ? (
                           <SelectItem value="no-clients" disabled>
                             No customers found. Please add a customer first.
                           </SelectItem>
@@ -315,7 +328,7 @@ export default function CreateContract() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Contract type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Nothing selected" />
@@ -392,14 +405,18 @@ export default function CreateContract() {
                     <Select onValueChange={(value) => {
                       field.onChange(value);
                       handleTemplateChange(value);
-                    }} value={field.value}>
+                    }} value={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a professional template" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {templates.length === 0 ? (
+                        {isLoadingTemplates ? (
+                          <SelectItem value="loading" disabled>
+                            Loading templates...
+                          </SelectItem>
+                        ) : templates.length === 0 ? (
                           <SelectItem value="no-templates" disabled>
                             No templates found. Please create a template first.
                           </SelectItem>
