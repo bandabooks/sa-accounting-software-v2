@@ -7,7 +7,7 @@ import {
   DollarSign, CreditCard, Box, Truck, PieChart, CheckCircle, Shield,
   Briefcase, FolderOpen, CheckSquare, Clock, Brain, UserCog, Key,
   Lock, ToggleLeft, Upload, Terminal, Zap, MessageCircle, PackageCheck, Mail, FileCheck, Calendar,
-  ChevronLeft, Menu
+  ChevronLeft, Menu, Plus
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompanySubscription } from "@/hooks/useCompanySubscription";
@@ -514,6 +514,18 @@ const navigationGroups = [
       { path: "/business-reports", label: "Business Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "basic_reports" },
       { path: "/general-reports", label: "General Reports", icon: BarChart3, permission: "REPORT_VIEW", module: "reports" },
       { path: "/audit-trail", label: "Audit Trail", icon: Shield, permission: "audit:view", module: "reports" }
+    ]
+  },
+  // 9.5. Contract Management (Direct Access)
+  {
+    id: "contracts",
+    label: "Contract Management",
+    icon: FileText,
+    module: "compliance",
+    items: [
+      { path: "/contracts", label: "Contract Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/contracts/create", label: "New Contract", icon: Plus, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/contracts/templates", label: "Manage Templates", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" }
     ]
   },
   // 10. CRM & Projects
