@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 
 interface ComplianceReport {
   id: string;
@@ -860,17 +861,82 @@ export default function ComplianceReports() {
           )}
         </TabsContent>
 
-        {/* Individual report type tabs would go here */}
+        {/* Individual report type tabs with relevant links */}
         <TabsContent value="vat-reports">
           <Card>
             <CardHeader>
-              <CardTitle>VAT Reports</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-600" />
+                VAT Reports
+              </CardTitle>
               <CardDescription>
                 Manage VAT201 returns and related compliance reports
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">VAT-specific reports and compliance tracking coming soon.</p>
+              <div className="space-y-4">
+                <p className="text-muted-foreground mb-4">
+                  Access comprehensive VAT reporting and compliance management tools.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link href="/vat-management">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Shield className="h-8 w-8 text-blue-600" />
+                          <div>
+                            <h3 className="font-semibold">VAT Management</h3>
+                            <p className="text-sm text-muted-foreground">Comprehensive VAT administration</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/vat-reports">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <BarChart3 className="h-8 w-8 text-blue-600" />
+                          <div>
+                            <h3 className="font-semibold">VAT Reports</h3>
+                            <p className="text-sm text-muted-foreground">Detailed VAT reporting</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/vat-returns">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-8 w-8 text-blue-600" />
+                          <div>
+                            <h3 className="font-semibold">VAT Returns</h3>
+                            <p className="text-sm text-muted-foreground">VAT201 submissions</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/vat-settings">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Settings className="h-8 w-8 text-blue-600" />
+                          <div>
+                            <h3 className="font-semibold">VAT Settings</h3>
+                            <p className="text-sm text-muted-foreground">Configure VAT preferences</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -878,13 +944,78 @@ export default function ComplianceReports() {
         <TabsContent value="tax-reports">
           <Card>
             <CardHeader>
-              <CardTitle>Tax Reports</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                Tax Reports
+              </CardTitle>
               <CardDescription>
                 Income tax returns, PAYE reconciliations and tax compliance reports
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Tax-specific reports and compliance tracking coming soon.</p>
+              <div className="space-y-4">
+                <p className="text-muted-foreground mb-4">
+                  Manage all tax-related reporting and compliance requirements.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link href="/emp201">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-8 w-8 text-green-600" />
+                          <div>
+                            <h3 className="font-semibold">EMP201 Returns</h3>
+                            <p className="text-sm text-muted-foreground">PAYE tax returns</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/payroll">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Users className="h-8 w-8 text-green-600" />
+                          <div>
+                            <h3 className="font-semibold">Payroll Management</h3>
+                            <p className="text-sm text-muted-foreground">Employee tax calculations</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/reports/financial">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <BarChart3 className="h-8 w-8 text-green-600" />
+                          <div>
+                            <h3 className="font-semibold">Tax Reports</h3>
+                            <p className="text-sm text-muted-foreground">Financial tax reporting</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/labour-compliance">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Shield className="h-8 w-8 text-green-600" />
+                          <div>
+                            <h3 className="font-semibold">Labour Compliance</h3>
+                            <p className="text-sm text-muted-foreground">SDL and UIF management</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -892,13 +1023,78 @@ export default function ComplianceReports() {
         <TabsContent value="cipc-reports">
           <Card>
             <CardHeader>
-              <CardTitle>CIPC Reports</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-purple-600" />
+                CIPC Reports
+              </CardTitle>
               <CardDescription>
                 Company annual returns and CIPC compliance filings
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">CIPC-specific reports and compliance tracking coming soon.</p>
+              <div className="space-y-4">
+                <p className="text-muted-foreground mb-4">
+                  Manage company registrations and CIPC compliance requirements.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link href="/cipc-compliance">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Building2 className="h-8 w-8 text-purple-600" />
+                          <div>
+                            <h3 className="font-semibold">CIPC Compliance</h3>
+                            <p className="text-sm text-muted-foreground">Annual returns and filings</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/companies">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Users className="h-8 w-8 text-purple-600" />
+                          <div>
+                            <h3 className="font-semibold">Company Management</h3>
+                            <p className="text-sm text-muted-foreground">Company registrations</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/compliance-documents">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-8 w-8 text-purple-600" />
+                          <div>
+                            <h3 className="font-semibold">Compliance Documents</h3>
+                            <p className="text-sm text-muted-foreground">Document management</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/professional-services">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Shield className="h-8 w-8 text-purple-600" />
+                          <div>
+                            <h3 className="font-semibold">Professional Services</h3>
+                            <p className="text-sm text-muted-foreground">CIPC professional support</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -906,13 +1102,78 @@ export default function ComplianceReports() {
         <TabsContent value="audit-reports">
           <Card>
             <CardHeader>
-              <CardTitle>Audit Reports</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-orange-600" />
+                Audit Reports
+              </CardTitle>
               <CardDescription>
                 Audit trails, compliance summaries and review reports
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Audit-specific reports and tracking coming soon.</p>
+              <div className="space-y-4">
+                <p className="text-muted-foreground mb-4">
+                  Access comprehensive audit trails and compliance monitoring tools.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Link href="/audit-trail">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="h-8 w-8 text-orange-600" />
+                          <div>
+                            <h3 className="font-semibold">Audit Trail</h3>
+                            <p className="text-sm text-muted-foreground">Complete transaction history</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/compliance-tracker">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <TrendingUp className="h-8 w-8 text-orange-600" />
+                          <div>
+                            <h3 className="font-semibold">Compliance Tracker</h3>
+                            <p className="text-sm text-muted-foreground">Track compliance progress</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/general-reports">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <BarChart3 className="h-8 w-8 text-orange-600" />
+                          <div>
+                            <h3 className="font-semibold">General Reports</h3>
+                            <p className="text-sm text-muted-foreground">Comprehensive reporting</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+
+                  <Link href="/super-admin-audit-logs">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Shield className="h-8 w-8 text-orange-600" />
+                          <div>
+                            <h3 className="font-semibold">Audit Logs</h3>
+                            <p className="text-sm text-muted-foreground">System audit logging</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
