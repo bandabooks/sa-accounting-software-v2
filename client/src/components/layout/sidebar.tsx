@@ -208,7 +208,17 @@ const getFullNavigationGroups = () => [
       { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
     ]
   },
-  // 2. Banking & Cash
+  // 2. Contracts and Engagements - Standalone menu item
+  {
+    id: "contracts",
+    label: "Contracts and Engagements",
+    icon: FileText,
+    module: "compliance",
+    items: [
+      { path: "/contracts", label: "Contracts and Engagements", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" }
+    ]
+  },
+  // 3. Banking & Cash
   {
     id: "banking",
     label: "Banking & Cash",
