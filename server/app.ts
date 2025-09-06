@@ -18,7 +18,7 @@ async function ensureSATemplatesForAllCompanies() {
   }
   
   try {
-    const { seedContractTemplates } = await import('./contractTemplatesSeeder.js');
+    const { seedContractTemplates } = await import('./contractTemplatesSeeder');
     const allCompanies = await db.select().from(companies);
     
     for (const company of allCompanies) {
