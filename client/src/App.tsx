@@ -971,6 +971,11 @@ function AuthenticatedApp() {
             <SuperAdminAuditLogs />
           </ProtectedRoute>
         </Route>
+        <Route path="/super-admin-audit-logs">
+          <ProtectedRoute requiredRole="super_admin">
+            <SuperAdminAuditLogs />
+          </ProtectedRoute>
+        </Route>
         <Route path="/super-admin/plans/:id">
           <ProtectedRoute requiredRole="super_admin">
             <SuperAdminPlanEdit />

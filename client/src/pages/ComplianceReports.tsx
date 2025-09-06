@@ -1066,7 +1066,7 @@ export default function ComplianceReports() {
                     </Card>
                   </Link>
 
-                  <Link href="/compliance-documents">
+                  <Link href="/compliance/documents">
                     <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
@@ -1131,7 +1131,7 @@ export default function ComplianceReports() {
                     </Card>
                   </Link>
 
-                  <Link href="/compliance-tracker">
+                  <Link href="/compliance/tracker">
                     <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
