@@ -76,14 +76,21 @@ export default function CreateContract() {
   // Fetch templates
   const { data: templatesData, isLoading: isLoadingTemplates, error: templatesError } = useQuery({
     queryKey: ["/api/contracts/templates"],
-    retry: 3,
+    retry: 1,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
+    onError: (error: any) => {
+      console.error("Failed to fetch templates:", error);
+    }
   });
 
   // Fetch customers  
-  const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
+  const { data: customersData, isLoading: isLoadingCustomers, error: customersError } = useQuery({
     queryKey: ["/api/customers"],
+    retry: 1,
+    onError: (error: any) => {
+      console.error("Failed to fetch customers:", error);
+    }
   });
 
   // Ensure data is array

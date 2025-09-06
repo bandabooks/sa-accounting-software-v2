@@ -271,6 +271,52 @@ export const estimateItems = pgTable("estimate_items", {
   companyIdx: index("estimate_items_company_idx").on(table.companyId),
 }));
 
+// Proforma Invoices - Pre-billing documents for approval
+export const proformaInvoices = pgTable("proforma_invoices", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  proformaNumber: text("proforma_number").notNull(),
+  customerId: integer("customer_id").notNull(),
+  issueDate: timestamp("issue_date").notNull(),
+  expiryDate: timestamp("expiry_date").notNull(),
+  status: text("status").notNull().default("draft"), // draft, sent, viewed, approved, rejected, expired, converted
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: integer("approved_by").references(() => users.id),
+  convertedToInvoiceId: integer("converted_to_invoice_id").references(() => invoices.id),
+  convertedAt: timestamp("converted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyProformaUnique: unique().on(table.companyId, table.proformaNumber),
+  companyIdx: index("proforma_invoices_company_idx").on(table.companyId),
+  customerIdx: index("proforma_invoices_customer_idx").on(table.customerId),
+  statusIdx: index("proforma_invoices_status_idx").on(table.status),
+  expiryIdx: index("proforma_invoices_expiry_idx").on(table.expiryDate),
+}));
+
+// Proforma Invoice Items
+export const proformaInvoiceItems = pgTable("proforma_invoice_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  proformaInvoiceId: integer("proforma_invoice_id").notNull(),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }).notNull().default("15.00"),
+  vatInclusive: boolean("vat_inclusive").default(false),
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("proforma_invoice_items_company_idx").on(table.companyId),
+  proformaIdx: index("proforma_invoice_items_proforma_idx").on(table.proformaInvoiceId),
+}));
+
 // Sales Orders - Track orders before invoicing
 export const salesOrders = pgTable("sales_orders", {
   id: serial("id").primaryKey(),
@@ -1554,6 +1600,16 @@ export const insertEstimateItemSchema = createInsertSchema(estimateItems).omit({
   id: true,
 });
 
+export const insertProformaInvoiceSchema = createInsertSchema(proformaInvoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProformaInvoiceItemSchema = createInsertSchema(proformaInvoiceItems).omit({
+  id: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -1736,6 +1792,12 @@ export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 
 export type EstimateItem = typeof estimateItems.$inferSelect;
 export type InsertEstimateItem = z.infer<typeof insertEstimateItemSchema>;
+
+export type ProformaInvoice = typeof proformaInvoices.$inferSelect;
+export type InsertProformaInvoice = z.infer<typeof insertProformaInvoiceSchema>;
+
+export type ProformaInvoiceItem = typeof proformaInvoiceItems.$inferSelect;
+export type InsertProformaInvoiceItem = z.infer<typeof insertProformaInvoiceItemSchema>;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
