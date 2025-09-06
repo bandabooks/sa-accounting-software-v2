@@ -418,7 +418,7 @@ export default function Dashboard() {
                   <span className="text-yellow-700">EMP201</span>
                   <span className="font-medium text-yellow-800">7 days</span>
                 </div>
-                <Link href={dashboardType === 'practitioner' ? "/compliance-management" : "/vat-management"} className="block">
+                <Link href={dashboardType === 'practitioner' ? "/compliance-dashboard" : "/vat-management"} className="block">
                   <Button size="sm" variant="outline" className="w-full text-xs border-yellow-300 text-yellow-700 hover:bg-yellow-100 mt-2">
                     View All Deadlines
                   </Button>
