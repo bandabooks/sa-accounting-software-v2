@@ -77,9 +77,6 @@ export default function ProformaInvoices() {
   const { data: proformaInvoices = [], isLoading, error } = useQuery({
     queryKey: ["/api/proforma-invoices"],
     retry: 1,
-    onError: (error: any) => {
-      console.error("Failed to fetch proforma invoices:", error);
-    }
   });
 
   // Delete mutation
@@ -126,7 +123,7 @@ export default function ProformaInvoices() {
   });
 
   // Filter proforma invoices
-  const filteredProformaInvoices = proformaInvoices.filter((proforma: ProformaInvoice) => {
+  const filteredProformaInvoices = (proformaInvoices as ProformaInvoice[]).filter((proforma: ProformaInvoice) => {
     const matchesSearch = 
       proforma.proformaNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       proforma.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
