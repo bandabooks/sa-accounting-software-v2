@@ -198,13 +198,6 @@ export default function ContractDetail() {
     input.click();
   };
 
-  const handleDownloadPDF = () => {
-    // PDF download functionality
-    toast({
-      title: "PDF Download",
-      description: "PDF download will be implemented.",
-    });
-  };
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
