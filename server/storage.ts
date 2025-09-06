@@ -3,7 +3,9 @@ import {
   invoices, 
   invoiceItems, 
   estimates, 
-  estimateItems, 
+  estimateItems,
+  proformaInvoices,
+  proformaInvoiceItems, 
   users,
   userSessions,
   userRoles,
@@ -556,6 +558,14 @@ export interface IStorage {
   updateEstimate(id: number, estimate: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   deleteEstimate(id: number): Promise<boolean>;
   convertEstimateToInvoice(estimateId: number): Promise<InvoiceWithItems>;
+
+  // Proforma Invoices
+  getAllProformaInvoices(companyId?: number): Promise<ProformaInvoiceWithCustomer[]>;
+  getProformaInvoice(id: number): Promise<ProformaInvoiceWithItems | undefined>;
+  createProformaInvoice(proforma: InsertProformaInvoice, items: Omit<InsertProformaInvoiceItem, 'proformaInvoiceId'>[]): Promise<ProformaInvoiceWithItems>;
+  updateProformaInvoice(id: number, proforma: Partial<InsertProformaInvoice>): Promise<ProformaInvoice | undefined>;
+  deleteProformaInvoice(id: number): Promise<boolean>;
+  convertProformaToInvoice(proformaId: number): Promise<InvoiceWithItems>;
 
   // Payments
   getAllPayments(): Promise<Payment[]>;
@@ -3438,6 +3448,152 @@ export class DatabaseStorage implements IStorage {
       console.error("Error getting bank account balances:", error);
       return [];
     }
+  }
+
+  // Proforma Invoice Methods
+  async getAllProformaInvoices(companyId?: number): Promise<ProformaInvoiceWithCustomer[]> {
+    try {
+      const query = db
+        .select()
+        .from(proformaInvoices)
+        .leftJoin(customers, eq(proformaInvoices.customerId, customers.id));
+
+      if (companyId) {
+        query.where(eq(proformaInvoices.companyId, companyId));
+      }
+
+      const results = await query;
+      
+      const result = results.map((row) => {
+        const proforma = row.proforma_invoices;
+        const customer = row.customers || {
+          id: 0,
+          companyId: proforma.companyId,
+          name: 'Unknown Customer',
+          email: '',
+          phone: '',
+          address: '',
+          vatNumber: '',
+          creditLimit: '0',
+          paymentTerms: 30,
+          isActive: true,
+          portalAccess: false,
+          portalPassword: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        return {
+          ...proforma,
+          customer
+        };
+      });
+      
+      console.log(`Retrieved ${result.length} proforma invoices for company ${companyId || 'all'}`);
+      return result as ProformaInvoiceWithCustomer[];
+    } catch (error) {
+      console.error("Error in getAllProformaInvoices:", error);
+      throw error;
+    }
+  }
+
+  async getProformaInvoice(id: number): Promise<ProformaInvoiceWithItems | undefined> {
+    const [proforma] = await db.select().from(proformaInvoices).where(eq(proformaInvoices.id, id));
+    if (!proforma) return undefined;
+
+    const [customer] = await db.select().from(customers).where(eq(customers.id, proforma.customerId));
+    if (!customer) return undefined;
+
+    const items = await db.select().from(proformaInvoiceItems).where(eq(proformaInvoiceItems.proformaInvoiceId, id));
+    
+    return {
+      ...proforma,
+      customer,
+      items
+    };
+  }
+
+  async createProformaInvoice(insertProforma: InsertProformaInvoice, items: Omit<InsertProformaInvoiceItem, 'proformaInvoiceId'>[]): Promise<ProformaInvoiceWithItems> {
+    // Generate proforma number if not provided
+    if (!insertProforma.proformaNumber) {
+      insertProforma.proformaNumber = await this.getNextDocumentNumber(insertProforma.companyId, 'proforma', 'PRF-');
+    }
+
+    const [proforma] = await db
+      .insert(proformaInvoices)
+      .values(insertProforma)
+      .returning();
+
+    const createdItems: ProformaInvoiceItem[] = [];
+    for (const item of items) {
+      const [proformaItem] = await db
+        .insert(proformaInvoiceItems)
+        .values({ 
+          ...item, 
+          proformaInvoiceId: proforma.id,
+          companyId: insertProforma.companyId 
+        })
+        .returning();
+      createdItems.push(proformaItem);
+    }
+
+    const [customer] = await db.select().from(customers).where(eq(customers.id, proforma.customerId));
+    return {
+      ...proforma,
+      customer: customer!,
+      items: createdItems
+    };
+  }
+
+  async updateProformaInvoice(id: number, updateData: Partial<InsertProformaInvoice>): Promise<ProformaInvoice | undefined> {
+    const [proforma] = await db
+      .update(proformaInvoices)
+      .set(updateData)
+      .where(eq(proformaInvoices.id, id))
+      .returning();
+    return proforma || undefined;
+  }
+
+  async deleteProformaInvoice(id: number): Promise<boolean> {
+    // Delete associated items first
+    await db.delete(proformaInvoiceItems).where(eq(proformaInvoiceItems.proformaInvoiceId, id));
+    
+    const result = await db.delete(proformaInvoices).where(eq(proformaInvoices.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async convertProformaToInvoice(proformaId: number, userId?: number): Promise<InvoiceWithItems> {
+    const proforma = await this.getProformaInvoice(proformaId);
+    if (!proforma) throw new Error("Proforma invoice not found");
+
+    // Mark proforma as converted
+    await this.updateProformaInvoice(proformaId, { status: "converted" });
+
+    const invoiceData: InsertInvoice = {
+      companyId: proforma.companyId,
+      customerId: proforma.customerId,
+      invoiceNumber: await this.getNextDocumentNumber(proforma.companyId, 'invoice'),
+      issueDate: new Date(),
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      subtotal: proforma.subtotal,
+      vatAmount: proforma.vatAmount,
+      total: proforma.total,
+      status: "draft",
+      notes: `Converted from proforma invoice ${proforma.proformaNumber}`
+    };
+
+    const invoiceItems = proforma.items.map(item => ({
+      companyId: proforma.companyId,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      vatRate: item.vatRate,
+      vatInclusive: item.vatInclusive,
+      vatAmount: item.vatAmount,
+      total: item.total
+    }));
+
+    return this.createInvoice(invoiceData, invoiceItems);
   }
 
   // Payments

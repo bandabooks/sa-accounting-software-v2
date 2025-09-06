@@ -2426,6 +2426,9 @@ export type InvoiceWithCustomer = Invoice & { customer: Customer };
 export type InvoiceWithItems = Invoice & { items: InvoiceItem[]; customer: Customer };
 export type EstimateWithCustomer = Estimate & { customer: Customer };
 export type EstimateWithItems = Estimate & { items: EstimateItem[]; customer: Customer };
+
+export type ProformaInvoiceWithCustomer = ProformaInvoice & { customer: Customer };
+export type ProformaInvoiceWithItems = ProformaInvoice & { items: ProformaInvoiceItem[]; customer: Customer };
 export type PurchaseOrderWithSupplier = PurchaseOrder & { supplier: Supplier };
 export type PurchaseOrderWithItems = PurchaseOrder & { items: PurchaseOrderItem[]; supplier: Supplier };
 export type GoodsReceiptWithSupplier = GoodsReceipt & { supplier: Supplier };
