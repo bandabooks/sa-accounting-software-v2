@@ -74,8 +74,9 @@ export default function CreateContract() {
   });
 
   // Fetch templates
-  const { data: templatesData, isLoading: isLoadingTemplates } = useQuery({
+  const { data: templatesData, isLoading: isLoadingTemplates, error: templatesError } = useQuery({
     queryKey: ["/api/contracts/templates"],
+    retry: 3,
   });
 
   // Fetch clients  
@@ -83,9 +84,22 @@ export default function CreateContract() {
     queryKey: ["/api/customers"],
   });
 
+  // Debug template loading
+  if (templatesError) {
+    console.error('Templates loading error:', templatesError);
+  }
+
   // Ensure data is array
   const templates = Array.isArray(templatesData) ? templatesData : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
+
+  // Log template loading status
+  console.log('CreateContract Debug:', {
+    templatesCount: templates.length,
+    isLoading: isLoadingTemplates,
+    hasError: !!templatesError,
+    templatesData: templatesData
+  });
 
   // Create contract mutation
   const createContractMutation = useMutation({

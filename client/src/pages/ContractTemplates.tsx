@@ -88,11 +88,25 @@ export default function ContractTemplates() {
   });
 
   // Fetch templates
-  const { data: templatesResponse = [], isLoading } = useQuery({
+  const { data: templatesResponse = [], isLoading, error: templatesError } = useQuery({
     queryKey: ["/api/contracts/templates"],
+    retry: 3,
   });
 
+  // Debug template loading
+  if (templatesError) {
+    console.error('Templates page loading error:', templatesError);
+  }
+
   const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
+  
+  // Log template loading status
+  console.log('ContractTemplates Debug:', {
+    templatesCount: templates.length,
+    isLoading: isLoading,
+    hasError: !!templatesError,
+    templatesResponse: templatesResponse
+  });
 
   // Create template mutation
   const createTemplateMutation = useMutation({
