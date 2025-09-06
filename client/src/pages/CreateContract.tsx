@@ -38,7 +38,7 @@ interface ContractTemplate {
   name: string;
   version: number;
   bodyMd: string;
-  fields: string[];
+  fields: string | string[];
   servicePackage: string;
 }
 
@@ -67,25 +67,30 @@ export default function CreateContract() {
   // Fetch templates
   const { data: templatesResponse = [] } = useQuery({
     queryKey: ["/api/contracts/templates"],
-    queryFn: () => apiRequest("/api/contracts/templates"),
+    queryFn: async () => {
+      const response = await apiRequest("/api/contracts/templates");
+      return Array.isArray(response) ? response : [];
+    },
   });
 
-  const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
+  const templates = templatesResponse as ContractTemplate[];
 
   // Fetch clients
   const { data: clientsResponse = [] } = useQuery({
-    queryKey: ["/api/clients"],
-    queryFn: () => apiRequest("/api/clients"),
+    queryKey: ["/api/customers"],
+    queryFn: async () => {
+      const response = await apiRequest("/api/customers");
+      return Array.isArray(response) ? response : [];
+    },
   });
 
   const clients = Array.isArray(clientsResponse) ? clientsResponse : [];
 
   // Create contract mutation
   const createContractMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/contracts", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: async (data: ContractForm) => {
+      return await apiRequest("/api/contracts", "POST", data);
+    },
     onSuccess: () => {
       toast({
         title: "Contract Created",
@@ -109,9 +114,9 @@ export default function CreateContract() {
     
     if (template) {
       // Initialize merge fields for the template
-      const fields = Array.isArray(template.fields) ? template.fields : [];
+      const fields = typeof template.fields === 'string' ? JSON.parse(template.fields) : (Array.isArray(template.fields) ? template.fields : []);
       const initialFields: Record<string, string> = {};
-      fields.forEach(field => {
+      fields.forEach((field: string) => {
         initialFields[field] = '';
       });
       setMergeFields(initialFields);
