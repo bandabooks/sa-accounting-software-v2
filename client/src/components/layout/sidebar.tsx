@@ -238,6 +238,7 @@ const getFullNavigationGroups = () => [
     items: [
       { path: "/sales-dashboard", label: "Sales Dashboard", icon: ChartLine, permission: "DASHBOARD_VIEW", module: "sales" },
       { path: "/invoices", label: "Invoices", icon: Receipt, permission: "INVOICE_VIEW", module: "sales" },
+      { path: "/proforma-invoices", label: "Proforma Invoices", icon: FileText, permission: "INVOICE_VIEW", module: "sales" },
       { path: "/estimates", label: "Estimates / Quotes", icon: FileText, permission: "ESTIMATE_VIEW", module: "sales" },
       { path: "/sales-orders", label: "Sales Orders", icon: ShoppingCart, permission: "SALES_ORDER_VIEW", module: "sales" },
       { path: "/credit-notes", label: "Credit Notes", icon: FileText, permission: "CREDIT_NOTES_VIEW", module: "sales" },

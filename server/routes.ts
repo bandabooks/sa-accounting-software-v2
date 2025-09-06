@@ -2874,6 +2874,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Proforma Invoice Routes
+  app.get("/api/proforma-invoices", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      const proformaInvoices = await storage.getAllProformaInvoices(companyId);
+      res.json(proformaInvoices);
+    } catch (error) {
+      console.error("Error fetching proforma invoices:", error);
+      res.status(500).json({ message: "Failed to fetch proforma invoices" });
+    }
+  });
+
+  app.get("/api/proforma-invoices/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const proformaInvoice = await storage.getProformaInvoice(id);
+      
+      if (!proformaInvoice) {
+        return res.status(404).json({ message: "Proforma invoice not found" });
+      }
+      
+      res.json(proformaInvoice);
+    } catch (error) {
+      console.error("Error fetching proforma invoice:", error);
+      res.status(500).json({ message: "Failed to fetch proforma invoice" });
+    }
+  });
+
+  app.post("/api/proforma-invoices", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      const { items, ...proformaData } = req.body;
+      
+      // Add company ID to proforma data
+      proformaData.companyId = companyId;
+      
+      // Validate proforma data using schema
+      const validatedProforma = insertProformaInvoiceSchema.parse(proformaData);
+      
+      // Validate items
+      const validatedItems = items.map((item: any) => insertProformaInvoiceItemSchema.parse({
+        ...item,
+        companyId
+      }));
+      
+      const proformaInvoice = await storage.createProformaInvoice(validatedProforma, validatedItems);
+      
+      // Log audit trail
+      await logAudit(req.user?.id || 0, 'CREATE', 'proforma_invoices', proformaInvoice.id, proformaInvoice);
+      
+      res.status(201).json(proformaInvoice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating proforma invoice:", error);
+      res.status(500).json({ message: "Failed to create proforma invoice" });
+    }
+  });
+
+  app.put("/api/proforma-invoices/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const proformaInvoice = await storage.updateProformaInvoice(id, updateData);
+      
+      if (!proformaInvoice) {
+        return res.status(404).json({ message: "Proforma invoice not found" });
+      }
+      
+      // Log audit trail
+      await logAudit(req.user?.id || 0, 'UPDATE', 'proforma_invoices', id, updateData);
+      
+      res.json(proformaInvoice);
+    } catch (error) {
+      console.error("Error updating proforma invoice:", error);
+      res.status(500).json({ message: "Failed to update proforma invoice" });
+    }
+  });
+
+  app.delete("/api/proforma-invoices/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteProformaInvoice(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Proforma invoice not found" });
+      }
+      
+      // Log audit trail
+      await logAudit(req.user?.id || 0, 'DELETE', 'proforma_invoices', id, {});
+      
+      res.json({ message: "Proforma invoice deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting proforma invoice:", error);
+      res.status(500).json({ message: "Failed to delete proforma invoice" });
+    }
+  });
+
+  app.post("/api/proforma-invoices/:id/convert-to-invoice", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const invoice = await storage.convertProformaToInvoice(id, req.user?.id);
+      
+      // Log audit trail
+      await logAudit(req.user?.id || 0, 'CONVERT', 'proforma_invoices', id, { 
+        convertedToInvoiceId: invoice.id 
+      });
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error converting proforma to invoice:", error);
+      res.status(500).json({ message: "Failed to convert proforma to invoice" });
+    }
+  });
+
   // Setup recurring invoice
   app.post("/api/invoices/setup-recurring", async (req, res) => {
     try {

@@ -21,6 +21,7 @@ import CustomerDetail from "@/pages/customer-detail";
 import CustomerPortal from "@/pages/customer-portal";
 import Estimates from "@/pages/estimates";
 import EstimateCreate from "@/pages/estimate-create";
+import ProformaInvoices from "@/pages/proforma-invoices";
 import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
@@ -352,6 +353,11 @@ function AuthenticatedApp() {
         <Route path="/estimates">
           <ProtectedRoute permission={PERMISSIONS.ESTIMATES_VIEW}>
             <Estimates />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/proforma-invoices">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
+            <ProformaInvoices />
           </ProtectedRoute>
         </Route>
         <Route path="/estimates/create">
