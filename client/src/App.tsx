@@ -22,6 +22,7 @@ import CustomerPortal from "@/pages/customer-portal";
 import Estimates from "@/pages/estimates";
 import EstimateCreate from "@/pages/estimate-create";
 import ProformaInvoices from "@/pages/proforma-invoices";
+import ProformaInvoiceCreate from "@/pages/proforma-invoice-create";
 import EstimateDetail from "@/pages/estimate-detail";
 import Reports from "@/pages/reports";
 import FinancialReports from "@/pages/financial-reports";
@@ -358,6 +359,16 @@ function AuthenticatedApp() {
         <Route path="/proforma-invoices">
           <ProtectedRoute permission={PERMISSIONS.INVOICES_VIEW}>
             <ProformaInvoices />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/proforma-invoices/create">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_CREATE}>
+            <ProformaInvoiceCreate />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/proforma-invoices/:id/edit">
+          <ProtectedRoute permission={PERMISSIONS.INVOICES_CREATE}>
+            <ProformaInvoiceCreate />
           </ProtectedRoute>
         </Route>
         <Route path="/estimates/create">

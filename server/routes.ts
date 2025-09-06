@@ -117,6 +117,8 @@ import {
   insertCreditNoteSchema,
   insertCreditNoteItemSchema,
   insertInvoiceReminderSchema,
+  insertProformaInvoiceSchema,
+  insertProformaInvoiceItemSchema,
   insertInvoiceAgingReportSchema,
   insertApprovalWorkflowSchema,
   insertApprovalRequestSchema,
