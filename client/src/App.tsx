@@ -1024,7 +1024,7 @@ function AuthenticatedApp() {
         <Route path="/onboarding">
           <Onboarding />
         </Route>
-        <Route path="/spending-wizard">
+        <Route path="/smart-spending-wizard">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
             <SpendingWizard />
           </ProtectedRoute>
