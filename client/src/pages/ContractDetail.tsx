@@ -162,6 +162,42 @@ export default function ContractDetail() {
     window.print();
   };
 
+  const handleViewPDFNewTab = () => {
+    window.open(`/api/contracts/${contractId}/pdf`, '_blank');
+  };
+
+  const handleDownloadPDF = () => {
+    const link = document.createElement('a');
+    link.href = `/api/contracts/${contractId}/pdf?download=true`;
+    link.download = `contract-${contractId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRenewContract = () => {
+    // Navigate to create a new contract based on this one
+    window.location.href = `/contracts/create?renewal=${contractId}`;
+  };
+
+  const handleAddAttachment = () => {
+    // Create file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files) {
+        toast({
+          title: "Files Selected",
+          description: `${files.length} file(s) selected for upload.`,
+        });
+        // TODO: Implement file upload to server
+      }
+    };
+    input.click();
+  };
+
   const handleDownloadPDF = () => {
     // PDF download functionality
     toast({
@@ -186,7 +222,6 @@ export default function ContractDetail() {
         
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleEmailContract}>
-            <Send className="w-4 h-4 mr-2" />
             View Contract
           </Button>
           <Button variant="outline" onClick={handlePrintPDF}>
@@ -195,6 +230,31 @@ export default function ContractDetail() {
           <Button variant="outline" onClick={handleEmailContract}>
             <Send className="w-4 h-4 mr-2" />
           </Button>
+          
+          {/* PDF Actions Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                View PDF
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleViewPDFNewTab}>
+                <Eye className="w-4 h-4 mr-2" />
+                View PDF in New Tab
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownloadPDF}>
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePrintPDF}>
+                <Printer className="w-4 h-4 mr-2" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -203,10 +263,6 @@ export default function ContractDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEmailContract}>
-                <Send className="w-4 h-4 mr-2" />
-                View Contract
-              </DropdownMenuItem>
               <DropdownMenuItem>
                 <CheckSquare className="w-4 h-4 mr-2" />
                 Mark as signed
@@ -435,9 +491,24 @@ export default function ContractDetail() {
                 <Paperclip className="w-5 h-5" />
                 Attachments
               </CardTitle>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleAddAttachment}
+                  data-testid="button-add-attachment"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Attachment
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">No attachments available.</p>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Paperclip className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 mb-2">No attachments uploaded yet</p>
+                <p className="text-sm text-gray-500">Click "Add Attachment" or drag files here to upload</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -465,7 +536,18 @@ export default function ContractDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">No renewal history available.</p>
+              <div className="flex items-center justify-between mb-4">
+                <Button 
+                  variant="default" 
+                  onClick={handleRenewContract}
+                  className="bg-gray-800 hover:bg-gray-700"
+                  data-testid="button-renew-contract"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Renew Contract
+                </Button>
+              </div>
+              <p className="text-gray-600">Renewals for this contract are not found</p>
             </CardContent>
           </Card>
         </TabsContent>
