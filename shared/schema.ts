@@ -4298,7 +4298,7 @@ export const projects = pgTable("projects", {
   customerIdx: index("projects_customer_idx").on(table.customerId),
 }));
 
-export const tasks: any = pgTable("tasks", {
+export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   projectId: integer("project_id").references(() => projects.id), // nullable for standalone tasks
