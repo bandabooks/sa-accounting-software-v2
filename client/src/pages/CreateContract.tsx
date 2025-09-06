@@ -77,6 +77,8 @@ export default function CreateContract() {
   const { data: templatesData, isLoading: isLoadingTemplates, error: templatesError } = useQuery({
     queryKey: ["/api/contracts/templates"],
     retry: 3,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch clients  
@@ -89,8 +91,17 @@ export default function CreateContract() {
     console.error('Templates loading error:', templatesError);
   }
 
-  // Ensure data is array
-  const templates = Array.isArray(templatesData) ? templatesData : [];
+  // Ensure data is array - handle both array and object responses
+  let templates: ContractTemplate[] = [];
+  if (Array.isArray(templatesData)) {
+    templates = templatesData;
+  } else if (templatesData && typeof templatesData === 'object' && Object.keys(templatesData).length > 0) {
+    // If it's an object, try to extract templates
+    templates = Object.values(templatesData).filter((item): item is ContractTemplate => 
+      item && typeof item === 'object' && 'id' in item && 'name' in item
+    );
+  }
+  
   const clients = Array.isArray(clientsData) ? clientsData : [];
 
   // Log template loading status
@@ -98,7 +109,9 @@ export default function CreateContract() {
     templatesCount: templates.length,
     isLoading: isLoadingTemplates,
     hasError: !!templatesError,
-    templatesData: templatesData
+    templatesData: templatesData,
+    templatesDataType: typeof templatesData,
+    isArray: Array.isArray(templatesData)
   });
 
   // Create contract mutation
