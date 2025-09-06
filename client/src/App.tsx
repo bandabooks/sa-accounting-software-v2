@@ -121,6 +121,7 @@ import CustomerInsights from "@/pages/customer-insights";
 import AgingReports from "@/pages/aging-reports";
 import Contracts from "@/pages/ContractsNew";
 import CreateContract from "@/pages/CreateContract";
+import ContractTemplates from "@/pages/ContractTemplates";
 
 import Integrations from "@/pages/integrations";
 import CIPCCompliance from "@/pages/cipc-compliance";
@@ -805,6 +806,11 @@ function AuthenticatedApp() {
         <Route path="/contracts/create">
           <ProtectedRoute permission={PERMISSIONS.CONTRACTS_CREATE}>
             <CreateContract />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/contracts/templates">
+          <ProtectedRoute permission={PERMISSIONS.COMPLIANCE_VIEW}>
+            <ContractTemplates />
           </ProtectedRoute>
         </Route>
         <Route path="/contracts">

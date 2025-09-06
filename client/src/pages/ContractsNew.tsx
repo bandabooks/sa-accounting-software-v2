@@ -288,6 +288,13 @@ export default function ContractsNew() {
             <Filter className="w-4 h-4 mr-2" />
             Filters
           </Button>
+          <Button 
+            variant="outline"
+            onClick={() => navigate("/contracts/templates")}
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Manage Templates
+          </Button>
           <Button onClick={handleCreateContract} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
             New Contract
