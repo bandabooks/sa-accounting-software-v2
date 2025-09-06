@@ -95,10 +95,7 @@ export default function ContractTemplates() {
 
   // Create template mutation
   const createTemplateMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/contracts/templates", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: any) => apiRequest("/api/contracts/templates", "POST", data),
     onSuccess: () => {
       toast({
         title: "Template Created",
@@ -119,9 +116,7 @@ export default function ContractTemplates() {
 
   // Delete template mutation
   const deleteTemplateMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/contracts/templates/${id}`, {
-      method: "DELETE",
-    }),
+    mutationFn: (id: number) => apiRequest(`/api/contracts/templates/${id}`, "DELETE"),
     onSuccess: () => {
       toast({
         title: "Template Deleted",
@@ -133,9 +128,7 @@ export default function ContractTemplates() {
 
   // Seed South African professional templates
   const seedTemplatesMutation = useMutation({
-    mutationFn: () => apiRequest("/api/contracts/templates/seed", {
-      method: "POST",
-    }),
+    mutationFn: () => apiRequest("/api/contracts/templates/seed", "POST"),
     onSuccess: () => {
       toast({
         title: "Templates Added",
