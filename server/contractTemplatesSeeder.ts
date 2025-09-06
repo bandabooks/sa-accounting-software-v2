@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { contractTemplates } from "@/shared/schema";
+import { contractTemplates } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
 // Comprehensive South African Professional Engagement Letter Templates
