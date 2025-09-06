@@ -17681,7 +17681,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/contracts/templates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const template = await contractService.createTemplate(req.user.companyId, req.body);
+      const template = await contractService.createTemplate(req.user.companyId, {
+        ...req.body,
+        createdBy: req.user.id,
+      });
       res.status(201).json(template);
     } catch (error) {
       console.error("Error creating contract template:", error);
@@ -17704,7 +17707,10 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.put("/api/contracts/templates/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const template = await contractService.updateTemplate(req.user.companyId, parseInt(req.params.id), req.body);
+      const template = await contractService.updateTemplate(req.user.companyId, parseInt(req.params.id), {
+        ...req.body,
+        updatedBy: req.user.id,
+      });
       if (!template) {
         return res.status(404).json({ error: "Template not found" });
       }

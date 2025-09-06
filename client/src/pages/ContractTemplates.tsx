@@ -74,6 +74,8 @@ export default function ContractTemplates() {
   const [selectedPackage, setSelectedPackage] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<ContractTemplate | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const form = useForm<TemplateForm>({
     resolver: zodResolver(templateSchema),
@@ -180,6 +182,11 @@ export default function ContractTemplates() {
     form.setValue("bodyMd", template.bodyMd);
     form.setValue("fields", Array.isArray(template.fields) ? template.fields.join(', ') : '');
     setIsCreateDialogOpen(true);
+  };
+
+  const handleView = (template: ContractTemplate) => {
+    setViewingTemplate(template);
+    setIsViewDialogOpen(true);
   };
 
   const statistics = {
@@ -468,6 +475,10 @@ We are pleased to confirm our engagement to provide professional services..."
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleView(template)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(template)}>
                               <Edit3 className="mr-2 h-4 w-4" />
                               Edit
@@ -513,6 +524,79 @@ We are pleased to confirm our engagement to provide professional services..."
           </div>
         </CardContent>
       </Card>
+
+      {/* View Template Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Template Preview: {viewingTemplate?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Preview the template content, merge fields, and service package details
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingTemplate && (
+            <div className="space-y-6">
+              {/* Template Details */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Service Package</Label>
+                  <Badge className={`mt-1 ${packageColors[viewingTemplate.servicePackage as keyof typeof packageColors]}`}>
+                    {servicePackages.find(p => p.value === viewingTemplate.servicePackage)?.label || viewingTemplate.servicePackage}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Version</Label>
+                  <p className="mt-1 text-sm">v{viewingTemplate.version}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Merge Fields</Label>
+                  <p className="mt-1 text-sm">{Array.isArray(viewingTemplate.fields) ? viewingTemplate.fields.length : 0} fields</p>
+                </div>
+              </div>
+
+              {/* Merge Fields */}
+              {Array.isArray(viewingTemplate.fields) && viewingTemplate.fields.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Available Merge Fields</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {viewingTemplate.fields.map((field: string, index: number) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {`{{${field}}}`}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Template Content */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Template Content</Label>
+                <div className="mt-2 prose max-w-none">
+                  <pre className="whitespace-pre-wrap text-sm bg-white p-4 border rounded-lg font-mono">
+                    {viewingTemplate.bodyMd}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Creation Info */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t text-sm text-gray-600">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Created</Label>
+                  <p className="mt-1">{new Date(viewingTemplate.createdAt).toLocaleDateString()} at {new Date(viewingTemplate.createdAt).toLocaleTimeString()}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Last Updated</Label>
+                  <p className="mt-1">{new Date(viewingTemplate.updatedAt).toLocaleDateString()} at {new Date(viewingTemplate.updatedAt).toLocaleTimeString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
