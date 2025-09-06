@@ -50,7 +50,7 @@ interface ContractTemplate {
 interface Contract {
   id: number;
   templateId: number;
-  clientId: number;
+  customerId: number;
   status: string;
   title: string;
   value: number;

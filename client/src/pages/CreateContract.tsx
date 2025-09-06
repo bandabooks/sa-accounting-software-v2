@@ -19,7 +19,7 @@ import { useLocation } from "wouter";
 
 const contractSchema = z.object({
   templateId: z.string().min(1, "Please select a template"),
-  clientId: z.string().min(1, "Please select a client"),
+  customerId: z.string().min(1, "Please select a customer"),
   subject: z.string().min(1, "Subject is required"),
   contractValue: z.string().optional(),
   contractType: z.string().min(1, "Contract type is required"),
@@ -42,7 +42,7 @@ interface ContractTemplate {
   servicePackage: string;
 }
 
-interface Client {
+interface Customer {
   id: number;
   name: string;
   company?: string;
@@ -60,7 +60,7 @@ export default function CreateContract() {
     resolver: zodResolver(contractSchema),
     defaultValues: {
       templateId: "",
-      clientId: "",
+      customerId: "",
       subject: "",
       contractValue: "",
       contractType: "",
@@ -81,14 +81,14 @@ export default function CreateContract() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch clients  
-  const { data: clientsData, isLoading: isLoadingClients } = useQuery({
+  // Fetch customers  
+  const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["/api/customers"],
   });
 
   // Ensure data is array
   const templates = Array.isArray(templatesData) ? templatesData : [];
-  const clients = Array.isArray(clientsData) ? clientsData : [];
+  const customers = Array.isArray(customersData) ? customersData : [];
 
   // Create contract mutation
   const createContractMutation = useMutation({
@@ -246,7 +246,7 @@ export default function CreateContract() {
               {/* Customer Selection */}
               <FormField
                 control={form.control}
-                name="clientId"
+                name="customerId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
@@ -261,18 +261,18 @@ export default function CreateContract() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {isLoadingClients ? (
+                        {isLoadingCustomers ? (
                           <SelectItem value="loading" disabled>
                             Loading customers...
                           </SelectItem>
-                        ) : clients.length === 0 ? (
-                          <SelectItem value="no-clients" disabled>
+                        ) : customers.length === 0 ? (
+                          <SelectItem value="no-customers" disabled>
                             No customers found. Please add a customer first.
                           </SelectItem>
                         ) : (
-                          clients.map((client: Client) => (
-                            <SelectItem key={client.id} value={client.id.toString()}>
-                              {client.name} {client.company && `(${client.company})`}
+                          customers.map((customer: Customer) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.name} {customer.company && `(${customer.company})`}
                             </SelectItem>
                           ))
                         )}
