@@ -489,7 +489,7 @@ const navigationGroups = [
       { path: "/professional-services", label: "Service Package Management", icon: Briefcase, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/calendar", label: "Calendar", icon: Calendar, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/contracts", label: "Contract Management", icon: FileText, permission: "CONTRACTS_VIEW", module: "contracts" }
+      { path: "/contracts", label: "Contract Management", icon: FileText, permission: "COMPLIANCE_VIEW", module: "contracts" }
     ]
   },
   // 8.5. Practice Management (for accounting professionals)
