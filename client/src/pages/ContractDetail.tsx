@@ -9,7 +9,6 @@ import {
   RefreshCw, 
   CheckSquare, 
   StickyNote,
-  Template,
   Plus,
   Eye,
   Edit,
@@ -288,7 +287,7 @@ export default function ContractDetail() {
                 <div className="space-y-4">
                   <p className="text-gray-800">{"{"}dark_logo_image_with_uri{"}"}</p>
                   <div className="space-y-2">
-                    <p>To : {"{"}contact_firstname{"} {"}{"}contact_lastname{"}"}</p>
+                    <p>To : {"{"}contact_firstname{"}"} {"{"}contact_lastname{"}"}</p>
                     <p>{"{"}client_company{"}"}</p>
                   </div>
                   <p>{"{"}contract_subject{"}"}</p>
