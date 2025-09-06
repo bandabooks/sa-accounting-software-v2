@@ -1602,6 +1602,7 @@ export const insertEstimateItemSchema = createInsertSchema(estimateItems).omit({
 
 export const insertProformaInvoiceSchema = createInsertSchema(proformaInvoices).omit({
   id: true,
+  proformaNumber: true,
   createdAt: true,
   updatedAt: true,
 });
