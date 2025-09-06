@@ -93,14 +93,6 @@ export default function ContractTemplates() {
 
   const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
 
-  // Auto-seed templates when no templates exist
-  useEffect(() => {
-    if (!isLoading && templates.length === 0) {
-      // Automatically add South African professional templates
-      seedTemplatesMutation.mutate();
-    }
-  }, [templates.length, isLoading, seedTemplatesMutation]);
-
   // Create template mutation
   const createTemplateMutation = useMutation({
     mutationFn: (data: any) => apiRequest("/api/contracts/templates", "POST", data),
@@ -152,6 +144,14 @@ export default function ContractTemplates() {
       });
     },
   });
+
+  // Auto-seed templates when no templates exist
+  useEffect(() => {
+    if (!isLoading && templates.length === 0 && !seedTemplatesMutation.isPending) {
+      // Automatically add South African professional templates
+      seedTemplatesMutation.mutate();
+    }
+  }, [templates.length, isLoading]);
 
   // Filter templates
   const filteredTemplates = templates.filter((template: ContractTemplate) => {
