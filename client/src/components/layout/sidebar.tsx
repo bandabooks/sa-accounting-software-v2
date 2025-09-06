@@ -35,6 +35,17 @@ const getNavigationGroupsForRole = (userRole: string) => {
       ]
     },
     
+    // 1.5. Contract Management - Direct access
+    {
+      id: "contracts",
+      label: "Contract Management",
+      module: "compliance",
+      roleTypes: ["all"],
+      items: [
+        { path: "/contracts", label: "Contract Management", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" }
+      ]
+    },
+    
     // 2. Core Accounting - Essential for all accounting professionals
     {
       id: "accounting",
