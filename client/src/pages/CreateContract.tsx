@@ -65,26 +65,22 @@ export default function CreateContract() {
   });
 
   // Fetch templates
-  const { data: templatesResponse = [], isLoading: isLoadingTemplates } = useQuery({
+  const { data: templatesData, isLoading: isLoadingTemplates } = useQuery({
     queryKey: ["/api/contracts/templates"],
-    queryFn: async () => {
-      const response = await apiRequest("/api/contracts/templates");
-      return Array.isArray(response) ? response : [];
-    },
   });
 
-  const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
-
-  // Fetch clients
-  const { data: clientsResponse = [], isLoading: isLoadingClients } = useQuery({
+  // Fetch clients  
+  const { data: clientsData, isLoading: isLoadingClients } = useQuery({
     queryKey: ["/api/customers"],
-    queryFn: async () => {
-      const response = await apiRequest("/api/customers");
-      return Array.isArray(response) ? response : [];
-    },
   });
 
-  const clients = Array.isArray(clientsResponse) ? clientsResponse : [];
+  // Ensure data is array
+  const templates = Array.isArray(templatesData) ? templatesData : [];
+  const clients = Array.isArray(clientsData) ? clientsData : [];
+
+  // Debug logging
+  console.log('Templates loaded:', templates.length, templates);
+  console.log('Clients loaded:', clients.length, clients);
 
   // Create contract mutation
   const createContractMutation = useMutation({
@@ -121,8 +117,18 @@ export default function CreateContract() {
       });
       setMergeFields(initialFields);
       
-      // Set contract type based on template
-      form.setValue("contractType", template.servicePackage || "");
+      // Set contract type based on template service package
+      const packageToType: Record<string, string> = {
+        'basic': 'bookkeeping',
+        'standard': 'engagement_letter',
+        'premium': 'advisory',
+        'enterprise': 'other',
+        'tax_compliance': 'tax_compliance',
+        'vat_services': 'vat_services',
+        'audit': 'audit',
+        'payroll': 'payroll'
+      };
+      form.setValue("contractType", packageToType[template.servicePackage] || "other");
     }
   };
 
@@ -139,14 +145,15 @@ export default function CreateContract() {
   };
 
   const contractTypes = [
-    "Engagement Letters",
-    "VAT Practitioner Services", 
-    "Tax Compliance",
-    "Annual Financial Statements",
-    "Advisory Services",
-    "Payroll Services",
-    "Audit Services",
-    "Other Professional Services"
+    { value: "engagement_letter", label: "Engagement Letters" },
+    { value: "vat_services", label: "VAT Practitioner Services" },
+    { value: "tax_compliance", label: "Tax Compliance" },
+    { value: "financial_statements", label: "Annual Financial Statements" },
+    { value: "advisory", label: "Advisory Services" },
+    { value: "payroll", label: "Payroll Services" },
+    { value: "audit", label: "Audit Services" },
+    { value: "bookkeeping", label: "Bookkeeping Services" },
+    { value: "other", label: "Other Professional Services" }
   ];
 
   // Show loading state while data is being fetched
@@ -246,11 +253,17 @@ export default function CreateContract() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {clients.map((client: Client) => (
-                          <SelectItem key={client.id} value={client.id.toString()}>
-                            {client.name} {client.company && `(${client.company})`}
+                        {clients.length === 0 ? (
+                          <SelectItem value="no-clients" disabled>
+                            No customers found. Please add a customer first.
                           </SelectItem>
-                        ))}
+                        ) : (
+                          clients.map((client: Client) => (
+                            <SelectItem key={client.id} value={client.id.toString()}>
+                              {client.name} {client.company && `(${client.company})`}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -314,8 +327,8 @@ export default function CreateContract() {
                       </FormControl>
                       <SelectContent>
                         {contractTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -390,11 +403,17 @@ export default function CreateContract() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {templates.map((template: ContractTemplate) => (
-                          <SelectItem key={template.id} value={template.id.toString()}>
-                            {template.name} (v{template.version})
+                        {templates.length === 0 ? (
+                          <SelectItem value="no-templates" disabled>
+                            No templates found. Please create a template first.
                           </SelectItem>
-                        ))}
+                        ) : (
+                          templates.map((template: ContractTemplate) => (
+                            <SelectItem key={template.id} value={template.id.toString()}>
+                              {template.name} (v{template.version})
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
