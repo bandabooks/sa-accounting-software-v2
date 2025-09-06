@@ -208,25 +208,6 @@ export default function ContractTemplates() {
           </p>
         </div>
         <div className="ml-auto flex gap-3">
-          {templates.length === 0 && (
-            <Button 
-              onClick={() => seedTemplatesMutation.mutate()}
-              disabled={seedTemplatesMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {seedTemplatesMutation.isPending ? (
-                <>
-                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Adding Templates...
-                </>
-              ) : (
-                <>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Add SA Professional Templates
-                </>
-              )}
-            </Button>
-          )}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700">

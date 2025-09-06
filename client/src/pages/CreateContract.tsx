@@ -78,10 +78,6 @@ export default function CreateContract() {
   const templates = Array.isArray(templatesData) ? templatesData : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
 
-  // Debug logging
-  console.log('Templates loaded:', templates.length, templates);
-  console.log('Clients loaded:', clients.length, clients);
-
   // Create contract mutation
   const createContractMutation = useMutation({
     mutationFn: async (data: ContractForm) => {

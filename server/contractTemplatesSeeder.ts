@@ -752,21 +752,29 @@ Date: _______________`,
 ];
 
 export async function seedContractTemplates(companyId: number, userId: number) {
-  console.log("🔄 Seeding South African professional engagement letter templates...");
+  console.log("🔄 Ensuring South African professional engagement letter templates are available...");
   
   try {
-    // Check if templates already exist for this company
+    // Get existing templates for this company
     const existingTemplates = await db.select()
       .from(contractTemplates)
       .where(eq(contractTemplates.companyId, companyId));
     
-    if (existingTemplates.length > 0) {
-      console.log(`✓ Contract templates already exist for company ${companyId} (${existingTemplates.length} templates)`);
+    // Create a set of existing template names for quick lookup
+    const existingTemplateNames = new Set(existingTemplates.map(t => t.name));
+    
+    // Track what templates need to be added
+    const templatesToAdd = SOUTH_AFRICAN_ENGAGEMENT_TEMPLATES.filter(
+      template => !existingTemplateNames.has(template.name)
+    );
+    
+    if (templatesToAdd.length === 0) {
+      console.log(`✓ All SA professional templates already exist for company ${companyId}`);
       return;
     }
 
-    // Insert all templates
-    for (const template of SOUTH_AFRICAN_ENGAGEMENT_TEMPLATES) {
+    // Insert missing templates
+    for (const template of templatesToAdd) {
       await db.insert(contractTemplates).values({
         companyId,
         name: template.name,
@@ -778,14 +786,14 @@ export async function seedContractTemplates(companyId: number, userId: number) {
       });
     }
 
-    console.log(`✓ Successfully seeded ${SOUTH_AFRICAN_ENGAGEMENT_TEMPLATES.length} professional engagement letter templates`);
+    console.log(`✓ Successfully added ${templatesToAdd.length} missing SA professional templates`);
     console.log("📋 Templates added:");
-    SOUTH_AFRICAN_ENGAGEMENT_TEMPLATES.forEach((template, index) => {
+    templatesToAdd.forEach((template, index) => {
       console.log(`   ${index + 1}. ${template.name} (${template.servicePackage})`);
     });
 
   } catch (error) {
-    console.error("❌ Error seeding contract templates:", error);
+    console.error("❌ Error ensuring contract templates:", error);
     throw error;
   }
 }
