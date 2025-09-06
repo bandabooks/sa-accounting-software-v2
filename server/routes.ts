@@ -2951,7 +2951,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/proforma-invoices/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updateData = req.body;
+      const { items, ...proformaData } = req.body;
+      const companyId = req.user?.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      // Add company ID to proforma data
+      proformaData.companyId = companyId;
+      
+      // Validate proforma data using schema with date conversion
+      const validatedProforma = insertProformaInvoiceSchema.parse({
+        ...proformaData,
+        issueDate: new Date(proformaData.issueDate),
+        expiryDate: new Date(proformaData.expiryDate),
+      });
+      
+      // Validate items
+      const validatedItems = items.map((item: any) => insertProformaInvoiceItemSchema.parse({
+        ...item,
+        companyId
+      }));
+      
+      const updateData = { 
+        proforma: validatedProforma, 
+        items: validatedItems 
+      };
       
       const proformaInvoice = await storage.updateProformaInvoice(id, updateData);
       
@@ -2964,6 +2990,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(proformaInvoice);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
       console.error("Error updating proforma invoice:", error);
       res.status(500).json({ message: "Failed to update proforma invoice" });
     }
