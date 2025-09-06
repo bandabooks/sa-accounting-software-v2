@@ -2920,8 +2920,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add company ID to proforma data
       proformaData.companyId = companyId;
       
-      // Validate proforma data using schema
-      const validatedProforma = insertProformaInvoiceSchema.parse(proformaData);
+      // Validate proforma data using schema with date conversion
+      const validatedProforma = insertProformaInvoiceSchema.parse({
+        ...proformaData,
+        issueDate: new Date(proformaData.issueDate),
+        expiryDate: new Date(proformaData.expiryDate),
+      });
       
       // Validate items
       const validatedItems = items.map((item: any) => insertProformaInvoiceItemSchema.parse({
