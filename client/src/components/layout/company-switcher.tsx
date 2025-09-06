@@ -158,11 +158,11 @@ export default function CompanySwitcher() {
           className="flex items-center space-x-2 h-9 px-3 hover:bg-white/20 bg-white/10 border border-white/20 rounded backdrop-blur-sm"
         >
           <div className="relative">
-            <Avatar className="h-5 w-5 flex-shrink-0 rounded">
-              <AvatarFallback className="bg-primary text-white text-xs font-medium rounded flex items-center justify-center">
+            <div className="h-6 w-6 bg-primary rounded flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-medium">
                 {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
-              </AvatarFallback>
-            </Avatar>
+              </span>
+            </div>
             {/* Green active indicator */}
             <div className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 border border-white rounded-full"></div>
           </div>
