@@ -154,26 +154,22 @@ export default function CompanySwitcher() {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="flex items-center space-x-3 h-auto px-3 py-2 hover:bg-white/20 bg-white/10 border border-white/20 rounded-lg min-w-[200px] backdrop-blur-sm"
+          size="sm"
+          className="flex items-center space-x-2 h-9 px-3 hover:bg-white/20 bg-white/10 border border-white/20 rounded backdrop-blur-sm"
         >
           <div className="relative">
-            <Avatar className="h-8 w-12 flex-shrink-0 rounded-lg">
-              <AvatarFallback className="bg-primary text-white text-sm font-semibold rounded-lg">
+            <Avatar className="h-6 w-6 flex-shrink-0 rounded">
+              <AvatarFallback className="bg-primary text-white text-xs font-semibold rounded">
                 {getCompanyInitials(activeCompany.displayName || activeCompany.name)}
               </AvatarFallback>
             </Avatar>
             {/* Green active indicator */}
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-white rounded-full"></div>
           </div>
           <div className="flex-1 min-w-0 text-left">
             <div className="font-medium text-white truncate text-sm">
               {activeCompany.displayName || activeCompany.name}
             </div>
-            {activeCompany.industry && (
-              <div className="text-xs text-gray-300 truncate max-w-[140px]">
-                {activeCompany.industry}
-              </div>
-            )}
           </div>
           <ChevronDown className="h-4 w-4 text-white/70" />
         </Button>
