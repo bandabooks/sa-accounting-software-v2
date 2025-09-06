@@ -3454,7 +3454,22 @@ export class DatabaseStorage implements IStorage {
   async getAllProformaInvoices(companyId?: number): Promise<ProformaInvoiceWithCustomer[]> {
     try {
       const query = db
-        .select()
+        .select({
+          id: proformaInvoices.id,
+          companyId: proformaInvoices.companyId,
+          proformaNumber: proformaInvoices.proformaNumber,
+          customerId: proformaInvoices.customerId,
+          issueDate: proformaInvoices.issueDate,
+          expiryDate: proformaInvoices.expiryDate,
+          subtotal: proformaInvoices.subtotal,
+          vatAmount: proformaInvoices.vatAmount,
+          total: proformaInvoices.total,
+          status: proformaInvoices.status,
+          notes: proformaInvoices.notes,
+          createdAt: proformaInvoices.createdAt,
+          updatedAt: proformaInvoices.updatedAt,
+          customer: customers
+        })
         .from(proformaInvoices)
         .leftJoin(customers, eq(proformaInvoices.customerId, customers.id));
 
@@ -3465,10 +3480,9 @@ export class DatabaseStorage implements IStorage {
       const results = await query;
       
       const result = results.map((row) => {
-        const proforma = row.proforma_invoices;
-        const customer = row.customers || {
+        const customer = row.customer || {
           id: 0,
-          companyId: proforma.companyId,
+          companyId: row.companyId,
           name: 'Unknown Customer',
           email: '',
           phone: '',
@@ -3484,7 +3498,19 @@ export class DatabaseStorage implements IStorage {
         };
         
         return {
-          ...proforma,
+          id: row.id,
+          companyId: row.companyId,
+          proformaNumber: row.proformaNumber,
+          customerId: row.customerId,
+          issueDate: row.issueDate,
+          expiryDate: row.expiryDate,
+          subtotal: row.subtotal,
+          vatAmount: row.vatAmount,
+          total: row.total,
+          status: row.status,
+          notes: row.notes,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
           customer
         };
       });
