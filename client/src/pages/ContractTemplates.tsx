@@ -131,6 +131,27 @@ export default function ContractTemplates() {
     },
   });
 
+  // Seed South African professional templates
+  const seedTemplatesMutation = useMutation({
+    mutationFn: () => apiRequest("/api/contracts/templates/seed", {
+      method: "POST",
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Templates Added",
+        description: "South African professional engagement letter templates have been added successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts/templates"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add templates",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter templates
   const filteredTemplates = templates.filter((template: ContractTemplate) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -194,7 +215,26 @@ export default function ContractTemplates() {
             Manage professional engagement letter templates
           </p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-3">
+          {templates.length === 0 && (
+            <Button 
+              onClick={() => seedTemplatesMutation.mutate()}
+              disabled={seedTemplatesMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {seedTemplatesMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Adding Templates...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Add SA Professional Templates
+                </>
+              )}
+            </Button>
+          )}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700">

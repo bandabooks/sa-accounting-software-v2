@@ -219,6 +219,10 @@ export async function seedDatabase() {
     const { complianceGamification } = await import('./compliance-gamification.js');
     await complianceGamification.seedDefaultData();
 
+    // Seed South African professional engagement letter templates
+    const { seedContractTemplates } = await import('./contractTemplatesSeeder.js');
+    await seedContractTemplates(defaultCompany.id, 1); // Use company 1 and admin user 1
+
     console.log("Database seeding completed successfully!");
   } catch (error) {
     console.error("Error seeding database:", error);

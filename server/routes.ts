@@ -17658,6 +17658,27 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // Seed South African Professional Templates
+  app.post("/api/contracts/templates/seed", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Only allow super admin or company admin to seed templates
+      if (req.user.role !== 'super_admin' && req.user.role !== 'company_admin') {
+        return res.status(403).json({ error: "Insufficient permissions" });
+      }
+
+      const { seedContractTemplates } = await import('./contractTemplatesSeeder');
+      await seedContractTemplates(req.user.companyId, req.user.id);
+      
+      res.json({ 
+        success: true, 
+        message: "South African professional engagement letter templates seeded successfully" 
+      });
+    } catch (error) {
+      console.error("Error seeding contract templates:", error);
+      res.status(500).json({ error: "Failed to seed contract templates" });
+    }
+  });
+
   app.post("/api/contracts/templates", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const template = await contractService.createTemplate(req.user.companyId, req.body);
