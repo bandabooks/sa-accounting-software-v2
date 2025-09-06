@@ -7042,9 +7042,9 @@ export const contractRelations = relations(contracts, ({ one, many }) => ({
     fields: [contracts.companyId],
     references: [companies.id],
   }),
-  client: one(clients, {
-    fields: [contracts.clientId],
-    references: [clients.id],
+  customer: one(customers, {
+    fields: [contracts.customerId],
+    references: [customers.id],
   }),
   template: one(contractTemplates, {
     fields: [contracts.templateId],
