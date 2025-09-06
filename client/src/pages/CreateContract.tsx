@@ -165,7 +165,7 @@ export default function CreateContract() {
   ];
 
   // Show loading state while data is being fetched
-  if (isLoadingTemplates || isLoadingClients) {
+  if (isLoadingTemplates || isLoadingCustomers) {
     return (
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center h-64">
