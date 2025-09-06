@@ -86,7 +86,7 @@ export class ContractService {
         eq(contractTemplates.id, templateId),
         eq(contractTemplates.companyId, companyId)
       ));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Contract management
@@ -99,6 +99,7 @@ export class ContractService {
     const template = await this.getTemplate(companyId, data.templateId);
     if (template) {
       await this.createVersion(contract.id, {
+        contractId: contract.id,
         version: 1,
         bodyMd: template.bodyMd,
         mergeData: {},
@@ -190,6 +191,7 @@ export class ContractService {
     const nextVersionNumber = currentVersion ? currentVersion.version + 1 : 1;
 
     const newVersion = await this.createVersion(contractId, {
+      contractId: contractId,
       version: nextVersionNumber,
       bodyMd: template.bodyMd,
       mergeData: {},
