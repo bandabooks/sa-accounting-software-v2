@@ -188,51 +188,55 @@ export default function BusinessDashboard() {
   }
 
   return (
-    <div className="space-y-6" data-testid="business-dashboard">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Business Dashboard</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Financial performance and operational insights
-          </p>
+    <div className="min-h-screen bg-gray-50/50" data-testid="business-dashboard">
+      {/* Header with Global Controls */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Business Dashboard</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Financial performance and operational insights
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Time Range Selector */}
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-32" data-testid="time-range-selector">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Refresh Button */}
+            <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="button-refresh">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+
+            {/* Export Button */}
+            <Button variant="outline" size="sm" data-testid="button-export">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-3">
-          {/* Time Range Selector */}
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32" data-testid="time-range-selector">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
-            </SelectContent>
-          </Select>
 
-          {/* Refresh Button */}
-          <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="button-refresh">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-
-          {/* Export Button */}
-          <Button variant="outline" size="sm" data-testid="button-export">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+        {/* Last Update Indicator */}
+        <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+          <div className="w-2 h-2 bg-green-500 rounded-full" data-testid="status-indicator"></div>
+          <span data-testid="text-last-updated">Last updated: {lastRefresh.toLocaleTimeString()}</span>
         </div>
       </div>
 
-      {/* Last Update Indicator */}
-      <div className="flex items-center gap-2 text-xs text-gray-500">
-        <div className="w-2 h-2 bg-green-500 rounded-full" data-testid="status-indicator"></div>
-        <span data-testid="text-last-updated">Last updated: {lastRefresh.toLocaleTimeString()}</span>
-      </div>
-      {/* KPI Strip - 6 Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="kpi-grid">
+      <div className="p-6 space-y-8">
+        {/* KPI Strip - 6 Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="kpi-grid">
           {businessMetrics.map((metric, index) => (
             <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer" data-testid={`kpi-card-${index}`}>
               <CardContent className="p-4">
@@ -270,8 +274,8 @@ export default function BusinessDashboard() {
           ))}
         </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-testid="charts-section">
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-testid="charts-section">
           {/* Cash Flow Chart */}
           <Card data-testid="chart-cashflow">
             <CardHeader className="pb-3">
@@ -315,8 +319,8 @@ export default function BusinessDashboard() {
           </Card>
         </div>
 
-      {/* Work Queue and Money in Motion */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Work Queue and Money in Motion */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Work Queue */}
           <Card className="lg:col-span-2" data-testid="work-queue">
             <CardHeader className="pb-3">
@@ -408,8 +412,8 @@ export default function BusinessDashboard() {
           </Card>
         </div>
 
-      {/* Recent High-Value Transactions */}
-      <Card data-testid="recent-transactions">
+        {/* Recent High-Value Transactions */}
+        <Card data-testid="recent-transactions">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold">Recent High-Value Activity</CardTitle>
@@ -456,8 +460,9 @@ export default function BusinessDashboard() {
                 </div>
               )}
             </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
