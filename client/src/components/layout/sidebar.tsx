@@ -333,6 +333,7 @@ const getFullNavigationGroups = () => [
     id: "compliance",
     label: "Practice Management",
     icon: Shield,
+    path: "/compliance-dashboard",
     module: "compliance",
     items: [
       { path: "/compliance-dashboard", label: "Compliance Dashboard", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
@@ -499,6 +500,7 @@ const navigationGroups = [
     id: "compliance",
     label: "Practice Management",
     icon: Shield,
+    path: "/compliance-dashboard",
     module: "compliance",
     items: [
       { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
