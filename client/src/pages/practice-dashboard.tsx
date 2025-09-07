@@ -364,6 +364,10 @@ export default function PracticeDashboard() {
                       setLocation('/emp201');
                     } else if (filing.service === 'EMP501') {
                       setLocation('/emp501');
+                    } else if (filing.service === 'ITR12') {
+                      setLocation('/itr12');
+                    } else if (filing.service === 'ITR14') {
+                      setLocation('/itr14');
                     } else if (filing.service === 'CIPC') {
                       setLocation('/cipc-compliance');
                     } else if (filing.service === 'PROV_TAX') {
