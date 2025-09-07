@@ -184,7 +184,7 @@ export const AVAILABLE_MODULES: Record<string, Module> = {
   },
   compliance_management: {
     id: "compliance_management",
-    name: "Compliance Management",
+    name: "Practice Management",
     description: "Professional compliance tracking, client management, and regulatory requirements for tax practitioners",
     icon: Shield,
     category: "compliance",

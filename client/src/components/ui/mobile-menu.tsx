@@ -116,7 +116,7 @@ const navigationGroups = [
   },
   {
     id: "compliance",
-    label: "Compliance Management",
+    label: "Practice Management",
     icon: Shield,
     module: "compliance",
     items: [

@@ -65,7 +65,7 @@ const userRoles: UserRole[] = [
     recommendedPlan: "professional",
     features: [
       "Audit trail & documentation",
-      "Compliance management suite",
+      "Practice management suite",
       "Risk assessment tools",
       "Regulatory reporting"
     ]

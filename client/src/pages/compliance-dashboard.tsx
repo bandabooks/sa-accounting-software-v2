@@ -164,7 +164,7 @@ export default function ComplianceDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Compliance Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Practice Management</h1>
           <p className="text-muted-foreground">Centralized South African compliance tracking for SARS, CIPC, and Labour requirements</p>
         </div>
         <div className="flex items-center gap-3">

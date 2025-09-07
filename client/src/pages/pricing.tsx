@@ -55,7 +55,7 @@ export default function Pricing() {
         "Inventory Management",
         "VAT Management",
         "Advanced Analytics",
-        "Compliance Management"
+        "Practice Management"
       ],
       limitations: [],
       cta: "Start Free Trial"

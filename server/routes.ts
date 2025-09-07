@@ -14900,7 +14900,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     try {
       // Allow compliance managers and super admins to view pricing
       if (!req.user.permissions.includes('compliance_management:view') && req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: "Compliance management access required" });
+        return res.status(403).json({ message: "Practice management access required" });
       }
 
       const packages = await db.select().from(servicePackagePricing).orderBy(servicePackagePricing.monthlyPrice);
@@ -14916,7 +14916,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     try {
       // Allow compliance managers and super admins to update pricing
       if (!req.user.permissions.includes('compliance_management:view') && req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: "Compliance management access required" });
+        return res.status(403).json({ message: "Practice management access required" });
       }
 
       const { packageType } = req.params;
@@ -14954,7 +14954,7 @@ Format your response as a JSON array of tip objects with "title", "description",
     try {
       // Allow compliance managers and super admins to create packages
       if (!req.user.permissions.includes('compliance_management:view') && req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: "Compliance management access required" });
+        return res.status(403).json({ message: "Practice management access required" });
       }
 
       const { packageType, displayName, description, monthlyPrice, annualPrice, isActive } = req.body;

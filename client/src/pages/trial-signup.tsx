@@ -71,7 +71,7 @@ export default function TrialSignup() {
         'Inventory Management',
         'VAT Management',
         'Advanced Analytics',
-        'Compliance Management'
+        'Practice Management'
       ],
       popular: true
     },

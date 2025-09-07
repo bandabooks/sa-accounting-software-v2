@@ -90,7 +90,7 @@ const subscriptionPlans = [
     monthlyPrice: "679.99",
     yearlyPrice: "7519.89",
     description: "Advanced features for growing businesses",
-    features: ["Everything in Basic", "Advanced Invoicing", "Inventory Management", "VAT Management", "Advanced Analytics", "Compliance Management"],
+    features: ["Everything in Basic", "Advanced Invoicing", "Inventory Management", "VAT Management", "Advanced Analytics", "Practice Management"],
     popular: true
   },
   {

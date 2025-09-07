@@ -136,7 +136,7 @@ import {
   spendingWizardMessages,
   spendingWizardInsights,
   spendingWizardTips,
-  // Compliance Management imports
+  // Practice Management imports
   clients,
   onboardingWorkflows,
   engagementLetters,

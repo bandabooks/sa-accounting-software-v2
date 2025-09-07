@@ -1073,7 +1073,7 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
 
-        {/* Compliance Management Routes */}
+        {/* Practice Management Routes */}
         <Route path="/compliance/dashboard">
           <ProtectedRoute>
             <ComplianceDashboard />
