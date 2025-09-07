@@ -45,6 +45,8 @@ const formSchema = z.object({
   description: z.string().optional(),
   status: z.enum(["todo", "in_progress", "review", "completed", "blocked"]).default("todo"),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  taskType: z.string().optional(), // Add compliance task type
+  complianceType: z.string().optional(), // Add compliance category
   projectId: z.number().optional(),
   customerId: z.number().optional(),
   parentTaskId: z.number().optional(),
@@ -66,12 +68,15 @@ const formSchema = z.object({
   recurringDayOfMonth: z.number().optional(),
   recurringEndDate: z.string().optional(),
   recurringCount: z.number().optional(),
-  parentRecurringTaskId: z.number().optional()
+  parentRecurringTaskId: z.number().optional(),
+  notes: z.string().optional() // Add notes field
 });
 
 export default function TasksPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filter, setFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [complianceFilter, setComplianceFilter] = useState<string>("all");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -203,7 +208,10 @@ export default function TasksPage() {
       estimatedHours: "",
       actualHours: "",
       hourlyRate: "",
-      tags: []
+      tags: [],
+      taskType: "project", // Default to project task
+      complianceType: "",
+      notes: ""
     },
   });
 
@@ -282,11 +290,18 @@ export default function TasksPage() {
   };
 
   const filteredTasks = tasks.filter((task: TaskWithDetails) => {
-    if (filter === "all") return true;
-    if (filter === "my") return task.assignedToId === 1; // Current user ID should come from auth
-    if (filter === "active") return task.status === "in_progress";
-    if (filter === "completed") return task.status === "completed";
-    return true;
+    const statusMatch = (() => {
+      if (filter === "all") return true;
+      if (filter === "my") return task.assignedToId === 1; // Current user ID should come from auth
+      if (filter === "active") return task.status === "in_progress";
+      if (filter === "completed") return task.status === "completed";
+      return true;
+    })();
+    
+    const typeMatch = typeFilter === "all" || (task as any).taskType === typeFilter;
+    const complianceMatch = complianceFilter === "all" || (task as any).complianceType === complianceFilter;
+    
+    return statusMatch && typeMatch && complianceMatch;
   });
 
   const formatTime = (seconds: number) => {
@@ -362,6 +377,57 @@ export default function TasksPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Task Type and Compliance Category */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="taskType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Task Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || "project"}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select task type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="project">Project Task</SelectItem>
+                            <SelectItem value="compliance">Compliance</SelectItem>
+                            <SelectItem value="review">Review</SelectItem>
+                            <SelectItem value="follow_up">Follow Up</SelectItem>
+                            <SelectItem value="document_request">Document Request</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="complianceType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Compliance Category (Optional)</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(value === "none" ? "" : value)} value={field.value || "none"}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select compliance type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No Category</SelectItem>
+                            <SelectItem value="sars">SARS</SelectItem>
+                            <SelectItem value="cipc">CIPC</SelectItem>
+                            <SelectItem value="labour">Labour</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -734,11 +800,11 @@ export default function TasksPage() {
                             {task.title}
                           </h3>
                         </Link>
-                        <Badge className={getStatusColor(task.status)}>
-                          {task.status.replace('_', ' ')}
+                        <Badge className={getStatusColor(task.status || 'todo')}>
+                          {(task.status || 'todo').replace('_', ' ')}
                         </Badge>
-                        <Badge variant="outline" className={getPriorityColor(task.priority)}>
-                          {task.priority}
+                        <Badge variant="outline" className={getPriorityColor(task.priority || 'medium')}>
+                          {task.priority || 'medium'}
                         </Badge>
                       </div>
                       
@@ -767,7 +833,7 @@ export default function TasksPage() {
                             {new Date(task.dueDate).toLocaleDateString()}
                           </div>
                         )}
-                        {task.totalTimeSpent > 0 && (
+                        {task.totalTimeSpent && task.totalTimeSpent > 0 && (
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-1" />
                             {formatTime(task.totalTimeSpent)}
