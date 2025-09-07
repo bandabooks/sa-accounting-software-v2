@@ -231,11 +231,51 @@ export default function ProjectsPage() {
       const daysDiff = dueDate ? Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 999;
       return daysDiff <= 7 && daysDiff > 0 && !['completed', 'finished', 'cancelled'].includes(p.status);
     }).length,
-    // Over Budget: actual cost > budget
+    // Over Budget: billing-type specific calculations
     overBudget: projects.filter((p: any) => {
-      const budget = parseFloat(p.budgetAmount) || 0;
-      const actual = parseFloat(p.actualCost) || 0;
-      return budget > 0 && actual > budget;
+      const billingType = p.billingType || 'tm';
+      const actualHours = parseFloat(p.actualHours) || 0;
+      const hourlyRate = parseFloat(p.hourlyRate) || 0;
+      const budgetAmount = parseFloat(p.budgetAmount) || 0;
+      const estimatedHours = parseFloat(p.estimatedHours) || 0;
+
+      switch (billingType) {
+        case 'tm': // Time & Materials
+          if (budgetAmount > 0) {
+            const actualCost = actualHours * hourlyRate;
+            return actualCost > budgetAmount;
+          }
+          if (estimatedHours > 0) {
+            return actualHours > estimatedHours;
+          }
+          return false;
+        
+        case 'fixed_fee': // Fixed Fee
+          if (budgetAmount > 0) { // Contract amount stored in budgetAmount
+            const internalCostRate = 75; // Assumed internal cost rate per hour
+            const actualCost = actualHours * internalCostRate;
+            return actualCost > budgetAmount;
+          }
+          if (estimatedHours > 0) {
+            return actualHours > estimatedHours;
+          }
+          return false;
+        
+        case 'retainer': // Retainer
+          const monthlyCapHours = estimatedHours; // Cap hours stored in estimatedHours  
+          const monthlyCapAmount = budgetAmount; // Cap amount stored in budgetAmount
+          if (monthlyCapHours > 0) {
+            return actualHours > monthlyCapHours;
+          }
+          if (monthlyCapAmount > 0 && hourlyRate > 0) {
+            const actualCost = actualHours * hourlyRate;
+            return actualCost > monthlyCapAmount;
+          }
+          return false;
+        
+        default:
+          return false;
+      }
     }).length,
     // No PM assigned
     noPM: projects.filter((p: any) => !p.projectManagerId).length,
@@ -256,6 +296,66 @@ export default function ProjectsPage() {
       case "high": return "bg-orange-100 text-orange-800";
       case "urgent": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Calculate burn rate percentage for different billing types
+  const calculateBurnRate = (project: any) => {
+    const billingType = project.billingType || 'tm';
+    const actualHours = parseFloat(project.actualHours) || 0;
+    const hourlyRate = parseFloat(project.hourlyRate) || 0;
+    const budgetAmount = parseFloat(project.budgetAmount) || 0;
+    const estimatedHours = parseFloat(project.estimatedHours) || 0;
+
+    switch (billingType) {
+      case 'tm': // Time & Materials
+        if (budgetAmount > 0) {
+          const actualCost = actualHours * hourlyRate;
+          return Math.round((actualCost / budgetAmount) * 100);
+        }
+        if (estimatedHours > 0) {
+          return Math.round((actualHours / estimatedHours) * 100);
+        }
+        return 0;
+      
+      case 'fixed_fee': // Fixed Fee
+        if (budgetAmount > 0) { // Contract amount
+          const internalCostRate = 75; // Assumed internal cost rate
+          const actualCost = actualHours * internalCostRate;
+          return Math.round((actualCost / budgetAmount) * 100);
+        }
+        if (estimatedHours > 0) {
+          return Math.round((actualHours / estimatedHours) * 100);
+        }
+        return 0;
+      
+      case 'retainer': // Retainer - utilization percentage
+        const monthlyCapHours = estimatedHours;
+        const monthlyCapAmount = budgetAmount;
+        if (monthlyCapHours > 0) {
+          return Math.round((actualHours / monthlyCapHours) * 100);
+        }
+        if (monthlyCapAmount > 0 && hourlyRate > 0) {
+          const actualCost = actualHours * hourlyRate;
+          return Math.round((actualCost / monthlyCapAmount) * 100);
+        }
+        return 0;
+      
+      default:
+        return 0;
+    }
+  };
+
+  // Get burn rate status and color
+  const getBurnRateStatus = (burnRate: number, billingType: string) => {
+    if (billingType === 'retainer') {
+      if (burnRate >= 100) return { status: 'Over Cap', color: 'text-red-600', bgColor: 'bg-red-50' };
+      if (burnRate >= 80) return { status: 'Near Cap', color: 'text-orange-600', bgColor: 'bg-orange-50' };
+      return { status: 'On Track', color: 'text-green-600', bgColor: 'bg-green-50' };
+    } else {
+      if (burnRate >= 100) return { status: 'Over Budget', color: 'text-red-600', bgColor: 'bg-red-50' };
+      if (burnRate >= 80) return { status: 'Near Budget', color: 'text-orange-600', bgColor: 'bg-orange-50' };
+      return { status: 'On Track', color: 'text-green-600', bgColor: 'bg-green-50' };
     }
   };
 
