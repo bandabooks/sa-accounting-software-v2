@@ -620,10 +620,10 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         
-        {/* Compliance Dashboard Route (alternative URL) */}
+        {/* Practice Dashboard Route */}
         <Route path="/practice-dashboard">
           <ProtectedRoute>
-            <ComplianceDashboard />
+            <PracticeDashboard />
           </ProtectedRoute>
         </Route>
         
