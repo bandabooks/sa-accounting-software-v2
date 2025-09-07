@@ -85,6 +85,7 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
+  const [selectedRelatedType, setSelectedRelatedType] = useState<string>("");
   const { toast } = useToast();
 
   // Task Templates
@@ -624,23 +625,43 @@ export default function TasksPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="projectId"
+                    name="relatedToType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Project (Optional)</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                        <FormLabel>Related To</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value === "none" ? "" : value);
+                            setSelectedRelatedType(value === "none" ? "" : value);
+                            // Clear related ID when type changes
+                            form.setValue("relatedToId", undefined);
+                            // Set legacy fields for backward compatibility
+                            if (value === "project") {
+                              form.setValue("customerId", undefined);
+                            } else if (value === "customer") {
+                              form.setValue("projectId", undefined);
+                            } else {
+                              form.setValue("projectId", undefined);
+                              form.setValue("customerId", undefined);
+                            }
+                          }} 
+                          value={field.value || "none"}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select project" />
+                              <SelectValue placeholder="Select what this task relates to" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="none">No Project (Standalone Task)</SelectItem>
-                            {projects.map((project: any) => (
-                              <SelectItem key={project.id} value={project.id.toString()}>
-                                {project.name}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value="none">No Relation (Internal Task)</SelectItem>
+                            <SelectItem value="customer">Customer</SelectItem>
+                            <SelectItem value="project">Project</SelectItem>
+                            <SelectItem value="invoice">Invoice</SelectItem>
+                            <SelectItem value="estimate">Estimate</SelectItem>
+                            <SelectItem value="contract">Contract</SelectItem>
+                            <SelectItem value="expense">Expense</SelectItem>
+                            <SelectItem value="lead">Lead</SelectItem>
+                            <SelectItem value="ticket">Ticket</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -649,28 +670,92 @@ export default function TasksPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="customerId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Customer (Optional)</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select customer" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No Customer (Internal Task)</SelectItem>
-                            {customers.map((customer: any) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {customer.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    name="relatedToId"
+                    render={({ field }) => {
+                      const relatedType = form.watch("relatedToType");
+                      
+                      // Don't show this field if no type is selected
+                      if (!relatedType || relatedType === "none") {
+                        return <div></div>;
+                      }
+
+                      // Get the appropriate data based on type
+                      let items: any[] = [];
+                      let placeholder = "";
+                      let label = "";
+                      
+                      switch (relatedType) {
+                        case "customer":
+                          items = customers;
+                          placeholder = "Select customer";
+                          label = "Customer";
+                          break;
+                        case "project":
+                          items = projects;
+                          placeholder = "Select project";
+                          label = "Project";
+                          break;
+                        case "invoice":
+                          items = invoices;
+                          placeholder = "Select invoice";
+                          label = "Invoice";
+                          break;
+                        case "estimate":
+                          items = estimates;
+                          placeholder = "Select estimate";
+                          label = "Estimate";
+                          break;
+                        case "contract":
+                        case "expense":
+                        case "lead":
+                        case "ticket":
+                          items = [];
+                          placeholder = `Select ${relatedType}`;
+                          label = relatedType.charAt(0).toUpperCase() + relatedType.slice(1);
+                          break;
+                        default:
+                          return <div></div>;
+                      }
+
+                      return (
+                        <FormItem>
+                          <FormLabel>{label}</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              const numValue = value === "none" ? undefined : parseInt(value);
+                              field.onChange(numValue);
+                              // Set legacy fields for backward compatibility
+                              if (relatedType === "project") {
+                                form.setValue("projectId", numValue);
+                              } else if (relatedType === "customer") {
+                                form.setValue("customerId", numValue);
+                              }
+                            }} 
+                            value={field.value?.toString() || "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={placeholder} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">None selected</SelectItem>
+                              {items.map((item: any) => (
+                                <SelectItem key={item.id} value={item.id.toString()}>
+                                  {item.name || item.title || `${relatedType.charAt(0).toUpperCase() + relatedType.slice(1)} ${item.id}`}
+                                </SelectItem>
+                              ))}
+                              {items.length === 0 && relatedType !== "customer" && relatedType !== "project" && (
+                                <SelectItem value="none" disabled>
+                                  No {relatedType}s available
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
 
