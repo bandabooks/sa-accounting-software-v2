@@ -82,20 +82,21 @@ export default function Dashboard() {
   });
 
   // Real financial data now displayed directly in components
-  const {
-    isWizardVisible,
-    onboardingSteps,
-    completeOnboarding,
-    skipOnboarding,
-  } = useOnboardingWizard();
+  // TEMPORARILY DISABLED: These custom hooks are causing hooks ordering violations
+  // const {
+  //   isWizardVisible,
+  //   onboardingSteps,
+  //   completeOnboarding,
+  //   skipOnboarding,
+  // } = useOnboardingWizard();
 
-  // Use loading states for comprehensive loading feedback
-  useLoadingStates({
-    loadingStates: [
-      { isLoading, message: 'Loading dashboard data...' },
-    ],
-    progressSteps: ['Loading dashboard', 'Processing data'],
-  });
+  // // Use loading states for comprehensive loading feedback
+  // useLoadingStates({
+  //   loadingStates: [
+  //     { isLoading, message: 'Loading dashboard data...' },
+  //   ],
+  //   progressSteps: ['Loading dashboard', 'Processing data'],
+  // });
 
   // Auto-refresh data every 45 seconds - optimized for performance
   useEffect(() => {
