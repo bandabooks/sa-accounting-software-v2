@@ -82,6 +82,8 @@ export default function TasksPage() {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Task Templates
@@ -850,6 +852,40 @@ export default function TasksPage() {
         </Dialog>
       </div>
 
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Update the task details below.
+            </DialogDescription>
+          </DialogHeader>
+          {editingTask && (
+            <EditTaskFormContent 
+              task={editingTask} 
+              users={users}
+              projects={projects}
+              customers={customers}
+              taskTemplates={taskTemplates}
+              onClose={() => {
+                setIsEditDialogOpen(false);
+                setEditingTask(null);
+              }}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+                setIsEditDialogOpen(false);
+                setEditingTask(null);
+                toast({
+                  title: "Success",
+                  description: "Task updated successfully",
+                });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Status Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -1153,20 +1189,43 @@ export default function TasksPage() {
                             )}
                           </>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            // TODO: Add task editing functionality
-                            toast({
-                              title: "Coming Soon",
-                              description: "Task editing will be available soon",
-                            });
-                          }}
-                          className="p-0 h-8 w-8"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="p-0 h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => {
+                              setEditingTask(task);
+                              setIsEditDialogOpen(true);
+                            }}>
+                              Edit Task
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/time-entries?taskId=${task.id}`} className="cursor-pointer">
+                                View Timesheet
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this task?')) {
+                                  // TODO: Add delete functionality
+                                  toast({
+                                    title: "Delete Task",
+                                    description: "Task deletion will be implemented soon",
+                                  });
+                                }
+                              }}
+                            >
+                              Delete Task
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1177,5 +1236,251 @@ export default function TasksPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Edit Task Form Component
+interface EditTaskFormProps {
+  task: TaskWithDetails;
+  users: any[];
+  projects: any[];
+  customers: any[];
+  taskTemplates: any[];
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function EditTaskFormContent({ task, users, projects, customers, taskTemplates, onClose, onSuccess }: EditTaskFormProps) {
+  const { toast } = useToast();
+  
+  const editForm = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: task.title || "",
+      description: task.description || "",
+      status: (task.status as any) || "todo",
+      priority: (task.priority as any) || "medium",
+      taskType: (task as any).taskType || "project",
+      complianceType: (task as any).complianceType || "",
+      projectId: task.projectId || undefined,
+      customerId: task.customerId || undefined,
+      assignedToId: task.assignedToId || undefined,
+      startDate: task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : "",
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+      estimatedHours: task.estimatedHours?.toString() || "",
+      actualHours: task.actualHours?.toString() || "",
+      hourlyRate: task.hourlyRate?.toString() || "",
+      isInternal: task.isInternal || false,
+      isBillable: task.isBillable !== false,
+      progress: task.progress || 0,
+      isRecurring: task.isRecurring || false,
+      notes: task.notes || ""
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      return await apiRequest(`/api/tasks/${task.id}`, "PUT", data);
+    },
+    onSuccess: () => {
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onEditSubmit = (values: z.infer<typeof formSchema>) => {
+    updateMutation.mutate(values);
+  };
+
+  return (
+    <Form {...editForm}>
+      <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+        <FormField
+          control={editForm.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Task Title</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter task title" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={editForm.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter task description" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-3 gap-4">
+          <FormField
+            control={editForm.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={editForm.control}
+            name="priority"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Priority</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={editForm.control}
+            name="taskType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Task Type</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || "project"}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select task type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="project">Project Task</SelectItem>
+                    <SelectItem value="compliance">Compliance</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="follow_up">Follow Up</SelectItem>
+                    <SelectItem value="document_request">Document Request</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={editForm.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Start Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={editForm.control}
+            name="dueDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Due Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={editForm.control}
+          name="assignedToId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assigned To</FormLabel>
+              <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Assign to user" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {users.map((user: any) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={editForm.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Additional notes" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? "Updating..." : "Update Task"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
