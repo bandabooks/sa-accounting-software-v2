@@ -778,7 +778,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
         ref={buttonRef}
         onClick={() => {
           // For main menu groups, navigate to their first item and expand dropdown
-          if ((group.id === "sales" || group.id === "purchases" || group.id === "compliance") && visibleItems.length > 0) {
+          if ((group.id === "sales" || group.id === "purchases" || group.id === "compliance" || group.id === "banking" || group.id === "employees" || group.id === "vat" || group.id === "contracts") && visibleItems.length > 0) {
             setLocation(visibleItems[0].path); // Navigate to the first item (dashboard/main page)
           }
           onToggle(); // Always toggle the dropdown
