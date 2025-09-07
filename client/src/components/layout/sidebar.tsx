@@ -31,7 +31,7 @@ const getNavigationGroupsForRole = (userRole: string) => {
       module: "dashboard",
       roleTypes: ["all"],
       items: [
-        { path: "/dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
+        { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
         { path: "/business-dashboard", label: "Business Dashboard", icon: TrendingUp, permission: null, module: "dashboard" }
       ]
     },
@@ -206,7 +206,7 @@ const getFullNavigationGroups = () => [
     label: "Dashboard",
     module: "dashboard",
     items: [
-      { path: "/dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
+      { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
       { path: "/business-dashboard", label: "Business Dashboard", icon: TrendingUp, permission: null, module: "dashboard" }
     ]
   },
