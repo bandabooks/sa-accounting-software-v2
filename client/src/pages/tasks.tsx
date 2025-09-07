@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,6 +155,9 @@ export default function TasksPage() {
       return await apiRequest(`/api/time-entries/${timeEntryId}/stop`, "PUT");
     },
     onSuccess: () => {
+      // Immediately clear the active time entry to stop timers
+      queryClient.setQueryData(["/api/time-entries/active"], null);
+      // Then invalidate to refresh from server
       queryClient.invalidateQueries({ queryKey: ["/api/time-entries/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
@@ -238,15 +241,46 @@ export default function TasksPage() {
   // Running Timer Component
   const RunningTimer = ({ startTime }: { startTime: string }) => {
     const [elapsed, setElapsed] = useState(0);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    useState(() => {
-      const interval = setInterval(() => {
+    useEffect(() => {
+      // Clear any existing interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+
+      // Only start timer if there's an active time entry
+      if (!activeTimeEntry) {
+        setElapsed(0);
+        return;
+      }
+
+      // Start the timer
+      intervalRef.current = setInterval(() => {
+        // Double check activeTimeEntry is still active
+        if (!activeTimeEntry) {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setElapsed(0);
+          return;
+        }
+
         const start = new Date(startTime).getTime();
         const now = Date.now();
         setElapsed(Math.floor((now - start) / 1000));
       }, 1000);
-      return () => clearInterval(interval);
-    });
+
+      // Cleanup function
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+    }, [startTime, activeTimeEntry]); // Re-run when activeTimeEntry changes
 
     const formatElapsed = (seconds: number) => {
       const hours = Math.floor(seconds / 3600);
@@ -258,6 +292,11 @@ export default function TasksPage() {
       }
       return `${minutes}:${secs.toString().padStart(2, '0')}`;
     };
+
+    // Don't render timer if no active time entry
+    if (!activeTimeEntry) {
+      return null;
+    }
 
     return <span>{formatElapsed(elapsed)}</span>;
   };
@@ -724,6 +763,12 @@ export default function TasksPage() {
                   <p className="text-sm text-muted-foreground">
                     {activeTimeEntry?.description || "Current task"}
                   </p>
+                  {activeTimeEntry?.startTime && (
+                    <div className="flex items-center text-sm font-medium text-green-700 mt-1">
+                      <Clock className="h-4 w-4 mr-1" />
+                      <RunningTimer startTime={activeTimeEntry.startTime} />
+                    </div>
+                  )}
                 </div>
               </div>
               <Button
