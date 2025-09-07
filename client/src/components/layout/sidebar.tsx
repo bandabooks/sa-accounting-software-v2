@@ -333,10 +333,9 @@ const getFullNavigationGroups = () => [
     id: "compliance",
     label: "Practice Management",
     icon: Shield,
-    path: "/compliance-dashboard",
     module: "compliance",
     items: [
-      { path: "/compliance-dashboard", label: "Compliance Dashboard", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/audit-trail", label: "Audit Trail", icon: FileText, permission: "AUDIT_VIEW", module: "compliance" },
       { path: "/client-management", label: "Client Management", icon: Users, permission: "CLIENT_MANAGEMENT_VIEW", module: "compliance" },
@@ -500,10 +499,9 @@ const navigationGroups = [
     id: "compliance",
     label: "Practice Management",
     icon: Shield,
-    path: "/compliance-dashboard",
     module: "compliance",
     items: [
-      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/audit-trail", label: "Audit Trail", icon: FileCheck, permission: "AUDIT_VIEW", module: "compliance" },
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },

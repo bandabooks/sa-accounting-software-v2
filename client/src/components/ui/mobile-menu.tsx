@@ -118,10 +118,9 @@ const navigationGroups = [
     id: "compliance",
     label: "Practice Management",
     icon: Shield,
-    path: "/compliance-dashboard",
     module: "compliance",
     items: [
-      { path: "/compliance/dashboard", label: "Compliance Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/compliance-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
 
       { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
