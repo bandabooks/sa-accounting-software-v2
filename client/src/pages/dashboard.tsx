@@ -58,6 +58,7 @@ export default function Dashboard() {
   const [isTodaysTasksExpanded, setIsTodaysTasksExpanded] = useState(false);
   const [isProfitOverviewExpanded, setIsProfitOverviewExpanded] = useState(false);
   const [location, setLocation] = useLocation();
+  const [dashboardViewType, setDashboardViewType] = useState<'practitioner' | 'business'>('practitioner');
   // Fetch real alert counts from API - Less frequent updates for performance
   const { data: alertCounts } = useQuery({
     queryKey: ["/api/alerts/counts"],
@@ -148,21 +149,41 @@ export default function Dashboard() {
     return growth.toFixed(1);
   };
 
-  // Role detection for dashboard layout
-  const getUserDashboardType = () => {
-    if (!currentUser?.role) return 'business';
+  // Professional role-based dashboard logic for multi-company platform
+  const getUserRoleCapabilities = (): {
+    defaultView: 'practitioner' | 'business';
+    canToggle: boolean;
+    isAdmin?: boolean;
+    isPractitioner?: boolean;
+    isBusinessOwner?: boolean;
+  } => {
+    if (!currentUser?.role) return { defaultView: 'business' as const, canToggle: false };
     const role = currentUser.role.toLowerCase();
     
-    // Tax Practitioner roles get the professional hub
-    if (['accountant', 'tax_practitioner', 'super_admin', 'admin'].includes(role)) {
-      return 'practitioner';
+    // Super Admin: Can manage all companies and toggle between views
+    if (role === 'super_admin') {
+      return { defaultView: 'practitioner' as const, canToggle: true, isAdmin: true };
     }
     
-    // Business owner roles get simplified dashboard
-    return 'business';
+    // Practitioners: Can work with client companies and toggle views
+    if (['accountant', 'tax_practitioner', 'admin'].includes(role)) {
+      return { defaultView: 'practitioner' as const, canToggle: true, isPractitioner: true };
+    }
+    
+    // Business owners: Only see their company's business view
+    return { defaultView: 'business' as const, canToggle: false, isBusinessOwner: true };
   };
 
-  const dashboardType = getUserDashboardType();
+  const userCapabilities = getUserRoleCapabilities();
+  
+  // Initialize dashboard view based on user role
+  useEffect(() => {
+    if (!userCapabilities.canToggle) {
+      setDashboardViewType(userCapabilities.defaultView);
+    }
+  }, [currentUser?.role]);
+
+  const dashboardType = userCapabilities.canToggle ? dashboardViewType : userCapabilities.defaultView;
 
   // Get total active alerts count for the header button
   const totalActiveAlerts = (alertCounts as any)?.active || 0;
@@ -357,11 +378,49 @@ export default function Dashboard() {
           
           {/* Professional Header */}
           <div className="py-4 mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-              {dashboardType === 'practitioner' ? 'Practice Dashboard' : 'Business Dashboard'}
-            </h1>
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {dashboardType === 'practitioner' ? 'Practice Dashboard' : 'Business Dashboard'}
+              </h1>
+              
+              {/* Dashboard View Toggle - Only for Super Admins and Practitioners */}
+              {userCapabilities.canToggle && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">View:</span>
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setDashboardViewType('practitioner')}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                        dashboardViewType === 'practitioner'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      data-testid="toggle-practitioner-view"
+                    >
+                      Practitioner
+                    </button>
+                    <button
+                      onClick={() => setDashboardViewType('business')}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                        dashboardViewType === 'business'
+                          ? 'bg-green-600 text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      data-testid="toggle-business-view"
+                    >
+                      Business
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <p className="text-sm text-gray-600">
               {getCurrentGreeting()} • Last updated: {lastUpdate.toLocaleTimeString()}
+              {userCapabilities.canToggle && (
+                <span className="ml-2">
+                  • {userCapabilities.isAdmin ? 'Super Admin' : 'Practitioner'} Mode
+                </span>
+              )}
             </p>
           </div>
 
