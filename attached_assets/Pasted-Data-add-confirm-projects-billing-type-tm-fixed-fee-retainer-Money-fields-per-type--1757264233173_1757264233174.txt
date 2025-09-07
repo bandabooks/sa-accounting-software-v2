@@ -1,0 +1,101 @@
+Data (add/confirm)
+
+projects.billing_type: tm | fixed_fee | retainer
+
+Money fields (per type):
+
+tm: budget_hours?, budget_amount?, rate_card_id?, hourly_rate_default?
+
+fixed_fee: contract_amount, budget_hours?
+
+retainer: retainer_cap_hours? and/or retainer_cap_amount?, retainer_renewal_day (1–28)
+
+Shared: currency, po_number?, confidentiality, department/practice, tags[]
+
+tasks.billable (bool), time_entries.billable (bool)
+
+Optional now / later: rate_cards, project_role_rates, retainer_periods (derived monthly windows)
+
+Create Project form (show/hide by billing type)
+
+Top row: Project Code, Name, Client, Currency.
+
+Middle: Status (Planning/Active/On Hold/In Review/Completed), Priority, Project Manager(s).
+
+Billing section:
+
+Billing Type (radio or segmented control)
+
+If T&M → Rate Card / Hourly Rate + optional Budget (hrs/amount)
+
+If Fixed Fee → Contract Amount (+ optional Budget Hours)
+
+If Retainer → Monthly Cap (hrs/amount) + Renewal Day; checkbox Bill overage as T&M
+
+Dates: Start, End (+ “Due in X days” preview)
+
+Contacts: Client Contact(s) for approvals/invoices
+
+Structure: Template (task/milestone set), Tags, Department/Practice
+
+Validation:
+
+End ≥ Start; required money fields per type; currency formatting
+
+Retainer renewal day valid; if “Bill overage as T&M” is off, cap time (warn on attempt)
+
+Portfolio UI (Projects page)
+
+Clickable stat cards: Active, On Hold, Completed, At-Risk, Over Budget, Unbilled Hours, Budget vs Burn.
+
+Filters & saved views: Client, PM, Status, Billing Type, Department, Tags, Date range.
+
+Table columns (sortable): Project | Client | PM | Status | Due | Billing Type | Budget | Burn % | Hours Used | Unbilled | Currency.
+
+Cards: add client, PM avatars, budget ring, billing pill (T&M/Fixed/Retainer), due in…, invoice status snapshot.
+
+Calculations (authoritative)
+
+Progress %: weighted by task estimate_hours if present; else simple completed/total.
+
+T&M Budget Burn %: (sum billable time × rate) / budget_amount or hours/budget_hours.
+
+Fixed Fee Burn %: (actual cost proxy = time × internal cost rate) / contract_amount (revenue tracked separately).
+
+Retainer Utilization: used (hours/amount) / monthly cap; Overage billed as T&M if enabled.
+
+At-Risk (project): (Due ≤ 7 days & Progress < 90%) or projected burn > 100%.
+
+Over Budget: Burn % > 100% or EAC > Budget.
+
+Unbilled Hours: billable time not yet invoiced (by project).
+
+Invoicing rules (light v1)
+
+T&M: invoice unbilled billable time by rate card/default rate; support budget alerts at 80/100%.
+
+Fixed Fee: create fixed-fee invoice lines (optionally milestone-based); time is non-invoiceable by default (still tracked for cost/margin). Out-of-scope tasks can be billable T&M.
+
+Retainer: auto-generate monthly retainer line (cap). Overage → T&M. (Carry-forward = none in v1.)
+
+Analytics (add to Projects)
+
+Portfolio header: Active, At-Risk, Over Budget, Unbilled, Total Budget vs Burn.
+
+Per-project: Progress, Burn %, Hours used, Unbilled, Retainer utilization (if applicable).
+
+Weekly grouping obeys Monday-first rule (same as Tasks Analytics).
+
+Acceptance
+
+Form shows only relevant fields per billing type; required fields enforced.
+
+Budget/Burn/At-Risk/Over-Budget calculate immediately on time/task changes.
+
+Stat cards filter the list; saved views persist.
+
+Non-billable toggles at project/task/time entry correctly exclude from Unbilled/Billing.
+
+What can wait (v2+)
+
+Value-based pricing, deliverable line packs, prepaid hour banks, revenue recognition schedules, margin/cost rates per role, retainer carry-forward policies, automated invoicing runs.

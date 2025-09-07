@@ -4347,7 +4347,7 @@ export const projects = pgTable("projects", {
   budgetAmount: decimal("budget_amount", { precision: 10, scale: 2 }),
   actualCost: decimal("actual_cost", { precision: 10, scale: 2 }).default("0"),
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
-  billingType: varchar("billing_type", { length: 20 }).default("fixed_rate"), // fixed_rate, project_hours, task_hours
+  billingType: varchar("billing_type", { length: 20 }).default("tm"), // tm, fixed_fee, retainer
   totalRate: decimal("total_rate", { precision: 10, scale: 2 }),
   tags: jsonb("tags"), // array of project tags
   progressThroughTasks: boolean("progress_through_tasks").default(true),
@@ -4361,6 +4361,24 @@ export const projects = pgTable("projects", {
   recurringInterval: integer("recurring_interval"), // e.g., every 2 months = 2
   recurringEndDate: date("recurring_end_date"), // when recurring stops
   parentRecurringProjectId: integer("parent_recurring_project_id").references(() => projects.id), // links to the original recurring project
+  // Enhanced Billing Fields per Type
+  // T&M specific fields
+  budgetHours: decimal("budget_hours", { precision: 10, scale: 2 }),
+  rateCardId: integer("rate_card_id"), // Reference to rate cards table (future)
+  hourlyRateDefault: decimal("hourly_rate_default", { precision: 10, scale: 2 }),
+  // Fixed Fee specific fields
+  contractAmount: decimal("contract_amount", { precision: 10, scale: 2 }),
+  // Retainer specific fields
+  retainerCapHours: decimal("retainer_cap_hours", { precision: 10, scale: 2 }),
+  retainerCapAmount: decimal("retainer_cap_amount", { precision: 10, scale: 2 }),
+  retainerRenewalDay: integer("retainer_renewal_day"), // 1-28
+  billOverageAsTM: boolean("bill_overage_as_tm").default(false),
+  // Shared billing fields
+  currency: varchar("currency", { length: 3 }).default("ZAR"),
+  poNumber: varchar("po_number", { length: 50 }),
+  confidentiality: varchar("confidentiality", { length: 20 }).default("normal"), // normal, confidential, highly_confidential
+  department: varchar("department", { length: 100 }),
+  practice: varchar("practice", { length: 100 }),
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
