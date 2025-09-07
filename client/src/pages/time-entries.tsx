@@ -118,8 +118,11 @@ export default function TimeEntriesPage() {
       const taskMatch = !taskIdParam || entry.taskId?.toString() === taskIdParam;
 
       // Advanced filters
+      const customerName = typeof entry.task?.customer === 'string' 
+        ? entry.task.customer 
+        : entry.task?.customer?.name || '';
       const customerMatch = !advancedFilters.customer || advancedFilters.customer === "all" || 
-        entry.task?.customer?.name === advancedFilters.customer;
+        customerName === advancedFilters.customer;
       
       const taskTypeMatch = !advancedFilters.taskType || advancedFilters.taskType === "all" || 
         entry.task?.category === advancedFilters.taskType;
@@ -736,7 +739,9 @@ export default function TimeEntriesPage() {
                           <Building className="h-4 w-4 text-gray-500" />
                           <div>
                             <div className="font-medium text-gray-900">
-                              {entry.task?.customer?.name || 'No Client'}
+                              {typeof entry.task?.customer === 'string' 
+                                ? entry.task.customer 
+                                : entry.task?.customer?.name || 'No Client'}
                             </div>
                             {entry.task?.project && (
                               <div className="text-xs text-gray-500">
