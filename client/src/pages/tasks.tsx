@@ -31,13 +31,15 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, User, Clock, CheckCircle2, Circle, Play, Pause, Paperclip, Square } from "lucide-react";
+import { Plus, Calendar, User, Clock, CheckCircle2, Circle, Play, Pause, Paperclip, Square, Search, Filter, Target, AlertTriangle, MoreHorizontal } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertTaskSchema, type TaskWithDetails } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Create a proper form schema with correct types
 const formSchema = z.object({
@@ -78,7 +80,23 @@ export default function TasksPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [complianceFilter, setComplianceFilter] = useState<string>("all");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const { toast } = useToast();
+
+  // Task Templates
+  const taskTemplates = [
+    { id: "annual_returns", name: "Annual Company Returns", type: "compliance", compliance: "cipc", priority: "high", estimatedHours: "4" },
+    { id: "vat_return", name: "Monthly VAT Return", type: "compliance", compliance: "sars", priority: "high", estimatedHours: "2" },
+    { id: "paye_return", name: "Monthly PAYE Return", type: "compliance", compliance: "sars", priority: "high", estimatedHours: "1" },
+    { id: "income_tax", name: "Annual Income Tax Return", type: "compliance", compliance: "sars", priority: "high", estimatedHours: "6" },
+    { id: "provisional_tax", name: "Provisional Tax Return", type: "compliance", compliance: "sars", priority: "medium", estimatedHours: "2" },
+    { id: "client_review", name: "Client File Review", type: "review", priority: "medium", estimatedHours: "1" },
+    { id: "bank_reconciliation", name: "Monthly Bank Reconciliation", type: "project", priority: "medium", estimatedHours: "2" },
+    { id: "uif_return", name: "UIF Return", type: "compliance", compliance: "labour", priority: "medium", estimatedHours: "1" },
+    { id: "skills_development", name: "Skills Development Levy Return", type: "compliance", compliance: "labour", priority: "low", estimatedHours: "1" },
+    { id: "document_request", name: "Client Document Request", type: "document_request", priority: "medium", estimatedHours: "0.5" }
+  ];
   const queryClient = useQueryClient();
 
   const { data: tasks = [], isLoading } = useQuery<any[]>({
@@ -340,8 +358,35 @@ export default function TasksPage() {
     const typeMatch = typeFilter === "all" || (task as any).taskType === typeFilter;
     const complianceMatch = complianceFilter === "all" || (task as any).complianceType === complianceFilter;
     
-    return statusMatch && typeMatch && complianceMatch;
+    // Search filter
+    const searchMatch = !searchQuery || 
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (task.customer && task.customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (task.assignedTo && task.assignedTo.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    return statusMatch && typeMatch && complianceMatch && searchMatch;
   });
+
+  // Calculate status counts
+  const statusCounts = {
+    total: tasks.length,
+    inProgress: tasks.filter(t => t.status === 'in_progress').length,
+    completed: tasks.filter(t => t.status === 'completed').length,
+    overdue: tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed').length
+  };
+
+  // Handle template selection
+  const handleTemplateSelect = (templateId: string) => {
+    const template = taskTemplates.find(t => t.id === templateId);
+    if (template) {
+      form.setValue('title', template.name);
+      form.setValue('taskType', template.type);
+      form.setValue('complianceType', template.compliance || '');
+      form.setValue('priority', template.priority as any);
+      form.setValue('estimatedHours', template.estimatedHours);
+      setSelectedTemplate(templateId);
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -368,9 +413,9 @@ export default function TasksPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Tasks</h1>
+          <h1 className="text-3xl font-bold">Task Management</h1>
           <p className="text-muted-foreground">
-            Manage all your project tasks, compliance work, and track your time
+            Track and manage all compliance tasks and deadlines
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -389,6 +434,24 @@ export default function TasksPage() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* Task Templates */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Task Template (Optional)</Label>
+                  <Select onValueChange={handleTemplateSelect} value={selectedTemplate}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose from common practice tasks" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Custom Task</SelectItem>
+                      {taskTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 <FormField
                   control={form.control}
                   name="title"
@@ -751,6 +814,57 @@ export default function TasksPage() {
         </Dialog>
       </div>
 
+      {/* Status Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Tasks</p>
+                <p className="text-2xl font-bold">{statusCounts.total}</p>
+              </div>
+              <Target className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold">{statusCounts.inProgress}</p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">{statusCounts.completed}</p>
+              </div>
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Overdue</p>
+                <p className="text-2xl font-bold">{statusCounts.overdue}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Active Time Tracker */}
       {activeTimeEntry && (
         <Card className="border-green-200 bg-green-50">
@@ -785,159 +899,196 @@ export default function TasksPage() {
         </Card>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
-        {[
-          { key: "all", label: "All Tasks" },
-          { key: "my", label: "My Tasks" },
-          { key: "active", label: "Active" },
-          { key: "completed", label: "Completed" },
-        ].map((tab) => (
-          <Button
-            key={tab.key}
-            variant={filter === tab.key ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setFilter(tab.key)}
-          >
-            {tab.label}
-          </Button>
-        ))}
-      </div>
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search tasks by title or client..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Task Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="project">Project</SelectItem>
+                  <SelectItem value="compliance">Compliance</SelectItem>
+                  <SelectItem value="review">Review</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="my">My Tasks</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {filteredTasks.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Create your first task to start tracking work and time
-            </p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Task
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredTasks.map((task: TaskWithDetails) => (
-            <Card key={task.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4 flex-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleTaskStatus(task)}
-                      disabled={updateStatusMutation.isPending}
-                    >
-                      {task.status === 'completed' ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-gray-400" />
+      {/* Tasks Table */}
+      <Card>
+        <CardContent className="p-0">
+          {filteredTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                Create your first task to start tracking work and time
+              </p>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Task
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8"></TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Assigned to</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTasks.map((task: TaskWithDetails) => (
+                  <TableRow key={task.id} className="hover:bg-muted/50">
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleTaskStatus(task)}
+                        disabled={updateStatusMutation.isPending}
+                        className="p-0 h-8 w-8"
+                      >
+                        {task.status === 'completed' ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{task.title}</div>
+                      {task.customer && (
+                        <div className="text-sm text-muted-foreground">Client: {task.customer.name}</div>
                       )}
-                    </Button>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <Link href={`/tasks/${task.id}`}>
-                          <h3 className="font-medium hover:text-blue-600 cursor-pointer">
-                            {task.title}
-                          </h3>
-                        </Link>
-                        <Badge className={getStatusColor(task.status || 'todo')}>
-                          {(task.status || 'todo').replace('_', ' ')}
-                        </Badge>
-                        <Badge variant="outline" className={getPriorityColor(task.priority || 'medium')}>
-                          {task.priority || 'medium'}
-                        </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(task.status || 'todo')}>
+                        {(task.status || 'todo').replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {task.startDate ? new Date(task.startDate).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {task.dueDate ? (
+                        <div className={new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'text-red-600 font-medium' : ''}>
+                          {new Date(task.dueDate).toLocaleDateString()}
+                        </div>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {task.assignedTo ? task.assignedTo.name : 'Unassigned'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 flex-wrap">
                         {(task as any).taskType && (task as any).taskType !== 'project' && (
-                          <Badge variant="secondary">
+                          <Badge variant="secondary" className="text-xs">
                             {(task as any).taskType.replace('_', ' ')}
                           </Badge>
                         )}
                         {(task as any).complianceType && (
-                          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
                             {(task as any).complianceType.toUpperCase()}
                           </Badge>
                         )}
                       </div>
-                      
-                      <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                        {task.project && (
-                          <div className="flex items-center">
-                            <span className="font-medium">Project:</span>
-                            <span className="ml-1">{task.project.name}</span>
-                          </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getPriorityColor(task.priority || 'medium')}>
+                        {task.priority || 'medium'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        {task.status !== 'completed' && (
+                          <>
+                            {activeTimeEntry && (activeTimeEntry as any).taskId === task.id ? (
+                              <div className="flex items-center space-x-2">
+                                <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded text-sm font-medium">
+                                  <Clock className="h-4 w-4 mr-1 animate-pulse" />
+                                  <RunningTimer startTime={(activeTimeEntry as any).startTime} />
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleStopTime((activeTimeEntry as any).id)}
+                                  disabled={stopTimeMutation.isPending}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Square className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStartTime(task.id)}
+                                disabled={!!activeTimeEntry || startTimeMutation.isPending}
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </>
                         )}
-                        {task.customer && (
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
-                            {task.customer.name}
-                          </div>
-                        )}
-                        {task.assignedTo && (
-                          <div className="flex items-center">
-                            <span className="font-medium">Assigned:</span>
-                            <span className="ml-1">{task.assignedTo.name}</span>
-                          </div>
-                        )}
-                        {task.dueDate && (
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {new Date(task.dueDate).toLocaleDateString()}
-                          </div>
-                        )}
-                        {task.totalTimeSpent && task.totalTimeSpent > 0 && (
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {formatTime(task.totalTimeSpent)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    {task.status !== 'completed' && (
-                      <>
-                        {activeTimeEntry && (activeTimeEntry as any).taskId === task.id ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded text-sm font-medium">
-                              <Clock className="h-4 w-4 mr-1 animate-pulse" />
-                              <RunningTimer startTime={(activeTimeEntry as any).startTime} />
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleStopTime((activeTimeEntry as any).id)}
-                              disabled={stopTimeMutation.isPending}
-                              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-                            >
-                              <Square className="h-4 w-4 mr-2" />
-                              Stop Timer
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="p-0 h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleStartTime(task.id)}
-                            disabled={!!activeTimeEntry || startTimeMutation.isPending}
-                          >
-                            <Play className="h-4 w-4 mr-2" />
-                            Start Timer
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                              <Link href={`/tasks/${task.id}`} className="cursor-pointer">
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
