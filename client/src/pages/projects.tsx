@@ -273,6 +273,18 @@ export default function ProjectsPage() {
           }
           return false;
         
+        case 'fixed_rate': // Fixed Rate (legacy)
+        case 'project_hours': // Project Hours (legacy)
+        case 'task_hours': // Task Hours (legacy)
+          if (budgetAmount > 0) {
+            const actualCost = actualHours * hourlyRate;
+            return actualCost > budgetAmount;
+          }
+          if (estimatedHours > 0) {
+            return actualHours > estimatedHours;
+          }
+          return false;
+        
         default:
           return false;
       }
@@ -338,6 +350,18 @@ export default function ProjectsPage() {
         if (monthlyCapAmount > 0 && hourlyRate > 0) {
           const actualCost = actualHours * hourlyRate;
           return Math.round((actualCost / monthlyCapAmount) * 100);
+        }
+        return 0;
+      
+      case 'fixed_rate': // Fixed Rate (legacy)
+      case 'project_hours': // Project Hours (legacy)
+      case 'task_hours': // Task Hours (legacy)
+        if (budgetAmount > 0) {
+          const actualCost = actualHours * hourlyRate;
+          return Math.round((actualCost / budgetAmount) * 100);
+        }
+        if (estimatedHours > 0) {
+          return Math.round((actualHours / estimatedHours) * 100);
         }
         return 0;
       
@@ -491,6 +515,9 @@ export default function ProjectsPage() {
                                 <SelectItem value="tm">Time & Materials</SelectItem>
                                 <SelectItem value="fixed_fee">Fixed Fee</SelectItem>
                                 <SelectItem value="retainer">Retainer</SelectItem>
+                                <SelectItem value="fixed_rate">Fixed Rate</SelectItem>
+                                <SelectItem value="project_hours">Project Hours</SelectItem>
+                                <SelectItem value="task_hours">Task Hours</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -1180,6 +1207,9 @@ export default function ProjectsPage() {
                   <SelectItem value="tm">Time & Materials</SelectItem>
                   <SelectItem value="fixed_fee">Fixed Fee</SelectItem>
                   <SelectItem value="retainer">Retainer</SelectItem>
+                  <SelectItem value="fixed_rate">Fixed Rate</SelectItem>
+                  <SelectItem value="project_hours">Project Hours</SelectItem>
+                  <SelectItem value="task_hours">Task Hours</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -1299,7 +1329,7 @@ export default function ProjectsPage() {
                               <Link href={`/projects/${project.id}`} className="font-medium text-gray-900 hover:text-blue-600">
                                 {project.name}
                               </Link>
-                              <div className="text-sm text-gray-500">{project.billingType === 'tm' ? 'Time & Materials' : project.billingType === 'fixed_fee' ? 'Fixed Fee' : project.billingType === 'retainer' ? 'Retainer' : project.billingType}</div>
+                              <div className="text-sm text-gray-500">{project.billingType === 'tm' ? 'Time & Materials' : project.billingType === 'fixed_fee' ? 'Fixed Fee' : project.billingType === 'retainer' ? 'Retainer' : project.billingType === 'fixed_rate' ? 'Fixed Rate' : project.billingType === 'project_hours' ? 'Project Hours' : project.billingType === 'task_hours' ? 'Task Hours' : project.billingType}</div>
                             </div>
                           </div>
                         </td>
@@ -1416,7 +1446,7 @@ export default function ProjectsPage() {
                     {/* Billing Type Badge */}
                     <div className="flex justify-between items-center">
                       <Badge variant="outline" className="text-xs bg-gray-50">
-                        {project.billingType === 'tm' ? 'Time & Materials' : project.billingType === 'fixed_fee' ? 'Fixed Fee' : project.billingType === 'retainer' ? 'Retainer' : 'Time & Materials'}
+                        {project.billingType === 'tm' ? 'Time & Materials' : project.billingType === 'fixed_fee' ? 'Fixed Fee' : project.billingType === 'retainer' ? 'Retainer' : project.billingType === 'fixed_rate' ? 'Fixed Rate' : project.billingType === 'project_hours' ? 'Project Hours' : project.billingType === 'task_hours' ? 'Task Hours' : 'Time & Materials'}
                       </Badge>
                       {daysDiff !== null && daysDiff > 0 && daysDiff <= 7 && (
                         <Badge variant="outline" className="text-orange-600 border-orange-200 text-xs">
