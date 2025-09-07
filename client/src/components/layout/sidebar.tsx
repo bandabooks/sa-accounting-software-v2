@@ -336,7 +336,6 @@ const getFullNavigationGroups = () => [
     module: "compliance",
     items: [
       { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/audit-trail", label: "Audit Trail", icon: FileText, permission: "AUDIT_VIEW", module: "compliance" },
       { path: "/client-management", label: "Client Management", icon: Users, permission: "CLIENT_MANAGEMENT_VIEW", module: "compliance" },
       { path: "/cipc-compliance", label: "CIPC Compliance", icon: Building, permission: "CIPC_COMPLIANCE_VIEW", module: "compliance" },
@@ -502,7 +501,6 @@ const navigationGroups = [
     module: "compliance",
     items: [
       { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/audit-trail", label: "Audit Trail", icon: FileCheck, permission: "AUDIT_VIEW", module: "compliance" },
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
