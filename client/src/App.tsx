@@ -614,12 +614,7 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         
-        {/* Task Management Route */}
-        <Route path="/task-management">
-          <ProtectedRoute>
-            <ComplianceTasks />
-          </ProtectedRoute>
-        </Route>
+        {/* Task Management Route - Now unified with /tasks */}
         
         {/* Calendar Route */}
         <Route path="/calendar">
