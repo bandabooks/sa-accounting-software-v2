@@ -78,6 +78,7 @@ import SubscriptionPayment from "@/pages/subscription-payment";
 import PaymentSuccess from "@/pages/payment-success";
 import PaymentCancel from "@/pages/payment-cancel";
 import Projects from "@/pages/projects";
+import ProjectDetail from "@/pages/project-detail";
 import Tasks from "@/pages/tasks";
 import TimeEntries from "@/pages/time-entries";
 import AlertsPage from "@/pages/alerts";
@@ -889,6 +890,12 @@ function AuthenticatedApp() {
         <Route path="/bank-reconciliation">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
             <Banking />
+          </ProtectedRoute>
+        </Route>
+
+        <Route path="/projects/:id">
+          <ProtectedRoute permission={PERMISSIONS.PROJECTS_VIEW}>
+            <ProjectDetail />
           </ProtectedRoute>
         </Route>
 
