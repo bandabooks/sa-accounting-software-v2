@@ -130,7 +130,7 @@ const getNavigationGroupsForRole = (userRole: string) => {
         { path: "/vat-management", label: "VAT Management", icon: FileCheck, permission: "VAT_VIEW", module: "compliance" },
         { path: "/vat-management?tab=returns", label: "VAT201 Returns", icon: FileText, permission: "VAT_VIEW", module: "compliance" },
         { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
-        { path: "/compliance-dashboard", label: "Compliance Dashboard", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" }
+        { path: "/practice-dashboard", label: "Practice Dashboard", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" }
       ]
     },
 
@@ -335,7 +335,7 @@ const getFullNavigationGroups = () => [
     icon: Shield,
     module: "compliance",
     items: [
-      { path: "/compliance-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/audit-trail", label: "Audit Trail", icon: FileText, permission: "AUDIT_VIEW", module: "compliance" },
       { path: "/client-management", label: "Client Management", icon: Users, permission: "CLIENT_MANAGEMENT_VIEW", module: "compliance" },
@@ -501,7 +501,7 @@ const navigationGroups = [
     icon: Shield,
     module: "compliance",
     items: [
-      { path: "/compliance-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/sars-integration", label: "SARS Integration", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/audit-trail", label: "Audit Trail", icon: FileCheck, permission: "AUDIT_VIEW", module: "compliance" },
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
@@ -778,7 +778,7 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
         ref={buttonRef}
         onClick={() => {
           // For main menu groups, navigate to their first item and expand dropdown
-          if ((group.id === "sales" || group.id === "purchases") && visibleItems.length > 0) {
+          if ((group.id === "sales" || group.id === "purchases" || group.id === "compliance") && visibleItems.length > 0) {
             setLocation(visibleItems[0].path); // Navigate to the first item (dashboard/main page)
           }
           onToggle(); // Always toggle the dropdown

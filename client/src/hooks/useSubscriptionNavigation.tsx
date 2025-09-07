@@ -71,7 +71,7 @@ const FEATURE_KEYS = {
   'vat-history': 'vat_management',
   
   // Compliance
-  'compliance-dashboard': 'compliance_dashboard',
+  'practice-dashboard': 'compliance_dashboard',
   'compliance-clients': 'compliance_clients', 
   'cipc-compliance': 'cipc_compliance',
   'labour-compliance': 'labour_compliance',

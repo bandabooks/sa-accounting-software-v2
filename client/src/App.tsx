@@ -629,7 +629,7 @@ function AuthenticatedApp() {
         </Route>
         
         {/* Compliance Dashboard Route (alternative URL) */}
-        <Route path="/compliance-dashboard">
+        <Route path="/practice-dashboard">
           <ProtectedRoute>
             <ComplianceDashboard />
           </ProtectedRoute>

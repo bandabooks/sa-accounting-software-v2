@@ -120,7 +120,7 @@ const navigationGroups = [
     icon: Shield,
     module: "compliance",
     items: [
-      { path: "/compliance-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
 
       { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },

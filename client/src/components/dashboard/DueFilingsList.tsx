@@ -129,7 +129,7 @@ export default function DueFilingsList({ filings, showAll = false }: DueFilingsL
                 <DropdownMenuItem onClick={() => setFilterType('Service')}>Service</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link href="/compliance-dashboard">
+            <Link href="/practice-dashboard">
               <Button size="sm" variant="outline" className="text-xs h-7" aria-label="View all filings">
                 View All
               </Button>

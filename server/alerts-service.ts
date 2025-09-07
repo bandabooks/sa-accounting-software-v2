@@ -189,7 +189,7 @@ export class AlertsService {
         dueDate: empDueDate.toISOString().split('T')[0],
         status: 'active',
         actionRequired: daysUntilEmpDue <= 30,
-        actionUrl: '/compliance-dashboard'
+        actionUrl: '/practice-dashboard'
       });
     }
 
