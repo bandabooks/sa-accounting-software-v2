@@ -117,6 +117,8 @@ export default function ProjectsPage() {
       tags: [],
       estimatedHours: 0,
       budgetAmount: 0,
+      currency: "ZAR",
+      poNumber: "",
     },
   });
 
@@ -424,42 +426,232 @@ export default function ProjectsPage() {
                       />
                     </div>
 
-                    {/* Total Rate & Estimated Hours */}
+                    {/* Conditional Billing Fields based on Billing Type */}
+                    {form.watch("billingType") === "tm" && (
+                      <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="font-medium text-blue-900">Time & Materials Settings</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="hourlyRate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Hourly Rate *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.01"
+                                    placeholder="0.00" 
+                                    {...field}
+                                    className="border-gray-300"
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="budgetAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Budget Amount (Optional)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.01"
+                                    placeholder="0.00" 
+                                    {...field}
+                                    className="border-gray-300"
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {form.watch("billingType") === "fixed_fee" && (
+                      <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <h4 className="font-medium text-green-900">Fixed Fee Settings</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="budgetAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Contract Amount *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.01"
+                                    placeholder="0.00" 
+                                    {...field}
+                                    className="border-gray-300"
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="estimatedHours"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Budget Hours (Optional)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.25"
+                                    placeholder="0" 
+                                    {...field}
+                                    className="border-gray-300"
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {form.watch("billingType") === "retainer" && (
+                      <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <h4 className="font-medium text-purple-900">Retainer Settings</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="budgetAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Monthly Cap Amount</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.01"
+                                    placeholder="0.00" 
+                                    {...field}
+                                    className="border-gray-300"
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="estimatedHours"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Monthly Cap Hours</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.25"
+                                    placeholder="0" 
+                                    {...field}
+                                    className="border-gray-300"
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="hourlyRate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Renewal Day (1-28)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min="1"
+                                    max="28"
+                                    placeholder="1" 
+                                    {...field}
+                                    className="border-gray-300"
+                                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="progressThroughTasks"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-6">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="text-sm font-medium">
+                                    Bill overage as T&M
+                                  </FormLabel>
+                                  <div className="text-xs text-gray-600">
+                                    Charge additional hours at T&M rate
+                                  </div>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Shared Project Fields */}
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="budgetAmount"
+                        name="currency"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium">Total Rate</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                placeholder="0.00" 
-                                {...field}
-                                className="border-gray-300"
-                                onChange={(e) => field.onChange(e.target.value || undefined)}
-                              />
-                            </FormControl>
+                            <FormLabel className="text-sm font-medium">Currency</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || "ZAR"}>
+                              <FormControl>
+                                <SelectTrigger className="border-gray-300">
+                                  <SelectValue placeholder="ZAR" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="ZAR">ZAR (South African Rand)</SelectItem>
+                                <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                                <SelectItem value="EUR">EUR (Euro)</SelectItem>
+                                <SelectItem value="GBP">GBP (British Pound)</SelectItem>
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       <FormField
                         control={form.control}
-                        name="estimatedHours"
+                        name="poNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium">Estimated Hours</FormLabel>
+                            <FormLabel className="text-sm font-medium">PO Number</FormLabel>
                             <FormControl>
                               <Input 
-                                type="number" 
-                                step="0.25"
-                                placeholder="0" 
+                                placeholder="Purchase Order Number" 
                                 {...field}
                                 className="border-gray-300"
-                                onChange={(e) => field.onChange(e.target.value || undefined)}
                               />
                             </FormControl>
                             <FormMessage />
