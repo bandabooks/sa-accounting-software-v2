@@ -130,7 +130,7 @@ import ComplianceReports from "@/pages/ComplianceReports";
 import Integrations from "@/pages/integrations";
 import CIPCCompliance from "@/pages/cipc-compliance";
 import LabourCompliance from "@/pages/labour-compliance";
-import ComplianceTasks from "@/pages/compliance-tasks";
+// ComplianceTasks removed - now unified with Tasks
 import ComplianceCalendar from "@/pages/compliance-calendar";
 import ComplianceDocuments from "@/pages/compliance-documents";
 import ProfessionalUserManagement from "@/pages/ProfessionalUserManagement";
