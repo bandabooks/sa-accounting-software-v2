@@ -368,15 +368,36 @@ export default function Dashboard() {
           {/* Professional Metrics Grid */}
           {dashboardType === 'practitioner' ? renderPractitionerMetrics() : renderBusinessOwnerMetrics()}
 
-          {/* SARS Compliance Timeline - Above the fold */}
-          <div className="mb-4">
-            <TimelineStrip />
-          </div>
+          {/* Business Operations Section */}
 
-          {/* Due Filings & Activity - Two columns */}
+          {/* Business Activity & Recent Transactions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <DueFilingsList />
             <ActivityList title="Recent Activity" />
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-gray-900">Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {dashboardStats.recentInvoices?.slice(0, 5).map((invoice: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Invoice #{invoice.invoiceNumber || `INV-${index + 1001}`}</p>
+                        <p className="text-xs text-gray-500">{invoice.customerName || 'Customer'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-sm">{formatCurrency(invoice.total || '1000.00')}</p>
+                        <p className="text-xs text-green-600">{invoice.status || 'Paid'}</p>
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">No recent transactions</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Cash Flow Mini Stats */}
