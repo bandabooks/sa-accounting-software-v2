@@ -26,7 +26,7 @@ import {
 
 interface DueFiling {
   id: number;
-  service: 'VAT201' | 'EMP201' | 'CIPC' | 'PROV_TAX';
+  service: 'VAT201' | 'EMP201' | 'EMP501' | 'ITR12' | 'ITR14' | 'PROV_TAX' | 'CIPC';
   entity: string;
   period: string;
   dueDate: string;
@@ -87,6 +87,42 @@ export default function PracticeDashboard() {
           status: 'overdue',
           hasDocuments: false,
           client: 'Tech Solutions'
+        },
+        {
+          id: 4,
+          service: 'EMP501',
+          entity: 'Digital Marketing Agency',
+          period: '2024 Tax Year',
+          dueDate: '2024-05-31',
+          daysUntilDue: 85,
+          assignee: 'Current User',
+          status: 'upcoming',
+          hasDocuments: true,
+          client: 'Digital Marketing'
+        },
+        {
+          id: 5,
+          service: 'ITR12',
+          entity: 'John Smith (Individual)',
+          period: '2024 Tax Year',
+          dueDate: '2024-10-31',
+          daysUntilDue: 238,
+          assignee: 'Team Member',
+          status: 'upcoming',
+          hasDocuments: false,
+          client: 'John Smith'
+        },
+        {
+          id: 6,
+          service: 'ITR14',
+          entity: 'Innovative Tech (Pty) Ltd',
+          period: '2024 Tax Year',
+          dueDate: '2024-12-31',
+          daysUntilDue: 299,
+          assignee: 'Current User',
+          status: 'draft',
+          hasDocuments: true,
+          client: 'Innovative Tech'
         }
       ] as DueFiling[];
     }
