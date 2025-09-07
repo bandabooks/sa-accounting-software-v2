@@ -1066,7 +1066,7 @@ export default function TasksPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Overdue</p>
-                <p className="text-2xl font-bold">{statusCounts.overdue}</p>
+                <p className="text-2xl font-bold text-red-600">{statusCounts.overdue}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
