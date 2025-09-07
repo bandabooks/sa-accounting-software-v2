@@ -80,6 +80,14 @@ export default function BusinessDashboard() {
 
   const businessMetrics: BusinessMetric[] = [
     {
+      title: "Cash Balance",
+      value: Math.round((dashboardStats as any)?.bankBalance || 245800),
+      change: 5.2,
+      changeType: 'increase',
+      trend: 'up',
+      period: "vs last month"
+    },
+    {
       title: "Total Receivables",
       value: overdueAmount,
       change: overdueAmount > 0 ? 15.4 : -5.4,
@@ -115,14 +123,6 @@ export default function BusinessDashboard() {
       title: "Profit Margin",
       value: "18.5%",
       change: 2.1,
-      changeType: 'increase',
-      trend: 'up',
-      period: "vs last month"
-    },
-    {
-      title: "Customer Growth",
-      value: customerList.length,
-      change: 7.8,
       changeType: 'increase',
       trend: 'up',
       period: "vs last month"
