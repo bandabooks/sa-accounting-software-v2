@@ -1110,16 +1110,7 @@ function AuthenticatedApp() {
             <LabourCompliance />
           </ProtectedRoute>
         </Route>
-        <Route path="/compliance/tasks">
-          <ProtectedRoute>
-            <ComplianceTasks />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/compliance/tasks/new">
-          <ProtectedRoute>
-            <ComplianceTasks />
-          </ProtectedRoute>
-        </Route>
+        {/* Compliance tasks routes removed - now unified with /tasks */}
         <Route path="/compliance/calendar">
           <ProtectedRoute>
             <ComplianceCalendar />
