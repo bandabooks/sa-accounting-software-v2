@@ -160,7 +160,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors" onClick={() => setLocation('/compliance/tracker')}>
+        <Card className="bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors" onClick={() => setLocation('/tasks')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -173,7 +173,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-rose-50 cursor-pointer hover:bg-rose-100 transition-colors" onClick={() => setLocation('/compliance/tracker')}>
+        <Card className="bg-rose-50 cursor-pointer hover:bg-rose-100 transition-colors" onClick={() => setLocation('/tasks')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
