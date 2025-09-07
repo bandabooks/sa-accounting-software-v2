@@ -358,12 +358,14 @@ export default function PracticeDashboard() {
                   data-testid={`button-file-${filing.id}`}
                   aria-label={`File ${filing.service} ${filing.period} for ${filing.client}`}
                   onClick={() => {
-                    if (filing.service === 'VAT201' || filing.service === 'EMP201') {
-                      setLocation('/sars-integration');
+                    if (filing.service === 'VAT201') {
+                      setLocation('/vat-management');
+                    } else if (filing.service === 'EMP201') {
+                      setLocation('/emp201');
                     } else if (filing.service === 'CIPC') {
                       setLocation('/cipc-compliance');
                     } else if (filing.service === 'PROV_TAX') {
-                      setLocation('/sars-integration');
+                      setLocation('/accountants/tax-practitioners');
                     }
                   }}
                 >
