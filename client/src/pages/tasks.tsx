@@ -83,7 +83,6 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Task Templates
@@ -128,6 +127,7 @@ export default function TasksPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       setIsDialogOpen(false);
+      setEditingTask(null);
       form.reset();
       setAttachedFiles([]);
       toast({
@@ -139,6 +139,31 @@ export default function TasksPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to create task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      if (!editingTask) throw new Error("No task selected for editing");
+      return await apiRequest(`/api/tasks/${editingTask.id}`, "PUT", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setIsDialogOpen(false);
+      setEditingTask(null);
+      form.reset();
+      setAttachedFiles([]);
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task",
         variant: "destructive",
       });
     },
@@ -259,7 +284,11 @@ export default function TasksPage() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createMutation.mutate(values);
+    if (editingTask) {
+      updateMutation.mutate(values);
+    } else {
+      createMutation.mutate(values);
+    }
   };
 
   const handleStartTime = (taskId: number) => {
@@ -456,18 +485,29 @@ export default function TasksPage() {
             Track and manage all compliance tasks and deadlines
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setEditingTask(null);
+            form.reset();
+            setSelectedTemplate("");
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => {
+              setEditingTask(null);
+              form.reset();
+              setSelectedTemplate("");
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               New Task
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Create New Task</DialogTitle>
+              <DialogTitle>{editingTask ? "Edit Task" : "Create New Task"}</DialogTitle>
               <DialogDescription>
-                Add a new task to track work and time
+                {editingTask ? "Update the task details below" : "Add a new task to track work and time"}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -842,8 +882,11 @@ export default function TasksPage() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Creating..." : "Create Task"}
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {editingTask 
+                      ? (updateMutation.isPending ? "Updating..." : "Update Task")
+                      : (createMutation.isPending ? "Creating..." : "Create Task")
+                    }
                   </Button>
                 </div>
               </form>
@@ -852,39 +895,6 @@ export default function TasksPage() {
         </Dialog>
       </div>
 
-      {/* Edit Task Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-            <DialogDescription>
-              Update the task details below.
-            </DialogDescription>
-          </DialogHeader>
-          {editingTask && (
-            <EditTaskFormContent 
-              task={editingTask} 
-              users={users}
-              projects={projects}
-              customers={customers}
-              taskTemplates={taskTemplates}
-              onClose={() => {
-                setIsEditDialogOpen(false);
-                setEditingTask(null);
-              }}
-              onSuccess={() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-                setIsEditDialogOpen(false);
-                setEditingTask(null);
-                toast({
-                  title: "Success",
-                  description: "Task updated successfully",
-                });
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Status Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1200,7 +1210,29 @@ export default function TasksPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => {
                               setEditingTask(task);
-                              setIsEditDialogOpen(true);
+                              // Populate form with task data
+                              form.reset({
+                                title: task.title || "",
+                                description: task.description || "",
+                                status: (task.status as any) || "todo",
+                                priority: (task.priority as any) || "medium",
+                                taskType: (task as any).taskType || "project",
+                                complianceType: (task as any).complianceType || "",
+                                projectId: task.projectId || undefined,
+                                customerId: task.customerId || undefined,
+                                assignedToId: task.assignedToId || undefined,
+                                startDate: task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : "",
+                                dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+                                estimatedHours: task.estimatedHours?.toString() || "",
+                                actualHours: task.actualHours?.toString() || "",
+                                hourlyRate: task.hourlyRate?.toString() || "",
+                                isInternal: task.isInternal || false,
+                                isBillable: task.isBillable !== false,
+                                progress: task.progress || 0,
+                                isRecurring: task.isRecurring || false,
+                                notes: (task as any).notes || ""
+                              });
+                              setIsDialogOpen(true);
                             }}>
                               Edit Task
                             </DropdownMenuItem>
