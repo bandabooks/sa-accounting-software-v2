@@ -418,9 +418,9 @@ export default function ProjectsPage() {
             </DialogTrigger>
           </Dialog>
           <Link href="/tasks">
-            <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 shadow-lg">
+            <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white shadow-lg transition-colors">
               <Target className="h-4 w-4 mr-2" />
-              New Task
+              Task
             </Button>
           </Link>
         </div>
