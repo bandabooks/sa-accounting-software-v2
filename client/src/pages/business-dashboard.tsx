@@ -61,13 +61,18 @@ export default function BusinessDashboard() {
   const customerList = Array.isArray(customers) ? customers : [];
   const projectList = Array.isArray(projects) ? projects : [];
   
-  const totalRevenue = invoiceList.reduce((sum: number, inv: any) => 
-    inv.status === 'paid' ? sum + (inv.total || 0) : sum, 0);
+  const totalRevenue = Math.round(invoiceList.reduce((sum: number, inv: any) => {
+    const total = typeof inv.total === 'number' ? inv.total : parseFloat(inv.total) || 0;
+    return inv.status === 'paid' ? sum + total : sum;
+  }, 0) * 100) / 100;
   
   const overdueInvoices = invoiceList.filter((inv: any) => 
     inv.status === 'overdue' || (inv.dueDate && new Date(inv.dueDate) < new Date()));
   
-  const overdueAmount = overdueInvoices.reduce((sum: number, inv: any) => sum + (inv.total || 0), 0);
+  const overdueAmount = Math.round(overdueInvoices.reduce((sum: number, inv: any) => {
+    const total = typeof inv.total === 'number' ? inv.total : parseFloat(inv.total) || 0;
+    return sum + total;
+  }, 0) * 100) / 100;
   
   const activeProjects = projectList.filter((p: any) => p.status === 'in_progress');
   
@@ -84,7 +89,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Monthly Revenue",
-      value: (dashboardStats as any)?.monthlyRevenue || totalRevenue,
+      value: Math.round(((dashboardStats as any)?.monthlyRevenue || totalRevenue) * 100) / 100,
       change: 8.2,
       changeType: 'increase', 
       trend: 'up',
@@ -243,7 +248,7 @@ export default function BusinessDashboard() {
                     <div className="flex items-baseline gap-2 mt-2">
                       <span className="text-xl font-bold text-gray-900" data-testid={`kpi-value-${index}`}>
                         {typeof metric.value === 'number' && (metric.title.includes('Revenue') || metric.title.includes('Cash') || metric.title.includes('Receivables'))
-                          ? formatCurrency(metric.value) 
+                          ? formatCurrency(Number(metric.value)) 
                           : metric.value}
                       </span>
                     </div>
