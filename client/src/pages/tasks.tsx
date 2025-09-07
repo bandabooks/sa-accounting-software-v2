@@ -297,10 +297,40 @@ export default function TasksPage() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Sanitize fields - convert empty strings to undefined for proper API handling
+    const sanitizedValues = {
+      ...values,
+      // Handle string fields that can be empty - convert empty strings to undefined
+      estimatedHours: values.estimatedHours === "" ? undefined : values.estimatedHours,
+      actualHours: values.actualHours === "" ? undefined : values.actualHours,
+      hourlyRate: values.hourlyRate === "" ? undefined : values.hourlyRate,
+      // Ensure ID fields are properly set (undefined instead of 0 or empty)
+      projectId: values.projectId || undefined,
+      customerId: values.customerId || undefined,
+      relatedToId: values.relatedToId || undefined,
+      assignedToId: values.assignedToId || undefined,
+      parentTaskId: values.parentTaskId || undefined,
+      // Handle date fields - convert empty strings to undefined
+      startDate: values.startDate === "" ? undefined : values.startDate,
+      dueDate: values.dueDate === "" ? undefined : values.dueDate,
+      completedDate: values.completedDate === "" ? undefined : values.completedDate,
+      // Handle recurring fields - convert empty/falsy to undefined
+      recurringInterval: values.recurringInterval || undefined,
+      recurringDayOfMonth: values.recurringDayOfMonth || undefined,
+      recurringCount: values.recurringCount || undefined,
+      // Handle optional string fields
+      relatedToType: values.relatedToType === "" || values.relatedToType === "none" ? undefined : values.relatedToType,
+      complianceType: values.complianceType === "" || values.complianceType === "none" ? undefined : values.complianceType,
+      taskType: values.taskType === "" ? "project" : values.taskType,
+      // Convert empty description to undefined
+      description: values.description === "" ? undefined : values.description,
+      notes: values.notes === "" ? undefined : values.notes,
+    };
+
     if (editingTask) {
-      updateMutation.mutate(values);
+      updateMutation.mutate(sanitizedValues);
     } else {
-      createMutation.mutate(values);
+      createMutation.mutate(sanitizedValues);
     }
   };
 
