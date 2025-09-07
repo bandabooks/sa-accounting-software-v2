@@ -1168,21 +1168,22 @@ export default function TasksPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-gray-50">
                   <TableHead className="w-8"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Assigned to</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Client</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Task</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Status</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Start Date</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Due Date</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Assigned to</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Tags</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Priority</TableHead>
+                  <TableHead className="text-right font-semibold text-gray-700">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTasks.map((task: TaskWithDetails) => (
-                  <TableRow key={task.id} className="hover:bg-muted/50">
+                  <TableRow key={task.id} className="hover:bg-blue-50/50 transition-colors">
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -1199,10 +1200,16 @@ export default function TasksPage() {
                       </Button>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{task.title}</div>
-                      {task.customer && (
-                        <div className="text-sm text-muted-foreground">Client: {task.customer.name}</div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {task.customer ? (
+                          <span className="text-gray-700">{task.customer.name}</span>
+                        ) : (
+                          <span className="text-gray-400 italic">No Client</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium text-gray-900">{task.title}</div>
                     </TableCell>
                     <TableCell>
                       <Select 
