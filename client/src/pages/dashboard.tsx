@@ -49,6 +49,7 @@ interface DashboardWidget {
 }
 
 export default function Dashboard() {
+  // ALL HOOKS MUST COME FIRST - BEFORE ANY EARLY RETURNS
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -59,6 +60,7 @@ export default function Dashboard() {
   const [isProfitOverviewExpanded, setIsProfitOverviewExpanded] = useState(false);
   const [location, setLocation] = useLocation();
   const [dashboardViewType, setDashboardViewType] = useState<'practitioner' | 'business'>('practitioner');
+  
   // Fetch real alert counts from API - Less frequent updates for performance
   const { data: alertCounts } = useQuery({
     queryKey: ["/api/alerts/counts"],
@@ -80,7 +82,6 @@ export default function Dashboard() {
   });
 
   // Real financial data now displayed directly in components
-
   const {
     isWizardVisible,
     onboardingSteps,
@@ -106,6 +107,7 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // NOW safe to do early return - all hooks have been called
   if (isLoading) {
     return <PageLoader message="Loading dashboard data..." />;
   }
