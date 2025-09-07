@@ -816,9 +816,14 @@ export default function ProjectsPage() {
                                 <SelectItem value="none">No Members</SelectItem>
                                 {users.map((user: any) => (
                                   <SelectItem key={user.id} value={user.id.toString()}>
-                                    {user.name}
+                                    {user.name || user.username || `User ${user.id}`}
                                   </SelectItem>
                                 ))}
+                                {users.length === 0 && (
+                                  <SelectItem value="no-users" disabled>
+                                    No users available
+                                  </SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
                             <FormMessage />
