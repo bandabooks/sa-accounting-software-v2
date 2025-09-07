@@ -154,6 +154,66 @@ export default function ProjectsPage() {
     }
   };
 
+  // Apply filters to projects
+  const filteredProjects = projects.filter((project: any) => {
+    // Search filter
+    if (filters.search && !project.name.toLowerCase().includes(filters.search.toLowerCase())) {
+      return false;
+    }
+
+    // Status filter
+    if (filters.status && filters.status !== 'all' && project.status !== filters.status) {
+      return false;
+    }
+
+    // Priority filter
+    if (filters.priority && filters.priority !== 'all' && project.priority !== filters.priority) {
+      return false;
+    }
+
+    // Client filter
+    if (filters.client && filters.client !== 'all' && project.customerId?.toString() !== filters.client) {
+      return false;
+    }
+
+    // Billing type filter
+    if (filters.billingType && filters.billingType !== 'all' && project.billingType !== filters.billingType) {
+      return false;
+    }
+
+    // Date range filter
+    if (filters.dateRange.start && project.startDate && new Date(project.startDate) < new Date(filters.dateRange.start)) {
+      return false;
+    }
+    if (filters.dateRange.end && project.endDate && new Date(project.endDate) > new Date(filters.dateRange.end)) {
+      return false;
+    }
+
+    // At Risk filter
+    if (filters.showAtRisk) {
+      const dueDate = project.endDate ? new Date(project.endDate) : null;
+      const now = new Date();
+      const daysDiff = dueDate ? Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+      const isAtRisk = daysDiff <= 7 && daysDiff > 0 && !['completed', 'finished', 'cancelled'].includes(project.status);
+      if (!isAtRisk) return false;
+    }
+
+    // Over Budget filter
+    if (filters.showOverBudget) {
+      const budget = parseFloat(project.budgetAmount) || 0;
+      const actual = parseFloat(project.actualCost) || 0;
+      const isOverBudget = budget > 0 && actual > budget;
+      if (!isOverBudget) return false;
+    }
+
+    // No PM filter
+    if (filters.showNoPM && project.projectManagerId) {
+      return false;
+    }
+
+    return true;
+  });
+
   // Calculate comprehensive project statistics
   const projectStats = {
     total: projects.length,
@@ -784,7 +844,7 @@ export default function ProjectsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="not_started">Not Started</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="on_hold">On Hold</SelectItem>
@@ -797,7 +857,7 @@ export default function ProjectsPage() {
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Priority</SelectItem>
+                  <SelectItem value="all">All Priority</SelectItem>
                   <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
@@ -810,7 +870,7 @@ export default function ProjectsPage() {
                   <SelectValue placeholder="Client" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Clients</SelectItem>
+                  <SelectItem value="all">All Clients</SelectItem>
                   {customers.map((customer: any) => (
                     <SelectItem key={customer.id} value={customer.id.toString()}>
                       {customer.name}
@@ -824,7 +884,7 @@ export default function ProjectsPage() {
                   <SelectValue placeholder="Billing Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Billing</SelectItem>
+                  <SelectItem value="all">All Billing</SelectItem>
                   <SelectItem value="fixed_rate">Fixed Rate</SelectItem>
                   <SelectItem value="project_hours">Project Hours</SelectItem>
                   <SelectItem value="task_hours">Task Hours</SelectItem>
@@ -876,7 +936,7 @@ export default function ProjectsPage() {
         </CardContent>
       </Card>
 
-      {projects.length === 0 ? (
+      {filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
@@ -928,7 +988,7 @@ export default function ProjectsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {projects.map((project: ProjectWithDetails) => {
+                  {filteredProjects.map((project: ProjectWithDetails) => {
                     const customer = customers.find((c: any) => c.id === project.customerId);
                     const manager = users.find((u: any) => u.id === project.projectManagerId);
                     const dueDate = project.endDate ? new Date(project.endDate).toLocaleDateString() : 'No due date';
@@ -1012,7 +1072,7 @@ export default function ProjectsPage() {
       ) : (
         // Enhanced Grid/Card View
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project: ProjectWithDetails) => {
+          {filteredProjects.map((project: ProjectWithDetails) => {
             const progress = project.totalTasks > 0 
               ? Math.round((project.completedTasks / project.totalTasks) * 100) 
               : 0;
