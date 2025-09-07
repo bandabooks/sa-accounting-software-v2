@@ -31,6 +31,10 @@ import ComplianceAlerts from "@/components/dashboard/compliance-alerts";
 import ActionShortcuts from "@/components/dashboard/action-shortcuts";
 import BankComplianceCard from "@/components/dashboard/bank-compliance-card";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
+import ActivityList from "@/components/dashboard/ActivityList";
+import TimelineStrip from "@/components/dashboard/TimelineStrip";
+import DueFilingsList from "@/components/dashboard/DueFilingsList";
+import MiniStatsRow from "@/components/ui/MiniStatsRow";
 import { dashboardApi, userApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils-invoice";
 import { TooltipWizard } from "@/components/onboarding/TooltipWizard";
@@ -355,161 +359,102 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 pb-8">
           
-          {/* Professional Header */}
+          {/* Professional Header with Quick Actions */}
           <div className="py-4 mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-              {dashboardType === 'practitioner' ? 'Practice Dashboard' : 'Business Dashboard'}
-            </h1>
-            <p className="text-sm text-gray-600">
-              {getCurrentGreeting()} • Last updated: {lastUpdate.toLocaleTimeString()}
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+                  {dashboardType === 'practitioner' ? 'Practice Dashboard' : 'Business Dashboard'}
+                </h1>
+                <p className="text-sm text-gray-600">
+                  {getCurrentGreeting()} • Last updated: {lastUpdate.toLocaleTimeString()}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href="/invoices/new">
+                  <Button size="sm" variant="outline" className="text-xs h-8">
+                    <FileText className="h-3 w-3 mr-2" />
+                    New Invoice
+                  </Button>
+                </Link>
+                <Link href="/customers/new">
+                  <Button size="sm" variant="outline" className="text-xs h-8">
+                    <UserPlus className="h-3 w-3 mr-2" />
+                    Add Customer
+                  </Button>
+                </Link>
+                <Link href="/vat-returns">
+                  <Button size="sm" variant="outline" className="text-xs h-8">
+                    <Calculator className="h-3 w-3 mr-2" />
+                    VAT Return
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
 
           {/* Professional Metrics Grid */}
           {dashboardType === 'practitioner' ? renderPractitionerMetrics() : renderBusinessOwnerMetrics()}
 
-          {/* Professional Action Items */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            {/* Critical Tasks */}
-            <Card className="p-4 border border-red-200 bg-red-50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-red-800">Critical Tasks</h3>
-                  <p className="text-xs text-red-600">Require immediate attention</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-red-700">Overdue Invoices</span>
-                  <span className="font-medium text-red-800">2</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-red-700">VAT Returns Due</span>
-                  <span className="font-medium text-red-800">1</span>
-                </div>
-                <Link href="/invoices?filter=overdue" className="block">
-                  <Button size="sm" variant="outline" className="w-full text-xs border-red-300 text-red-700 hover:bg-red-100 mt-2">
-                    Review Critical Items
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-
-            {/* Upcoming Deadlines */}
-            <Card className="p-4 border border-yellow-200 bg-yellow-50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 bg-yellow-100 rounded flex items-center justify-center">
-                  <Calendar className="h-4 w-4 text-yellow-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-yellow-800">Upcoming Deadlines</h3>
-                  <p className="text-xs text-yellow-600">Next 7 days</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-yellow-700">VAT Return</span>
-                  <span className="font-medium text-yellow-800">5 days</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-yellow-700">EMP201</span>
-                  <span className="font-medium text-yellow-800">7 days</span>
-                </div>
-                <Link href={dashboardType === 'practitioner' ? "/compliance-dashboard" : "/vat-management"} className="block">
-                  <Button size="sm" variant="outline" className="w-full text-xs border-yellow-300 text-yellow-700 hover:bg-yellow-100 mt-2">
-                    View All Deadlines
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="p-4 border border-blue-200 bg-blue-50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                  <Zap className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-blue-800">Quick Actions</h3>
-                  <p className="text-xs text-blue-600">Common tasks</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Link href="/invoices/new" className="block">
-                  <Button size="sm" variant="outline" className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100">
-                    <FileText className="h-3 w-3 mr-2" />
-                    Create Invoice
-                  </Button>
-                </Link>
-                <Link href="/customers/new" className="block">
-                  <Button size="sm" variant="outline" className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100">
-                    <UserPlus className="h-3 w-3 mr-2" />
-                    Add Customer
-                  </Button>
-                </Link>
-              </div>
-            </Card>
+          {/* SARS Compliance Timeline - Above the fold */}
+          <div className="mb-4">
+            <TimelineStrip />
           </div>
 
-          {/* Recent Activity Feed */}
-          <Card className="mb-6">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
-                <Link href="/reports">
-                  <Button size="sm" variant="outline" className="text-xs">
-                    View All
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">Invoice INV-2024-001 created</div>
-                    <div className="text-xs text-gray-600">R 15,500.00 • ABC Company Ltd</div>
-                  </div>
-                  <div className="text-xs text-gray-500">2h ago</div>
-                </div>
-                
-                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">Payment received</div>
-                    <div className="text-xs text-gray-600">R 8,200.00 • XYZ Trading</div>
-                  </div>
-                  <div className="text-xs text-gray-500">4h ago</div>
-                </div>
-                
-                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                  <div className="w-8 h-8 bg-purple-100 rounded flex items-center justify-center">
-                    <UserPlus className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">New customer added</div>
-                    <div className="text-xs text-gray-600">Tech Solutions Pty Ltd</div>
-                  </div>
-                  <div className="text-xs text-gray-500">1d ago</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Due Filings & Activity - Two columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <DueFilingsList />
+            <ActivityList title="Recent Activity" />
+          </div>
+
+          {/* Cash Flow Mini Stats */}
+          <div className="mb-6">
+            <MiniStatsRow />
+          </div>
 
           {/* Professional Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            {/* Cash Flow Overview */}
+            {/* Outstanding Balances Table */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold text-gray-900">Cash Flow Overview</CardTitle>
+                <CardTitle className="text-lg font-semibold text-gray-900">Outstanding Balances</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left p-3 font-medium text-gray-600">Type</th>
+                        <th className="text-right p-3 font-medium text-gray-600">Amount</th>
+                        <th className="text-right p-3 font-medium text-gray-600">Overdue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      <tr className="hover:bg-gray-50">
+                        <td className="p-3 font-medium text-gray-900">Receivables</td>
+                        <td className="p-3 text-right font-semibold text-green-600">{formatCurrency(dashboardStats.outstandingInvoices)}</td>
+                        <td className="p-3 text-right text-red-600 font-medium">{formatCurrency("2,400.00")}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="p-3 font-medium text-gray-900">Payables</td>
+                        <td className="p-3 text-right font-semibold text-red-600">{stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}</td>
+                        <td className="p-3 text-right text-red-600 font-medium">{formatCurrency("0.00")}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 bg-blue-50">
+                        <td className="p-3 font-medium text-gray-900">Net Position</td>
+                        <td className="p-3 text-right font-bold text-blue-600">{formatCurrency((parseFloat(dashboardStats.outstandingInvoices.replace(/,/g, '')) - (stats?.payablesAging?.totalPayables ? parseFloat(stats.payablesAging.totalPayables.replace(/,/g, '')) : 0)).toString())}</td>
+                        <td className="p-3 text-right text-gray-400">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Profit & Loss Summary */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-gray-900">Profit & Loss Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
