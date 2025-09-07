@@ -4338,7 +4338,7 @@ export const projects = pgTable("projects", {
   customerId: integer("customer_id").references(() => customers.id),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  status: varchar("status", { length: 20 }).default("active"), // active, on_hold, completed, cancelled
+  status: varchar("status", { length: 30 }).default("not_started"), // not_started, planning, in_progress, under_review, awaiting_sars_verifications, on_hold, cancelled, completed, finished
   priority: varchar("priority", { length: 20 }).default("medium"), // low, medium, high, urgent
   startDate: date("start_date"),
   endDate: date("end_date"),
@@ -4347,6 +4347,12 @@ export const projects = pgTable("projects", {
   budgetAmount: decimal("budget_amount", { precision: 10, scale: 2 }),
   actualCost: decimal("actual_cost", { precision: 10, scale: 2 }).default("0"),
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  billingType: varchar("billing_type", { length: 20 }).default("fixed_rate"), // fixed_rate, project_hours, task_hours
+  totalRate: decimal("total_rate", { precision: 10, scale: 2 }),
+  tags: jsonb("tags"), // array of project tags
+  progressThroughTasks: boolean("progress_through_tasks").default(true),
+  sendProjectCreatedEmail: boolean("send_project_created_email").default(false),
+  isTemplate: boolean("is_template").default(false),
   isInternal: boolean("is_internal").default(false),
   projectManagerId: integer("project_manager_id").references(() => users.id),
   color: varchar("color", { length: 7 }).default("#3B82F6"), // Hex color for UI
