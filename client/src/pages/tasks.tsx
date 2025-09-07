@@ -51,6 +51,8 @@ const formSchema = z.object({
   complianceType: z.string().optional(), // Add compliance category
   projectId: z.number().optional(),
   customerId: z.number().optional(),
+  relatedToType: z.string().optional(), // Related to type (project, customer, invoice, etc.)
+  relatedToId: z.number().optional(), // ID of the related entity
   parentTaskId: z.number().optional(),
   assignedToId: z.number().optional(),
   startDate: z.string().optional(),
@@ -110,6 +112,14 @@ export default function TasksPage() {
 
   const { data: customers = [] } = useQuery<any[]>({
     queryKey: ["/api/customers"],
+  });
+
+  const { data: invoices = [] } = useQuery<any[]>({
+    queryKey: ["/api/invoices"],
+  });
+
+  const { data: estimates = [] } = useQuery<any[]>({
+    queryKey: ["/api/estimates"],
   });
 
   const { data: users = [] } = useQuery<any[]>({
@@ -279,6 +289,8 @@ export default function TasksPage() {
       tags: [],
       taskType: "project", // Default to project task
       complianceType: "",
+      relatedToType: "", // Default to no relation
+      relatedToId: undefined,
       notes: ""
     },
   });
