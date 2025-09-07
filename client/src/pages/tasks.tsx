@@ -1274,7 +1274,7 @@ function EditTaskFormContent({ task, users, projects, customers, taskTemplates, 
       isBillable: task.isBillable !== false,
       progress: task.progress || 0,
       isRecurring: task.isRecurring || false,
-      notes: task.notes || ""
+      notes: (task as any).notes || ""
     },
   });
 

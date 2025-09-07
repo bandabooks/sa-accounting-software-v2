@@ -79,6 +79,7 @@ import PaymentSuccess from "@/pages/payment-success";
 import PaymentCancel from "@/pages/payment-cancel";
 import Projects from "@/pages/projects";
 import Tasks from "@/pages/tasks";
+import TimeEntries from "@/pages/time-entries";
 import AlertsPage from "@/pages/alerts";
 import TimeTracking from "@/pages/time-tracking";
 import VatManagement from "@/pages/vat-management";
@@ -899,6 +900,11 @@ function AuthenticatedApp() {
         <Route path="/tasks">
           <ProtectedRoute permission={PERMISSIONS.TASKS_VIEW}>
             <Tasks />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/time-entries">
+          <ProtectedRoute permission={PERMISSIONS.TASKS_VIEW}>
+            <TimeEntries />
           </ProtectedRoute>
         </Route>
         <Route path="/time-tracking">
