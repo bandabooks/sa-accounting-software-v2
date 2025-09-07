@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -32,13 +34,20 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, Users, BarChart3, Clock, DollarSign } from "lucide-react";
+import { Plus, Calendar, Users, BarChart3, Clock, DollarSign, Target, TrendingUp, CheckCircle2, AlertTriangle, PauseCircle, XCircle, PlayCircle, Eye, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertProjectSchema, type ProjectWithDetails } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-const formSchema = insertProjectSchema.omit({ companyId: true, createdBy: true });
+const formSchema = insertProjectSchema.omit({ 
+  companyId: true, 
+  createdBy: true,
+  actualHours: true,
+  actualCost: true,
+  createdAt: true,
+  updatedAt: true
+});
 
 export default function ProjectsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -83,10 +92,16 @@ export default function ProjectsPage() {
     defaultValues: {
       name: "",
       description: "",
-      status: "planning",
+      status: "not_started",
       priority: "medium",
       isInternal: false,
       hourlyRate: 0,
+      billingType: "fixed_rate",
+      progressThroughTasks: true,
+      sendProjectCreatedEmail: false,
+      tags: [],
+      estimatedHours: 0,
+      budgetAmount: 0,
     },
   });
 
@@ -96,13 +111,42 @@ export default function ProjectsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "not_started": return "bg-gray-100 text-gray-800";
       case "planning": return "bg-blue-100 text-blue-800";
-      case "active": return "bg-green-100 text-green-800";
+      case "in_progress": return "bg-green-100 text-green-800";
+      case "under_review": return "bg-purple-100 text-purple-800";
+      case "awaiting_sars_verifications": return "bg-orange-100 text-orange-800";
       case "on_hold": return "bg-yellow-100 text-yellow-800";
-      case "completed": return "bg-gray-100 text-gray-800";
       case "cancelled": return "bg-red-100 text-red-800";
+      case "completed": return "bg-emerald-100 text-emerald-800";
+      case "finished": return "bg-green-100 text-green-800";
       default: return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "not_started": return <PauseCircle className="h-4 w-4" />;
+      case "planning": return <Target className="h-4 w-4" />;
+      case "in_progress": return <PlayCircle className="h-4 w-4" />;
+      case "under_review": return <Eye className="h-4 w-4" />;
+      case "awaiting_sars_verifications": return <Building2 className="h-4 w-4" />;
+      case "on_hold": return <PauseCircle className="h-4 w-4" />;
+      case "cancelled": return <XCircle className="h-4 w-4" />;
+      case "completed": return <CheckCircle2 className="h-4 w-4" />;
+      case "finished": return <CheckCircle2 className="h-4 w-4" />;
+      default: return <PauseCircle className="h-4 w-4" />;
+    }
+  };
+
+  // Calculate project statistics
+  const projectStats = {
+    total: projects.length,
+    active: projects.filter((p: any) => p.status === 'in_progress').length,
+    completed: projects.filter((p: any) => ['completed', 'finished'].includes(p.status)).length,
+    overdue: projects.filter((p: any) => p.endDate && new Date(p.endDate) < new Date() && !['completed', 'finished', 'cancelled'].includes(p.status)).length,
+    totalBudget: projects.reduce((sum: number, p: any) => sum + (parseFloat(p.budgetAmount) || 0), 0),
+    totalEstimatedHours: projects.reduce((sum: number, p: any) => sum + (parseFloat(p.estimatedHours) || 0), 0),
   };
 
   const getPriorityColor = (priority: string) => {
@@ -132,69 +176,363 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Professional Dashboard Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-muted-foreground">
-            Manage your projects and track progress
+          <h1 className="text-3xl font-bold text-gray-900">Project Management</h1>
+          <p className="text-gray-600 mt-1">
+            Track projects, manage teams, and monitor financial performance across your portfolio
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
               <Plus className="h-4 w-4 mr-2" />
               New Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Project</DialogTitle>
+              <DialogTitle className="text-2xl font-bold">Create New Project</DialogTitle>
               <DialogDescription>
-                Add a new project to start tracking tasks and time
+                Create a comprehensive project with professional settings, team management, and budget tracking
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Project Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter project name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="customerId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Customer</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <Tabs defaultValue="project" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="project" className="font-semibold">Project</TabsTrigger>
+                    <TabsTrigger value="settings" className="font-semibold">Project Settings</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="project" className="space-y-6">
+                    {/* Project Name & Customer */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Project Name *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter project name" {...field} className="border-gray-300" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="customerId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Customer *</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                              <FormControl>
+                                <SelectTrigger className="border-gray-300">
+                                  <SelectValue placeholder="Select and begin typing" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">No Customer (Internal Project)</SelectItem>
+                                {customers.map((customer: any) => (
+                                  <SelectItem key={customer.id} value={customer.id.toString()}>
+                                    {customer.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Progress Through Tasks Checkbox */}
+                    <FormField
+                      control={form.control}
+                      name="progressThroughTasks"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select customer" />
-                            </SelectTrigger>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No Customer (Internal Project)</SelectItem>
-                            {customers.map((customer: any) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {customer.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-medium">
+                              Calculate progress through tasks
+                            </FormLabel>
+                            <div className="text-xs text-gray-600">
+                              Progress 0%
+                            </div>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Billing Type & Status */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="billingType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Billing Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="border-gray-300">
+                                  <SelectValue placeholder="Fixed Rate" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="fixed_rate">Fixed Rate</SelectItem>
+                                <SelectItem value="project_hours">Project Hours</SelectItem>
+                                <SelectItem value="task_hours">Task Hours</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="border-gray-300">
+                                  <SelectValue placeholder="Not Started" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="not_started">Not Started</SelectItem>
+                                <SelectItem value="planning">Planning</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="under_review">Under Review</SelectItem>
+                                <SelectItem value="awaiting_sars_verifications">Awaiting SARS Verifications</SelectItem>
+                                <SelectItem value="on_hold">On Hold</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                <SelectItem value="finished">Finished</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Total Rate & Estimated Hours */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="budgetAmount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Total Rate</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                placeholder="0.00" 
+                                {...field}
+                                className="border-gray-300"
+                                onChange={(e) => field.onChange(e.target.value || undefined)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="estimatedHours"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Estimated Hours</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.25"
+                                placeholder="0" 
+                                {...field}
+                                className="border-gray-300"
+                                onChange={(e) => field.onChange(e.target.value || undefined)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Members & Deadline */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="projectManagerId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Members</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} value={field.value?.toString() || "none"}>
+                              <FormControl>
+                                <SelectTrigger className="border-gray-300">
+                                  <SelectValue placeholder="Select team members" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">No Members</SelectItem>
+                                {users.map((user: any) => (
+                                  <SelectItem key={user.id} value={user.id.toString()}>
+                                    {user.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="endDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">Deadline</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="date" 
+                                {...field}
+                                value={field.value || ''}
+                                className="border-gray-300"
+                                onChange={(e) => field.onChange(e.target.value || undefined)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Start Date */}
+                    <FormField
+                      control={form.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium">Start Date *</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              {...field}
+                              value={field.value || ''}
+                              className="border-gray-300"
+                              onChange={(e) => field.onChange(e.target.value || undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Tags */}
+                    <FormField
+                      control={form.control}
+                      name="tags"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium">Tags</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Add tags (comma separated)"
+                              value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                              className="border-gray-300"
+                              onChange={(e) => {
+                                const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                                field.onChange(tags);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Save as Template */}
+                    <FormField
+                      control={form.control}
+                      name="isTemplate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium">Save Project As Template</FormLabel>
+                          <Select onValueChange={(value) => field.onChange(value === "yes")} value={field.value ? "yes" : "no"}>
+                            <FormControl>
+                              <SelectTrigger className="border-gray-300">
+                                <SelectValue placeholder="No" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="no">No</SelectItem>
+                              <SelectItem value="yes">Yes</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Rich Description */}
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium">Description</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Enter detailed project description..."
+                              className="min-h-[120px] border-gray-300 resize-none"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Send Email Checkbox */}
+                    <FormField
+                      control={form.control}
+                      name="sendProjectCreatedEmail"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-medium">
+                              Send project created email
+                            </FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="settings" className="space-y-6">
+                    <div className="text-center py-12 text-gray-500">
+                      <p className="text-lg font-medium">Advanced Project Settings</p>
+                      <p className="text-sm mt-2">Configure recurring projects, automation, and advanced billing options</p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
                 
                 <FormField
                   control={form.control}
@@ -344,22 +682,122 @@ export default function ProjectsPage() {
                   )}
                 />
 
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-3 pt-6 border-t">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsDialogOpen(false)}
+                    className="px-6"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending ? "Creating..." : "Create Project"}
+                  <Button type="submit" disabled={createMutation.isPending} className="bg-blue-600 hover:bg-blue-700 text-white px-8 shadow-lg">
+                    {createMutation.isPending ? "Creating..." : "Save"}
                   </Button>
                 </div>
               </form>
             </Form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Professional Statistics Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-8">
+        {/* Total Projects */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700">Total Projects</p>
+                <p className="text-3xl font-bold text-blue-900">{projectStats.total}</p>
+                <p className="text-xs text-blue-600 mt-1">All projects</p>
+              </div>
+              <div className="p-3 bg-blue-200 rounded-full">
+                <BarChart3 className="h-6 w-6 text-blue-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Projects */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-700">Active Projects</p>
+                <p className="text-3xl font-bold text-green-900">{projectStats.active}</p>
+                <p className="text-xs text-green-600 mt-1">In progress</p>
+              </div>
+              <div className="p-3 bg-green-200 rounded-full">
+                <PlayCircle className="h-6 w-6 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Completed Projects */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-700">Completed</p>
+                <p className="text-3xl font-bold text-emerald-900">{projectStats.completed}</p>
+                <p className="text-xs text-emerald-600 mt-1">Finished projects</p>
+              </div>
+              <div className="p-3 bg-emerald-200 rounded-full">
+                <CheckCircle2 className="h-6 w-6 text-emerald-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Overdue Projects */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-700">Overdue</p>
+                <p className="text-3xl font-bold text-red-900">{projectStats.overdue}</p>
+                <p className="text-xs text-red-600 mt-1">Past deadline</p>
+              </div>
+              <div className="p-3 bg-red-200 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-red-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Budget */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-700">Total Budget</p>
+                <p className="text-3xl font-bold text-purple-900">R{projectStats.totalBudget.toLocaleString()}</p>
+                <p className="text-xs text-purple-600 mt-1">Project budgets</p>
+              </div>
+              <div className="p-3 bg-purple-200 rounded-full">
+                <DollarSign className="h-6 w-6 text-purple-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Hours */}
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-700">Estimated Hours</p>
+                <p className="text-3xl font-bold text-orange-900">{projectStats.totalEstimatedHours}</p>
+                <p className="text-xs text-orange-600 mt-1">Total estimated</p>
+              </div>
+              <div className="p-3 bg-orange-200 rounded-full">
+                <Clock className="h-6 w-6 text-orange-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {projects.length === 0 ? (
