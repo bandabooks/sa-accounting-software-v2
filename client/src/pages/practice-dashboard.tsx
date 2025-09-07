@@ -121,11 +121,11 @@ export default function PracticeDashboard() {
         </div>
         
         <div className="flex gap-3">
-          <Button data-testid="button-new-client">
+          <Button data-testid="button-new-client" onClick={() => setLocation('/customers/new')}>
             <Plus className="h-4 w-4 mr-2" />
             New Client
           </Button>
-          <Button variant="outline" data-testid="button-new-task">
+          <Button variant="outline" data-testid="button-new-task" onClick={() => setLocation('/tasks')}>
             <Plus className="h-4 w-4 mr-2" />
             New Task
           </Button>
@@ -385,7 +385,7 @@ export default function PracticeDashboard() {
 
       {/* Compliance Modules */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setLocation('/sars-integration')}>
+        <Card className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setLocation('/vat-management')}>
           <CardContent className="p-6 text-center">
             <FileText className="h-12 w-12 text-green-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">SARS Compliance</h3>
@@ -434,9 +434,9 @@ export default function PracticeDashboard() {
                 <span className="font-semibold text-emerald-700">R 11,300</span>
               </div>
               <div className="flex gap-2 text-sm">
-                <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">AR aging</Button>
+                <Button variant="link" size="sm" className="h-auto p-0 text-blue-600" onClick={() => setLocation('/reports/aging')}>AR aging</Button>
                 <span className="text-gray-400">·</span>
-                <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">AP aging</Button>
+                <Button variant="link" size="sm" className="h-auto p-0 text-blue-600" onClick={() => setLocation('/reports/aging')}>AP aging</Button>
               </div>
             </div>
           </CardContent>
@@ -447,7 +447,7 @@ export default function PracticeDashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold text-gray-900">Recent Tasks</CardTitle>
-              <Button variant="link" size="sm" className="p-0 h-auto text-blue-600">View all</Button>
+              <Button variant="link" size="sm" className="p-0 h-auto text-blue-600" onClick={() => setLocation('/tasks')}>View all</Button>
             </div>
           </CardHeader>
           <CardContent>
