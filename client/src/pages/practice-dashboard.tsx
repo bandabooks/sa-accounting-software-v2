@@ -160,7 +160,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors" onClick={() => setLocation('/tasks')}>
+        <Card className="bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors" onClick={() => setLocation('/compliance/tracker')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -173,7 +173,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-rose-50 cursor-pointer hover:bg-rose-100 transition-colors" onClick={() => setLocation('/tasks')}>
+        <Card className="bg-rose-50 cursor-pointer hover:bg-rose-100 transition-colors" onClick={() => setLocation('/compliance/tracker')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -196,19 +196,19 @@ export default function PracticeDashboard() {
           <div className="flex gap-2 flex-wrap">
             <Badge 
               className="bg-amber-100 text-amber-700 px-3 py-1 cursor-pointer hover:bg-amber-200 transition-colors" 
-              onClick={() => setLocation('/sars-compliance')}
+              onClick={() => setLocation('/sars-integration')}
             >
               <span className="font-medium">due</span> VAT Return (VAT201) · Due 25 Mar · <span className="font-medium">5d</span>
             </Badge>
             <Badge 
               className="bg-blue-100 text-blue-700 px-3 py-1 cursor-pointer hover:bg-blue-200 transition-colors" 
-              onClick={() => setLocation('/sars-compliance')}
+              onClick={() => setLocation('/sars-integration')}
             >
               <span className="font-medium">upcoming</span> EMP201 Filing · Due 7 Apr · <span className="font-medium">upcoming</span>
             </Badge>
             <Badge 
               className="bg-rose-100 text-rose-700 px-3 py-1 cursor-pointer hover:bg-rose-200 transition-colors" 
-              onClick={() => setLocation('/sars-compliance')}
+              onClick={() => setLocation('/sars-integration')}
             >
               <span className="font-medium">overdue</span> Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
             </Badge>
@@ -357,6 +357,15 @@ export default function PracticeDashboard() {
                   size="sm" 
                   data-testid={`button-file-${filing.id}`}
                   aria-label={`File ${filing.service} ${filing.period} for ${filing.client}`}
+                  onClick={() => {
+                    if (filing.service === 'VAT201' || filing.service === 'EMP201') {
+                      setLocation('/sars-integration');
+                    } else if (filing.service === 'CIPC') {
+                      setLocation('/cipc-compliance');
+                    } else if (filing.service === 'PROV_TAX') {
+                      setLocation('/sars-integration');
+                    }
+                  }}
                 >
                   File
                 </Button>
@@ -374,7 +383,7 @@ export default function PracticeDashboard() {
 
       {/* Compliance Modules */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setLocation('/sars-compliance')}>
+        <Card className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setLocation('/sars-integration')}>
           <CardContent className="p-6 text-center">
             <FileText className="h-12 w-12 text-green-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">SARS Compliance</h3>
