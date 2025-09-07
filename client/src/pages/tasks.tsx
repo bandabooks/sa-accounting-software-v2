@@ -331,7 +331,7 @@ export default function TasksPage() {
         <div>
           <h1 className="text-3xl font-bold">Tasks</h1>
           <p className="text-muted-foreground">
-            Manage tasks and track your time
+            Manage all your project tasks, compliance work, and track your time
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -806,6 +806,16 @@ export default function TasksPage() {
                         <Badge variant="outline" className={getPriorityColor(task.priority || 'medium')}>
                           {task.priority || 'medium'}
                         </Badge>
+                        {(task as any).taskType && (task as any).taskType !== 'project' && (
+                          <Badge variant="secondary">
+                            {(task as any).taskType.replace('_', ' ')}
+                          </Badge>
+                        )}
+                        {(task as any).complianceType && (
+                          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            {(task as any).complianceType.toUpperCase()}
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center space-x-6 text-sm text-muted-foreground">

@@ -340,7 +340,7 @@ const getFullNavigationGroups = () => [
       { path: "/client-management", label: "Client Management", icon: Users, permission: "CLIENT_MANAGEMENT_VIEW", module: "compliance" },
       { path: "/cipc-compliance", label: "CIPC Compliance", icon: Building, permission: "CIPC_COMPLIANCE_VIEW", module: "compliance" },
       { path: "/labour-compliance", label: "Labour Compliance", icon: Users, permission: "LABOUR_COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/task-management", label: "Task Management", icon: CheckSquare, permission: "TASK_MANAGEMENT_VIEW", module: "compliance" },
+      { path: "/tasks", label: "Task Management", icon: CheckSquare, permission: "TASK_MANAGEMENT_VIEW", module: "compliance" },
       { path: "/admin/service-packages", label: "Service Package Management", icon: Package, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/calendar", label: "Calendar", icon: Calendar, permission: "CALENDAR_VIEW", module: "compliance" },
       { path: "/document-library", label: "Document Library", icon: FolderOpen, permission: "DOCUMENT_LIBRARY_VIEW", module: "compliance" }
@@ -505,7 +505,7 @@ const navigationGroups = [
       { path: "/compliance/clients", label: "Client Management", icon: Users, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/cipc", label: "CIPC Compliance", icon: Building2, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/labour", label: "Labour Compliance", icon: Shield, permission: "COMPLIANCE_VIEW", module: "compliance" },
-      { path: "/compliance/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
+      { path: "/tasks", label: "Task Management", icon: CheckSquare, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/professional-services", label: "Service Package Management", icon: Briefcase, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/calendar", label: "Calendar", icon: Calendar, permission: "COMPLIANCE_VIEW", module: "compliance" },
       { path: "/compliance/documents", label: "Document Library", icon: FolderOpen, permission: "COMPLIANCE_VIEW", module: "compliance" },
