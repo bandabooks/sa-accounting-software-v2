@@ -208,7 +208,7 @@ export default function PracticeDashboard() {
             </Badge>
             <Badge 
               className="bg-rose-100 text-rose-700 px-3 py-1 cursor-pointer hover:bg-rose-200 transition-colors" 
-              onClick={() => setLocation('/accountants/tax-practitioners')}
+              onClick={() => setLocation('/provisional-tax')}
             >
               <span className="font-medium">Overdue</span> Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
             </Badge>
@@ -362,10 +362,12 @@ export default function PracticeDashboard() {
                       setLocation('/vat-management');
                     } else if (filing.service === 'EMP201') {
                       setLocation('/emp201');
+                    } else if (filing.service === 'EMP501') {
+                      setLocation('/emp501');
                     } else if (filing.service === 'CIPC') {
                       setLocation('/cipc-compliance');
                     } else if (filing.service === 'PROV_TAX') {
-                      setLocation('/accountants/tax-practitioners');
+                      setLocation('/provisional-tax');
                     }
                   }}
                 >

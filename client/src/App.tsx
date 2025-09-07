@@ -88,6 +88,8 @@ import VATSettings from "@/pages/vat-settings";
 import VATTypes from "@/pages/vat-types";
 import VATReturns from "@/pages/vat-returns";
 import EMP201Returns from "@/pages/emp201";
+import ProvisionalTax from "@/pages/provisional-tax";
+import EMP501 from "@/pages/emp501";
 import VATTransactionAnalysis from "@/pages/vat-transaction-analysis";
 import VATReportsPage from "@/pages/vat-reports";
 import VATPreparation from "@/pages/vat-preparation";
@@ -957,6 +959,18 @@ function AuthenticatedApp() {
         <Route path="/emp201">
           <ProtectedRoute permission={PERMISSIONS.PAYROLL_VIEW}>
             <EMP201Returns />
+          </ProtectedRoute>
+        </Route>
+        
+        <Route path="/provisional-tax">
+          <ProtectedRoute permission={PERMISSIONS.FINANCIAL_VIEW}>
+            <ProvisionalTax />
+          </ProtectedRoute>
+        </Route>
+        
+        <Route path="/emp501">
+          <ProtectedRoute permission={PERMISSIONS.PAYROLL_VIEW}>
+            <EMP501 />
           </ProtectedRoute>
         </Route>
         <Route path="/vat-transaction-analysis">
