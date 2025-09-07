@@ -1,0 +1,72 @@
+You’re very close. The page is already clear, dense, and practitioner-friendly. Below is a focused review with prioritized changes so you get the most impact without churning.
+
+Quick verdict
+
+Layout order is right: KPIs → Timeline → Due Filings (center) with supporting blocks.
+
+Visual contrast + spacing are professional.
+
+It can ship, but a few tweaks will make it faster to operate day-to-day and safer for mixed roles.
+
+Must-do (ship blockers / high ROI)
+
+Make “Due Filings” the working surface (filters + bulk actions).
+
+Add a thin filter bar above the list: Assignee (Me/Team) · Service (VAT/EMP/CIPC/…) · Entity · Status.
+
+Add a list counter (“3 items”) and checkboxes + bulk actions (Assign, Request docs, Mark ready).
+
+Keep “File” button per row; add aria-label like aria-label="File VAT201 Feb 2025 for ABC Pty".
+
+Remove the empty “Upcoming Deadlines” card.
+When no deadlines exist, don’t show a blank box—collapse it or replace with one sentence under the timeline: “No deadlines in the next 14 days.”
+
+De-duplicate finance blocks.
+You have Outstanding Balances and P&L Summary (good). Ensure there’s only one balances block site-wide on this page (no duplicates elsewhere). Add tiny links: “AR aging” and “AP aging”.
+
+Role guard on actions.
+“File” must be visible only to permitted practitioner roles. Clients should see Approve / Upload instead. (Server already enforces, but hide in UI to avoid confusion.)
+
+Accessibility & focus
+
+Every icon-only control needs an aria-label.
+
+Ensure tab order: KPIs → Timeline → Due Filings → Tasks → Activity.
+
+Keep visible focus rings on all interactive elements.
+
+Should-do (quality & speed)
+
+Header quick actions stay, but add one more: “Request Docs”.
+Common first step when a return appears soon.
+
+Timeline chips: show owner & severity consistently.
+Chip label pattern: Service · Period and a right-side sublabel in 5d / overdue 3d. Color = info/warn/danger only.
+
+Due Filings row info density.
+Each row should show: Service chip · Entity · Period · Due date (+days) · Assignee · Status · Action.
+Add a small paperclip indicator if docs are attached / pending.
+
+Recent Tasks: group by due date.
+Headings: Today, This week, Later. Keep “View all”.
+
+Performance
+
+React Query for this page: staleTime: 45s, refetchInterval: 60s.
+
+Server list endpoints must support pagination & server-side filtering (assignee/service/status). Add DB indexes on (tenant_id, entity_id, due_date, status) for returns.
+
+Nice-to-have (polish)
+
+Portfolio scope switcher (top right of Due Filings): All clients / My portfolio / Unassigned.
+
+Export small CSV for Due Filings (id, client, service, period, due, status, assignee).
+
+Empty states
+Use friendly sentences + a single CTA (e.g., “No filings this week — View calendar”).
+
+Color tokens
+Use semantic tokens (text-emerald-700, text-amber-700, text-rose-700) only; avoid extra tints for cleanliness.
+
+AI bar placement
+The “AI assistant loading” banner at the top is visual noise—move status into Settings → AI with a small inline dot in header if needed.

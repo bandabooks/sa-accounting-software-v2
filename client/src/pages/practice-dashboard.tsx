@@ -22,7 +22,12 @@ import {
   Eye,
   Edit,
   BarChart3,
-  DollarSign
+  DollarSign,
+  Paperclip,
+  UserCheck,
+  FolderOpen,
+  Send,
+  CheckSquare
 } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -45,11 +50,31 @@ interface ClientSummary {
   };
 }
 
+interface DueFiling {
+  id: number;
+  service: 'VAT201' | 'EMP201' | 'CIPC' | 'PROV_TAX';
+  entity: string;
+  period: string;
+  dueDate: string;
+  daysUntilDue: number;
+  assignee: string;
+  status: 'due' | 'upcoming' | 'overdue' | 'draft';
+  hasDocuments: boolean;
+  client: string;
+}
+
 export default function PracticeDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [packageFilter, setPackageFilter] = useState('all');
   const [selectedView, setSelectedView] = useState<'overview' | 'calendar' | 'tasks'>('overview');
+  
+  // Due Filings filters
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [entityFilter, setEntityFilter] = useState('all');
+  const [filingStatusFilter, setFilingStatusFilter] = useState('all');
+  const [selectedFilings, setSelectedFilings] = useState<number[]>([]);
 
   // Fetch practice clients
   const { data: practiceClients = [], isLoading } = useQuery({
@@ -68,7 +93,7 @@ export default function PracticeDashboard() {
           assignedTo: "Current User",
           lastActivity: "2 days ago",
           complianceStatus: "compliant",
-          outstandingTasks: 2,
+          outstandingTasks: 0,
           yearEndDue: "2024-02-28",
           vatReturns: { next: "2024-01-31", status: "current" }
         },
@@ -82,7 +107,7 @@ export default function PracticeDashboard() {
           assignedTo: "Current User",
           lastActivity: "1 week ago",
           complianceStatus: "warning",
-          outstandingTasks: 5,
+          outstandingTasks: 0,
           yearEndDue: "2024-06-30",
           vatReturns: { next: "2024-01-31", status: "overdue" }
         },
@@ -96,11 +121,56 @@ export default function PracticeDashboard() {
           assignedTo: "Current User",
           lastActivity: "3 days ago",
           complianceStatus: "overdue",
-          outstandingTasks: 8,
+          outstandingTasks: 2,
           yearEndDue: "2024-04-30",
           vatReturns: { next: "2023-12-31", status: "overdue" }
         }
       ] as ClientSummary[];
+    }
+  });
+  
+  // Fetch due filings
+  const { data: dueFilings = [] } = useQuery({
+    queryKey: ['/api/practice/due-filings'],
+    queryFn: async () => {
+      return [
+        {
+          id: 1,
+          service: 'VAT201',
+          entity: 'Acme Construction (Pty) Ltd',
+          period: 'Feb 2024',
+          dueDate: '2024-03-07',
+          daysUntilDue: 5,
+          assignee: 'Current User',
+          status: 'due',
+          hasDocuments: true,
+          client: 'Acme Construction'
+        },
+        {
+          id: 2,
+          service: 'EMP201',
+          entity: 'Green Valley Restaurant CC',
+          period: 'Jan 2024',
+          dueDate: '2024-02-07',
+          daysUntilDue: -15,
+          assignee: 'Current User',
+          status: 'overdue',
+          hasDocuments: false,
+          client: 'Green Valley'
+        },
+        {
+          id: 3,
+          service: 'CIPC',
+          entity: 'Tech Solutions SA',
+          period: 'Annual Return 2024',
+          dueDate: '2024-04-30',
+          daysUntilDue: 45,
+          assignee: 'Team Member',
+          status: 'upcoming',
+          hasDocuments: false,
+          client: 'Tech Solutions'
+        }
+      ] as DueFiling[];
     }
   });
 
@@ -120,6 +190,18 @@ export default function PracticeDashboard() {
   const totalMonthlyRevenue = practiceClients.reduce((sum, client) => sum + parseFloat(client.monthlyFee), 0);
   const clientsWithIssues = practiceClients.filter(c => c.complianceStatus !== 'compliant').length;
   const totalOutstandingTasks = practiceClients.reduce((sum, client) => sum + client.outstandingTasks, 0);
+  
+  // Filter due filings
+  const filteredFilings = dueFilings.filter(filing => {
+    const matchesAssignee = assigneeFilter === 'all' || filing.assignee.includes('Current User');
+    const matchesService = serviceFilter === 'all' || filing.service === serviceFilter;
+    const matchesStatus = filingStatusFilter === 'all' || filing.status === filingStatusFilter;
+    return matchesAssignee && matchesService && matchesStatus;
+  });
+  
+  // Due filings metrics
+  const overdueFilings = dueFilings.filter(f => f.status === 'overdue').length;
+  const dueSoonFilings = dueFilings.filter(f => f.status === 'due').length;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
