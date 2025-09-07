@@ -4,51 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Users,
   Building2,
-  TrendingUp,
   Clock,
   AlertTriangle,
-  CheckCircle2,
-  Calendar,
   FileText,
-  Banknote,
   Search,
   Filter,
   Plus,
-  Eye,
-  Edit,
-  BarChart3,
-  DollarSign,
   Paperclip,
   UserCheck,
   FolderOpen,
-  Send,
-  CheckSquare
+  CheckSquare,
+  Calendar,
+  ExternalLink
 } from 'lucide-react';
-import { Link } from 'wouter';
-
-interface ClientSummary {
-  id: number;
-  name: string;
-  tradingName?: string;
-  businessType: string;
-  status: 'active' | 'inactive' | 'pending';
-  servicePackage: string;
-  monthlyFee: string;
-  assignedTo?: string;
-  lastActivity?: string;
-  complianceStatus: 'compliant' | 'warning' | 'overdue';
-  outstandingTasks: number;
-  yearEndDue?: string;
-  vatReturns?: {
-    next: string;
-    status: 'current' | 'overdue';
-  };
-}
 
 interface DueFiling {
   id: number;
@@ -64,11 +36,6 @@ interface DueFiling {
 }
 
 export default function PracticeDashboard() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [packageFilter, setPackageFilter] = useState('all');
-  const [selectedView, setSelectedView] = useState<'overview' | 'calendar' | 'tasks'>('overview');
-  
   // Due Filings filters
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
@@ -76,59 +43,6 @@ export default function PracticeDashboard() {
   const [filingStatusFilter, setFilingStatusFilter] = useState('all');
   const [selectedFilings, setSelectedFilings] = useState<number[]>([]);
 
-  // Fetch practice clients
-  const { data: practiceClients = [], isLoading } = useQuery({
-    queryKey: ['/api/practice/clients'],
-    queryFn: async () => {
-      // Mock data for now - replace with actual API call
-      return [
-        {
-          id: 1,
-          name: "Acme Construction (Pty) Ltd",
-          tradingName: "Acme Builders",
-          businessType: "pty",
-          status: "active",
-          servicePackage: "premium",
-          monthlyFee: "4500.00",
-          assignedTo: "Current User",
-          lastActivity: "2 days ago",
-          complianceStatus: "compliant",
-          outstandingTasks: 0,
-          yearEndDue: "2024-02-28",
-          vatReturns: { next: "2024-01-31", status: "current" }
-        },
-        {
-          id: 2,
-          name: "Green Valley Restaurant CC",
-          businessType: "cc",
-          status: "active",
-          servicePackage: "standard",
-          monthlyFee: "2800.00",
-          assignedTo: "Current User",
-          lastActivity: "1 week ago",
-          complianceStatus: "warning",
-          outstandingTasks: 0,
-          yearEndDue: "2024-06-30",
-          vatReturns: { next: "2024-01-31", status: "overdue" }
-        },
-        {
-          id: 3,
-          name: "Tech Solutions SA",
-          businessType: "pty",
-          status: "pending",
-          servicePackage: "basic",
-          monthlyFee: "1200.00",
-          assignedTo: "Current User",
-          lastActivity: "3 days ago",
-          complianceStatus: "overdue",
-          outstandingTasks: 2,
-          yearEndDue: "2024-04-30",
-          vatReturns: { next: "2023-12-31", status: "overdue" }
-        }
-      ] as ClientSummary[];
-    }
-  });
-  
   // Fetch due filings
   const { data: dueFilings = [] } = useQuery({
     queryKey: ['/api/practice/due-filings'],
@@ -174,88 +88,56 @@ export default function PracticeDashboard() {
     }
   });
 
-  // Filter clients based on search and filters
-  const filteredClients = practiceClients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (client.tradingName?.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
-    const matchesPackage = packageFilter === 'all' || client.servicePackage === packageFilter;
-    
-    return matchesSearch && matchesStatus && matchesPackage;
-  });
-
-  // Calculate metrics
-  const totalClients = practiceClients.length;
-  const activeClients = practiceClients.filter(c => c.status === 'active').length;
-  const totalMonthlyRevenue = practiceClients.reduce((sum, client) => sum + parseFloat(client.monthlyFee), 0);
-  const clientsWithIssues = practiceClients.filter(c => c.complianceStatus !== 'compliant').length;
-  const totalOutstandingTasks = practiceClients.reduce((sum, client) => sum + client.outstandingTasks, 0);
-  
   // Filter due filings
   const filteredFilings = dueFilings.filter(filing => {
-    const matchesAssignee = assigneeFilter === 'all' || filing.assignee.includes('Current User');
+    const matchesAssignee = assigneeFilter === 'all' || 
+      (assigneeFilter === 'me' && filing.assignee.includes('Current User')) ||
+      (assigneeFilter === 'team' && !filing.assignee.includes('Current User'));
     const matchesService = serviceFilter === 'all' || filing.service === serviceFilter;
     const matchesStatus = filingStatusFilter === 'all' || filing.status === filingStatusFilter;
     return matchesAssignee && matchesService && matchesStatus;
   });
-  
+
   // Due filings metrics
   const overdueFilings = dueFilings.filter(f => f.status === 'overdue').length;
   const dueSoonFilings = dueFilings.filter(f => f.status === 'due').length;
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
-      case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-
-  const getComplianceBadge = (status: string) => {
-    switch (status) {
-      case 'compliant':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      case 'overdue':
-        return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      default:
-        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-64">Loading practice dashboard...</div>;
-  }
+  const totalClients = 6;
+  const onboardingClients = 0;
 
   return (
     <div className="space-y-6" data-testid="practice-dashboard">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Practice Dashboard</h1>
-          <p className="text-gray-600">Manage your client portfolio and track service delivery</p>
+          <h1 className="text-3xl font-bold text-gray-900">Practice Management</h1>
+          <p className="text-gray-600">Centralized South African compliance tracking for SARS, CIPC, and Labour requirements</p>
         </div>
-        <Button data-testid="button-add-client">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Client
-        </Button>
+        
+        <div className="flex gap-3">
+          <Button data-testid="button-new-client">
+            <Plus className="h-4 w-4 mr-2" />
+            New Client
+          </Button>
+          <Button variant="outline" data-testid="button-new-task">
+            <Plus className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
+          <Button variant="outline" data-testid="button-request-docs">
+            <FolderOpen className="h-4 w-4 mr-2" />
+            Request Docs
+          </Button>
+        </div>
       </div>
 
-      {/* Key Metrics */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Clients</p>
-                <p className="text-3xl font-bold text-gray-900">{totalClients}</p>
-                <p className="text-sm text-gray-500">{activeClients} active</p>
+                <p className="text-2xl font-normal text-gray-900">{totalClients}</p>
+                <p className="text-sm text-gray-500">Active</p>
               </div>
               <Users className="h-8 w-8 text-blue-600" />
             </div>
@@ -266,11 +148,11 @@ export default function PracticeDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                <p className="text-3xl font-bold text-gray-900">R{totalMonthlyRevenue.toLocaleString()}</p>
-                <p className="text-sm text-green-600">+12% from last month</p>
+                <p className="text-sm font-medium text-gray-600">Onboarding</p>
+                <p className="text-2xl font-normal text-gray-900">{onboardingClients}</p>
+                <p className="text-sm text-gray-500">In progress</p>
               </div>
-              <Banknote className="h-8 w-8 text-green-600" />
+              <Building2 className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -279,11 +161,11 @@ export default function PracticeDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Compliance Issues</p>
-                <p className="text-3xl font-bold text-gray-900">{clientsWithIssues}</p>
-                <p className="text-sm text-red-600">Needs attention</p>
+                <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
+                <p className="text-2xl font-normal text-gray-900">{dueSoonFilings}</p>
+                <p className="text-sm text-gray-500">Overdue</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+              <Clock className="h-8 w-8 text-amber-700" />
             </div>
           </CardContent>
         </Card>
@@ -292,150 +174,296 @@ export default function PracticeDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Outstanding Tasks</p>
-                <p className="text-3xl font-bold text-gray-900">{totalOutstandingTasks}</p>
-                <p className="text-sm text-yellow-600">Across all clients</p>
+                <p className="text-sm font-medium text-gray-600">Urgent Tasks</p>
+                <p className="text-2xl font-normal text-gray-900">{overdueFilings}</p>
+                <p className="text-sm text-gray-500">Requires attention</p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-600" />
+              <AlertTriangle className="h-8 w-8 text-rose-700" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters and Search */}
+      {/* Compliance Timeline */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search clients..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                data-testid="input-client-search"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40" data-testid="select-status-filter">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900">Compliance Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 flex-wrap">
+            <Badge className="bg-amber-100 text-amber-700 px-3 py-1">
+              VAT Return (VAT201) · Due 25 Mar · <span className="font-medium">5d</span>
+            </Badge>
+            <Badge className="bg-blue-100 text-blue-700 px-3 py-1">
+              EMP201 Filing · Due 7 Apr · <span className="font-medium">upcoming</span>
+            </Badge>
+            <Badge className="bg-rose-100 text-rose-700 px-3 py-1">
+              Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
+            </Badge>
+            <Badge className="bg-green-100 text-green-700 px-3 py-1">
+              CIPC Filing · Due 30 Apr · <span className="font-medium">upcoming</span>
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Due Filings Command Center */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold text-gray-900">Due Filings</CardTitle>
+            <div className="text-sm text-gray-500">{filteredFilings.length} items</div>
+          </div>
+          
+          {/* Filter Bar */}
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
+            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <SelectTrigger className="w-32" data-testid="select-assignee-filter">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="me">Me</SelectItem>
+                <SelectItem value="team">Team</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={serviceFilter} onValueChange={setServiceFilter}>
+              <SelectTrigger className="w-32" data-testid="select-service-filter">
+                <SelectValue placeholder="Service" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="VAT201">VAT</SelectItem>
+                <SelectItem value="EMP201">EMP</SelectItem>
+                <SelectItem value="CIPC">CIPC</SelectItem>
+                <SelectItem value="PROV_TAX">Prov Tax</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={filingStatusFilter} onValueChange={setFilingStatusFilter}>
+              <SelectTrigger className="w-32" data-testid="select-filing-status-filter">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="due">Due</SelectItem>
+                <SelectItem value="upcoming">Upcoming</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={packageFilter} onValueChange={setPackageFilter}>
-              <SelectTrigger className="w-full sm:w-40" data-testid="select-package-filter">
-                <SelectValue placeholder="Package" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Packages</SelectItem>
-                <SelectItem value="basic">Basic</SelectItem>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            {selectedFilings.length > 0 && (
+              <div className="flex gap-2 ml-auto">
+                <Button size="sm" variant="outline" data-testid="button-assign-bulk">
+                  <UserCheck className="h-4 w-4 mr-1" />
+                  Assign
+                </Button>
+                <Button size="sm" variant="outline" data-testid="button-request-docs-bulk">
+                  <FolderOpen className="h-4 w-4 mr-1" />
+                  Request Docs
+                </Button>
+                <Button size="sm" variant="outline" data-testid="button-mark-ready-bulk">
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  Mark Ready
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {filteredFilings.map((filing) => (
+              <div key={filing.id} className="flex items-center gap-4 p-4 hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={selectedFilings.includes(filing.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedFilings([...selectedFilings, filing.id]);
+                    } else {
+                      setSelectedFilings(selectedFilings.filter(id => id !== filing.id));
+                    }
+                  }}
+                  className="rounded"
+                  data-testid={`checkbox-filing-${filing.id}`}
+                />
+                
+                <div className="flex items-center gap-2 flex-1">
+                  <Badge 
+                    className={`
+                      ${filing.service === 'VAT201' ? 'bg-blue-100 text-blue-700' : ''}
+                      ${filing.service === 'EMP201' ? 'bg-green-100 text-green-700' : ''}
+                      ${filing.service === 'CIPC' ? 'bg-purple-100 text-purple-700' : ''}
+                      ${filing.service === 'PROV_TAX' ? 'bg-orange-100 text-orange-700' : ''}
+                    `}
+                  >
+                    {filing.service}
+                  </Badge>
+                  
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{filing.entity}</div>
+                    <div className="text-sm text-gray-500">{filing.period}</div>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    Due {filing.dueDate} 
+                    <span className={`ml-1 font-medium ${
+                      filing.daysUntilDue < 0 ? 'text-rose-700' : 
+                      filing.daysUntilDue <= 7 ? 'text-amber-700' : 'text-gray-600'
+                    }`}>
+                      ({filing.daysUntilDue < 0 ? `overdue ${Math.abs(filing.daysUntilDue)}d` : `${filing.daysUntilDue}d`})
+                    </span>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600 w-24">
+                    {filing.assignee.replace('Current User', 'Me')}
+                  </div>
+                  
+                  <Badge className={`
+                    ${filing.status === 'overdue' ? 'bg-rose-100 text-rose-700' : ''}
+                    ${filing.status === 'due' ? 'bg-amber-100 text-amber-700' : ''}
+                    ${filing.status === 'upcoming' ? 'bg-blue-100 text-blue-700' : ''}
+                    ${filing.status === 'draft' ? 'bg-gray-100 text-gray-700' : ''}
+                  `}>
+                    {filing.status}
+                  </Badge>
+                  
+                  {filing.hasDocuments && (
+                    <Paperclip className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+                
+                <Button 
+                  size="sm" 
+                  data-testid={`button-file-${filing.id}`}
+                  aria-label={`File ${filing.service} ${filing.period} for ${filing.client}`}
+                >
+                  <FileText className="h-4 w-4 mr-1" />
+                  File
+                </Button>
+              </div>
+            ))}
+            
+            {filteredFilings.length === 0 && (
+              <div className="p-8 text-center text-gray-500">
+                No filings match your current filters.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Client List */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">Client Portfolio ({filteredClients.length})</h2>
+      {/* Compliance Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <FileText className="h-12 w-12 text-green-600 mx-auto mb-3" />
+            <h3 className="font-semibold text-gray-900 mb-2">SARS Compliance</h3>
+            <p className="text-sm text-gray-600 mb-3">Tax, VAT, PAYE eFiling</p>
+            <Badge className="bg-green-100 text-green-700">Active</Badge>
+          </CardContent>
+        </Card>
         
-        {filteredClients.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No clients found matching your criteria.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {filteredClients.map((client) => (
-              <Card key={client.id} className="transition-shadow hover:shadow-md">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                            {client.name}
-                          </h3>
-                          {client.tradingName && (
-                            <p className="text-sm text-gray-600 mb-2">T/A {client.tradingName}</p>
-                          )}
-                          <div className="flex items-center gap-2 mb-3">
-                            {getStatusBadge(client.status)}
-                            <Badge variant="outline" className="capitalize">
-                              {client.servicePackage}
-                            </Badge>
-                            <span className="text-sm text-gray-500">
-                              {client.businessType.toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getComplianceBadge(client.complianceStatus)}
-                          <span className="text-lg font-semibold text-gray-900">
-                            R{parseFloat(client.monthlyFee).toLocaleString()}/mo
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Outstanding Tasks</p>
-                          <p className="text-lg font-semibold text-red-600">{client.outstandingTasks}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Year-End Due</p>
-                          <p className="text-sm text-gray-900">{client.yearEndDue}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Next VAT Return</p>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-sm ${client.vatReturns?.status === 'overdue' ? 'text-red-600' : 'text-gray-900'}`}>
-                              {client.vatReturns?.next}
-                            </span>
-                            {client.vatReturns?.status === 'overdue' && (
-                              <AlertTriangle className="h-3 w-3 text-red-600" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-4 border-t">
-                        <p className="text-sm text-gray-500">
-                          Last activity: {client.lastActivity}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" data-testid={`button-view-client-${client.id}`}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm" data-testid={`button-manage-client-${client.id}`}>
-                            <Edit className="h-4 w-4 mr-1" />
-                            Manage
-                          </Button>
-                          <Button variant="outline" size="sm" data-testid={`button-reports-client-${client.id}`}>
-                            <BarChart3 className="h-4 w-4 mr-1" />
-                            Reports
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Building2 className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+            <h3 className="font-semibold text-gray-900 mb-2">CIPC Compliance</h3>
+            <p className="text-sm text-gray-600 mb-3">Annual Returns · Changes</p>
+            <Badge className="bg-blue-100 text-blue-700">Active</Badge>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Users className="h-12 w-12 text-purple-600 mx-auto mb-3" />
+            <h3 className="font-semibold text-gray-900 mb-2">Labour Compliance</h3>
+            <p className="text-sm text-gray-600 mb-3">UIF, SDL, COIDA</p>
+            <Badge className="bg-purple-100 text-purple-700">Active</Badge>
+          </CardContent>
+        </Card>
       </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">Outstanding Balances</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Accounts Receivable</span>
+                <span className="font-semibold text-gray-900">R 19,500</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Accounts Payable</span>
+                <span className="font-semibold text-gray-900">R 8,200</span>
+              </div>
+              <div className="flex justify-between border-t pt-2">
+                <span className="text-gray-600">Net Position</span>
+                <span className="font-semibold text-green-600">R 11,300</span>
+              </div>
+              <div className="flex gap-2 text-sm">
+                <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">AR aging</Button>
+                <span className="text-gray-400">·</span>
+                <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">AP aging</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">Recent Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="text-sm font-medium text-gray-700">Today</div>
+              <div className="ml-4 text-sm text-gray-600">
+                VAT201 Return - Think MyBiz Accountants
+                <Badge className="ml-2 bg-green-100 text-green-700">Done</Badge>
+              </div>
+              
+              <div className="text-sm font-medium text-gray-700">This Week</div>
+              <div className="ml-4 text-sm text-gray-600">
+                Annual Financial Statements - John Smith
+                <Badge className="ml-2 bg-blue-100 text-blue-700">In Review</Badge>
+              </div>
+              
+              <Button variant="link" size="sm" className="p-0 h-auto text-blue-600">View all</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+              <Users className="h-6 w-6 text-blue-600" />
+              <span className="text-sm">Manage Clients</span>
+            </Button>
+            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+              <Calendar className="h-6 w-6 text-green-600" />
+              <span className="text-sm">View Calendar</span>
+            </Button>
+            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+              <FolderOpen className="h-6 w-6 text-purple-600" />
+              <span className="text-sm">Document Library</span>
+            </Button>
+            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+              <FileText className="h-6 w-6 text-orange-600" />
+              <span className="text-sm">Compliance Reports</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
