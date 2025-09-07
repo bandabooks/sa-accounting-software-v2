@@ -46,10 +46,10 @@ export class DashboardStatsService {
       ] = await Promise.all([
         this.getFilingsStats(tenantId, entityId),
         this.getDueFilings(tenantId, entityId),
-        this.getUnreconciledCount(tenantId, entityId, defaultPeriodFrom, defaultPeriodTo),
+        this.getUnreconciledCount(tenantId, defaultPeriodFrom, defaultPeriodTo, entityId),
         this.getTasksToday(tenantId, entityId),
         this.getBankBalances(tenantId, entityId),
-        this.getCashFlow(tenantId, entityId, defaultPeriodFrom, defaultPeriodTo),
+        this.getCashFlow(tenantId, defaultPeriodFrom, defaultPeriodTo, entityId),
         this.getArApTotals(tenantId, entityId),
         this.getLegacyData(tenantId)
       ]);
@@ -150,7 +150,7 @@ export class DashboardStatsService {
       service: row.service as any,
       entityName: String(row.entity_name),
       periodLabel: String(row.period_label),
-      dueDate: new Date(row.due_date).toISOString(),
+      dueDate: new Date(String(row.due_date)).toISOString(),
       status: String(row.status) as any
     }));
   }
@@ -158,7 +158,7 @@ export class DashboardStatsService {
   /**
    * Get unreconciled bank transactions count
    */
-  private static async getUnreconciledCount(tenantId: number, entityId?: number, periodFrom: Date, periodTo: Date) {
+  private static async getUnreconciledCount(tenantId: number, periodFrom: Date, periodTo: Date, entityId?: number) {
     const result = await db.execute(sql`
       SELECT COUNT(*) as unreconciled_count
       FROM bank_transactions bt
@@ -221,7 +221,7 @@ export class DashboardStatsService {
   /**
    * Get cash flow (inflow/outflow)
    */
-  private static async getCashFlow(tenantId: number, entityId?: number, periodFrom: Date, periodTo: Date) {
+  private static async getCashFlow(tenantId: number, periodFrom: Date, periodTo: Date, entityId?: number) {
     const result = await db.execute(sql`
       SELECT 
         COALESCE(SUM(CASE WHEN amount > 0 THEN amount::numeric ELSE 0 END), 0) as inflow,
