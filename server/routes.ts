@@ -1710,58 +1710,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Dashboard - protected route with company isolation and optimized caching
+  // Enhanced Dashboard - SARS-focused compliance dashboard with comprehensive stats
   app.get("/api/dashboard/stats", authenticate, requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user?.companyId;
+      const { entityId, periodFrom, periodTo } = req.query;
       
       if (!companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
       
+      // Parse query parameters
+      const entityIdNum = entityId ? parseInt(String(entityId)) : undefined;
+      const periodFromDate = periodFrom ? new Date(String(periodFrom)) : undefined;
+      const periodToDate = periodTo ? new Date(String(periodTo)) : undefined;
+      
       // Optimized cache headers for better performance
       res.set('Cache-Control', 'private, max-age=30'); // 30 seconds cache
-      res.set('ETag', `dashboard-${companyId}-${Date.now()}`);
+      res.set('ETag', `dashboard-${companyId}-${entityId || 'all'}-${Date.now()}`);
       
       // Use cached queries with short TTL for performance
-      const cacheKey = `dashboard-stats-${companyId}`;
+      const cacheKey = `dashboard-stats-${companyId}-${entityId || 'all'}`;
       const dashboardData = await withCache(cacheKey, async () => {
-        const [fastStats, recentActivities, bankBalances, profitLossData, auditStats, recentInvoices, receivablesAging, payablesAging] = await Promise.all([
-          fastStorage.getFastDashboardStats(companyId),
-          fastStorage.getFastRecentActivities(companyId),
-          fastStorage.getFastBankBalances(companyId),
-          fastStorage.getFastProfitLossData(companyId),
-          storage.getAuditTrailStats(companyId),
-          storage.getRecentInvoices(companyId, 5), // Get 5 most recent invoices
-          storage.getReceivablesAging(companyId),
-          storage.getPayablesAging(companyId)
-        ]);
-
-        return {
-          totalRevenue: fastStats.total_revenue || "0.00",
-          outstandingInvoices: fastStats.outstanding_invoices || "0.00",
-          totalExpenses: fastStats.total_expenses || "0.00", 
-          totalCustomers: fastStats.total_customers || "0",
-          bankBalance: fastStats.bank_balance || "0.00",
-          vatDue: fastStats.vat_due || "0.00",
-          pendingEstimates: fastStats.pending_estimates || "0",
-          outstandingInvoiceCount: fastStats.outstanding_invoice_count || 0,
-          paidInvoiceCount: fastStats.paid_invoice_count || 0,
-          recentInvoices: recentInvoices || [],
-          receivablesAging: receivablesAging || [],
-          payablesAging: payablesAging || [],
-          cashFlowSummary: {
-            currentCashPosition: fastStats.current_cash_position || fastStats.bank_balance || "0.00",
-            todayInflow: fastStats.today_inflow || "0.00",
-            todayOutflow: fastStats.today_outflow || "0.00", 
-            netCashFlow: (parseFloat(fastStats.today_inflow || "0") - parseFloat(fastStats.today_outflow || "0")).toFixed(2)
-          },
-          bankBalances,
-          profitLossData,
-          recentActivities,
-          complianceAlerts: [],
-          auditStats
-        };
+        // Import the dashboard stats service
+        const { DashboardStatsService } = await import('./services/dashboardStatsService');
+        
+        // Get comprehensive SARS-focused dashboard stats
+        return await DashboardStatsService.getDashboardStats({
+          tenantId: companyId,
+          entityId: entityIdNum,
+          periodFrom: periodFromDate,
+          periodTo: periodToDate
+        });
       }, 30000); // 30 second cache
       
       res.json(dashboardData);
