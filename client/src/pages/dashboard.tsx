@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { PullToRefresh } from "@/components/mobile/pull-to-refresh";
 import { FloatingActionButton } from "@/components/mobile/floating-action-button";
@@ -150,13 +150,7 @@ export default function Dashboard() {
   };
 
   // Professional role-based dashboard logic for multi-company platform
-  const getUserRoleCapabilities = (): {
-    defaultView: 'practitioner' | 'business';
-    canToggle: boolean;
-    isAdmin?: boolean;
-    isPractitioner?: boolean;
-    isBusinessOwner?: boolean;
-  } => {
+  const userCapabilities = useMemo(() => {
     if (!currentUser?.role) return { defaultView: 'business' as const, canToggle: false };
     const role = currentUser.role.toLowerCase();
     
@@ -172,16 +166,14 @@ export default function Dashboard() {
     
     // Business owners: Only see their company's business view
     return { defaultView: 'business' as const, canToggle: false, isBusinessOwner: true };
-  };
-
-  const userCapabilities = getUserRoleCapabilities();
+  }, [currentUser?.role]);
   
   // Initialize dashboard view based on user role
   useEffect(() => {
     if (!userCapabilities.canToggle) {
       setDashboardViewType(userCapabilities.defaultView);
     }
-  }, [currentUser?.role]);
+  }, [userCapabilities.canToggle, userCapabilities.defaultView]);
 
   const dashboardType = userCapabilities.canToggle ? dashboardViewType : userCapabilities.defaultView;
 
