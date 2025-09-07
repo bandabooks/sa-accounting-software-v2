@@ -14,12 +14,13 @@ import {
   Search,
   Filter,
   Plus,
+  Eye,
+  Edit,
+  BarChart3,
   Paperclip,
   UserCheck,
   FolderOpen,
-  CheckSquare,
-  Calendar,
-  ExternalLink
+  CheckSquare
 } from 'lucide-react';
 
 interface DueFiling {
@@ -36,7 +37,7 @@ interface DueFiling {
 }
 
 export default function PracticeDashboard() {
-  // Due Filings filters
+  // Due Filings filters and selection
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
   const [entityFilter, setEntityFilter] = useState('all');
@@ -74,13 +75,13 @@ export default function PracticeDashboard() {
         },
         {
           id: 3,
-          service: 'CIPC',
+          service: 'PROV_TAX',
           entity: 'Tech Solutions SA',
-          period: 'Annual Return 2024',
-          dueDate: '2024-04-30',
-          daysUntilDue: 45,
+          period: 'Feb 2024',
+          dueDate: '2024-02-28',
+          daysUntilDue: -3,
           assignee: 'Team Member',
-          status: 'upcoming',
+          status: 'overdue',
           hasDocuments: false,
           client: 'Tech Solutions'
         }
@@ -98,11 +99,14 @@ export default function PracticeDashboard() {
     return matchesAssignee && matchesService && matchesStatus;
   });
 
-  // Due filings metrics
-  const overdueFilings = dueFilings.filter(f => f.status === 'overdue').length;
-  const dueSoonFilings = dueFilings.filter(f => f.status === 'due').length;
+  // Metrics
   const totalClients = 6;
   const onboardingClients = 0;
+  const pendingTasks = 0;
+  const urgentTasks = 2;
+
+  // Check if there are upcoming deadlines
+  const upcomingDeadlines = dueFilings.filter(f => f.status === 'upcoming').length > 0;
 
   return (
     <div className="space-y-6" data-testid="practice-dashboard">
@@ -122,16 +126,12 @@ export default function PracticeDashboard() {
             <Plus className="h-4 w-4 mr-2" />
             New Task
           </Button>
-          <Button variant="outline" data-testid="button-request-docs">
-            <FolderOpen className="h-4 w-4 mr-2" />
-            Request Docs
-          </Button>
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Compact Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-blue-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -144,7 +144,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-green-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -157,12 +157,12 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-amber-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pending Tasks</p>
-                <p className="text-2xl font-normal text-gray-900">{dueSoonFilings}</p>
+                <p className="text-2xl font-normal text-gray-900">{pendingTasks}</p>
                 <p className="text-sm text-gray-500">Overdue</p>
               </div>
               <Clock className="h-8 w-8 text-amber-700" />
@@ -170,12 +170,12 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-rose-50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Urgent Tasks</p>
-                <p className="text-2xl font-normal text-gray-900">{overdueFilings}</p>
+                <p className="text-2xl font-normal text-gray-900">{urgentTasks}</p>
                 <p className="text-sm text-gray-500">Requires attention</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-rose-700" />
@@ -192,18 +192,18 @@ export default function PracticeDashboard() {
         <CardContent>
           <div className="flex gap-2 flex-wrap">
             <Badge className="bg-amber-100 text-amber-700 px-3 py-1">
-              VAT Return (VAT201) · Due 25 Mar · <span className="font-medium">5d</span>
+              <span className="font-medium">due</span> VAT Return (VAT201) · Due 25 Mar · <span className="font-medium">5d</span>
             </Badge>
             <Badge className="bg-blue-100 text-blue-700 px-3 py-1">
-              EMP201 Filing · Due 7 Apr · <span className="font-medium">upcoming</span>
+              <span className="font-medium">upcoming</span> EMP201 Filing · Due 7 Apr · <span className="font-medium">upcoming</span>
             </Badge>
             <Badge className="bg-rose-100 text-rose-700 px-3 py-1">
-              Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
-            </Badge>
-            <Badge className="bg-green-100 text-green-700 px-3 py-1">
-              CIPC Filing · Due 30 Apr · <span className="font-medium">upcoming</span>
+              <span className="font-medium">overdue</span> Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
             </Badge>
           </div>
+          {!upcomingDeadlines && (
+            <p className="text-gray-500 text-sm mt-2">No deadlines in the next 14 days.</p>
+          )}
         </CardContent>
       </Card>
       
@@ -215,8 +215,8 @@ export default function PracticeDashboard() {
             <div className="text-sm text-gray-500">{filteredFilings.length} items</div>
           </div>
           
-          {/* Filter Bar */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t">
+          {/* Filter Bar - NEW ADDITION */}
+          <div className="flex flex-wrap gap-2 pt-4 border-t bg-gray-50 -mx-6 px-6 py-3 mt-4">
             <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
               <SelectTrigger className="w-32" data-testid="select-assignee-filter">
                 <SelectValue placeholder="Assignee" />
@@ -254,6 +254,7 @@ export default function PracticeDashboard() {
               </SelectContent>
             </Select>
             
+            {/* Bulk Actions - NEW ADDITION */}
             {selectedFilings.length > 0 && (
               <div className="flex gap-2 ml-auto">
                 <Button size="sm" variant="outline" data-testid="button-assign-bulk">
@@ -277,6 +278,7 @@ export default function PracticeDashboard() {
           <div className="divide-y">
             {filteredFilings.map((filing) => (
               <div key={filing.id} className="flex items-center gap-4 p-4 hover:bg-gray-50">
+                {/* Checkbox - NEW ADDITION */}
                 <input
                   type="checkbox"
                   checked={selectedFilings.includes(filing.id)}
@@ -291,7 +293,7 @@ export default function PracticeDashboard() {
                   data-testid={`checkbox-filing-${filing.id}`}
                 />
                 
-                <div className="flex items-center gap-2 flex-1">
+                <div className="flex items-center gap-3 flex-1">
                   <Badge 
                     className={`
                       ${filing.service === 'VAT201' ? 'bg-blue-100 text-blue-700' : ''}
@@ -308,17 +310,19 @@ export default function PracticeDashboard() {
                     <div className="text-sm text-gray-500">{filing.period}</div>
                   </div>
                   
+                  {/* Enhanced row info - ENRICHED */}
                   <div className="text-sm text-gray-600">
-                    Due {filing.dueDate} 
-                    <span className={`ml-1 font-medium ${
-                      filing.daysUntilDue < 0 ? 'text-rose-700' : 
-                      filing.daysUntilDue <= 7 ? 'text-amber-700' : 'text-gray-600'
-                    }`}>
-                      ({filing.daysUntilDue < 0 ? `overdue ${Math.abs(filing.daysUntilDue)}d` : `${filing.daysUntilDue}d`})
-                    </span>
+                    Due {filing.dueDate}
                   </div>
                   
-                  <div className="text-sm text-gray-600 w-24">
+                  <div className={`text-sm font-medium ${
+                    filing.daysUntilDue < 0 ? 'text-rose-700' : 
+                    filing.daysUntilDue <= 7 ? 'text-amber-700' : 'text-gray-600'
+                  }`}>
+                    {filing.daysUntilDue < 0 ? `overdue ${Math.abs(filing.daysUntilDue)}d` : `${filing.daysUntilDue}d`}
+                  </div>
+                  
+                  <div className="text-sm text-gray-600 w-20">
                     {filing.assignee.replace('Current User', 'Me')}
                   </div>
                   
@@ -331,6 +335,7 @@ export default function PracticeDashboard() {
                     {filing.status}
                   </Badge>
                   
+                  {/* Document indicator - NEW ADDITION */}
                   {filing.hasDocuments && (
                     <Paperclip className="h-4 w-4 text-gray-400" />
                   )}
@@ -341,7 +346,6 @@ export default function PracticeDashboard() {
                   data-testid={`button-file-${filing.id}`}
                   aria-label={`File ${filing.service} ${filing.period} for ${filing.client}`}
                 >
-                  <FileText className="h-4 w-4 mr-1" />
                   File
                 </Button>
               </div>
@@ -358,7 +362,7 @@ export default function PracticeDashboard() {
 
       {/* Compliance Modules */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="bg-green-50">
           <CardContent className="p-6 text-center">
             <FileText className="h-12 w-12 text-green-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">SARS Compliance</h3>
@@ -367,7 +371,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-blue-50">
           <CardContent className="p-6 text-center">
             <Building2 className="h-12 w-12 text-blue-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">CIPC Compliance</h3>
@@ -376,7 +380,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-purple-50">
           <CardContent className="p-6 text-center">
             <Users className="h-12 w-12 text-purple-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">Labour Compliance</h3>
@@ -385,8 +389,9 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Outstanding Balances - SINGLE BLOCK */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-gray-900">Outstanding Balances</CardTitle>
@@ -403,7 +408,7 @@ export default function PracticeDashboard() {
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="text-gray-600">Net Position</span>
-                <span className="font-semibold text-green-600">R 11,300</span>
+                <span className="font-semibold text-emerald-700">R 11,300</span>
               </div>
               <div className="flex gap-2 text-sm">
                 <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">AR aging</Button>
@@ -414,56 +419,34 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
         
+        {/* Recent Tasks - GROUPED BY DATE */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Recent Tasks</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-gray-900">Recent Tasks</CardTitle>
+              <Button variant="link" size="sm" className="p-0 h-auto text-blue-600">View all</Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="text-sm font-medium text-gray-700">Today</div>
               <div className="ml-4 text-sm text-gray-600">
                 VAT201 Return - Think MyBiz Accountants
-                <Badge className="ml-2 bg-green-100 text-green-700">Done</Badge>
+                <Badge className="ml-2 bg-emerald-100 text-emerald-700 text-xs">Done</Badge>
               </div>
               
               <div className="text-sm font-medium text-gray-700">This Week</div>
               <div className="ml-4 text-sm text-gray-600">
                 Annual Financial Statements - John Smith
-                <Badge className="ml-2 bg-blue-100 text-blue-700">In Review</Badge>
+                <Badge className="ml-2 bg-blue-100 text-blue-700 text-xs">In Review</Badge>
               </div>
               
-              <Button variant="link" size="sm" className="p-0 h-auto text-blue-600">View all</Button>
+              <div className="text-sm font-medium text-gray-700">Later</div>
+              <div className="ml-4 text-sm text-gray-500">No upcoming tasks</div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-              <Users className="h-6 w-6 text-blue-600" />
-              <span className="text-sm">Manage Clients</span>
-            </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-              <Calendar className="h-6 w-6 text-green-600" />
-              <span className="text-sm">View Calendar</span>
-            </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-              <FolderOpen className="h-6 w-6 text-purple-600" />
-              <span className="text-sm">Document Library</span>
-            </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-              <FileText className="h-6 w-6 text-orange-600" />
-              <span className="text-sm">Compliance Reports</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

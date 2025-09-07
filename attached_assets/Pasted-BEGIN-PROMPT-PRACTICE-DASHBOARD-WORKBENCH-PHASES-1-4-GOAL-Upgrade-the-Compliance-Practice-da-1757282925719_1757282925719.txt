@@ -1,0 +1,71 @@
+BEGIN PROMPT — PRACTICE DASHBOARD WORKBENCH (PHASES 1–4)
+
+GOAL
+Upgrade the Compliance/Practice dashboard into an operator workbench without changing overall layout.
+Implement: filterable/paginatable Due Filings with bulk actions; tidy empty states; timeline chip consistency; task grouping; a11y; role-based actions.
+
+SERVER (Express TS)
+1) Add/extend endpoint GET /api/filings (portfolio scoped)
+   Query params: assignee?, service?, status?, entityId?, q?, page=1, limit=20, sort="dueDate:asc"
+   Response: { items: FilingRow[], total: number, page: number, pages: number }
+   FilingRow fields: { id, service, entityName, periodLabel, dueDate, daysLeft, assigneeName?, status, hasDocs:boolean }
+   Indexes on (tenant_id, entity_id, due_date, status, assignee_id).
+2) Bulk endpoints:
+   - POST /api/filings/bulk/assign  { filter|ids, assigneeId }
+   - POST /api/filings/bulk/mark-ready { filter|ids }
+   - POST /api/filings/bulk/request-docs { filter|ids, templateId? }
+   Accept either explicit ids[] or a filter object mirroring GET params.
+3) Guard: only practitioner roles can hit /file or bulk endpoints that change filing status.
+
+CLIENT (React + Vite + Tailwind)
+A) Due Filings “Command Center”
+- Above the list, add a sticky filter strip + bulk actions bar:
+  Controls: Assignee (All/Me/Unassigned), Service (All/VAT201/EMP201/EMP501/IRP6/ITR14/CIPC/UIF/COIDA), Status, Entity (typeahead), Search (q).
+  Right side: counter “{selectedCount} selected · {visibleCount} of {total} items”, buttons: Assign, Request Docs, Mark Ready.
+  Support “Select all {total}” when user selects all visible rows (keep a filter token for server bulk).
+- List rows show: [Service chip] [Entity] [Period] [Due date + daysLeft] [Assignee avatar/name] [Status pill] [paperclip if hasDocs] [Action]
+  • Action = File (practitioner only) or Approve/Upload (client mode).
+  • Each icon-only button has aria-label, e.g., `aria-label="File VAT201 Feb 2025 for ABC Pty"`.
+- Pagination controls bottom-right; keep keyboard navigation (↑↓ to move, Enter to open).
+
+B) Clean-ups
+- If “Upcoming Deadlines” has 0 items, don’t render the card. Instead, under the timeline show a single line: “No deadlines in the next 14 days.”
+- Ensure only one “Outstanding Balances” block exists; add small links “AR aging” and “AP aging”.
+
+C) Timeline consistency
+- Chip text: “{service} · {periodLabel}”
+- Right sublabel: “in {n}d” or “overdue {n}d”
+- Colors: info (default), warn (<7d), danger (overdue or <3d)
+
+D) Recent Tasks grouping
+- Group by sections: “Today”, “This week”, “Later”
+- Keep “View all” link; each row single-line; optional search.
+
+E) Header quick actions
+- Add “Request Docs” button next to “New Invoice / Add Customer / VAT Return”.
+
+F) A11y and Focus
+- Add aria-labels everywhere they’re missing.
+- Tab order: KPI strip → Timeline → Due Filings → Tasks → Activity.
+- Ensure visible focus ring on all interactive elements.
+
+PERFORMANCE
+- React Query settings on key lists: staleTime 45000, refetchInterval 60000.
+- Use query keys that include the filter object to cache result pages.
+- Use optimistic updates for Assign/Mark Ready.
+
+ACCEPTANCE
+- Filter bar + bulk actions visible (sticky) above Due Filings.
+- Sorting by dueDate asc; overdue highlighted subtly.
+- Empty “Upcoming Deadlines” card no longer rendered.
+- One balances block with aging links.
+- Tasks grouped; a11y checks pass; role-based actions respected.
+- Bulk actions operate on “select all {total}” using server-side filter.
+
+OUTPUT
+- FILES CHANGED (paths)
+- DIFFS (concise)
+- RUN (commands)
+- NOTES (assumptions)
+
+END PROMPT — PRACTICE DASHBOARD WORKBENCH (PHASES 1–4)
