@@ -58,6 +58,7 @@ export default function Dashboard() {
   const [isTodaysTasksExpanded, setIsTodaysTasksExpanded] = useState(false);
   const [isProfitOverviewExpanded, setIsProfitOverviewExpanded] = useState(false);
   const [location, setLocation] = useLocation();
+  
   // Fetch real alert counts from API - Less frequent updates for performance
   const { data: alertCounts } = useQuery({
     queryKey: ["/api/alerts/counts"],
@@ -78,8 +79,7 @@ export default function Dashboard() {
     staleTime: 300000, // Cache user data for 5 minutes
   });
 
-  // Real financial data now displayed directly in components
-
+  // All hooks must be called before any conditional returns
   const {
     isWizardVisible,
     onboardingSteps,
