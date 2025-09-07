@@ -780,7 +780,7 @@ export default function TimeEntriesPage() {
                       <TableCell>
                         <Badge 
                           variant={entry.isRunning ? "default" : "secondary"}
-                          className={entry.isRunning ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-700"}
+                          className={entry.isRunning ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-green-100 text-green-800 hover:bg-green-200"}
                         >
                           {entry.isRunning ? "Running" : "Completed"}
                         </Badge>

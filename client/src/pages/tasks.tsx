@@ -746,7 +746,7 @@ export default function TasksPage() {
                                 </SelectItem>
                               ))}
                               {items.length === 0 && relatedType !== "customer" && relatedType !== "project" && (
-                                <SelectItem value="none" disabled>
+                                <SelectItem value={`no-${relatedType}s`} disabled>
                                   No {relatedType}s available
                                 </SelectItem>
                               )}
