@@ -422,7 +422,7 @@ export default function Dashboard() {
                       </tr>
                       <tr className="hover:bg-gray-50 bg-blue-50">
                         <td className="p-3 font-medium text-gray-900">Net Position</td>
-                        <td className="p-3 text-right font-bold text-blue-600">{formatCurrency((parseFloat(dashboardStats.outstandingInvoices.replace(/,/g, '')) - (stats?.payablesAging?.totalPayables ? parseFloat(stats.payablesAging.totalPayables.replace(/,/g, '')) : 0)).toString())}</td>
+                        <td className="p-3 text-right font-bold text-blue-600">{formatCurrency((parseFloat(String(dashboardStats.outstandingInvoices).replace(/,/g, '')) - (stats?.payablesAging?.totalPayables ? parseFloat(String(stats.payablesAging.totalPayables).replace(/,/g, '')) : 0)).toString())}</td>
                         <td className="p-3 text-right text-gray-400">—</td>
                       </tr>
                     </tbody>
