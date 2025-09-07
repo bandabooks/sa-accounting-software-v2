@@ -198,19 +198,19 @@ export default function PracticeDashboard() {
               className="bg-amber-100 text-amber-700 px-3 py-1 cursor-pointer hover:bg-amber-200 transition-colors" 
               onClick={() => setLocation('/vat-management')}
             >
-              <span className="font-medium">due</span> VAT Return (VAT201) · Due 25 Mar · <span className="font-medium">5d</span>
+              <span className="font-medium">Due</span> VAT Return (VAT201) · Due 25 Mar · <span className="font-medium">5d</span>
             </Badge>
             <Badge 
               className="bg-blue-100 text-blue-700 px-3 py-1 cursor-pointer hover:bg-blue-200 transition-colors" 
               onClick={() => setLocation('/emp201')}
             >
-              <span className="font-medium">upcoming</span> EMP201 Filing · Due 7 Apr · <span className="font-medium">upcoming</span>
+              <span className="font-medium">Upcoming</span> EMP201 Filing · Due 7 Apr · <span className="font-medium">upcoming</span>
             </Badge>
             <Badge 
               className="bg-rose-100 text-rose-700 px-3 py-1 cursor-pointer hover:bg-rose-200 transition-colors" 
               onClick={() => setLocation('/accountants/tax-practitioners')}
             >
-              <span className="font-medium">overdue</span> Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
+              <span className="font-medium">Overdue</span> Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
             </Badge>
           </div>
           {!upcomingDeadlines && (
