@@ -80,11 +80,19 @@ export default function BusinessDashboard() {
 
   const businessMetrics: BusinessMetric[] = [
     {
-      title: "Cash Position",
-      value: totalRevenue,
-      change: 12.5,
-      changeType: 'increase',
-      trend: 'up',
+      title: "Total Receivables",
+      value: overdueAmount,
+      change: overdueAmount > 0 ? 15.4 : -5.4,
+      changeType: overdueAmount > 0 ? 'increase' : 'decrease',
+      trend: overdueAmount > 0 ? 'up' : 'down',
+      period: "vs last month"
+    },
+    {
+      title: "Total Payables",
+      value: Math.round((dashboardStats as any)?.totalPayables || 125000),
+      change: -8.3,
+      changeType: 'decrease',
+      trend: 'down',
       period: "vs last month"
     },
     {
@@ -93,14 +101,6 @@ export default function BusinessDashboard() {
       change: 8.2,
       changeType: 'increase', 
       trend: 'up',
-      period: "vs last month"
-    },
-    {
-      title: "Outstanding Receivables",
-      value: overdueAmount,
-      change: overdueAmount > 0 ? 15.4 : -5.4,
-      changeType: overdueAmount > 0 ? 'increase' : 'decrease',
-      trend: overdueAmount > 0 ? 'up' : 'down',
       period: "vs last month"
     },
     {
@@ -246,7 +246,7 @@ export default function BusinessDashboard() {
                       {metric.title}
                     </p>
                     <div className="flex items-baseline gap-2 mt-2">
-                      <span className="text-xl font-bold text-gray-900" data-testid={`kpi-value-${index}`}>
+                      <span className="text-xl font-medium text-gray-900" data-testid={`kpi-value-${index}`}>
                         {typeof metric.value === 'number' && (metric.title.includes('Revenue') || metric.title.includes('Cash') || metric.title.includes('Receivables'))
                           ? formatCurrency(Number(metric.value)) 
                           : metric.value}
