@@ -62,7 +62,7 @@ export default function TimeEntriesPage() {
   const filterOptions = useMemo(() => {
     const taskTypes = Array.from(new Set(tasks.map(task => task.category).filter(Boolean)));
     const projects = Array.from(new Set(tasks.map(task => task.project).filter(Boolean)));
-    const customerNames = customers.map(customer => customer.name);
+    const customerNames = customers.filter(customer => customer && customer.name).map(customer => customer.name);
     
     return {
       taskTypes,
@@ -526,8 +526,8 @@ export default function TimeEntriesPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All clients</SelectItem>
-                          {filterOptions.customers.map((customer, index) => (
-                            <SelectItem key={index} value={customer || `customer-${index}`}>{customer || 'Unknown Customer'}</SelectItem>
+                          {filterOptions.customers.map((customerName, index) => (
+                            <SelectItem key={index} value={customerName}>{customerName}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -549,7 +549,7 @@ export default function TimeEntriesPage() {
                         <SelectContent>
                           <SelectItem value="all">All task types</SelectItem>
                           {filterOptions.taskTypes.map((type, index) => (
-                            <SelectItem key={index} value={type || `type-${index}`}>{type || 'Unknown Type'}</SelectItem>
+                            <SelectItem key={index} value={type}>{type}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -571,7 +571,7 @@ export default function TimeEntriesPage() {
                         <SelectContent>
                           <SelectItem value="all">All projects</SelectItem>
                           {filterOptions.projects.map((project, index) => (
-                            <SelectItem key={index} value={project || `project-${index}`}>{project || 'Unknown Project'}</SelectItem>
+                            <SelectItem key={index} value={project}>{project}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
