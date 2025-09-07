@@ -33,11 +33,11 @@ export default function TimeEntriesPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("this_month");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
-    customer: "",
-    taskType: "",
-    project: "",
-    status: "",
-    billable: "",
+    customer: "all",
+    taskType: "all",
+    project: "all",
+    status: "all",
+    billable: "all",
     dateFrom: null,
     dateTo: null
   });
@@ -118,20 +118,20 @@ export default function TimeEntriesPage() {
       const taskMatch = !taskIdParam || entry.taskId?.toString() === taskIdParam;
 
       // Advanced filters
-      const customerMatch = !advancedFilters.customer || 
+      const customerMatch = !advancedFilters.customer || advancedFilters.customer === "all" || 
         entry.task?.customer?.name === advancedFilters.customer;
       
-      const taskTypeMatch = !advancedFilters.taskType || 
+      const taskTypeMatch = !advancedFilters.taskType || advancedFilters.taskType === "all" || 
         entry.task?.category === advancedFilters.taskType;
       
-      const projectMatch = !advancedFilters.project || 
+      const projectMatch = !advancedFilters.project || advancedFilters.project === "all" || 
         entry.task?.project === advancedFilters.project;
       
-      const statusMatch = !advancedFilters.status || 
+      const statusMatch = !advancedFilters.status || advancedFilters.status === "all" || 
         (advancedFilters.status === "running" && entry.isRunning) ||
         (advancedFilters.status === "completed" && !entry.isRunning);
       
-      const billableMatch = !advancedFilters.billable || 
+      const billableMatch = !advancedFilters.billable || advancedFilters.billable === "all" || 
         (advancedFilters.billable === "billable" && entry.isBillable) ||
         (advancedFilters.billable === "non-billable" && !entry.isBillable);
       
@@ -231,11 +231,11 @@ export default function TimeEntriesPage() {
 
   const clearFilters = () => {
     setAdvancedFilters({
-      customer: "",
-      taskType: "",
-      project: "",
-      status: "",
-      billable: "",
+      customer: "all",
+      taskType: "all",
+      project: "all",
+      status: "all",
+      billable: "all",
       dateFrom: null,
       dateTo: null
     });
@@ -245,11 +245,11 @@ export default function TimeEntriesPage() {
 
   const hasActiveFilters = () => {
     return searchQuery || 
-           advancedFilters.customer || 
-           advancedFilters.taskType || 
-           advancedFilters.project || 
-           advancedFilters.status || 
-           advancedFilters.billable ||
+           (advancedFilters.customer && advancedFilters.customer !== "all") || 
+           (advancedFilters.taskType && advancedFilters.taskType !== "all") || 
+           (advancedFilters.project && advancedFilters.project !== "all") || 
+           (advancedFilters.status && advancedFilters.status !== "all") || 
+           (advancedFilters.billable && advancedFilters.billable !== "all") ||
            timeFilter === "custom";
   };
 
@@ -486,7 +486,15 @@ export default function TimeEntriesPage() {
                     Advanced Filters
                     {hasActiveFilters() && (
                       <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
-                        {[searchQuery, advancedFilters.customer, advancedFilters.taskType, advancedFilters.project, advancedFilters.status, advancedFilters.billable].filter(Boolean).length}
+                        {[
+                          searchQuery, 
+                          advancedFilters.customer !== "all" ? advancedFilters.customer : null,
+                          advancedFilters.taskType !== "all" ? advancedFilters.taskType : null,
+                          advancedFilters.project !== "all" ? advancedFilters.project : null,
+                          advancedFilters.status !== "all" ? advancedFilters.status : null,
+                          advancedFilters.billable !== "all" ? advancedFilters.billable : null,
+                          timeFilter === "custom" ? "custom" : null
+                        ].filter(Boolean).length}
                       </Badge>
                     )}
                   </Button>
@@ -517,9 +525,9 @@ export default function TimeEntriesPage() {
                           <SelectValue placeholder="All clients" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All clients</SelectItem>
-                          {filterOptions.customers.map(customer => (
-                            <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                          <SelectItem value="all">All clients</SelectItem>
+                          {filterOptions.customers.map((customer, index) => (
+                            <SelectItem key={index} value={customer || `customer-${index}`}>{customer || 'Unknown Customer'}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -539,9 +547,9 @@ export default function TimeEntriesPage() {
                           <SelectValue placeholder="All task types" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All task types</SelectItem>
-                          {filterOptions.taskTypes.map(type => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          <SelectItem value="all">All task types</SelectItem>
+                          {filterOptions.taskTypes.map((type, index) => (
+                            <SelectItem key={index} value={type || `type-${index}`}>{type || 'Unknown Type'}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -561,9 +569,9 @@ export default function TimeEntriesPage() {
                           <SelectValue placeholder="All projects" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All projects</SelectItem>
-                          {filterOptions.projects.map(project => (
-                            <SelectItem key={project} value={project}>{project}</SelectItem>
+                          <SelectItem value="all">All projects</SelectItem>
+                          {filterOptions.projects.map((project, index) => (
+                            <SelectItem key={index} value={project || `project-${index}`}>{project || 'Unknown Project'}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -581,7 +589,7 @@ export default function TimeEntriesPage() {
                             <SelectValue placeholder="All statuses" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">All statuses</SelectItem>
+                            <SelectItem value="all">All statuses</SelectItem>
                             <SelectItem value="running">Running</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
                           </SelectContent>
@@ -598,7 +606,7 @@ export default function TimeEntriesPage() {
                             <SelectValue placeholder="All entries" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">All entries</SelectItem>
+                            <SelectItem value="all">All entries</SelectItem>
                             <SelectItem value="billable">Billable only</SelectItem>
                             <SelectItem value="non-billable">Non-billable only</SelectItem>
                           </SelectContent>
