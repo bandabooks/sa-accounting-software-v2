@@ -702,98 +702,98 @@ export default function ProjectsPage() {
       </div>
 
       {/* Professional Statistics Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-6">
         {/* Total Projects */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardContent className="p-6">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Projects</p>
-                <p className="text-3xl font-bold text-blue-900">{projectStats.total}</p>
-                <p className="text-xs text-blue-600 mt-1">All projects</p>
+                <p className="text-xs font-medium text-blue-700">Total Projects</p>
+                <p className="text-xl font-bold text-blue-900">{projectStats.total}</p>
+                <p className="text-[10px] text-blue-600 mt-0.5">All projects</p>
               </div>
-              <div className="p-3 bg-blue-200 rounded-full">
-                <BarChart3 className="h-6 w-6 text-blue-700" />
+              <div className="p-2 bg-blue-200 rounded-full">
+                <BarChart3 className="h-4 w-4 text-blue-700" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Active Projects */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
-          <CardContent className="p-6">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Active Projects</p>
-                <p className="text-3xl font-bold text-green-900">{projectStats.active}</p>
-                <p className="text-xs text-green-600 mt-1">In progress</p>
+                <p className="text-xs font-medium text-green-700">Active Projects</p>
+                <p className="text-xl font-bold text-green-900">{projectStats.active}</p>
+                <p className="text-[10px] text-green-600 mt-0.5">In progress</p>
               </div>
-              <div className="p-3 bg-green-200 rounded-full">
-                <PlayCircle className="h-6 w-6 text-green-700" />
+              <div className="p-2 bg-green-200 rounded-full">
+                <PlayCircle className="h-4 w-4 text-green-700" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Completed Projects */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100">
-          <CardContent className="p-6">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-100">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-emerald-700">Completed</p>
-                <p className="text-3xl font-bold text-emerald-900">{projectStats.completed}</p>
-                <p className="text-xs text-emerald-600 mt-1">Finished projects</p>
+                <p className="text-xs font-medium text-emerald-700">Completed</p>
+                <p className="text-xl font-bold text-emerald-900">{projectStats.completed}</p>
+                <p className="text-[10px] text-emerald-600 mt-0.5">Finished projects</p>
               </div>
-              <div className="p-3 bg-emerald-200 rounded-full">
-                <CheckCircle2 className="h-6 w-6 text-emerald-700" />
+              <div className="p-2 bg-emerald-200 rounded-full">
+                <CheckCircle2 className="h-4 w-4 text-emerald-700" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Overdue Projects */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100">
-          <CardContent className="p-6">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-700">Overdue</p>
-                <p className="text-3xl font-bold text-red-900">{projectStats.overdue}</p>
-                <p className="text-xs text-red-600 mt-1">Past deadline</p>
+                <p className="text-xs font-medium text-red-700">Overdue</p>
+                <p className="text-xl font-bold text-red-900">{projectStats.overdue}</p>
+                <p className="text-[10px] text-red-600 mt-0.5">Past deadline</p>
               </div>
-              <div className="p-3 bg-red-200 rounded-full">
-                <AlertTriangle className="h-6 w-6 text-red-700" />
+              <div className="p-2 bg-red-200 rounded-full">
+                <AlertTriangle className="h-4 w-4 text-red-700" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Total Budget */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="p-6">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Total Budget</p>
-                <p className="text-3xl font-bold text-purple-900">R{projectStats.totalBudget.toLocaleString()}</p>
-                <p className="text-xs text-purple-600 mt-1">Project budgets</p>
+                <p className="text-xs font-medium text-purple-700">Total Budget</p>
+                <p className="text-xl font-bold text-purple-900">R{projectStats.totalBudget.toLocaleString()}</p>
+                <p className="text-[10px] text-purple-600 mt-0.5">Project budgets</p>
               </div>
-              <div className="p-3 bg-purple-200 rounded-full">
-                <DollarSign className="h-6 w-6 text-purple-700" />
+              <div className="p-2 bg-purple-200 rounded-full">
+                <DollarSign className="h-4 w-4 text-purple-700" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Total Hours */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100">
-          <CardContent className="p-6">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Estimated Hours</p>
-                <p className="text-3xl font-bold text-orange-900">{projectStats.totalEstimatedHours}</p>
-                <p className="text-xs text-orange-600 mt-1">Total estimated</p>
+                <p className="text-xs font-medium text-orange-700">Estimated Hours</p>
+                <p className="text-xl font-bold text-orange-900">{projectStats.totalEstimatedHours}</p>
+                <p className="text-[10px] text-orange-600 mt-0.5">Total estimated</p>
               </div>
-              <div className="p-3 bg-orange-200 rounded-full">
-                <Clock className="h-6 w-6 text-orange-700" />
+              <div className="p-2 bg-orange-200 rounded-full">
+                <Clock className="h-4 w-4 text-orange-700" />
               </div>
             </div>
           </CardContent>

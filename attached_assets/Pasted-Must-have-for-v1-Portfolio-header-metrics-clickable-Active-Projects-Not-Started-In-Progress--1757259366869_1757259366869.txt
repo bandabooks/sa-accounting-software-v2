@@ -1,0 +1,102 @@
+Must-have for v1
+
+Portfolio header metrics (clickable):
+
+Active Projects, Not Started, In Progress, On Hold, Completed
+
+At-Risk (due ≤ 7 days & <100% OR schedule slip), Over Budget, No PM assigned
+
+Unbilled Hours, Total Budget vs Burn
+
+Filters + saved views: date range, client, manager, status, priority, tag, billing type, at-risk, over-budget.
+
+List/Grid toggle: table with sort (Name, Client, PM, Status, Due, Budget, Burn %, Margin, Invoiced).
+
+Card design upgrade: add client logo/name, budget vs burn ring, billing type, hours used / budget, invoice status, due in X days, PM avatar(s).
+
+Project details page with tabs: Overview • Tasks • Time • Budget • Invoices • Files • Activity • Settings.
+
+Templates: pick a default task template when creating a project.
+
+Permissions: role-based access (Partner/Manager/Practitioner).
+
+P1 — Next
+
+Pipeline view (Kanban): Planning → Active → On Hold → In Review → Completed.
+
+Calendar/Gantt: milestones & key dates.
+
+Rate cards: client/project rate card with role-based rates.
+
+Milestones & deliverables: with fees, due dates, approval.
+
+Retainers: recurring monthly budget & cap.
+
+P2 — Later
+
+Forecasting: EAC (estimate at completion), schedule & budget forecasts.
+
+Profitability & margin: fees vs cost (blended cost rates).
+
+Automations: overdue/at-risk alerts, auto-status from task progress.
+
+Create Project modal — what it needs
+Fields to add
+
+Project Code (short ID)
+
+Client Contact(s) (for approvals/invoicing)
+
+Billing Type: Time & Materials | Fixed Fee | Retainer | Non-billable
+
+Budget (depends on billing type):
+
+T&M → Budget Hours and/or Budget Amount
+
+Fixed Fee → Contract Amount (with optional Budget Hours)
+
+Retainer → Monthly Cap (hours/amount) + renewal day
+
+Currency (default from client/company)
+
+Rate Card (default + overrides per role)
+
+Project Tags (e.g., “VAT”, “Payroll”, “Audit”)
+
+Department / Practice (Tax, Audit, Bookkeeping, etc.)
+
+Timezone (affects due dates & reports)
+
+Milestone Template (optional)
+
+Attachments (SOW, PO, SLA)
+
+PO / Reference Number
+
+Confidentiality level (access scope)
+
+Improve existing fields
+
+Status: Planning, Active, On Hold, In Review, Completed, Canceled
+
+Priority: Low/Medium/High/Urgent
+
+Hourly Rate: only shown if Billing = T&M; else hidden/disabled
+
+Start/End Date: add date duration and “Due in X days” preview
+
+Project Manager: multi-PM optional; show avatar chips
+
+Validation & automation
+
+If Fixed Fee → Contract Amount required; Hourly Rate hidden.
+
+If T&M → Rate Card or Hourly Rate required; Budget optional (with warnings).
+
+If Retainer → Monthly Cap required; auto-create monthly periods.
+
+End Date ≥ Start Date; warn if Start Date in past.
+
+Currency locks rate inputs to that currency and formats amounts.
+
+After “Create Project”, optionally create default tasks from template and assign team.
