@@ -7,16 +7,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Play, Square, Calendar, ArrowLeft, Filter, TrendingUp, Activity, Target, BarChart3 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Clock, Play, Square, Calendar as CalendarIcon, ArrowLeft, Filter, TrendingUp, Activity, Target, BarChart3, X, Users, Briefcase, Building } from "lucide-react";
 import { Link } from "wouter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, LineChart, Line } from "recharts";
+import { format } from "date-fns";
 
-type TimeFilter = "today" | "this_week" | "this_month" | "last_month";
+type TimeFilter = "today" | "this_week" | "this_month" | "last_month" | "custom";
+
+interface AdvancedFilters {
+  customer: string;
+  taskType: string;
+  project: string;
+  status: string;
+  billable: string;
+  dateFrom: Date | null;
+  dateTo: Date | null;
+}
 
 export default function TimeEntriesPage() {
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("this_month");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
+    customer: "",
+    taskType: "",
+    project: "",
+    status: "",
+    billable: "",
+    dateFrom: null,
+    dateTo: null
+  });
   
   // Extract taskId from query params if present
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
@@ -30,44 +54,91 @@ export default function TimeEntriesPage() {
     queryKey: ["/api/tasks"],
   });
 
-  // Time filtering logic
+  const { data: customers = [] } = useQuery<any[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  // Get unique values for filter dropdowns
+  const filterOptions = useMemo(() => {
+    const taskTypes = Array.from(new Set(tasks.map(task => task.category).filter(Boolean)));
+    const projects = Array.from(new Set(tasks.map(task => task.project).filter(Boolean)));
+    const customerNames = customers.map(customer => customer.name);
+    
+    return {
+      taskTypes,
+      projects,
+      customers: customerNames
+    };
+  }, [tasks, customers]);
+
+  // Enhanced filtering logic
   const getFilteredTimeEntries = useMemo(() => {
     const now = new Date();
     let startDate: Date;
     let endDate: Date = now;
 
-    switch (timeFilter) {
-      case "today":
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case "this_week":
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - now.getDay());
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case "this_month":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "last_month":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Handle date filtering
+    if (timeFilter === "custom" && advancedFilters.dateFrom && advancedFilters.dateTo) {
+      startDate = advancedFilters.dateFrom;
+      endDate = advancedFilters.dateTo;
+    } else {
+      switch (timeFilter) {
+        case "today":
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case "this_week":
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - now.getDay());
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case "this_month":
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case "last_month":
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
     }
 
     return timeEntries.filter(entry => {
+      // Date filtering
       const entryDate = new Date(entry.startTime);
+      const dateMatch = entryDate >= startDate && entryDate <= endDate;
+
+      // Search filtering
       const searchMatch = !searchQuery || 
         entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (entry.task?.title && entry.task.title.toLowerCase().includes(searchQuery.toLowerCase()));
+        (entry.task?.title && entry.task.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (entry.task?.customer?.name && entry.task.customer.name.toLowerCase().includes(searchQuery.toLowerCase()));
       
+      // Task ID parameter filtering
       const taskMatch = !taskIdParam || entry.taskId?.toString() === taskIdParam;
-      const dateMatch = entryDate >= startDate && entryDate <= endDate;
+
+      // Advanced filters
+      const customerMatch = !advancedFilters.customer || 
+        entry.task?.customer?.name === advancedFilters.customer;
       
-      return searchMatch && taskMatch && dateMatch;
+      const taskTypeMatch = !advancedFilters.taskType || 
+        entry.task?.category === advancedFilters.taskType;
+      
+      const projectMatch = !advancedFilters.project || 
+        entry.task?.project === advancedFilters.project;
+      
+      const statusMatch = !advancedFilters.status || 
+        (advancedFilters.status === "running" && entry.isRunning) ||
+        (advancedFilters.status === "completed" && !entry.isRunning);
+      
+      const billableMatch = !advancedFilters.billable || 
+        (advancedFilters.billable === "billable" && entry.isBillable) ||
+        (advancedFilters.billable === "non-billable" && !entry.isBillable);
+      
+      return dateMatch && searchMatch && taskMatch && customerMatch && 
+             taskTypeMatch && projectMatch && statusMatch && billableMatch;
     });
-  }, [timeEntries, timeFilter, searchQuery, taskIdParam]);
+  }, [timeEntries, timeFilter, searchQuery, taskIdParam, advancedFilters]);
 
   // Generate daily chart data
   const chartData = useMemo(() => {
@@ -77,7 +148,11 @@ export default function TimeEntriesPage() {
     let daysToShow = 31;
     let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    if (timeFilter === "today") {
+    if (timeFilter === "custom" && advancedFilters.dateFrom && advancedFilters.dateTo) {
+      startDate = advancedFilters.dateFrom;
+      const diffTime = Math.abs(advancedFilters.dateTo.getTime() - advancedFilters.dateFrom.getTime());
+      daysToShow = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    } else if (timeFilter === "today") {
       daysToShow = 1;
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     } else if (timeFilter === "this_week") {
@@ -114,7 +189,7 @@ export default function TimeEntriesPage() {
     }
 
     return data;
-  }, [getFilteredTimeEntries, timeFilter]);
+  }, [getFilteredTimeEntries, timeFilter, advancedFilters.dateFrom, advancedFilters.dateTo]);
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -152,6 +227,30 @@ export default function TimeEntriesPage() {
     const totalHours = getTotalDuration() / 3600;
     const activeDays = chartData.filter(d => d.totalHours > 0).length;
     return activeDays > 0 ? (totalHours / activeDays).toFixed(1) : "0.0";
+  };
+
+  const clearFilters = () => {
+    setAdvancedFilters({
+      customer: "",
+      taskType: "",
+      project: "",
+      status: "",
+      billable: "",
+      dateFrom: null,
+      dateTo: null
+    });
+    setTimeFilter("this_month");
+    setSearchQuery("");
+  };
+
+  const hasActiveFilters = () => {
+    return searchQuery || 
+           advancedFilters.customer || 
+           advancedFilters.taskType || 
+           advancedFilters.project || 
+           advancedFilters.status || 
+           advancedFilters.billable ||
+           timeFilter === "custom";
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -206,7 +305,12 @@ export default function TimeEntriesPage() {
           </div>
         </div>
         <div className="flex gap-3">
-          <Select value={timeFilter} onValueChange={(value) => setTimeFilter(value as TimeFilter)}>
+          <Select value={timeFilter} onValueChange={(value) => {
+            setTimeFilter(value as TimeFilter);
+            if (value !== "custom") {
+              setAdvancedFilters(prev => ({ ...prev, dateFrom: null, dateTo: null }));
+            }
+          }}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -215,6 +319,7 @@ export default function TimeEntriesPage() {
               <SelectItem value="this_week">This Week</SelectItem>
               <SelectItem value="this_month">This Month</SelectItem>
               <SelectItem value="last_month">Last Month</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -297,7 +402,7 @@ export default function TimeEntriesPage() {
                 Daily Activity Overview
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Track your work patterns and productivity spikes throughout the {timeFilter.replace('_', ' ')}
+                Track your work patterns and productivity spikes throughout the {timeFilter === "custom" ? "selected period" : timeFilter.replace('_', ' ')}
               </CardDescription>
             </div>
           </div>
@@ -322,7 +427,7 @@ export default function TimeEntriesPage() {
                   stroke="#6B7280" 
                   fontSize={12} 
                   tick={{ fontSize: 11 }}
-                  interval={timeFilter === 'this_month' ? 2 : 0}
+                  interval={chartData.length > 15 ? 2 : 0}
                 />
                 <YAxis 
                   stroke="#6B7280" 
@@ -361,22 +466,210 @@ export default function TimeEntriesPage() {
         </CardContent>
       </Card>
 
-      {/* Search and Enhanced Filters */}
+      {/* Enhanced Search and Filters */}
       <Card className="border-0 shadow-lg">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Input
-                placeholder="Search time entries by description or task..."
+                placeholder="Search time entries by description, task, or client..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-4 border-gray-200 focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
-              <Filter className="h-4 w-4 mr-2" />
-              Advanced Filters
-            </Button>
+            <div className="flex gap-2">
+              <Dialog open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Advanced Filters
+                    {hasActiveFilters() && (
+                      <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                        {[searchQuery, advancedFilters.customer, advancedFilters.taskType, advancedFilters.project, advancedFilters.status, advancedFilters.billable].filter(Boolean).length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl flex items-center gap-2">
+                      <Filter className="h-5 w-5" />
+                      Advanced Filters
+                    </DialogTitle>
+                    <DialogDescription>
+                      Filter your time entries by client, task type, project, and more for precise analysis
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-6 py-4">
+                    {/* Client/Customer Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        Client/Customer
+                      </label>
+                      <Select 
+                        value={advancedFilters.customer} 
+                        onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, customer: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All clients" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All clients</SelectItem>
+                          {filterOptions.customers.map(customer => (
+                            <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Task Type Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <Briefcase className="h-4 w-4" />
+                        Task Type
+                      </label>
+                      <Select 
+                        value={advancedFilters.taskType} 
+                        onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, taskType: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All task types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All task types</SelectItem>
+                          {filterOptions.taskTypes.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Project Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Project
+                      </label>
+                      <Select 
+                        value={advancedFilters.project} 
+                        onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, project: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All projects" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All projects</SelectItem>
+                          {filterOptions.projects.map(project => (
+                            <SelectItem key={project} value={project}>{project}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Status and Billable Filters */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Status</label>
+                        <Select 
+                          value={advancedFilters.status} 
+                          onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, status: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All statuses" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All statuses</SelectItem>
+                            <SelectItem value="running">Running</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Billable</label>
+                        <Select 
+                          value={advancedFilters.billable} 
+                          onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, billable: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All entries" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All entries</SelectItem>
+                            <SelectItem value="billable">Billable only</SelectItem>
+                            <SelectItem value="non-billable">Non-billable only</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Custom Date Range */}
+                    {timeFilter === "custom" && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4" />
+                          Custom Date Range
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="justify-start text-left font-normal">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {advancedFilters.dateFrom ? format(advancedFilters.dateFrom, "PPP") : "From date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={advancedFilters.dateFrom || undefined}
+                                onSelect={(date) => setAdvancedFilters(prev => ({ ...prev, dateFrom: date || null }))}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="justify-start text-left font-normal">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {advancedFilters.dateTo ? format(advancedFilters.dateTo, "PPP") : "To date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={advancedFilters.dateTo || undefined}
+                                onSelect={(date) => setAdvancedFilters(prev => ({ ...prev, dateTo: date || null }))}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between pt-4 border-t">
+                    <Button variant="outline" onClick={clearFilters}>
+                      <X className="h-4 w-4 mr-2" />
+                      Clear All Filters
+                    </Button>
+                    <Button onClick={() => setShowAdvancedFilters(false)}>
+                      Apply Filters
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {hasActiveFilters() && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -386,7 +679,7 @@ export default function TimeEntriesPage() {
         <CardHeader>
           <CardTitle className="text-gray-900">Time Entries Detail</CardTitle>
           <CardDescription className="text-gray-600">
-            Comprehensive view of all time tracking sessions with detailed metrics
+            Comprehensive view of all time tracking sessions with detailed client and project metrics
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -395,14 +688,18 @@ export default function TimeEntriesPage() {
               <Clock className="h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold mb-2 text-gray-900">No time entries found</h3>
               <p className="text-gray-600 text-center mb-4">
-                {taskIdParam ? "No time has been tracked for this task yet" : "Start tracking time on tasks to see detailed analytics here"}
+                {hasActiveFilters() ? "Try adjusting your filters to see more results" : 
+                 taskIdParam ? "No time has been tracked for this task yet" : 
+                 "Start tracking time on tasks to see detailed analytics here"}
               </p>
-              <Link href="/tasks">
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Tracking Time
-                </Button>
-              </Link>
+              {!hasActiveFilters() && (
+                <Link href="/tasks">
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Play className="h-4 w-4 mr-2" />
+                    Start Tracking Time
+                  </Button>
+                </Link>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -410,6 +707,7 @@ export default function TimeEntriesPage() {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="font-semibold text-gray-700">Date</TableHead>
+                    <TableHead className="font-semibold text-gray-700">Client</TableHead>
                     <TableHead className="font-semibold text-gray-700">Task</TableHead>
                     <TableHead className="font-semibold text-gray-700">Description</TableHead>
                     <TableHead className="font-semibold text-gray-700">Start Time</TableHead>
@@ -426,12 +724,27 @@ export default function TimeEntriesPage() {
                         {formatDate(entry.startTime)}
                       </TableCell>
                       <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-gray-500" />
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {entry.task?.customer?.name || 'No Client'}
+                            </div>
+                            {entry.task?.project && (
+                              <div className="text-xs text-gray-500">
+                                {entry.task.project}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="font-medium text-gray-900">
                           {entry.task?.title || 'Unknown Task'}
                         </div>
-                        {entry.task?.customer && (
+                        {entry.task?.category && (
                           <div className="text-sm text-gray-500">
-                            {entry.task.customer.name}
+                            {entry.task.category}
                           </div>
                         )}
                       </TableCell>
