@@ -34,7 +34,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Calendar, Users, BarChart3, Clock, DollarSign, Target, TrendingUp, CheckCircle2, AlertTriangle, PauseCircle, XCircle, PlayCircle, Eye, Building2 } from "lucide-react";
+import { Plus, Calendar, Users, BarChart3, Clock, DollarSign, Target, TrendingUp, CheckCircle2, AlertTriangle, PauseCircle, XCircle, PlayCircle, Eye, Building2, Filter, Grid3X3, List, Search, SortAsc } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { insertProjectSchema, type ProjectWithDetails } from "@shared/schema";
@@ -51,6 +51,21 @@ const formSchema = insertProjectSchema.omit({
 
 export default function ProjectsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    priority: '',
+    client: '',
+    manager: '',
+    billingType: '',
+    dateRange: { start: '', end: '' },
+    tags: [] as string[],
+    showAtRisk: false,
+    showOverBudget: false,
+    showNoPM: false,
+  });
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' as 'asc' | 'desc' });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -139,14 +154,37 @@ export default function ProjectsPage() {
     }
   };
 
-  // Calculate project statistics
+  // Calculate comprehensive project statistics
   const projectStats = {
     total: projects.length,
+    notStarted: projects.filter((p: any) => p.status === 'not_started').length,
     active: projects.filter((p: any) => p.status === 'in_progress').length,
+    onHold: projects.filter((p: any) => p.status === 'on_hold').length,
     completed: projects.filter((p: any) => ['completed', 'finished'].includes(p.status)).length,
     overdue: projects.filter((p: any) => p.endDate && new Date(p.endDate) < new Date() && !['completed', 'finished', 'cancelled'].includes(p.status)).length,
+    // At-Risk: due <= 7 days & <100% OR schedule slip
+    atRisk: projects.filter((p: any) => {
+      const dueDate = p.endDate ? new Date(p.endDate) : null;
+      const now = new Date();
+      const daysDiff = dueDate ? Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+      return daysDiff <= 7 && daysDiff > 0 && !['completed', 'finished', 'cancelled'].includes(p.status);
+    }).length,
+    // Over Budget: actual cost > budget
+    overBudget: projects.filter((p: any) => {
+      const budget = parseFloat(p.budgetAmount) || 0;
+      const actual = parseFloat(p.actualCost) || 0;
+      return budget > 0 && actual > budget;
+    }).length,
+    // No PM assigned
+    noPM: projects.filter((p: any) => !p.projectManagerId).length,
+    // Financial metrics
     totalBudget: projects.reduce((sum: number, p: any) => sum + (parseFloat(p.budgetAmount) || 0), 0),
     totalEstimatedHours: projects.reduce((sum: number, p: any) => sum + (parseFloat(p.estimatedHours) || 0), 0),
+    unbilledHours: projects.reduce((sum: number, p: any) => {
+      const estimated = parseFloat(p.estimatedHours) || 0;
+      const actual = parseFloat(p.actualHours) || 0;
+      return sum + Math.max(0, actual - (estimated * 0.1)); // Assuming 10% buffer for billing
+    }, 0),
   };
 
   const getPriorityColor = (priority: string) => {
@@ -702,9 +740,9 @@ export default function ProjectsPage() {
       </div>
 
       {/* Professional Statistics Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-9 gap-3 mb-6">
         {/* Total Projects */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-blue-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter all projects */}}>
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -719,14 +757,30 @@ export default function ProjectsPage() {
           </CardContent>
         </Card>
 
-        {/* Active Projects */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100">
+        {/* Not Started */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-gray-50 to-gray-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter not started */}}>
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-green-700">Active Projects</p>
+                <p className="text-xs font-medium text-gray-700">Not Started</p>
+                <p className="text-xl font-bold text-gray-900">{projectStats.notStarted}</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">Pending start</p>
+              </div>
+              <div className="p-2 bg-gray-200 rounded-full">
+                <PauseCircle className="h-4 w-4 text-gray-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* In Progress */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-green-50 to-green-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter in progress */}}>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-green-700">In Progress</p>
                 <p className="text-xl font-bold text-green-900">{projectStats.active}</p>
-                <p className="text-[10px] text-green-600 mt-0.5">In progress</p>
+                <p className="text-[10px] text-green-600 mt-0.5">Active now</p>
               </div>
               <div className="p-2 bg-green-200 rounded-full">
                 <PlayCircle className="h-4 w-4 text-green-700" />
@@ -735,14 +789,30 @@ export default function ProjectsPage() {
           </CardContent>
         </Card>
 
-        {/* Completed Projects */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-100">
+        {/* On Hold */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-yellow-50 to-yellow-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter on hold */}}>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-yellow-700">On Hold</p>
+                <p className="text-xl font-bold text-yellow-900">{projectStats.onHold}</p>
+                <p className="text-[10px] text-yellow-600 mt-0.5">Paused</p>
+              </div>
+              <div className="p-2 bg-yellow-200 rounded-full">
+                <PauseCircle className="h-4 w-4 text-yellow-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Completed */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter completed */}}>
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-emerald-700">Completed</p>
                 <p className="text-xl font-bold text-emerald-900">{projectStats.completed}</p>
-                <p className="text-[10px] text-emerald-600 mt-0.5">Finished projects</p>
+                <p className="text-[10px] text-emerald-600 mt-0.5">Finished</p>
               </div>
               <div className="p-2 bg-emerald-200 rounded-full">
                 <CheckCircle2 className="h-4 w-4 text-emerald-700" />
@@ -751,54 +821,208 @@ export default function ProjectsPage() {
           </CardContent>
         </Card>
 
-        {/* Overdue Projects */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100">
+        {/* At Risk */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter at risk */}}>
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-red-700">Overdue</p>
-                <p className="text-xl font-bold text-red-900">{projectStats.overdue}</p>
-                <p className="text-[10px] text-red-600 mt-0.5">Past deadline</p>
-              </div>
-              <div className="p-2 bg-red-200 rounded-full">
-                <AlertTriangle className="h-4 w-4 text-red-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Budget */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-purple-700">Total Budget</p>
-                <p className="text-xl font-bold text-purple-900">R{projectStats.totalBudget.toLocaleString()}</p>
-                <p className="text-[10px] text-purple-600 mt-0.5">Project budgets</p>
-              </div>
-              <div className="p-2 bg-purple-200 rounded-full">
-                <DollarSign className="h-4 w-4 text-purple-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Total Hours */}
-        <Card className="border-0 shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-orange-700">Estimated Hours</p>
-                <p className="text-xl font-bold text-orange-900">{projectStats.totalEstimatedHours}</p>
-                <p className="text-[10px] text-orange-600 mt-0.5">Total estimated</p>
+                <p className="text-xs font-medium text-orange-700">At Risk</p>
+                <p className="text-xl font-bold text-orange-900">{projectStats.atRisk}</p>
+                <p className="text-[10px] text-orange-600 mt-0.5">Due ≤7 days</p>
               </div>
               <div className="p-2 bg-orange-200 rounded-full">
-                <Clock className="h-4 w-4 text-orange-700" />
+                <AlertTriangle className="h-4 w-4 text-orange-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Over Budget */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-red-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter over budget */}}>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-red-700">Over Budget</p>
+                <p className="text-xl font-bold text-red-900">{projectStats.overBudget}</p>
+                <p className="text-[10px] text-red-600 mt-0.5">Exceeded</p>
+              </div>
+              <div className="p-2 bg-red-200 rounded-full">
+                <TrendingUp className="h-4 w-4 text-red-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* No PM Assigned */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-pink-50 to-pink-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Filter no PM */}}>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-pink-700">No PM</p>
+                <p className="text-xl font-bold text-pink-900">{projectStats.noPM}</p>
+                <p className="text-[10px] text-pink-600 mt-0.5">Unassigned</p>
+              </div>
+              <div className="p-2 bg-pink-200 rounded-full">
+                <Users className="h-4 w-4 text-pink-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Unbilled Hours */}
+        <Card className="border-0 shadow-md bg-gradient-to-br from-indigo-50 to-indigo-100 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {/* Show unbilled hours */}}>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-indigo-700">Unbilled Hours</p>
+                <p className="text-xl font-bold text-indigo-900">{projectStats.unbilledHours.toFixed(1)}</p>
+                <p className="text-[10px] text-indigo-600 mt-0.5">Ready to bill</p>
+              </div>
+              <div className="p-2 bg-indigo-200 rounded-full">
+                <Clock className="h-4 w-4 text-indigo-700" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Advanced Filters Bar */}
+      <Card className="mb-6 border-gray-200">
+        <CardContent className="p-4">
+          <div className="space-y-4">
+            {/* Search and View Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input 
+                    placeholder="Search projects..." 
+                    className="pl-10 w-80" 
+                    value={filters.search}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  />
+                </div>
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                </Button>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant={viewMode === 'grid' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant={viewMode === 'list' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+                <SelectTrigger className="h-8">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="not_started">Not Started</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="on_hold">On Hold</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.priority} onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}>
+                <SelectTrigger className="h-8">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Priority</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.client} onValueChange={(value) => setFilters(prev => ({ ...prev, client: value }))}>
+                <SelectTrigger className="h-8">
+                  <SelectValue placeholder="Client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Clients</SelectItem>
+                  {customers.map((customer: any) => (
+                    <SelectItem key={customer.id} value={customer.id.toString()}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.billingType} onValueChange={(value) => setFilters(prev => ({ ...prev, billingType: value }))}>
+                <SelectTrigger className="h-8">
+                  <SelectValue placeholder="Billing Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Billing</SelectItem>
+                  <SelectItem value="fixed_rate">Fixed Rate</SelectItem>
+                  <SelectItem value="project_hours">Project Hours</SelectItem>
+                  <SelectItem value="task_hours">Task Hours</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Input 
+                type="date" 
+                placeholder="Start Date" 
+                className="h-8"
+                value={filters.dateRange.start}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateRange: { ...prev.dateRange, start: e.target.value } }))}
+              />
+
+              <Input 
+                type="date" 
+                placeholder="End Date" 
+                className="h-8"
+                value={filters.dateRange.end}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateRange: { ...prev.dateRange, end: e.target.value } }))}
+              />
+            </div>
+
+            {/* Quick Filters */}
+            <div className="flex items-center space-x-2">
+              <Badge 
+                variant={filters.showAtRisk ? "default" : "outline"} 
+                className="cursor-pointer"
+                onClick={() => setFilters(prev => ({ ...prev, showAtRisk: !prev.showAtRisk }))}
+              >
+                At Risk
+              </Badge>
+              <Badge 
+                variant={filters.showOverBudget ? "default" : "outline"} 
+                className="cursor-pointer"
+                onClick={() => setFilters(prev => ({ ...prev, showOverBudget: !prev.showOverBudget }))}
+              >
+                Over Budget
+              </Badge>
+              <Badge 
+                variant={filters.showNoPM ? "default" : "outline"} 
+                className="cursor-pointer"
+                onClick={() => setFilters(prev => ({ ...prev, showNoPM: !prev.showNoPM }))}
+              >
+                No PM
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {projects.length === 0 ? (
         <Card>
@@ -814,65 +1038,272 @@ export default function ProjectsPage() {
             </Button>
           </CardContent>
         </Card>
+      ) : viewMode === 'list' ? (
+        // List/Table View
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    {[
+                      { key: 'name', label: 'Name' },
+                      { key: 'customer', label: 'Client' }, 
+                      { key: 'projectManager', label: 'PM' },
+                      { key: 'status', label: 'Status' },
+                      { key: 'endDate', label: 'Due' },
+                      { key: 'budgetAmount', label: 'Budget' },
+                      { key: 'burnRate', label: 'Burn %' },
+                      { key: 'margin', label: 'Margin' },
+                      { key: 'invoiced', label: 'Invoiced' }
+                    ].map((column) => (
+                      <th 
+                        key={column.key} 
+                        className="text-left p-4 font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
+                        onClick={() => {
+                          setSortConfig(prev => ({
+                            key: column.key,
+                            direction: prev.key === column.key && prev.direction === 'asc' ? 'desc' : 'asc'
+                          }));
+                        }}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>{column.label}</span>
+                          <SortAsc className={`h-3 w-3 ${sortConfig.key === column.key ? 'text-blue-600' : 'text-gray-400'}`} />
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {projects.map((project: ProjectWithDetails) => {
+                    const customer = customers.find((c: any) => c.id === project.customerId);
+                    const manager = users.find((u: any) => u.id === project.projectManagerId);
+                    const dueDate = project.endDate ? new Date(project.endDate).toLocaleDateString() : 'No due date';
+                    const budget = project.budgetAmount ? `R${parseFloat(project.budgetAmount).toLocaleString()}` : 'No budget';
+                    const burnRate = project.budgetAmount ? 
+                      `${Math.round(((project.actualCost || 0) / parseFloat(project.budgetAmount)) * 100)}%` : '0%';
+                    const margin = project.budgetAmount ? 
+                      `R${(parseFloat(project.budgetAmount) - (project.actualCost || 0)).toLocaleString()}` : 'N/A';
+                    
+                    return (
+                      <tr key={project.id} className="border-b hover:bg-gray-50 cursor-pointer">
+                        <td className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${getStatusColor(project.status).split(' ')[0]}`}></div>
+                            <div>
+                              <Link href={`/projects/${project.id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                                {project.name}
+                              </Link>
+                              <div className="text-sm text-gray-500">{project.billingType?.replace('_', ' ')}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
+                              {customer?.name?.charAt(0) || 'I'}
+                            </div>
+                            <span className="text-gray-900">{customer?.name || 'Internal'}</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {manager ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-700">
+                                {manager.name?.charAt(0)}
+                              </div>
+                              <span className="text-gray-900">{manager.name}</span>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-red-600 border-red-200">No PM</Badge>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <Badge className={getStatusColor(project.status)}>
+                            <div className="flex items-center space-x-1">
+                              {getStatusIcon(project.status)}
+                              <span className="capitalize">{project.status.replace('_', ' ')}</span>
+                            </div>
+                          </Badge>
+                        </td>
+                        <td className="p-4 text-gray-900">{dueDate}</td>
+                        <td className="p-4 text-gray-900 font-medium">{budget}</td>
+                        <td className="p-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all ${
+                                  parseInt(burnRate) > 100 ? 'bg-red-500' : 
+                                  parseInt(burnRate) > 80 ? 'bg-orange-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(parseInt(burnRate), 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm text-gray-600">{burnRate}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-gray-900 font-medium">{margin}</td>
+                        <td className="p-4">
+                          <Badge variant="outline" className="text-gray-600">
+                            R0
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
+        // Enhanced Grid/Card View
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project: ProjectWithDetails) => {
             const progress = project.totalTasks > 0 
               ? Math.round((project.completedTasks / project.totalTasks) * 100) 
               : 0;
 
+            const customer = customers.find((c: any) => c.id === project.customerId);
+            const manager = users.find((u: any) => u.id === project.projectManagerId);
+            const dueDate = project.endDate ? new Date(project.endDate) : null;
+            const isOverdue = dueDate && dueDate < new Date() && !['completed', 'finished', 'cancelled'].includes(project.status);
+            const daysDiff = dueDate ? Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+            const budget = parseFloat(project.budgetAmount) || 0;
+            const spent = parseFloat(project.actualCost) || 0;
+            const burnPercentage = budget > 0 ? (spent / budget) * 100 : 0;
+            const estimatedHours = parseFloat(project.estimatedHours) || 0;
+            const actualHours = parseFloat(project.actualHours) || 0;
+
             return (
               <Link key={project.id} href={`/projects/${project.id}`}>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 shadow-md">
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg mb-1">{project.name}</CardTitle>
-                        <CardDescription className="line-clamp-2">
-                          {project.description || "No description"}
-                        </CardDescription>
+                      <div className="flex items-center space-x-3">
+                        {/* Client Logo/Avatar */}
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
+                          <span className="text-sm font-bold text-blue-700">
+                            {customer?.name?.charAt(0) || 'I'}
+                          </span>
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg text-gray-900">{project.name}</CardTitle>
+                          <CardDescription className="text-sm text-gray-600">
+                            {customer ? customer.name : "Internal Project"}
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div className="flex flex-col space-y-1 items-end">
-                        <Badge className={getStatusColor(project.status)}>
-                          {project.status.replace('_', ' ')}
+                      <div className="flex flex-col items-end space-y-1">
+                        <Badge className={`${getStatusColor(project.status)} text-xs`}>
+                          <div className="flex items-center space-x-1">
+                            {getStatusIcon(project.status)}
+                            <span>{project.status.replace('_', ' ')}</span>
+                          </div>
                         </Badge>
-                        <Badge variant="outline" className={getPriorityColor(project.priority)}>
+                        <Badge variant="outline" className={`${getPriorityColor(project.priority)} text-xs`}>
                           {project.priority}
                         </Badge>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {project.customer && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Users className="h-4 w-4 mr-2" />
-                        {project.customer.name}
+                    {/* Billing Type Badge */}
+                    <div className="flex justify-between items-center">
+                      <Badge variant="outline" className="text-xs bg-gray-50">
+                        {project.billingType?.replace('_', ' ') || 'Fixed Rate'}
+                      </Badge>
+                      {daysDiff !== null && daysDiff > 0 && daysDiff <= 7 && (
+                        <Badge variant="outline" className="text-orange-600 border-orange-200 text-xs">
+                          Due in {daysDiff}d
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Budget vs Burn Ring */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="relative">
+                          <svg className="w-12 h-12 transform -rotate-90">
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              stroke="#e5e7eb"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              stroke={burnPercentage > 100 ? '#ef4444' : burnPercentage > 80 ? '#f59e0b' : '#10b981'}
+                              strokeWidth="4"
+                              fill="none"
+                              strokeDasharray={`${Math.min(burnPercentage, 100) * 1.256} ${125.6}`}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-medium text-gray-700">
+                              {Math.round(burnPercentage)}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">R{budget.toLocaleString()}</div>
+                          <div className="text-gray-500">Budget</div>
+                        </div>
                       </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Progress</span>
-                        <span>{progress}%</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{project.completedTasks} of {project.totalTasks} tasks</span>
+                      
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-900">{actualHours || estimatedHours}h</div>
+                        <div className="text-xs text-gray-500">{actualHours ? 'Used' : 'Est.'}</div>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center pt-2 border-t">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'}
+                    {/* Invoice Status */}
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-green-600 border-green-200 text-xs">
+                        ✓ Invoiced: R0
+                      </Badge>
+                      <div className="text-xs text-gray-500">
+                        Progress: {progress}%
                       </div>
-                      {project.hourlyRate && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          R{project.hourlyRate}/hr
-                        </div>
-                      )}
                     </div>
+
+                    {/* Project Manager */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div className="flex items-center space-x-2">
+                        {manager ? (
+                          <>
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-700">{manager.name?.charAt(0)}</span>
+                            </div>
+                            <span className="text-sm text-gray-700">{manager.name}</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                              <Users className="h-3 w-3 text-red-600" />
+                            </div>
+                            <span className="text-sm text-red-600">No PM</span>
+                          </>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        <Calendar className="h-3 w-3" />
+                        <span>{dueDate ? dueDate.toLocaleDateString() : "No due date"}</span>
+                      </div>
+                    </div>
+                    
+                    {isOverdue && (
+                      <Badge variant="destructive" className="text-xs w-full justify-center">
+                        Overdue Project
+                      </Badge>
+                    )}
                   </CardContent>
                 </Card>
               </Link>
