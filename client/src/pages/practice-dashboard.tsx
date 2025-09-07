@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,8 @@ interface DueFiling {
 }
 
 export default function PracticeDashboard() {
+  const [location, setLocation] = useLocation();
+
   // Due Filings filters and selection
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
@@ -131,7 +134,7 @@ export default function PracticeDashboard() {
 
       {/* KPI Cards - Compact Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-blue-50">
+        <Card className="bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => setLocation('/customers')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -144,7 +147,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-green-50">
+        <Card className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setLocation('/onboarding')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -157,7 +160,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-amber-50">
+        <Card className="bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors" onClick={() => setLocation('/tasks')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -170,7 +173,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-rose-50">
+        <Card className="bg-rose-50 cursor-pointer hover:bg-rose-100 transition-colors" onClick={() => setLocation('/tasks')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -191,13 +194,22 @@ export default function PracticeDashboard() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 flex-wrap">
-            <Badge className="bg-amber-100 text-amber-700 px-3 py-1">
+            <Badge 
+              className="bg-amber-100 text-amber-700 px-3 py-1 cursor-pointer hover:bg-amber-200 transition-colors" 
+              onClick={() => setLocation('/sars-compliance')}
+            >
               <span className="font-medium">due</span> VAT Return (VAT201) · Due 25 Mar · <span className="font-medium">5d</span>
             </Badge>
-            <Badge className="bg-blue-100 text-blue-700 px-3 py-1">
+            <Badge 
+              className="bg-blue-100 text-blue-700 px-3 py-1 cursor-pointer hover:bg-blue-200 transition-colors" 
+              onClick={() => setLocation('/sars-compliance')}
+            >
               <span className="font-medium">upcoming</span> EMP201 Filing · Due 7 Apr · <span className="font-medium">upcoming</span>
             </Badge>
-            <Badge className="bg-rose-100 text-rose-700 px-3 py-1">
+            <Badge 
+              className="bg-rose-100 text-rose-700 px-3 py-1 cursor-pointer hover:bg-rose-200 transition-colors" 
+              onClick={() => setLocation('/sars-compliance')}
+            >
               <span className="font-medium">overdue</span> Provisional Tax · Due 28 Feb · <span className="font-medium">overdue 3d</span>
             </Badge>
           </div>
@@ -362,7 +374,7 @@ export default function PracticeDashboard() {
 
       {/* Compliance Modules */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-green-50">
+        <Card className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setLocation('/sars-compliance')}>
           <CardContent className="p-6 text-center">
             <FileText className="h-12 w-12 text-green-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">SARS Compliance</h3>
@@ -371,7 +383,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-blue-50">
+        <Card className="bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => setLocation('/cipc-compliance')}>
           <CardContent className="p-6 text-center">
             <Building2 className="h-12 w-12 text-blue-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">CIPC Compliance</h3>
@@ -380,7 +392,7 @@ export default function PracticeDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="bg-purple-50">
+        <Card className="bg-purple-50 cursor-pointer hover:bg-purple-100 transition-colors" onClick={() => setLocation('/labour-compliance')}>
           <CardContent className="p-6 text-center">
             <Users className="h-12 w-12 text-purple-600 mx-auto mb-3" />
             <h3 className="font-semibold text-gray-900 mb-2">Labour Compliance</h3>
