@@ -24,14 +24,15 @@ const getNavigationGroupsForRole = (userRole: string) => {
   
   // Core accounting functions - ALWAYS visible for all accounting professionals
   const coreAccountingGroups = [
-    // 1. Dashboard - Single item, no dropdown
+    // 1. Dashboard - Business and Practice views
     {
       id: "overview",
       label: "Dashboard",
       module: "dashboard",
       roleTypes: ["all"],
       items: [
-        { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
+        { path: "/dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
+        { path: "/business-dashboard", label: "Business Dashboard", icon: TrendingUp, permission: null, module: "dashboard" }
       ]
     },
     
@@ -199,13 +200,14 @@ const getNavigationGroupsForRole = (userRole: string) => {
 
 // Full navigation groups for Super Admins - complete menu structure
 const getFullNavigationGroups = () => [
-  // 1. Dashboard - Single item, no dropdown
+  // 1. Dashboard - Business and Practice views
   {
     id: "overview",
     label: "Dashboard",
     module: "dashboard",
     items: [
-      { path: "/dashboard", label: "Overview", icon: ChartLine, permission: null, module: "dashboard" }
+      { path: "/dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
+      { path: "/business-dashboard", label: "Business Dashboard", icon: TrendingUp, permission: null, module: "dashboard" }
     ]
   },
   // 2. Contracts and Engagements - Standalone menu item

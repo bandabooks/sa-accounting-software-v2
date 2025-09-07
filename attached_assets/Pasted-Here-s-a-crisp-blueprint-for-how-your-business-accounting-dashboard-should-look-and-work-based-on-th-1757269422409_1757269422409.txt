@@ -1,0 +1,69 @@
+Here’s a crisp blueprint for how your business/accounting dashboard should look and work based on the screenshot:
+
+Quick takeaways
+
+Good content set (cash, AR/AP, tasks, bank rec, recent activity) but hierarchy feels flat and activity list dominates.
+
+KPIs don’t roll up into a single “health” view; trends are fragmented.
+
+Actions (“New Invoice”, “Add Customer”, “VAT Return”) are far from the data they affect.
+
+No global time range or company filter controlling all cards.
+
+Visual noise: mixed chip styles, small typography, uneven spacing, and low contrast on secondaries.
+
+Recommended structure (top → bottom)
+
+Global controls bar: Company switcher • Time range (Today / 7 / 30 / Custom) • Search • Last sync/updated status.
+
+KPI strip (6 cards max) — each with delta vs previous period and click-through:
+
+Cash on hand
+
+Net cash flow (period)
+
+Receivables (and % overdue)
+
+Payables (and due this week)
+
+Unreconciled bank lines
+
+Compliance tasks due (VAT/returns)
+
+Primary chart row
+
+Cash flow over time (area + bars: inflow/outflow; toggle MTD/QTD/YTD).
+
+AR/AP aging (stacked bars or heatmap; quick filters for Overdue/This week).
+
+Work queue
+
+Tasks & alerts (due today/this week; approvals, missing docs, failed bank syncs).
+
+Bank reconciliation progress (per account with CTA “Continue reconciling”).
+
+Money-in-motion
+
+Recent transactions (exception-first: uncategorized, duplicates, large).
+
+Invoices (drafts, pending, overdue with “Send/Remind/Record payment” inline).
+
+Clients & revenue (if multi-client/practice)
+
+Small table: top clients by outstanding, new customers added.
+
+Quick actions (sticky at right or bottom)
+
+New invoice • Record payment • Add expense • VAT return • Import/Sync bank.
+
+Design system notes
+
+12-column grid, clear spacing scale (8/16/24).
+
+Typography: 18–20px page title, 14–16px body, 12–13px meta.
+
+Color: green for positive deltas, red for negatives; keep chips to 2 styles max.
+
+Accessibility: AA contrast, focus states, keyboard nav.
+
+Empty/error states with next-best action.

@@ -12,6 +12,7 @@ import { CompanyProvider } from "@/contexts/CompanyContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
+import BusinessDashboard from "@/pages/business-dashboard";
 import Invoices from "@/pages/invoices";
 import InvoiceCreate from "@/pages/invoice-create";
 import InvoiceDetail from "@/pages/invoice-detail";
@@ -1135,6 +1136,13 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
 
+        {/* Business Dashboard Route */}
+        <Route path="/business-dashboard">
+          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+            <BusinessDashboard />
+          </ProtectedRoute>
+        </Route>
+        
         {/* Practice Management Routes */}
         <Route path="/practice/dashboard">
           <ProtectedRoute>
