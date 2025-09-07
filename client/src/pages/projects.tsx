@@ -408,13 +408,24 @@ export default function ProjectsPage() {
             Track projects, manage teams, and monitor financial performance across your portfolio
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
-              <Plus className="h-4 w-4 mr-2" />
-              New Project
+        <div className="flex gap-3">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </DialogTrigger>
+          </Dialog>
+          <Link href="/tasks">
+            <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 shadow-lg">
+              <Target className="h-4 w-4 mr-2" />
+              New Task
             </Button>
-          </DialogTrigger>
+          </Link>
+        </div>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold">Create New Project</DialogTitle>
@@ -961,7 +972,7 @@ export default function ProjectsPage() {
                     Cancel
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending} className="bg-blue-600 hover:bg-blue-700 text-white px-8 shadow-lg">
-                    {createMutation.isPending ? "Creating..." : "Save"}
+                    {createMutation.isPending ? "Creating..." : "Create Project"}
                   </Button>
                 </div>
               </form>

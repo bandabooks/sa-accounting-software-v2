@@ -546,7 +546,7 @@ export default function TasksPage() {
               New Task
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTask ? "Edit Task" : "Create New Task"}</DialogTitle>
               <DialogDescription>
@@ -895,9 +895,14 @@ export default function TasksPage() {
                             <SelectItem value="none">Unassigned</SelectItem>
                             {users.map((user: any) => (
                               <SelectItem key={user.id} value={user.id.toString()}>
-                                {user.name}
+                                {user.name || user.username || `User ${user.id}`}
                               </SelectItem>
                             ))}
+                            {users.length === 0 && (
+                              <SelectItem value="no-users" disabled>
+                                No users available
+                              </SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
