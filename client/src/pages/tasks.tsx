@@ -203,13 +203,33 @@ export default function TasksPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({
         title: "Success",
-        description: "Task status updated",
+        description: "Task updated successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update task status",
+        description: error.message || "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, updates }: { taskId: number; updates: any }) => {
+      return await apiRequest(`/api/tasks/${taskId}`, "PUT", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task",
         variant: "destructive",
       });
     },
@@ -254,6 +274,22 @@ export default function TasksPage() {
 
   const handleStopTime = (timeEntryId: number) => {
     stopTimeMutation.mutate(timeEntryId);
+  };
+
+  const handleStatusChange = (taskId: number, newStatus: string) => {
+    updateStatusMutation.mutate({ taskId, status: newStatus });
+  };
+
+  const handleDateChange = (taskId: number, field: string, value: string) => {
+    updateTaskMutation.mutate({ 
+      taskId, 
+      updates: { [field]: value || null }
+    });
+  };
+
+  const formatDateForInput = (dateString: string | null) => {
+    if (!dateString) return '';
+    return new Date(dateString).toISOString().split('T')[0];
   };
 
   // Running Timer Component
@@ -996,19 +1032,72 @@ export default function TasksPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(task.status || 'todo')}>
-                        {(task.status || 'todo').replace('_', ' ')}
-                      </Badge>
+                      <Select 
+                        value={task.status || 'todo'} 
+                        onValueChange={(newStatus) => handleStatusChange(task.id, newStatus)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue>
+                            <Badge className={getStatusColor(task.status || 'todo')}>
+                              {(task.status || 'todo').replace('_', ' ')}
+                            </Badge>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todo">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                              To Do
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="in_progress">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                              In Progress
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="review">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                              Review
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="completed">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              Complete
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="blocked">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                              Blocked
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
-                      {task.startDate ? new Date(task.startDate).toLocaleDateString() : '-'}
+                      <Input
+                        type="date"
+                        value={formatDateForInput(task.startDate)}
+                        onChange={(e) => handleDateChange(task.id, 'startDate', e.target.value)}
+                        className="w-36 h-8 text-sm border-none hover:border-input focus:border-input bg-transparent hover:bg-muted/50"
+                        placeholder="Select date"
+                      />
                     </TableCell>
                     <TableCell>
-                      {task.dueDate ? (
-                        <div className={new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'text-red-600 font-medium' : ''}>
-                          {new Date(task.dueDate).toLocaleDateString()}
-                        </div>
-                      ) : '-'}
+                      <Input
+                        type="date"
+                        value={formatDateForInput(task.dueDate)}
+                        onChange={(e) => handleDateChange(task.id, 'dueDate', e.target.value)}
+                        className={`w-36 h-8 text-sm border-none hover:border-input focus:border-input bg-transparent hover:bg-muted/50 ${
+                          task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed' 
+                            ? 'text-red-600 font-medium' 
+                            : ''
+                        }`}
+                        placeholder="Select date"
+                      />
                     </TableCell>
                     <TableCell>
                       {task.assignedTo ? task.assignedTo.name : 'Unassigned'}
