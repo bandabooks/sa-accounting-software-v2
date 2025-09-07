@@ -1,10 +1,14 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   FileText, DollarSign, UserPlus, Receipt, 
-  CreditCard, TrendingUp, Building, Calculator 
+  CreditCard, TrendingUp, Building, Calculator, Search, ExternalLink 
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
+import { useState } from "react";
+import { Link } from "wouter";
 
 interface ActivityItem {
   id: string;
@@ -45,6 +49,7 @@ const getActivityColor = (type: string, status?: string) => {
 };
 
 export default function ActivityList({ activities = [], title = "Recent Activity" }: ActivityListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
   // Default activities if none provided
   const defaultActivities: ActivityItem[] = [
     {
@@ -83,21 +88,45 @@ export default function ActivityList({ activities = [], title = "Recent Activity
     }
   ];
 
-  const displayActivities = activities.length > 0 ? activities : defaultActivities;
+  const allActivities = activities.length > 0 ? activities : defaultActivities;
+  
+  // Filter activities based on search term
+  const filteredActivities = allActivities.filter(activity => 
+    activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    activity.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  const displayActivities = filteredActivities;
 
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
+        <div className="flex items-center justify-between mb-3">
+          <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
+          <Link href="/activities">
+            <Button size="sm" variant="outline" className="text-xs h-7" aria-label="View all activities">
+              <ExternalLink className="h-3 w-3 mr-1" />
+              View All
+            </Button>
+          </Link>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search activities..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-8 text-xs"
+            aria-label="Search activities"
+          />
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="space-y-0">
           {displayActivities.slice(0, 6).map((activity, index) => (
             <div 
               key={activity.id}
-              className={`flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
-                index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-              }`}
+              className="flex items-center gap-3 p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 bg-white"
             >
               <div className={`w-8 h-8 rounded flex items-center justify-center ${
                 activity.type === 'invoice' ? 'bg-blue-100' :

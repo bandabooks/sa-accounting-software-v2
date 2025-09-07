@@ -265,66 +265,10 @@ export default function Dashboard() {
     </div>
   );
 
-  // Professional metrics for tax practitioners
+  // Professional metrics for tax practitioners - Limited to 4 KPIs
   const renderPractitionerMetrics = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
-      {/* Client Portfolio */}
-      <Card className="p-3 border border-gray-200 hover:border-blue-300 transition-colors">
-        <div className="flex items-center justify-between mb-2">
-          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-            <Building className="h-4 w-4 text-blue-600" />
-          </div>
-        </div>
-        <div className="text-lg font-semibold text-gray-900 mb-1">
-          {dashboardStats.totalCustomers}
-        </div>
-        <div className="text-xs text-gray-600">Active Clients</div>
-        <div className="text-xs text-blue-600 mt-1">Under management</div>
-      </Card>
-
-      {/* Compliance Status */}
-      <Card className="p-3 border border-gray-200 hover:border-green-300 transition-colors">
-        <div className="flex items-center justify-between mb-2">
-          <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-            <Target className="h-4 w-4 text-green-600" />
-          </div>
-        </div>
-        <div className="text-lg font-semibold text-gray-900 mb-1">
-          85%
-        </div>
-        <div className="text-xs text-gray-600">Compliance Rate</div>
-        <div className="text-xs text-green-600 mt-1">On track</div>
-      </Card>
-
-      {/* Revenue */}
-      <Card className="p-3 border border-gray-200 hover:border-emerald-300 transition-colors">
-        <div className="flex items-center justify-between mb-2">
-          <div className="w-8 h-8 bg-emerald-100 rounded flex items-center justify-center">
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-          </div>
-        </div>
-        <div className="text-lg font-semibold text-gray-900 mb-1">
-          {formatCurrency(dashboardStats.totalRevenue)}
-        </div>
-        <div className="text-xs text-gray-600">Practice Revenue</div>
-        <div className="text-xs text-emerald-600 mt-1">+{getRevenueGrowth()}% growth</div>
-      </Card>
-
-      {/* Outstanding Receivables */}
-      <Card className="p-3 border border-gray-200 hover:border-orange-300 transition-colors">
-        <div className="flex items-center justify-between mb-2">
-          <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
-            <Calculator className="h-4 w-4 text-orange-600" />
-          </div>
-        </div>
-        <div className="text-lg font-semibold text-gray-900 mb-1">
-          {formatCurrency(dashboardStats.outstandingInvoices)}
-        </div>
-        <div className="text-xs text-gray-600">Outstanding Fees</div>
-        <div className="text-xs text-orange-600 mt-1">To be collected</div>
-      </Card>
-
-      {/* VAT Returns Due */}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {/* Filings Due 30d */}
       <Card className="p-3 border border-gray-200 hover:border-red-300 transition-colors">
         <div className="flex items-center justify-between mb-2">
           <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
@@ -332,24 +276,52 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="text-lg font-semibold text-gray-900 mb-1">
-          3
+          {stats?.filingsDue30 || 3}
         </div>
-        <div className="text-xs text-gray-600">VAT Returns Due</div>
-        <div className="text-xs text-red-600 mt-1">Next 7 days</div>
+        <div className="text-xs text-gray-600">Filings Due</div>
+        <div className="text-xs text-red-600 mt-1">Next 30 days</div>
       </Card>
 
-      {/* Client Deadlines */}
+      {/* Unreconciled */}
       <Card className="p-3 border border-gray-200 hover:border-yellow-300 transition-colors">
         <div className="flex items-center justify-between mb-2">
           <div className="w-8 h-8 bg-yellow-100 rounded flex items-center justify-center">
-            <Calendar className="h-4 w-4 text-yellow-600" />
+            <Banknote className="h-4 w-4 text-yellow-600" />
           </div>
         </div>
         <div className="text-lg font-semibold text-gray-900 mb-1">
-          12
+          {stats?.unreconciledCount || 8}
         </div>
-        <div className="text-xs text-gray-600">Upcoming Deadlines</div>
-        <div className="text-xs text-yellow-600 mt-1">Next 30 days</div>
+        <div className="text-xs text-gray-600">Unreconciled</div>
+        <div className="text-xs text-yellow-600 mt-1">Bank lines</div>
+      </Card>
+
+      {/* Tasks Today */}
+      <Card className="p-3 border border-gray-200 hover:border-blue-300 transition-colors">
+        <div className="flex items-center justify-between mb-2">
+          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+            <Clock className="h-4 w-4 text-blue-600" />
+          </div>
+        </div>
+        <div className="text-lg font-semibold text-gray-900 mb-1">
+          {stats?.tasksToday || 5}
+        </div>
+        <div className="text-xs text-gray-600">Tasks Today</div>
+        <div className="text-xs text-blue-600 mt-1">Due today</div>
+      </Card>
+
+      {/* Cash Total */}
+      <Card className="p-3 border border-gray-200 hover:border-green-300 transition-colors">
+        <div className="flex items-center justify-between mb-2">
+          <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
+            <Wallet className="h-4 w-4 text-green-600" />
+          </div>
+        </div>
+        <div className="text-lg font-semibold text-gray-900 mb-1">
+          {formatCurrency(dashboardStats.totalRevenue)}
+        </div>
+        <div className="text-xs text-gray-600">Cash Total</div>
+        <div className="text-xs text-green-600 mt-1">Available</div>
       </Card>
     </div>
   );
@@ -372,19 +344,19 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <Link href="/invoices/new">
-                  <Button size="sm" variant="outline" className="text-xs h-8">
+                  <Button size="sm" variant="outline" className="text-xs h-8" aria-label="Create new invoice">
                     <FileText className="h-3 w-3 mr-2" />
                     New Invoice
                   </Button>
                 </Link>
                 <Link href="/customers/new">
-                  <Button size="sm" variant="outline" className="text-xs h-8">
+                  <Button size="sm" variant="outline" className="text-xs h-8" aria-label="Add new customer">
                     <UserPlus className="h-3 w-3 mr-2" />
                     Add Customer
                   </Button>
                 </Link>
                 <Link href="/vat-returns">
-                  <Button size="sm" variant="outline" className="text-xs h-8">
+                  <Button size="sm" variant="outline" className="text-xs h-8" aria-label="File VAT return">
                     <Calculator className="h-3 w-3 mr-2" />
                     VAT Return
                   </Button>
@@ -430,13 +402,21 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      <tr className="hover:bg-gray-50">
-                        <td className="p-3 font-medium text-gray-900">Receivables</td>
+                      <tr className="hover:bg-gray-50 cursor-pointer">
+                        <td className="p-3 font-medium text-gray-900">
+                          <Link href="/aging-reports?type=receivables" className="hover:text-blue-600">
+                            Receivables
+                          </Link>
+                        </td>
                         <td className="p-3 text-right font-semibold text-green-600">{formatCurrency(dashboardStats.outstandingInvoices)}</td>
                         <td className="p-3 text-right text-red-600 font-medium">{formatCurrency("2,400.00")}</td>
                       </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="p-3 font-medium text-gray-900">Payables</td>
+                      <tr className="hover:bg-gray-50 cursor-pointer">
+                        <td className="p-3 font-medium text-gray-900">
+                          <Link href="/aging-reports?type=payables" className="hover:text-blue-600">
+                            Payables
+                          </Link>
+                        </td>
                         <td className="p-3 text-right font-semibold text-red-600">{stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}</td>
                         <td className="p-3 text-right text-red-600 font-medium">{formatCurrency("0.00")}</td>
                       </tr>
@@ -482,38 +462,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Outstanding Summary */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold text-gray-900">Outstanding Balances</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Accounts Receivable</span>
-                    <span className="text-lg font-semibold text-blue-600">{formatCurrency(dashboardStats.outstandingInvoices)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Accounts Payable</span>
-                    <span className="text-lg font-semibold text-orange-600">
-                      {stats?.payablesAging?.totalPayables ? formatCurrency(stats.payablesAging.totalPayables) : formatCurrency("0.00")}
-                    </span>
-                  </div>
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900">Net Position</span>
-                      <span className={`text-lg font-bold ${
-                        (parseFloat(dashboardStats.outstandingInvoices) - (stats?.payablesAging?.totalPayables || 0)) >= 0 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {formatCurrency((parseFloat(dashboardStats.outstandingInvoices) - (parseFloat(stats?.payablesAging?.totalPayables || "0"))).toString())}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
         </div>
 
 

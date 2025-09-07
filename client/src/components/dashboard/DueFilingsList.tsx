@@ -1,8 +1,15 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar, Clock, FileText, ExternalLink } from "lucide-react";
+import { AlertTriangle, Calendar, Clock, FileText, ExternalLink, Filter } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Filing {
   id: string;
@@ -21,6 +28,7 @@ interface DueFilingsListProps {
 }
 
 export default function DueFilingsList({ filings, showAll = false }: DueFilingsListProps) {
+  const [filterType, setFilterType] = useState<string>('All');
   // Default filings if none provided
   const defaultFilings: Filing[] = [
     {
@@ -56,7 +64,17 @@ export default function DueFilingsList({ filings, showAll = false }: DueFilingsL
   ];
 
   const displayFilings = filings || defaultFilings;
-  const itemsToShow = showAll ? displayFilings : displayFilings.slice(0, 5);
+  
+  // Filter filings based on selected filter
+  const filteredFilings = displayFilings.filter(filing => {
+    if (filterType === 'All') return true;
+    if (filterType === 'My Clients') return filing.type === 'VAT201' || filing.type === 'EMP201';
+    if (filterType === 'Entity') return filing.type === 'CIPC';
+    if (filterType === 'Service') return filing.type === 'IT12';
+    return true;
+  });
+  
+  const itemsToShow = showAll ? filteredFilings : filteredFilings.slice(0, 5);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -96,9 +114,27 @@ export default function DueFilingsList({ filings, showAll = false }: DueFilingsL
             <FileText className="h-5 w-5" />
             Due Filings
           </CardTitle>
-          <Badge variant="outline" className="text-xs">
-            {displayFilings.length} items
-          </Badge>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="text-xs h-7" aria-label="Filter filings">
+                  <Filter className="h-3 w-3 mr-1" />
+                  {filterType}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setFilterType('All')}>All</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterType('My Clients')}>My Clients</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterType('Entity')}>Entity</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterType('Service')}>Service</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Link href="/compliance-dashboard">
+              <Button size="sm" variant="outline" className="text-xs h-7" aria-label="View all filings">
+                View All
+              </Button>
+            </Link>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
