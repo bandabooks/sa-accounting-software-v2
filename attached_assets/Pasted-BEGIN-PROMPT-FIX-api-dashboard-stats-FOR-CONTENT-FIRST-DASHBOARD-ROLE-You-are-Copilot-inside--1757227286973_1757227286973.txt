@@ -1,0 +1,54 @@
+BEGIN PROMPT — FIX /api/dashboard/stats FOR CONTENT-FIRST DASHBOARD
+
+ROLE
+You are Copilot inside a Node 20 ESM monorepo (Express + TypeScript + Drizzle ORM, React client uses @tanstack/react-query).
+Update the **dashboard stats API** so the compact, compliance-first dashboard renders correctly.
+
+STACK (DO NOT CHANGE)
+- Backend: Express (TypeScript, ESM), Zod, Drizzle ORM (Postgres in prod / SQLite in dev)
+- Isolation: tenant_id + entity_id (from auth/ctx middleware)
+- Frontend consumer: `dashboardApi.getStats()` → `/api/dashboard/stats`
+
+OBJECTIVE
+Implement `/api/dashboard/stats` to return the following shape (all fields required; return zeros/empty arrays if data absent):
+
+```ts
+type DashboardStats = {
+  // SARS-first KPIs
+  filingsDue30: number;
+  dueFilingsNext14: Array<{
+    id: string;
+    service: 'VAT201'|'EMP201'|'EMP501'|'IRP6'|'ITR14'|'CIPC_AR'|'UIF'|'COIDA_ROE';
+    entityName: string;
+    periodLabel: string;
+    dueDate: string;                // ISO
+    status: 'not_started'|'in_progress'|'ready'|'filed'|'overdue';
+  }>;
+
+  unreconciledCount: number;        // bank lines to code
+  tasksToday: number;               // open tasks due today (mine + team)
+
+  // timeline chips
+  complianceAlerts: Array<{
+    id: string;
+    title: string;                  // e.g. "VAT201 ABC Pty"
+    dueDate: string;                // ISO
+    level: 'info'|'warn'|'critical' // critical: overdue or <3d; warn: <7d
+  }>;
+
+  // money
+  bankBalances: Array<{ accountId: string; accountName: string; balance: number }>;
+  cashInflow: number;               // period inflow
+  cashOutflow: number;              // period outflow
+
+  // AR/AP
+  arTotal: number;                  // open invoices (unpaid portion)
+  apTotal: number;                  // open bills (unpaid portion)
+
+  // existing fields (preserve if already present)
+  totalRevenue?: string|number;
+  totalExpenses?: string|number;
+  recentActivities?: Array<any>;
+  recentInvoices?: Array<any>;
+  profitLossData?: Array<any>;
+};

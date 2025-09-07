@@ -1,0 +1,131 @@
+DATA SOURCES (ADAPT TO EXISTING TABLES)
+
+Filings / compliance: returns / filings / tax_returns table with fields like service, entity_id, period_start/period_end or period_label, due_date, status.
+
+Banking:
+
+Accounts: bank_accounts (id, name, balance or derive).
+
+Transactions: bank_transactions (amount, date, type='credit'|'debit', reconciled:boolean, entity_id).
+
+Tasks: tasks (status, due_date, entity_id, deleted_at).
+
+Sales/Purchases:
+
+Invoices: invoices (total_cents, paid_cents, status, entity_id).
+
+Bills: bills (total_cents, paid_cents, status, entity_id).
+
+If a table/column is missing, code defensively and return 0/[] (do not throw). Keep tenant isolation in every query.
+
+QUERY CONTRACT
+
+Read from query/ctx:
+
+tenantId from req.ctx.tenantId (or res.locals.tenantId).
+
+entityId from req.query.entityId (optional; if omitted, aggregate across tenant).
+
+periodFrom, periodTo (ISO dates, optional). Default: last 30 days.
+
+Build a single handler that fetches all stats in parallel (Promise.all).
+
+COMPUTATIONS
+
+filingsDue30: count of filings for the scope where due_date <= now+30d AND status NOT IN ('filed','cancelled').
+
+dueFilingsNext14: SELECT upcoming filings within 14 days, ORDER BY due_date ASC, LIMIT 12. Map to {id, service, entityName, periodLabel, dueDate, status}.
+
+complianceAlerts: from the same filings set; compute level:
+
+critical if overdue OR due in <3 days
+
+warn if due in <7 days
+
+else info
+
+unreconciledCount: count bank_transactions where reconciled=false AND date in period.
+
+cashInflow/cashOutflow: sum credits/debits in period. If you only have signed amounts, split by amount > 0 and < 0 (outflow = abs(negatives)).
+
+bankBalances: prefer bank_accounts.balance. If absent, compute as opening+sum(period to date) OR just sum(amount) per account; return top 5 by abs(balance).
+
+tasksToday: count tasks with status NOT IN ('done','cancelled') AND due_date is today (local date).
+
+arTotal: sum over invoices with status IN ('draft','sent','partially_paid','overdue') of (total_cents - paid_cents).
+
+apTotal: sum over bills with status IN ('draft','sent','partially_paid','overdue') of (total_cents - paid_cents).
+
+FILES TO CHANGE / ADD
+
+server/src/routes/dashboard.ts (or equivalent):
+
+Add GET /api/dashboard/stats with Zod schema for query, calls getDashboardStats.
+
+server/src/services/dashboardStats.ts:
+
+Implement getDashboardStats(db, { tenantId, entityId, periodFrom, periodTo }): Promise<DashboardStats>.
+
+Use Drizzle query builders; where unavailable, use raw SQL with parameter binding.
+
+server/src/types/dashboard.ts:
+
+Export DashboardStats type.
+
+TENANCY & SECURITY
+
+Every query must filter by tenant_id = :tenantId.
+
+If entityId provided, add AND entity_id = :entityId.
+
+Use prepared statements or Drizzle placeholders.
+
+Return 200 with the object; never leak other tenants’ data.
+
+PERFORMANCE
+
+Add appropriate indexes in a migration if missing:
+
+returns(tenant_id, entity_id, due_date, status)
+
+bank_transactions(tenant_id, entity_id, date, reconciled)
+
+tasks(tenant_id, entity_id, due_date, status)
+
+invoices(tenant_id, entity_id, status)
+
+bills(tenant_id, entity_id, status)
+
+Fetch in parallel; keep the handler under ~50ms on warm cache for typical tenants.
+
+OUTPUT FORMAT (ALWAYS)
+
+FILES CHANGED — list of created/updated paths
+
+DIFFS — full file contents or unified diffs
+
+RUN — commands to build and start dev
+
+TESTS — how to run tests (unit + API smoke)
+
+NOTES — any assumptions/TODOs
+
+TESTS (add minimal)
+
+Unit: classifyAlertLevel(dueDate) returns critical/warn/info as specified.
+
+API: seed small dataset; GET /api/dashboard/stats?entityId=... returns all required fields; verify numbers.
+
+ACCEPTANCE CRITERIA
+
+/api/dashboard/stats returns exactly the DashboardStats shape above.
+
+Works when tables are empty (returns zeros/empty arrays).
+
+Respects tenant/entity filters.
+
+Frontend components (KpiCard, TimelineStrip, DueFilingsList, MiniStatsRow) can render without further changes.
+
+END PROMPT — FIX /api/dashboard/stats FOR CONTENT-FIRST DASHBOARD
+
+::contentReference[oaicite:0]{index=0}
