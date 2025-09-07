@@ -11,7 +11,6 @@ import { LoadingProvider } from "@/contexts/LoadingContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/dashboard";
 import BusinessDashboard from "@/pages/business-dashboard";
 import Invoices from "@/pages/invoices";
 import InvoiceCreate from "@/pages/invoice-create";
@@ -275,16 +274,11 @@ function AuthenticatedApp() {
         <AIHealthBanner />
         <Switch>
         <Route path="/login">
-          <Dashboard />
+          <BusinessDashboard />
         </Route>
         <Route path="/">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
-            <Dashboard />
-          </ProtectedRoute>
-        </Route>
-        <Route path="/dashboard">
-          <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
-            <Dashboard />
+            <BusinessDashboard />
           </ProtectedRoute>
         </Route>
         <Route path="/expenses">

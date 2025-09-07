@@ -24,15 +24,15 @@ const getNavigationGroupsForRole = (userRole: string) => {
   
   // Core accounting functions - ALWAYS visible for all accounting professionals
   const coreAccountingGroups = [
-    // 1. Dashboard - Business and Practice views
+    // 1. Business Dashboard - Primary landing
     {
       id: "overview",
-      label: "Dashboard",
+      label: "Business Dashboard",
       module: "dashboard",
       roleTypes: ["all"],
       items: [
-        { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
-        { path: "/business-dashboard", label: "Business Dashboard", icon: TrendingUp, permission: null, module: "dashboard" }
+        { path: "/", label: "Business Operations", icon: TrendingUp, permission: null, module: "dashboard" },
+        { path: "/practice-dashboard", label: "Practice Management", icon: ChartLine, permission: null, module: "dashboard" }
       ]
     },
     
@@ -200,14 +200,14 @@ const getNavigationGroupsForRole = (userRole: string) => {
 
 // Full navigation groups for Super Admins - complete menu structure
 const getFullNavigationGroups = () => [
-  // 1. Dashboard - Business and Practice views
+  // 1. Business Dashboard - Primary landing
   {
     id: "overview",
-    label: "Dashboard",
+    label: "Business Dashboard",
     module: "dashboard",
     items: [
-      { path: "/practice-dashboard", label: "Practice Dashboard", icon: ChartLine, permission: null, module: "dashboard" },
-      { path: "/business-dashboard", label: "Business Dashboard", icon: TrendingUp, permission: null, module: "dashboard" }
+      { path: "/", label: "Business Operations", icon: TrendingUp, permission: null, module: "dashboard" },
+      { path: "/practice-dashboard", label: "Practice Management", icon: ChartLine, permission: null, module: "dashboard" }
     ]
   },
   // 2. Contracts and Engagements - Standalone menu item

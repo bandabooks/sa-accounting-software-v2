@@ -20,8 +20,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Get page title based on current route
   const getPageTitle = () => {
-    if (location.includes('/business-dashboard')) return 'Business Dashboard';
-    if (location.includes('/dashboard')) return 'Practice Dashboard';
+    if (location === '/' || location.includes('/business-dashboard')) return 'Business Dashboard';
+    if (location.includes('/practice-dashboard')) return 'Practice Dashboard';
     if (location.includes('/banking')) return 'Banking';
     if (location.includes('/invoices')) return 'Invoices';
     if (location.includes('/customers')) return 'Customers';
