@@ -258,6 +258,8 @@ const PERMISSIONS = {
   ATTENDANCE_MANAGE: 'attendance:manage',
   LEAVE_VIEW: 'leave:view',
   LEAVE_MANAGE: 'leave:manage',
+  // Compliance & Audit
+  COMPLIANCE_VIEW: 'compliance:view',
 } as const;
 
 function AuthenticatedApp() {
