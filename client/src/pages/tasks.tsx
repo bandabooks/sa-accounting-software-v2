@@ -1307,6 +1307,20 @@ export default function TasksPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => {
                               setEditingTask(task);
+                              // Determine Related To fields based on existing data
+                              let relatedType = "";
+                              let relatedId = undefined;
+                              
+                              if (task.projectId) {
+                                relatedType = "project";
+                                relatedId = task.projectId;
+                              } else if (task.customerId) {
+                                relatedType = "customer";
+                                relatedId = task.customerId;
+                              }
+                              
+                              setSelectedRelatedType(relatedType);
+                              
                               // Populate form with task data
                               form.reset({
                                 title: task.title || "",
@@ -1317,6 +1331,8 @@ export default function TasksPage() {
                                 complianceType: (task as any).complianceType || "",
                                 projectId: task.projectId || undefined,
                                 customerId: task.customerId || undefined,
+                                relatedToType: relatedType || "",
+                                relatedToId: relatedId,
                                 assignedToId: task.assignedToId || undefined,
                                 startDate: task.startDate ? new Date(task.startDate).toISOString().split('T')[0] : "",
                                 dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
