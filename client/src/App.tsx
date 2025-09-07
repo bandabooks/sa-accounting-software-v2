@@ -626,14 +626,11 @@ function AuthenticatedApp() {
           </ProtectedRoute>
         </Route>
         
-        {/* Practice Route (main entry point) */}
-        <Route path="/practice">
-          <Redirect to="/practice/dashboard" />
-        </Route>
-
-        {/* Legacy Compliance Dashboard Route - Redirect to Practice */}
+        {/* Compliance Dashboard Route (alternative URL) */}
         <Route path="/compliance-dashboard">
-          <Redirect to="/practice" />
+          <ProtectedRoute>
+            <ComplianceDashboard />
+          </ProtectedRoute>
         </Route>
         
         {/* CIPC Compliance Route (alternative URL) */}

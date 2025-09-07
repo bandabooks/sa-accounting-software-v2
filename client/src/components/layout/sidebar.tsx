@@ -328,10 +328,10 @@ const getFullNavigationGroups = () => [
       { path: "/vat-reconciliation", label: "VAT Reconciliation", icon: CheckCircle, permission: "VAT_VIEW", module: "compliance" }
     ]
   },
-  // 9. Practice Management
+  // 9. Compliance Management
   {
     id: "compliance",
-    label: "Practice Management",
+    label: "Compliance Management",
     icon: Shield,
     module: "compliance",
     items: [
@@ -494,10 +494,10 @@ const navigationGroups = [
       { path: "/vat-reports", label: "VAT Reports", icon: TrendingUp, permission: "FINANCIAL_VIEW", module: "vat" }
     ]
   },
-  // 8. Practice Management (SEPARATE)
+  // 8. Compliance Management (SEPARATE)
   {
     id: "compliance",
-    label: "Practice Management",
+    label: "Compliance Management",
     icon: Shield,
     module: "compliance",
     items: [
