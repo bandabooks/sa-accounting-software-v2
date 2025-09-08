@@ -308,49 +308,49 @@ export default function Contracts() {
         </div>
       </div>
 
-      {/* Ultra Compact Status Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-0.5 mb-2">
-        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] text-gray-500 leading-none">Total</div>
-            <div className="text-[11px] font-semibold text-gray-900 leading-none">{statusStats.total}</div>
+      {/* Ultra Compact Status Overview - 70% Height Reduction */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-1 mb-2">
+        <div style={{height: '20px', padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: '6px', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: '7px', color: '#6b7280', lineHeight: '1'}}>Total</div>
+            <div style={{fontSize: '9px', fontWeight: '600', color: '#111827', lineHeight: '1'}}>{statusStats.total}</div>
           </div>
-          <BarChart3 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          <BarChart3 style={{width: '10px', height: '10px', color: '#9ca3af', flexShrink: 0}} />
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] text-gray-500 leading-none">Draft</div>
-            <div className="text-[11px] font-semibold text-orange-600 leading-none">{statusStats.draft}</div>
+        <div style={{height: '20px', padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: '6px', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: '7px', color: '#6b7280', lineHeight: '1'}}>Draft</div>
+            <div style={{fontSize: '9px', fontWeight: '600', color: '#ea580c', lineHeight: '1'}}>{statusStats.draft}</div>
           </div>
-          <Edit3 className="w-3 h-3 text-orange-400 flex-shrink-0" />
+          <Edit3 style={{width: '10px', height: '10px', color: '#fb923c', flexShrink: 0}} />
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] text-gray-500 leading-none">Issued</div>
-            <div className="text-[11px] font-semibold text-blue-600 leading-none">{statusStats.issued}</div>
+        <div style={{height: '20px', padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: '6px', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: '7px', color: '#6b7280', lineHeight: '1'}}>Issued</div>
+            <div style={{fontSize: '9px', fontWeight: '600', color: '#2563eb', lineHeight: '1'}}>{statusStats.issued}</div>
           </div>
-          <Send className="w-3 h-3 text-blue-400 flex-shrink-0" />
+          <Send style={{width: '10px', height: '10px', color: '#60a5fa', flexShrink: 0}} />
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] text-gray-500 leading-none">Signed</div>
-            <div className="text-[11px] font-semibold text-yellow-600 leading-none">{statusStats.signed}</div>
+        <div style={{height: '20px', padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: '6px', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: '7px', color: '#6b7280', lineHeight: '1'}}>Signed</div>
+            <div style={{fontSize: '9px', fontWeight: '600', color: '#ca8a04', lineHeight: '1'}}>{statusStats.signed}</div>
           </div>
-          <PenTool className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+          <PenTool style={{width: '10px', height: '10px', color: '#facc15', flexShrink: 0}} />
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] text-gray-500 leading-none">Active</div>
-            <div className="text-[11px] font-semibold text-green-600 leading-none">{statusStats.active}</div>
+        <div style={{height: '20px', padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: '6px', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: '7px', color: '#6b7280', lineHeight: '1'}}>Active</div>
+            <div style={{fontSize: '9px', fontWeight: '600', color: '#16a34a', lineHeight: '1'}}>{statusStats.active}</div>
           </div>
-          <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+          <CheckCircle style={{width: '10px', height: '10px', color: '#4ade80', flexShrink: 0}} />
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] text-gray-500 leading-none">Completed</div>
-            <div className="text-[11px] font-semibold text-purple-600 leading-none">{statusStats.completed}</div>
+        <div style={{height: '20px', padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: '6px', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: '7px', color: '#6b7280', lineHeight: '1'}}>Completed</div>
+            <div style={{fontSize: '9px', fontWeight: '600', color: '#9333ea', lineHeight: '1'}}>{statusStats.completed}</div>
           </div>
-          <CheckCircle2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
+          <CheckCircle2 style={{width: '10px', height: '10px', color: '#c084fc', flexShrink: 0}} />
         </div>
       </div>
 
