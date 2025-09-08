@@ -62,9 +62,6 @@ export class DashboardStatsService {
         level: classifyAlertLevel(new Date(filing.dueDate))
       }));
 
-      // Calculate total bank balance from all accounts
-      const totalBankBalance = bankData.reduce((sum, account) => sum + account.balance, 0);
-
       return {
         // SARS-first KPIs
         filingsDue30: filingsStats.filingsDue30,
@@ -77,7 +74,6 @@ export class DashboardStatsService {
         
         // Money
         bankBalances: bankData,
-        bankBalance: totalBankBalance, // Total cash balance for dashboard card
         cashInflow: cashFlowData.inflow,
         cashOutflow: cashFlowData.outflow,
         
@@ -85,7 +81,7 @@ export class DashboardStatsService {
         arTotal: arApData.arTotal,
         apTotal: arApData.apTotal,
         
-        // Legacy compatibility
+        // Legacy compatibility (includes bankBalance from ALL bank accounts)
         ...legacyData
       };
     } catch (error) {
