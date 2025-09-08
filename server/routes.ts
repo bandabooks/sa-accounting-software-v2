@@ -6118,7 +6118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const outstandingAmount = outstandingInvoices
         .reduce((sum, invoice) => {
-          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+          const amount = parseFloat(invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
@@ -6146,24 +6146,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       const currentMonthInvoices = invoices.filter(invoice => {
-        const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
+        const invoiceDate = new Date(invoice.issueDate);
         return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
       });
       const currentMonthSales = currentMonthInvoices
         .reduce((sum, invoice) => {
-          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+          const amount = parseFloat(invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
       const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
       const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
       const previousMonthInvoices = invoices.filter(invoice => {
-        const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
+        const invoiceDate = new Date(invoice.issueDate);
         return invoiceDate.getMonth() === previousMonth && invoiceDate.getFullYear() === previousYear;
       });
       const previousMonthSales = previousMonthInvoices
         .reduce((sum, invoice) => {
-          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
+          const amount = parseFloat(invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
