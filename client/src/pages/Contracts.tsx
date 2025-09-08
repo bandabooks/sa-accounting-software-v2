@@ -70,11 +70,6 @@ export default function Contracts() {
   const { data: contracts = [], isLoading: contractsLoading } = useQuery({
     queryKey: ["/api/contracts", selectedStatus === "all" ? undefined : selectedStatus],
     queryFn: () => apiRequest(`/api/contracts${selectedStatus !== "all" ? `?status=${selectedStatus}` : ""}`),
-    onSuccess: (data) => {
-      console.log("🔍 Contracts API Response:", data);
-      console.log("🔍 Contracts length:", data?.length);
-      console.log("🔍 First contract:", data?.[0]);
-    },
   });
 
   // Fetch templates
@@ -94,11 +89,6 @@ export default function Contracts() {
     );
   });
 
-  console.log("🔍 All contracts:", contracts);
-  console.log("🔍 Filtered contracts:", filteredContracts);
-  console.log("🔍 Search term:", searchTerm);
-  console.log("🔍 Selected status:", selectedStatus);
-
   // Status statistics
   const statusStats = {
     total: (contracts || []).length,
@@ -108,8 +98,6 @@ export default function Contracts() {
     active: (contracts || []).filter((c: Contract) => c.status === "active").length,
     completed: (contracts || []).filter((c: Contract) => c.status === "completed").length,
   };
-
-  console.log("🔍 Status stats:", statusStats);
 
   // Issue contract mutation
   const issueContractMutation = useMutation({

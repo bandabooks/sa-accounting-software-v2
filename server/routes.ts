@@ -1751,6 +1751,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Financial Cash Flow Data - Company-specific with proper security
+  app.get("/api/financial/cash-flow", authenticate, requirePermission(PERMISSIONS.FINANCIAL_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+      
+      const { timeRange } = req.query;
+      const days = parseInt(String(timeRange || '30'));
+      
+      // Get real cash flow from invoices and expenses for this company only
+      const invoicesData = await storage.getInvoicesForCompany(companyId);
+      const expensesData = await storage.getExpensesForCompany(companyId);
+      
+      // Calculate periods
+      let periods = [];
+      if (days <= 30) {
+        periods = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      } else if (days <= 90) {
+        periods = ['Month 1', 'Month 2', 'Month 3'];  
+      } else {
+        periods = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      }
+      
+      // Calculate real cash flow data from company transactions
+      const cashFlow = periods.map((period, index) => {
+        const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + (index * days * 24 * 60 * 60 * 1000 / periods.length));
+        const endDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + ((index + 1) * days * 24 * 60 * 60 * 1000 / periods.length));
+        
+        const periodInvoices = Array.isArray(invoicesData) ? invoicesData.filter((inv: any) => {
+          const invDate = new Date(inv.date || inv.createdAt);
+          return invDate >= startDate && invDate <= endDate && inv.status === 'paid';
+        }) : [];
+        
+        const periodExpenses = Array.isArray(expensesData) ? expensesData.filter((exp: any) => {
+          const expDate = new Date(exp.date || exp.createdAt);
+          return expDate >= startDate && expDate <= endDate;
+        }) : [];
+        
+        const inflow = Math.round(periodInvoices.reduce((sum: number, inv: any) => sum + (parseFloat(inv.total) || 0), 0));
+        const outflow = Math.round(periodExpenses.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0));
+        
+        return {
+          month: period,
+          inflow,
+          outflow,
+          net: inflow - outflow
+        };
+      });
+      
+      res.json(cashFlow);
+    } catch (error) {
+      console.error("Error fetching cash flow data:", error);
+      res.status(500).json({ message: "Failed to fetch cash flow data" });
+    }
+  });
+
+  // Financial Revenue vs Expenses Data - Company-specific with proper security
+  app.get("/api/financial/revenue-expenses", authenticate, requirePermission(PERMISSIONS.FINANCIAL_VIEW), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+      
+      const { timeRange } = req.query;
+      const days = parseInt(String(timeRange || '30'));
+      
+      // Get real data for this company only
+      const invoicesData = await storage.getInvoicesForCompany(companyId);
+      const expensesData = await storage.getExpensesForCompany(companyId);
+      
+      // Calculate periods
+      let periods = [];
+      if (days <= 30) {
+        periods = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      } else if (days <= 90) {
+        periods = ['Month 1', 'Month 2', 'Month 3'];
+      } else {
+        periods = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      }
+      
+      // Calculate real revenue vs expenses from company data
+      const revenueExpenses = periods.map((period, index) => {
+        const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + (index * days * 24 * 60 * 60 * 1000 / periods.length));
+        const endDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + ((index + 1) * days * 24 * 60 * 60 * 1000 / periods.length));
+        
+        const periodInvoices = Array.isArray(invoicesData) ? invoicesData.filter((inv: any) => {
+          const invDate = new Date(inv.date || inv.createdAt);
+          return invDate >= startDate && invDate <= endDate;
+        }) : [];
+        
+        const periodExpenses = Array.isArray(expensesData) ? expensesData.filter((exp: any) => {
+          const expDate = new Date(exp.date || exp.createdAt);
+          return expDate >= startDate && expDate <= endDate;
+        }) : [];
+        
+        const revenue = Math.round(periodInvoices.reduce((sum: number, inv: any) => sum + (parseFloat(inv.total) || 0), 0));
+        const expenses = Math.round(periodExpenses.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0));
+        
+        return {
+          month: period,
+          revenue,
+          expenses,
+          profit: revenue - expenses
+        };
+      });
+      
+      res.json(revenueExpenses);
+    } catch (error) {
+      console.error("Error fetching revenue expenses data:", error);
+      res.status(500).json({ message: "Failed to fetch revenue expenses data" });
+    }
+  });
+
   // Customers with search - Company Isolated with caching
   app.get("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
