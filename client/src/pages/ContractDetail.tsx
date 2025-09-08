@@ -143,6 +143,34 @@ export default function ContractDetail() {
     },
   });
 
+  // Renewal mutation
+  const renewContractMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/contracts/${contractId}/renew`, "POST");
+    },
+    onSuccess: (response: any) => {
+      toast({
+        title: "Contract Renewed",
+        description: `New contract #${response.id} has been created based on this contract.`,
+      });
+      // Navigate to the new contract
+      window.location.href = `/contracts/${response.id}`;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to renew contract.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch renewal history
+  const { data: renewalHistory = [], isLoading: renewalHistoryLoading } = useQuery<Contract[]>({
+    queryKey: [`/api/contracts/${contractId}/renewals`],
+    enabled: !!contractId,
+  });
+
   if (contractLoading) {
     return (
       <div className="container mx-auto p-6 max-w-7xl">
@@ -199,34 +227,6 @@ export default function ContractDetail() {
     // Navigate to create a new contract based on this one
     window.location.href = `/contracts/create?renewal=${contractId}`;
   };
-
-  // Renewal mutation
-  const renewContractMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest(`/api/contracts/${contractId}/renew`, "POST");
-    },
-    onSuccess: (response: any) => {
-      toast({
-        title: "Contract Renewed",
-        description: `New contract #${response.id} has been created based on this contract.`,
-      });
-      // Navigate to the new contract
-      window.location.href = `/contracts/${response.id}`;
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to renew contract.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Fetch renewal history
-  const { data: renewalHistory = [], isLoading: renewalHistoryLoading } = useQuery<Contract[]>({
-    queryKey: [`/api/contracts/${contractId}/renewals`],
-    enabled: !!contractId,
-  });
 
   const handleAddAttachment = () => {
     // Create file input element
