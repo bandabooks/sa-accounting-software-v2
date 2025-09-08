@@ -47,10 +47,10 @@ export default function BusinessDashboard() {
     refetchInterval: 300000, // 5 minutes
   });
 
-  // Fetch real cash flow data from backend
-  const { data: cashFlowData = [], isLoading: cashFlowLoading, error: cashFlowError } = useQuery({
-    queryKey: ["/api/financial/cash-flow", timeRange],
-    queryFn: () => fetch(`/api/financial/cash-flow?timeRange=${timeRange}`).then(res => res.json()),
+  // Fetch invoice aging data for more meaningful chart
+  const { data: invoiceAgingData = [], isLoading: invoiceAgingLoading, error: invoiceAgingError } = useQuery({
+    queryKey: ["/api/financial/invoice-aging", timeRange],
+    queryFn: () => fetch(`/api/financial/invoice-aging?timeRange=${timeRange}`).then(res => res.json()),
     refetchInterval: 300000, // 5 minutes
     retry: 3,
     retryDelay: 1000,
