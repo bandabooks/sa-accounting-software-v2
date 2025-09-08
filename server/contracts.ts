@@ -8,7 +8,7 @@ import {
   contractSigners,
   contractEvents,
   contractTokens,
-  clients,
+  customers,
   projects,
   tasks,
   type ContractTemplate,
@@ -113,15 +113,17 @@ export class ContractService {
   }
 
   async getContracts(companyId: number, status?: string): Promise<Contract[]> {
-    const query = db.select()
+    let query = db.select()
       .from(contracts)
       .where(eq(contracts.companyId, companyId));
     
     if (status) {
-      query.where(and(
-        eq(contracts.companyId, companyId),
-        eq(contracts.status, status)
-      ));
+      query = db.select()
+        .from(contracts)
+        .where(and(
+          eq(contracts.companyId, companyId),
+          eq(contracts.status, status)
+        ));
     }
 
     return query.orderBy(desc(contracts.updatedAt));
@@ -410,17 +412,17 @@ export class ContractService {
 
     // Create project if none exists
     if (!contract.projectId) {
-      const customer = await db.select()
+      const customerResult = await db.select()
         .from(customers)
         .where(eq(customers.id, contract.customerId))
         .limit(1);
 
-      if (customer.length > 0) {
+      if (customerResult.length > 0) {
         const [project] = await db.insert(projects)
           .values({
             companyId,
             customerId: contract.customerId,
-            name: `Engagement - ${customer[0].name}`,
+            name: `Engagement - ${customerResult[0].name}`,
             description: `Auto-created from contract #${contractId}`,
             status: 'active',
             createdBy: contract.createdBy
