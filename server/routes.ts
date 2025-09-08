@@ -4264,6 +4264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = (req as AuthenticatedRequest).user!.companyId;
       
       const report = await storage.getCashFlowReport(
+        companyId,
         new Date(from),
         new Date(to)
       );
