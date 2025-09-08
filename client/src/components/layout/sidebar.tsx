@@ -749,8 +749,21 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
       <button
         ref={buttonRef}
         onClick={() => {
-          // Simply toggle the dropdown - no automatic navigation
-          onToggle();
+          // For main menu groups with dashboards, navigate to their dashboard and expand dropdown
+          if (group.id === "revenue" && visibleItems.length > 0) {
+            setLocation("/sales-dashboard"); // Navigate to sales dashboard
+          } else if (group.id === "expenses" && visibleItems.length > 0) {
+            setLocation("/purchase-dashboard"); // Navigate to purchase dashboard
+          } else if (group.id === "tax_compliance" && visibleItems.length > 0) {
+            setLocation("/practice-dashboard"); // Navigate to practice dashboard
+          } else if (group.id === "banking" && visibleItems.length > 0) {
+            setLocation("/banking"); // Navigate to banking center
+          } else if (group.id === "employees" && visibleItems.length > 0) {
+            setLocation("/employees"); // Navigate to employee directory
+          } else if (group.id === "vat" && visibleItems.length > 0) {
+            setLocation("/vat-management"); // Navigate to VAT management
+          }
+          onToggle(); // Always toggle the dropdown
         }}
         className={`group w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
           hasActiveItem || isExpanded
