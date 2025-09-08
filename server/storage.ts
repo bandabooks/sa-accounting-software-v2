@@ -582,7 +582,7 @@ export interface IStorage {
   updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
   deleteExpense(id: number): Promise<boolean>;
   getExpensesByCategory(categoryId: number, companyId?: number): Promise<any[]>;
-  getExpensesByDateRange(startDate: Date, endDate: Date): Promise<Expense[]>;
+  getExpensesByDateRange(companyId?: number, dateFilter?: string): Promise<any[]>;
 
   // VAT Returns
   getAllVatReturns(): Promise<VatReturn[]>;
