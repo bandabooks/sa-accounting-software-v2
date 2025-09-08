@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useDropdownManager } from "@/hooks/useDropdownManager";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -35,7 +36,7 @@ interface UserCompany {
 }
 
 export default function CompanySwitcher() {
-  const [isOpen, setIsOpen] = useState(false);
+  const companySwitcherDropdown = useDropdownManager('company-switcher');
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { companyId, switchCompany, isLoading: companyLoading } = useCompany();
@@ -71,12 +72,12 @@ export default function CompanySwitcher() {
 
   const handleSwitchCompany = async (targetCompanyId: number) => {
     if (targetCompanyId === companyId) {
-      setIsOpen(false);
+      companySwitcherDropdown.closeDropdown();
       return;
     }
     
     // Close dropdown immediately for better UX
-    setIsOpen(false);
+    companySwitcherDropdown.closeDropdown();
     setSearchQuery(""); // Clear search when switching
     
     try {
@@ -89,7 +90,7 @@ export default function CompanySwitcher() {
   };
 
   const handleCreateCompanyClick = () => {
-    setIsOpen(false); // Close the dropdown
+    companySwitcherDropdown.closeDropdown(); // Close the dropdown
     setSearchQuery(""); // Clear search
     setIsCreateDialogOpen(true); // Open the creation dialog directly
   };
@@ -100,7 +101,7 @@ export default function CompanySwitcher() {
   };
 
   const handleDropdownOpenChange = (open: boolean) => {
-    setIsOpen(open);
+    companySwitcherDropdown.handleOpenChange(open);
     if (!open) {
       setSearchQuery(""); // Clear search when closing
     }
@@ -150,7 +151,7 @@ export default function CompanySwitcher() {
 
   return (
     <>
-    <DropdownMenu open={isOpen} onOpenChange={handleDropdownOpenChange}>
+    <DropdownMenu open={companySwitcherDropdown.isOpen} onOpenChange={handleDropdownOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 

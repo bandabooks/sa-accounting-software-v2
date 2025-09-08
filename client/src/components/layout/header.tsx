@@ -1,6 +1,7 @@
 import { Bell, User, LogOut, Settings, Shield, Plus, ChevronDown, RefreshCw, FileText, UserPlus, Receipt } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useDropdownManager } from "@/hooks/useDropdownManager";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OnboardingHelpButton } from "@/components/onboarding/OnboardingHelpButton";
@@ -34,6 +35,10 @@ export default function Header() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const isDashboard = location === '/dashboard' || location === '/';
+  
+  // Dropdown managers for mutual exclusion
+  const quickCreateDropdown = useDropdownManager('quick-create');
+  const userProfileDropdown = useDropdownManager('user-profile');
   
   // Get alert counts for all pages
   const { data: alertCounts, refetch: refetchAlerts } = useQuery({
@@ -101,7 +106,7 @@ export default function Header() {
           </div>
           
           {/* Quick Create - Always visible */}
-          <DropdownMenu>
+          <DropdownMenu open={quickCreateDropdown.isOpen} onOpenChange={quickCreateDropdown.handleOpenChange}>
             <DropdownMenuTrigger asChild>
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Plus className="h-4 w-4 mr-2" />
@@ -244,7 +249,7 @@ export default function Header() {
           
           
           {user && (
-            <DropdownMenu>
+            <DropdownMenu open={userProfileDropdown.isOpen} onOpenChange={userProfileDropdown.handleOpenChange}>
               <DropdownMenuTrigger asChild>
                 <Button 
                   data-onboarding="user-profile" 
