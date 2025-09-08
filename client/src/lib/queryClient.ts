@@ -21,21 +21,11 @@ export async function apiRequest(
   data?: unknown | undefined,
   signal?: AbortSignal,
 ): Promise<Response> {
-  const token = localStorage.getItem('authToken');
-  const sessionToken = localStorage.getItem('sessionToken');
   const companyId = getCurrentCompanyId();
   
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  
-  if (sessionToken) {
-    headers["X-Session-Token"] = sessionToken;
-  }
   
   // Always include company ID in headers for transport-level isolation
   if (companyId) {
@@ -61,14 +51,11 @@ export async function apiRequest(
 
     // Handle authentication errors
     if (res.status === 401) {
-      // Clear authentication data
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('sessionToken');
-      localStorage.removeItem('userData');
+      // Clear company data
       localStorage.removeItem('activeCompanyId');
       
       // Redirect to login
-      window.location.href = '/login';
+      window.location.href = '/api/login';
     }
 
     await throwIfResNotOk(res);
@@ -91,19 +78,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey, signal }) => {
-    const token = localStorage.getItem('authToken');
-    const sessionToken = localStorage.getItem('sessionToken');
     const companyId = getCurrentCompanyId();
     
     const headers: HeadersInit = {};
-    
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    
-    if (sessionToken) {
-      headers["X-Session-Token"] = sessionToken;
-    }
     
     // Always include company ID in headers for transport-level isolation
     if (companyId) {
@@ -123,10 +100,7 @@ export const getQueryFn: <T>(options: {
       });
 
       if (res.status === 401) {
-        // Clear authentication data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('sessionToken');
-        localStorage.removeItem('userData');
+        // Clear company data
         localStorage.removeItem('activeCompanyId');
         
         if (unauthorizedBehavior === "returnNull") {
@@ -134,7 +108,7 @@ export const getQueryFn: <T>(options: {
         }
         
         // Redirect to login
-        window.location.href = '/login';
+        window.location.href = '/api/login';
       }
 
       await throwIfResNotOk(res);
