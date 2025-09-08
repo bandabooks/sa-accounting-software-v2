@@ -376,91 +376,48 @@ export default function Contracts() {
         </Select>
       </div>
 
-          {/* Contracts Grid */}
-          {contractsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-20 bg-gray-200 rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : filteredContracts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredContracts.map((contract: Contract) => (
-                <ContractCard key={contract.id} contract={contract} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="w-12 h-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No contracts found
-                </h3>
-                <p className="text-gray-600 text-center mb-4">
-                  {searchTerm || selectedStatus !== "all"
-                    ? "Try adjusting your search criteria"
-                    : "Create your first engagement letter to get started"}
-                </p>
-                {!searchTerm && selectedStatus === "all" && (
-                  <Button onClick={handleCreateContract} data-testid="button-create-first-contract">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Contract
-                  </Button>
+      {/* Contracts Grid */}
+      {contractsLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="animate-pulse border border-gray-200">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent className="pt-2 pb-3">
+                <div className="h-6 bg-gray-200 rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredContracts.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredContracts.map((contract: Contract) => (
+            <ContractCard key={contract.id} contract={contract} />
+          ))}
+        </div>
+      ) : (
+        <Card className="border border-gray-200">
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <FileText className="w-10 h-10 text-gray-400 mb-3" />
+            <h3 className="text-base font-semibold text-gray-900 mb-2">
+              No contracts found
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-4 max-w-sm">
+              {searchTerm || selectedStatus !== "all"
+                ? "Try adjusting your search criteria"
+                : "Create your first engagement letter to get started"}
+            </p>
+            {!searchTerm && selectedStatus === "all" && (
+              <Button onClick={handleCreateContract} className="h-9">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Contract
+              </Button>
                 )}
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-
-        <TabsContent value="templates" className="space-y-6">
-          {/* Templates Grid */}
-          {templatesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-20 bg-gray-200 rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : templates.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {templates.map((template: ContractTemplate) => (
-                <TemplateCard key={template.id} template={template} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="w-12 h-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No templates available
-                </h3>
-                <p className="text-gray-600 text-center mb-4">
-                  Create your first contract template to streamline your engagement process
-                </p>
-                <Button data-testid="button-create-template">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Template
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
