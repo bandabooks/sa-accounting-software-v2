@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Download, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Minus, Plus, CreditCard, FolderPlus, UserPlus, FileText, Users } from "lucide-react";
-import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, LineChart, Line, ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface BusinessMetric {
   title: string;
@@ -38,10 +38,10 @@ export default function BusinessDashboard() {
   ];
 
   const revenueExpenseData = [
-    {month: "Week 1", revenue: 6000, expenses: 4000},
-    {month: "Week 2", revenue: 6200, expenses: 3800},
-    {month: "Week 3", revenue: 6100, expenses: 4200},
-    {month: "Week 4", revenue: 6300, expenses: 3900}
+    {month: "Week 1", revenue: 60000, expenses: 40000, profitMargin: 33.3},
+    {month: "Week 2", revenue: 62000, expenses: 38000, profitMargin: 38.7},
+    {month: "Week 3", revenue: 61000, expenses: 42000, profitMargin: 31.1},
+    {month: "Week 4", revenue: 63000, expenses: 39000, profitMargin: 38.1}
   ];
 
   const businessMetrics: BusinessMetric[] = [
@@ -294,7 +294,7 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={revenueExpenseData}>
+                  <ComposedChart data={revenueExpenseData}>
                     <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
                     <XAxis 
                       dataKey="month" 
@@ -304,14 +304,27 @@ export default function BusinessDashboard() {
                       tick={{ fill: '#64748b' }}
                     />
                     <YAxis 
+                      yAxisId="left"
                       tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} 
                       fontSize={11}
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#64748b' }}
                     />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      tickFormatter={(value) => `${value}%`}
+                      fontSize={11}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b' }}
+                    />
                     <Tooltip 
-                      formatter={(value, name) => [`R${Number(value).toLocaleString()}`, name]}
+                      formatter={(value, name) => {
+                        if (name === 'Profit Margin') return [`${value}%`, name];
+                        return [`R${Number(value).toLocaleString()}`, name];
+                      }}
                       contentStyle={{
                         backgroundColor: '#ffffff',
                         border: '1px solid #e2e8f0',
@@ -319,25 +332,31 @@ export default function BusinessDashboard() {
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <Line 
-                      type="monotone" 
+                    <Bar 
+                      yAxisId="left"
                       dataKey="revenue" 
-                      stroke="#22c55e" 
-                      strokeWidth={3}
-                      dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6, stroke: '#22c55e', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Revenue" 
+                      fill="#22c55e" 
+                      name="Revenue"
+                      radius={[2, 2, 0, 0]}
+                    />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="expenses" 
+                      fill="#f59e0b" 
+                      name="Expenses"
+                      radius={[2, 2, 0, 0]}
                     />
                     <Line 
+                      yAxisId="right"
                       type="monotone" 
-                      dataKey="expenses" 
-                      stroke="#f59e0b" 
+                      dataKey="profitMargin" 
+                      stroke="#8b5cf6" 
                       strokeWidth={3}
-                      dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Expenses" 
+                      dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Profit Margin"
                     />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
