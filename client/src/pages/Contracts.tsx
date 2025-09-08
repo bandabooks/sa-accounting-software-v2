@@ -309,61 +309,49 @@ export default function Contracts() {
       </div>
 
       {/* Ultra Compact Status Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-1 mb-3">
-        <Card className="border border-gray-200 h-6">
-          <CardContent className="p-1 h-full flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="text-[8px] text-gray-500 leading-none">Total</div>
-              <div className="text-[10px] font-semibold text-gray-900 leading-none">{statusStats.total}</div>
-            </div>
-            <BarChart3 className="w-2.5 h-2.5 text-gray-400 flex-shrink-0" />
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 h-6">
-          <CardContent className="p-1 h-full flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="text-[8px] text-gray-500 leading-none">Draft</div>
-              <div className="text-[10px] font-semibold text-orange-600 leading-none">{statusStats.draft}</div>
-            </div>
-            <Edit3 className="w-2.5 h-2.5 text-orange-400 flex-shrink-0" />
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 h-6">
-          <CardContent className="p-1 h-full flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="text-[8px] text-gray-500 leading-none">Issued</div>
-              <div className="text-[10px] font-semibold text-blue-600 leading-none">{statusStats.issued}</div>
-            </div>
-            <Send className="w-2.5 h-2.5 text-blue-400 flex-shrink-0" />
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 h-6">
-          <CardContent className="p-1 h-full flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="text-[8px] text-gray-500 leading-none">Signed</div>
-              <div className="text-[10px] font-semibold text-yellow-600 leading-none">{statusStats.signed}</div>
-            </div>
-            <PenTool className="w-2.5 h-2.5 text-yellow-400 flex-shrink-0" />
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 h-6">
-          <CardContent className="p-1 h-full flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="text-[8px] text-gray-500 leading-none">Active</div>
-              <div className="text-[10px] font-semibold text-green-600 leading-none">{statusStats.active}</div>
-            </div>
-            <CheckCircle className="w-2.5 h-2.5 text-green-400 flex-shrink-0" />
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 h-6">
-          <CardContent className="p-1 h-full flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="text-[8px] text-gray-500 leading-none">Completed</div>
-              <div className="text-[10px] font-semibold text-purple-600 leading-none">{statusStats.completed}</div>
-            </div>
-            <CheckCircle2 className="w-2.5 h-2.5 text-purple-400 flex-shrink-0" />
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-0.5 mb-2">
+        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="text-[8px] text-gray-500 leading-none">Total</div>
+            <div className="text-[11px] font-semibold text-gray-900 leading-none">{statusStats.total}</div>
+          </div>
+          <BarChart3 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="text-[8px] text-gray-500 leading-none">Draft</div>
+            <div className="text-[11px] font-semibold text-orange-600 leading-none">{statusStats.draft}</div>
+          </div>
+          <Edit3 className="w-3 h-3 text-orange-400 flex-shrink-0" />
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="text-[8px] text-gray-500 leading-none">Issued</div>
+            <div className="text-[11px] font-semibold text-blue-600 leading-none">{statusStats.issued}</div>
+          </div>
+          <Send className="w-3 h-3 text-blue-400 flex-shrink-0" />
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="text-[8px] text-gray-500 leading-none">Signed</div>
+            <div className="text-[11px] font-semibold text-yellow-600 leading-none">{statusStats.signed}</div>
+          </div>
+          <PenTool className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="text-[8px] text-gray-500 leading-none">Active</div>
+            <div className="text-[11px] font-semibold text-green-600 leading-none">{statusStats.active}</div>
+          </div>
+          <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg h-8 px-2 flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="text-[8px] text-gray-500 leading-none">Completed</div>
+            <div className="text-[11px] font-semibold text-purple-600 leading-none">{statusStats.completed}</div>
+          </div>
+          <CheckCircle2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
+        </div>
       </div>
 
       {/* Compact Search and Filters */}
