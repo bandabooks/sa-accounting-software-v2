@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useCompany } from '@/contexts/CompanyContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Eye, ChevronDown, ChevronRight, Calendar, TrendingUp, Users, ShoppingCart, Package, BarChart3, Target, PieChart, Settings, Sparkles, DollarSign, TrendingDown } from 'lucide-react';
@@ -28,6 +29,18 @@ interface ReportSection {
 
 const BusinessReports = () => {
   const [expandedSections, setExpandedSections] = useState<string[]>(['sales']);
+  const { companyId } = useCompany();
+
+  // Fetch real business data for summary stats
+  const { data: businessStats } = useQuery({
+    queryKey: ['/api/dashboard/stats', companyId],
+    enabled: !!companyId,
+  });
+
+  const { data: invoiceStats } = useQuery({
+    queryKey: ['/api/invoices/stats', companyId],
+    enabled: !!companyId,
+  });
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => 
@@ -513,9 +526,10 @@ const BusinessReports = () => {
     const apiEndpoint = getReportApiEndpoint(report.id);
     
     const { data: reportData, isLoading, error } = useQuery({
-      queryKey: ['business-report', report.id],
+      queryKey: ['business-report', report.id, companyId],
+      enabled: !!companyId && !!apiEndpoint,
       queryFn: async () => {
-        if (!apiEndpoint) return null;
+        if (!apiEndpoint || !companyId) return null;
         const token = localStorage.getItem('authToken');
         const sessionToken = localStorage.getItem('sessionToken');
         const companyId = localStorage.getItem('activeCompanyId');
@@ -878,7 +892,7 @@ const BusinessReports = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-orange-600">49</p>
+                <p className="text-2xl font-bold text-orange-600">{(invoiceStats as any)?.activeInvoices || 0}</p>
                 <p className="text-sm text-gray-600">Active Invoices</p>
               </div>
             </CardContent>
