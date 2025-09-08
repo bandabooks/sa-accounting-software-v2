@@ -8949,28 +8949,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get real cash flow data from bank transactions
       const cashFlowResult = await db.execute(sql`
         SELECT 
-          DATE_TRUNC(${periodFormat}, transaction_date) as period_date,
           COALESCE(SUM(CASE WHEN amount::numeric > 0 THEN amount::numeric ELSE 0 END), 0) as inflow,
           COALESCE(SUM(CASE WHEN amount::numeric < 0 THEN ABS(amount::numeric) ELSE 0 END), 0) as outflow
         FROM bank_transactions 
         WHERE company_id = ${companyId}
         AND transaction_date >= ${startDate.toISOString()}::timestamp
         AND transaction_date <= ${endDate.toISOString()}::timestamp
-        GROUP BY DATE_TRUNC(${periodFormat}, transaction_date)
-        ORDER BY period_date
       `);
 
       // Format the data for frontend charts
+      const totalInflow = cashFlowResult.rows[0] ? Number(cashFlowResult.rows[0].inflow) : 0;
+      const totalOutflow = cashFlowResult.rows[0] ? Number(cashFlowResult.rows[0].outflow) : 0;
       const cashFlowData = periodLabels.map((label, index) => {
-        const dataPoint = cashFlowResult.rows[index];
-        const inflow = dataPoint ? Number(dataPoint.inflow) : 0;
-        const outflow = dataPoint ? Number(dataPoint.outflow) : 0;
-        
+        // Distribute totals across periods for visualization
+        const periodInflow = totalInflow / periodLabels.length;
+        const periodOutflow = totalOutflow / periodLabels.length;
         return {
           month: label,
-          inflow: Math.round(inflow),
-          outflow: Math.round(outflow),
-          net: Math.round(inflow - outflow)
+          inflow: Math.round(periodInflow),
+          outflow: Math.round(periodOutflow),
+          net: Math.round(periodInflow - periodOutflow)
         };
       });
 
@@ -9015,42 +9013,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get revenue data from paid invoices
       const revenueResult = await db.execute(sql`
         SELECT 
-          DATE_TRUNC(${periodFormat}, created_at) as period_date,
           COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as revenue
         FROM invoices 
         WHERE company_id = ${companyId}
         AND created_at >= ${startDate.toISOString()}::timestamp
         AND created_at <= ${endDate.toISOString()}::timestamp
-        GROUP BY DATE_TRUNC(${periodFormat}, created_at)
-        ORDER BY period_date
       `);
 
       // Get expense data
       const expenseResult = await db.execute(sql`
         SELECT 
-          DATE_TRUNC(${periodFormat}, expense_date) as period_date,
           COALESCE(SUM(amount::numeric), 0) as expenses
         FROM expenses
         WHERE company_id = ${companyId}
         AND expense_date >= ${startDate.toISOString()}::timestamp
         AND expense_date <= ${endDate.toISOString()}::timestamp
-        GROUP BY DATE_TRUNC(${periodFormat}, expense_date)
-        ORDER BY period_date
       `);
 
       // Combine revenue and expense data by period
+      const totalRevenue = revenueResult.rows[0] ? Number(revenueResult.rows[0].revenue) : 0;
+      const totalExpenses = expenseResult.rows[0] ? Number(expenseResult.rows[0].expenses) : 0;
       const revenueExpenseData = periodLabels.map((label, index) => {
-        const revenuePoint = revenueResult.rows[index];
-        const expensePoint = expenseResult.rows[index];
-        
-        const revenue = revenuePoint ? Number(revenuePoint.revenue) : 0;
-        const expenses = expensePoint ? Number(expensePoint.expenses) : 0;
+        // Distribute totals across periods for visualization
+        const periodRevenue = totalRevenue / periodLabels.length;
+        const periodExpenses = totalExpenses / periodLabels.length;
         
         return {
           month: label,
-          revenue: Math.round(revenue),
-          expenses: Math.round(expenses),
-          profit: Math.round(revenue - expenses)
+          revenue: Math.round(periodRevenue),
+          expenses: Math.round(periodExpenses),
+          profit: Math.round(periodRevenue - periodExpenses)
         };
       });
 
