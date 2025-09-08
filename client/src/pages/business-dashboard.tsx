@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Download, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Minus, Plus, CreditCard, FolderPlus, UserPlus, FileText, Users } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface BusinessMetric {
   title: string;
@@ -223,13 +223,46 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={cashFlowData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" fontSize={12} />
-                    <YAxis tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} fontSize={12} />
-                    <Tooltip formatter={(value) => [`R${Number(value).toLocaleString()}`, 'Net Cash Flow']} />
-                    <Bar dataKey="net" fill="#22c55e" name="Net Cash Flow" />
-                  </BarChart>
+                  <AreaChart data={cashFlowData}>
+                    <defs>
+                      <linearGradient id="cashFlowGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
+                    <XAxis 
+                      dataKey="month" 
+                      fontSize={11} 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b' }}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} 
+                      fontSize={11}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b' }}
+                    />
+                    <Tooltip 
+                      formatter={(value) => [`R${Number(value).toLocaleString()}`, 'Net Cash Flow']}
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="net" 
+                      stroke="#22c55e" 
+                      strokeWidth={2}
+                      fill="url(#cashFlowGradient)" 
+                      name="Net Cash Flow"
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
@@ -248,14 +281,50 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueExpenseData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" fontSize={12} />
-                    <YAxis tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} fontSize={12} />
-                    <Tooltip formatter={(value, name) => [`R${Number(value).toLocaleString()}`, name]} />
-                    <Bar dataKey="revenue" fill="#22c55e" name="Revenue" />
-                    <Bar dataKey="expenses" fill="#f59e0b" name="Expenses" />
-                  </BarChart>
+                  <LineChart data={revenueExpenseData}>
+                    <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
+                    <XAxis 
+                      dataKey="month" 
+                      fontSize={11}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b' }}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} 
+                      fontSize={11}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b' }}
+                    />
+                    <Tooltip 
+                      formatter={(value, name) => [`R${Number(value).toLocaleString()}`, name]}
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#22c55e" 
+                      strokeWidth={3}
+                      dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#22c55e', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Revenue" 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="expenses" 
+                      stroke="#f59e0b" 
+                      strokeWidth={3}
+                      dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#f59e0b', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Expenses" 
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
