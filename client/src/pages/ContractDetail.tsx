@@ -72,7 +72,7 @@ export default function ContractDetail() {
   const contractId = params.id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("contract-info");
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch contract details
   const { data: contract, isLoading: contractLoading } = useQuery<Contract>({
@@ -110,8 +110,11 @@ export default function ContractDetail() {
 
   // Email contract mutation
   const emailContractMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest(`/api/contracts/${contractId}/send-email`, "POST");
+    mutationFn: async (email: string) => {
+      return apiRequest(`/api/contracts/${contractId}/send-email`, {
+        method: "POST",
+        body: { email }
+      });
     },
     onSuccess: () => {
       toast({
@@ -155,7 +158,8 @@ export default function ContractDetail() {
   };
 
   const handleEmailContract = () => {
-    emailContractMutation.mutate();
+    // For now, use a default email - in a real app, this would come from customer data
+    emailContractMutation.mutate('client@example.com');
   };
 
   const handlePrintPDF = () => {
@@ -200,28 +204,41 @@ export default function ContractDetail() {
 
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm">
+    <div className="p-4 max-w-6xl mx-auto">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => window.history.back()}
+            className="p-2 h-8 w-8"
+          >
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Company Documents</h1>
-            <p className="text-gray-600">Contract management and templates</p>
+            <h1 className="text-lg font-bold text-gray-900">{contract?.title || 'Contract Details'}</h1>
+            <p className="text-sm text-gray-600">Contract #{contractId} - {contract ? format(new Date(contract.createdAt), 'MMM d, yyyy') : ''}</p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleEmailContract}>
-            View Contract
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.open(`/api/contracts/${contractId}/view`, '_blank')}
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            View
           </Button>
-          <Button variant="outline" onClick={handlePrintPDF}>
-            <Printer className="w-4 h-4 mr-2" />
-          </Button>
-          <Button variant="outline" onClick={handleEmailContract}>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleEmailContract}
+            disabled={emailContractMutation.isPending}
+          >
             <Send className="w-4 h-4 mr-2" />
+            {emailContractMutation.isPending ? 'Sending...' : 'Email'}
           </Button>
           
           {/* PDF Actions Dropdown */}
@@ -274,22 +291,13 @@ export default function ContractDetail() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Compact Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="contract-info">Contract Information</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
-          <TabsTrigger value="comments">Comments</TabsTrigger>
-          <TabsTrigger value="renewal-history">Renewal History</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="templates" className="relative">
-            Templates
-            <Badge variant="secondary" className="ml-2 text-xs">
-              {templates.length}
-            </Badge>
-          </TabsTrigger>
+          <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
         </TabsList>
 
         {/* Contract Information Tab */}
