@@ -78,9 +78,10 @@ export default function ContractDetail() {
   const [contractContent, setContractContent] = useState<string>("");
 
   // Fetch contract details
-  const { data: contract, isLoading: contractLoading } = useQuery<Contract>({
+  const { data: contract, isLoading: contractLoading, error: contractError } = useQuery<Contract>({
     queryKey: [`/api/contracts/${contractId}`],
     enabled: !!contractId,
+    retry: 1,
   });
 
   // Fetch contract content/version
@@ -94,9 +95,12 @@ export default function ContractDetail() {
   });
 
   // Fetch all SA professional templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery<ContractTemplate[]>({
+  const { data: templatesData, isLoading: templatesLoading, error: templatesError } = useQuery<ContractTemplate[]>({
     queryKey: ["/api/contracts/templates"],
   });
+
+  // Ensure templates is always an array
+  const templates = Array.isArray(templatesData) ? templatesData : [];
 
   // Insert template mutation
   const insertTemplateMutation = useMutation({
@@ -182,12 +186,25 @@ export default function ContractDetail() {
     );
   }
 
-  if (!contract) {
+  if (contractError) {
+    return (
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Contract</h1>
+          <p className="text-gray-600 mb-4">{contractError?.message || 'Failed to load contract'}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!contract && !contractLoading) {
     return (
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Contract Not Found</h1>
           <p className="text-gray-600">The requested contract could not be found.</p>
+          <Button onClick={() => window.history.back()}>Go Back</Button>
         </div>
       </div>
     );
