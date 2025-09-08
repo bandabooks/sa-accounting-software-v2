@@ -208,25 +208,25 @@ export default function BusinessDashboard() {
           ))}
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-testid="charts-section">
-          {/* Cash Flow Chart */}
+        {/* Charts and Quick Actions Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-testid="charts-actions-section">
+          {/* Cash Flow Chart - Compact */}
           <Card data-testid="chart-cashflow">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Cash Flow Trend</CardTitle>
+                <CardTitle className="text-base font-semibold">Cash Flow Trend</CardTitle>
                 <Badge variant="outline" className="text-xs">
                   {timeRange === "7" ? "7 days" : timeRange === "30" ? "30 days" : timeRange === "90" ? "90 days" : "1 year"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
+              <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={cashFlowData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} fontSize={12} />
                     <Tooltip formatter={(value) => [`R${Number(value).toLocaleString()}`, 'Net Cash Flow']} />
                     <Bar dataKey="net" fill="#22c55e" name="Net Cash Flow" />
                   </BarChart>
@@ -235,23 +235,23 @@ export default function BusinessDashboard() {
             </CardContent>
           </Card>
 
-          {/* Revenue vs Expenses Chart */}
+          {/* Revenue vs Expenses Chart - Compact */}
           <Card data-testid="chart-revenue-expenses">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Revenue vs Expenses</CardTitle>
+                <CardTitle className="text-base font-semibold">Revenue vs Expenses</CardTitle>
                 <Badge variant="outline" className="text-xs">
                   {timeRange === "7" ? "7 days" : timeRange === "30" ? "30 days" : timeRange === "90" ? "90 days" : "1 year"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
+              <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={revenueExpenseData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} fontSize={12} />
                     <Tooltip formatter={(value, name) => [`R${Number(value).toLocaleString()}`, name]} />
                     <Bar dataKey="revenue" fill="#22c55e" name="Revenue" />
                     <Bar dataKey="expenses" fill="#f59e0b" name="Expenses" />
@@ -260,10 +260,58 @@ export default function BusinessDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Quick Actions */}
+          <Card data-testid="quick-actions">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button 
+                className="w-full justify-start h-8 text-sm" 
+                variant="outline"
+                onClick={() => setLocation('/invoices/new')}
+                data-testid="button-create-invoice"
+              >
+                <Plus className="h-3 w-3 mr-2" />
+                Create Invoice
+              </Button>
+              
+              <Button 
+                className="w-full justify-start h-8 text-sm" 
+                variant="outline"
+                onClick={() => setLocation('/payments/new')}
+                data-testid="button-record-payment"
+              >
+                <CreditCard className="h-3 w-3 mr-2" />
+                Record Payment
+              </Button>
+              
+              <Button 
+                className="w-full justify-start h-8 text-sm" 
+                variant="outline"
+                onClick={() => setLocation('/projects/new')}
+                data-testid="button-new-project"
+              >
+                <FolderPlus className="h-3 w-3 mr-2" />
+                New Project
+              </Button>
+              
+              <Button 
+                className="w-full justify-start h-8 text-sm" 
+                variant="outline"
+                onClick={() => setLocation('/customers/new')}
+                data-testid="button-add-customer"
+              >
+                <UserPlus className="h-3 w-3 mr-2" />
+                Add Customer
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Bottom Row - Priority Actions, Quick Actions, Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-testid="actions-section">
+        {/* Bottom Row - Priority Actions and Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-testid="actions-section">
           {/* Priority Actions */}
           <Card data-testid="priority-actions">
             <CardHeader className="pb-3">
@@ -304,54 +352,6 @@ export default function BusinessDashboard() {
                   Approve
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card data-testid="quick-actions">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => setLocation('/invoices/new')}
-                data-testid="button-create-invoice"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Invoice
-              </Button>
-              
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => setLocation('/payments/new')}
-                data-testid="button-record-payment"
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Record Payment
-              </Button>
-              
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => setLocation('/projects/new')}
-                data-testid="button-new-project"
-              >
-                <FolderPlus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-              
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => setLocation('/customers/new')}
-                data-testid="button-add-customer"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Customer
-              </Button>
             </CardContent>
           </Card>
 
