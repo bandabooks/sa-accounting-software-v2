@@ -169,7 +169,7 @@ export default function BusinessDashboard() {
             <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer" data-testid={`kpi-card-${index}`}
                   onClick={() => {
                     if (metric.title.includes('Revenue')) setLocation('/invoices');
-                    else if (metric.title.includes('Bank')) setLocation('/bank-accounts');
+                    else if (metric.title.includes('Bank')) setLocation('/banking');
                     else if (metric.title.includes('Receivables')) setLocation('/invoices');
                     else if (metric.title.includes('Projects')) setLocation('/projects');
                     else if (metric.title.includes('Profit')) setLocation('/reports/financial');
