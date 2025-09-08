@@ -756,6 +756,8 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
             setLocation("/purchase-dashboard"); // Navigate to purchase dashboard
           } else if (group.id === "tax_compliance" && visibleItems.length > 0) {
             setLocation("/practice-dashboard"); // Navigate to practice dashboard
+          } else if ((group.id === "compliance" || group.id === "practice") && visibleItems.length > 0) {
+            setLocation("/practice-dashboard"); // Navigate to practice dashboard
           } else if (group.id === "banking" && visibleItems.length > 0) {
             setLocation("/banking"); // Navigate to banking center
           } else if (group.id === "employees" && visibleItems.length > 0) {
