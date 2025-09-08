@@ -309,7 +309,7 @@ export default function Contracts() {
       </div>
 
       {/* Compact Status Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <Card className="border border-gray-200">
           <CardContent className="p-3">
             <div className="text-xs text-gray-600">Total</div>
@@ -324,26 +324,8 @@ export default function Contracts() {
         </Card>
         <Card className="border border-gray-200">
           <CardContent className="p-3">
-            <div className="text-xs text-gray-600">Issued</div>
-            <div className="text-lg font-bold text-blue-600">{statusStats.issued}</div>
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-3">
-            <div className="text-xs text-gray-600">Signed</div>
-            <div className="text-lg font-bold text-yellow-600">{statusStats.signed}</div>
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-3">
             <div className="text-xs text-gray-600">Active</div>
             <div className="text-lg font-bold text-green-600">{statusStats.active}</div>
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-3">
-            <div className="text-xs text-gray-600">Completed</div>
-            <div className="text-lg font-bold text-purple-600">{statusStats.completed}</div>
           </CardContent>
         </Card>
       </div>
