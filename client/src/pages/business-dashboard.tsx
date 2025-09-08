@@ -236,10 +236,10 @@ export default function BusinessDashboard() {
           <div className="flex items-center gap-3">
             {/* Time Range Selector */}
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-32" data-testid="time-range-selector">
-                <SelectValue />
+              <SelectTrigger className="w-32 z-50" data-testid="time-range-selector">
+                <SelectValue placeholder="Last 30..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-white border border-gray-200 shadow-lg">
                 <SelectItem value="7">Last 7 days</SelectItem>
                 <SelectItem value="30">Last 30 days</SelectItem>
                 <SelectItem value="90">Last 90 days</SelectItem>

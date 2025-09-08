@@ -8946,20 +8946,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         periodLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
       }
 
-      // Get real cash flow data from bank transactions
-      const cashFlowResult = await db.execute(sql`
-        SELECT 
-          COALESCE(SUM(CASE WHEN amount::numeric > 0 THEN amount::numeric ELSE 0 END), 0) as inflow,
-          COALESCE(SUM(CASE WHEN amount::numeric < 0 THEN ABS(amount::numeric) ELSE 0 END), 0) as outflow
-        FROM bank_transactions 
+      // Get real cash flow data from payments table (which has the real data)
+      const paymentsResult = await db.execute(sql`
+        SELECT COALESCE(SUM(amount::numeric), 0) as inflow
+        FROM payments 
         WHERE company_id = ${companyId}
-        AND transaction_date >= ${startDate.toISOString()}::timestamp
-        AND transaction_date <= ${endDate.toISOString()}::timestamp
+      `);
+      
+      const expensesResult = await db.execute(sql`
+        SELECT COALESCE(SUM(amount::numeric), 0) as outflow
+        FROM expenses 
+        WHERE company_id = ${companyId}
       `);
 
       // Format the data for frontend charts
-      const totalInflow = cashFlowResult.rows[0] ? Number(cashFlowResult.rows[0].inflow) : 0;
-      const totalOutflow = cashFlowResult.rows[0] ? Number(cashFlowResult.rows[0].outflow) : 0;
+      const totalInflow = paymentsResult.rows[0] ? Number(paymentsResult.rows[0].inflow) : 0;
+      const totalOutflow = expensesResult.rows[0] ? Number(expensesResult.rows[0].outflow) : 0;
       const cashFlowData = periodLabels.map((label, index) => {
         // Distribute totals across periods for visualization
         const periodInflow = totalInflow / periodLabels.length;
