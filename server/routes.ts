@@ -18594,8 +18594,13 @@ Format your response as a JSON array of tip objects with "title", "description",
   app.get("/api/contracts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { status } = req.query;
-      const contracts = await contractService.getContracts(req.user.companyId, status as string);
-      res.json(contracts);
+      const companyId = req.user.companyId;
+      console.log(`→ Fetching contracts for company ${companyId}, status: ${status || 'all'}`);
+      
+      const contracts = await contractService.getContracts(companyId, status as string);
+      console.log(`→ Found ${contracts?.length || 0} contracts`);
+      
+      res.json(contracts || []);
     } catch (error) {
       console.error("Error fetching contracts:", error);
       res.status(500).json({ error: "Failed to fetch contracts" });
