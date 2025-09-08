@@ -27,25 +27,17 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         if (storedCompanyId) {
           setCompanyId(parseInt(storedCompanyId));
         } else {
-          try {
-            // Fetch from API
-            const response = await fetch('/api/companies/active', {
-              credentials: 'include',
-            });
-            if (response.ok) {
-              const data = await response.json();
-              setCompanyId(data.id);
-              localStorage.setItem('activeCompanyId', data.id.toString());
-            } else if (response.status === 401) {
-              // User not authenticated, redirect to login
-              window.location.href = '/api/login';
-              return;
-            }
-          } catch (fetchError) {
-            console.error('Failed to fetch active company:', fetchError);
-            // Set a default company ID for testing (company 2 has contracts)
-            setCompanyId(2);
-            localStorage.setItem('activeCompanyId', '2');
+          // Fetch from API
+          const response = await fetch('/api/companies/active', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'X-Session-Token': localStorage.getItem('sessionToken') || '',
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setCompanyId(data.id);
+            localStorage.setItem('activeCompanyId', data.id.toString());
           }
         }
       } catch (error) {
@@ -80,9 +72,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'X-Session-Token': localStorage.getItem('sessionToken') || '',
           'X-Company-ID': newCompanyId.toString(),
         },
-        credentials: 'include',
         body: JSON.stringify({ companyId: newCompanyId }),
       });
 

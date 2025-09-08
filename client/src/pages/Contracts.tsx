@@ -27,20 +27,16 @@ interface ContractTemplate {
 
 interface Contract {
   id: number;
-  companyId: number;
-  customerId: number;
-  templateId: number | null;
-  status: string;
-  expiresAt?: string;
-  currentVersion: number;
+  templateId: number;
+  title: string;
+  clientId: number;
   projectId?: number;
-  createdBy: number;
+  status: string;
+  value?: number;
+  currency: string;
   createdAt: string;
   updatedAt: string;
-  // Joined data from backend
-  customerName: string | null;
-  customerEmail: string | null;
-  templateName: string | null;
+  expiresAt?: string;
 }
 
 const statusColors = {
@@ -83,9 +79,7 @@ export default function Contracts() {
 
   // Filter contracts by search term
   const filteredContracts = (contracts || []).filter((contract: Contract) =>
-    contract.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contract.templateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contract.id.toString().includes(searchTerm)
+    contract.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Status statistics
@@ -157,7 +151,7 @@ export default function Contracts() {
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base font-semibold text-gray-900 truncate">
-                {contract.customerName || 'Unnamed Customer'} - {contract.templateName || 'No Template'}
+                {contract.title}
               </CardTitle>
               <CardDescription className="text-sm mt-1">
                 #{contract.id} • {format(new Date(contract.createdAt), "MMM d, yyyy")}
@@ -205,7 +199,7 @@ export default function Contracts() {
             <div className="flex items-center gap-4">
               <div>
                 <span className="font-medium text-gray-900">
-                  Customer: {contract.customerName || 'Unknown'}
+                  {contract.value ? `${contract.currency} ${contract.value.toLocaleString()}` : 'Value TBD'}
                 </span>
               </div>
               {contract.expiresAt && (
