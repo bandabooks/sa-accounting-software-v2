@@ -115,7 +115,16 @@ export class ContractService {
   }
 
   async getContracts(companyId: number, status?: string): Promise<any[]> {
-    const baseQuery = db.select({
+    let whereCondition: any = eq(contracts.companyId, companyId);
+    
+    if (status && status !== 'all') {
+      whereCondition = and(
+        eq(contracts.companyId, companyId),
+        eq(contracts.status, status)
+      );
+    }
+    
+    return db.select({
       id: contracts.id,
       companyId: contracts.companyId,
       customerId: contracts.customerId,
@@ -136,18 +145,8 @@ export class ContractService {
     .from(contracts)
     .leftJoin(customers, eq(contracts.customerId, customers.id))
     .leftJoin(contractTemplates, eq(contracts.templateId, contractTemplates.id))
-    .where(eq(contracts.companyId, companyId));
-    
-    if (status) {
-      return baseQuery
-        .where(and(
-          eq(contracts.companyId, companyId),
-          eq(contracts.status, status)
-        ))
-        .orderBy(desc(contracts.updatedAt));
-    }
-
-    return baseQuery.orderBy(desc(contracts.updatedAt));
+    .where(whereCondition)
+    .orderBy(desc(contracts.updatedAt));
   }
 
   async getContract(companyId: number, contractId: number): Promise<Contract | null> {
