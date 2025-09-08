@@ -100,7 +100,8 @@ export default function CreateContract() {
         projectId: data.projectId ? parseInt(data.projectId) : undefined,
         contractValue: data.contractValue ? parseFloat(data.contractValue) : undefined,
       };
-      return await apiRequest("/api/contracts", "POST", payload);
+      const response = await apiRequest("/api/contracts", "POST", payload);
+      return await response.json();
     },
     onSuccess: (response: any) => {
       toast({
