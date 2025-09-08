@@ -1751,6 +1751,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Priority Actions API
+  app.get("/api/dashboard/priority-actions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user!.companyId;
+      
+      // Get overdue invoices
+      const overdueInvoices = await db.select({
+        count: sql<number>`COUNT(*)`,
+        total: sql<string>`COALESCE(SUM(${invoices.total}), '0.00')`
+      }).from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          lt(invoices.dueDate, new Date()),
+          eq(invoices.status, 'sent')
+        ));
+
+      // Get invoices due this week
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      const dueThisWeek = await db.select({
+        count: sql<number>`COUNT(*)`
+      }).from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          gte(invoices.dueDate, new Date()),
+          lt(invoices.dueDate, nextWeek),
+          eq(invoices.status, 'sent')
+        ));
+
+      // Get pending approval invoices (draft status)
+      const pendingApprovals = await db.select({
+        count: sql<number>`COUNT(*)`
+      }).from(invoices)
+        .where(and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.status, 'draft')
+        ));
+
+      res.json({
+        overdueInvoices: {
+          count: Number(overdueInvoices[0]?.count || 0),
+          total: overdueInvoices[0]?.total || '0.00'
+        },
+        dueThisWeek: {
+          count: Number(dueThisWeek[0]?.count || 0)
+        },
+        pendingApprovals: {
+          count: Number(pendingApprovals[0]?.count || 0)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching priority actions:", error);
+      res.status(500).json({ error: "Failed to fetch priority actions" });
+    }
+  });
+
+  // Recent Activity API
+  app.get("/api/dashboard/recent-activity", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user!.companyId;
+      const activities: any[] = [];
+
+      // Helper function for time ago formatting
+      const getTimeAgo = (date: Date): string => {
+        const now = new Date();
+        const diffInHours = Math.floor((now.getTime() - new Date(date).getTime()) / (1000 * 60 * 60));
+        
+        if (diffInHours < 1) return 'Just now';
+        if (diffInHours === 1) return '1 hour ago';
+        if (diffInHours < 24) return `${diffInHours} hours ago`;
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays === 1) return '1 day ago';
+        return `${diffInDays} days ago`;
+      };
+
+      // Get recent payments (last 7 days)
+      const recentPayments = await db.select({
+        id: payments.id,
+        amount: payments.amount,
+        paymentDate: payments.paymentDate,
+        invoiceId: payments.invoiceId,
+        customer: customers.name
+      }).from(payments)
+        .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
+        .innerJoin(customers, eq(invoices.customerId, customers.id))
+        .where(and(
+          eq(invoices.companyId, companyId),
+          gte(payments.paymentDate, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+          eq(payments.status, 'completed')
+        ))
+        .orderBy(desc(payments.paymentDate))
+        .limit(3);
+
+      recentPayments.forEach(payment => {
+        activities.push({
+          type: 'payment',
+          title: 'Payment Received',
+          description: `${payment.customer} - Invoice #${payment.invoiceId}`,
+          amount: payment.amount,
+          timeAgo: getTimeAgo(payment.paymentDate),
+          link: `/payments?search=${payment.customer}`
+        });
+      });
+
+      // Get recent invoices (last 7 days)
+      const recentInvoices = await db.select({
+        id: invoices.id,
+        total: invoices.total,
+        invoiceDate: invoices.invoiceDate,
+        customer: customers.name
+      }).from(invoices)
+        .innerJoin(customers, eq(invoices.customerId, customers.id))
+        .where(and(
+          eq(invoices.companyId, companyId),
+          gte(invoices.invoiceDate, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+        ))
+        .orderBy(desc(invoices.invoiceDate))
+        .limit(2);
+
+      recentInvoices.forEach(invoice => {
+        activities.push({
+          type: 'invoice',
+          title: 'Invoice Created',
+          description: `${invoice.customer} - Invoice #${invoice.id}`,
+          amount: invoice.total,
+          timeAgo: getTimeAgo(invoice.invoiceDate),
+          link: `/invoices?search=${invoice.customer}`
+        });
+      });
+
+      // Sort by most recent
+      activities.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+      res.json(activities.slice(0, 3)); // Return top 3 most recent
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ error: "Failed to fetch recent activity" });
+    }
+  });
+
   // Customers with search - Company Isolated with caching
   app.get("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

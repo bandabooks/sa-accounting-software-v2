@@ -32,6 +32,18 @@ export default function BusinessDashboard() {
     refetchInterval: 300000, // 5 minutes
   });
 
+  // Fetch priority actions data
+  const { data: priorityActions } = useQuery({
+    queryKey: [`/api/dashboard/priority-actions`, companyId],
+    enabled: !!companyId,
+  });
+
+  // Fetch recent activity data
+  const { data: recentActivity } = useQuery({
+    queryKey: [`/api/dashboard/recent-activity`, companyId],
+    enabled: !!companyId,
+  });
+
   // Calculate date range based on timeRange selection
   const getDateRange = () => {
     const today = new Date();
@@ -510,53 +522,65 @@ export default function BusinessDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                <div>
-                  <p className="font-medium text-red-900">Overdue Invoices</p>
-                  <p className="text-sm text-red-600">3 invoices totaling R3500</p>
+              {priorityActions?.overdueInvoices && priorityActions.overdueInvoices.count > 0 && (
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                  <div>
+                    <p className="font-medium text-red-900">Overdue Invoices</p>
+                    <p className="text-sm text-red-600">{priorityActions.overdueInvoices.count} invoices totaling R{priorityActions.overdueInvoices.total}</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 border-red-300 hover:bg-red-100"
+                    onClick={() => setLocation('/invoices?filter=overdue')}
+                    data-testid="button-view-overdue"
+                  >
+                    View All
+                  </Button>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-red-600 border-red-300 hover:bg-red-100"
-                  onClick={() => setLocation('/invoices?filter=overdue')}
-                  data-testid="button-view-overdue"
-                >
-                  View All
-                </Button>
-              </div>
+              )}
               
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div>
-                  <p className="font-medium text-yellow-900">Due This Week</p>
-                  <p className="text-sm text-yellow-600">5 items pending and due</p>
+              {priorityActions?.dueThisWeek && priorityActions.dueThisWeek.count > 0 && (
+                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div>
+                    <p className="font-medium text-yellow-900">Due This Week</p>
+                    <p className="text-sm text-yellow-600">{priorityActions.dueThisWeek.count} items pending and due</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-yellow-600 border-yellow-300 hover:bg-yellow-100"
+                    onClick={() => setLocation('/invoices?filter=due-this-week')}
+                    data-testid="button-review-due"
+                  >
+                    Review
+                  </Button>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-yellow-600 border-yellow-300 hover:bg-yellow-100"
-                  onClick={() => setLocation('/invoices?filter=due-this-week')}
-                  data-testid="button-review-due"
-                >
-                  Review
-                </Button>
-              </div>
+              )}
               
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div>
-                  <p className="font-medium text-blue-900">Pending Approvals</p>
-                  <p className="text-sm text-blue-600">8 draft invoices ready to send</p>
+              {priorityActions?.pendingApprovals && priorityActions.pendingApprovals.count > 0 && (
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div>
+                    <p className="font-medium text-blue-900">Pending Approvals</p>
+                    <p className="text-sm text-blue-600">{priorityActions.pendingApprovals.count} draft invoices ready to send</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-blue-600 border-blue-300 hover:bg-blue-100"
+                    onClick={() => setLocation('/invoices?filter=pending-approval')}
+                    data-testid="button-approve-pending"
+                  >
+                    Approve
+                  </Button>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-blue-600 border-blue-300 hover:bg-blue-100"
-                  onClick={() => setLocation('/invoices?filter=pending-approval')}
-                  data-testid="button-approve-pending"
-                >
-                  Approve
-                </Button>
-              </div>
+              )}
+              
+              {(!priorityActions?.overdueInvoices?.count && !priorityActions?.dueThisWeek?.count && !priorityActions?.pendingApprovals?.count) && (
+                <div className="flex items-center justify-center p-8 text-gray-500">
+                  <p className="text-sm">No priority actions at this time</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
