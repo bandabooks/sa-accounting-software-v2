@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Download, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Minus, Plus, CreditCard, FolderPlus, UserPlus, FileText, Users } from "lucide-react";
 import { AreaChart, Area, LineChart, Line, ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface BusinessMetric {
   title: string;
@@ -22,22 +23,36 @@ export default function BusinessDashboard() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const { companyId } = useCompany();
 
-  // Fetch business metrics
+  // Fetch business metrics with company context
   const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ["/api/dashboard/stats"],
+    queryKey: ["/api/dashboard/stats", companyId],
+    enabled: !!companyId,
     refetchInterval: 300000, // 5 minutes
   });
 
-  // Sample chart data
-  const cashFlowData = [
+  // Fetch real chart data - Cash Flow 
+  const { data: cashFlowData } = useQuery({
+    queryKey: ["/api/reports/cash-flow", companyId, timeRange],
+    enabled: !!companyId,
+  });
+
+  // Fetch real chart data - Revenue vs Expenses
+  const { data: revenueExpenseData } = useQuery({
+    queryKey: ["/api/reports/revenue-expenses", companyId, timeRange], 
+    enabled: !!companyId,
+  });
+
+  // Fallback data when API data is loading or unavailable
+  const defaultCashFlowData = [
     {month: "Week 1", cashIn: 25000, cashOut: 15000, netFlow: 10000},
     {month: "Week 2", cashIn: 28000, cashOut: 16000, netFlow: 12000},
     {month: "Week 3", cashIn: 27000, cashOut: 16000, netFlow: 11000},
     {month: "Week 4", cashIn: 29000, cashOut: 16000, netFlow: 13000}
   ];
 
-  const revenueExpenseData = [
+  const defaultRevenueExpenseData = [
     {month: "Week 1", revenue: 60000, expenses: 40000, profitMargin: 33.3},
     {month: "Week 2", revenue: 62000, expenses: 38000, profitMargin: 38.7},
     {month: "Week 3", revenue: 61000, expenses: 42000, profitMargin: 31.1},
@@ -97,7 +112,9 @@ export default function BusinessDashboard() {
 
   const handleRefresh = () => {
     setLastRefresh(new Date());
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats', companyId] });
+    queryClient.invalidateQueries({ queryKey: ['/api/reports/cash-flow', companyId, timeRange] });
+    queryClient.invalidateQueries({ queryKey: ['/api/reports/revenue-expenses', companyId, timeRange] });
   };
 
   if (isLoading) {
@@ -223,7 +240,7 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={cashFlowData}>
+                  <LineChart data={cashFlowData || defaultCashFlowData}>
                     <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
                     <XAxis 
                       dataKey="month" 
@@ -294,7 +311,7 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={revenueExpenseData}>
+                  <ComposedChart data={revenueExpenseData || defaultRevenueExpenseData}>
                     <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
                     <XAxis 
                       dataKey="month" 
