@@ -1,0 +1,95 @@
+You are a senior full-stack engineer. Implement a complete “Contracts (Engagement Letters)” module for SA V1 in our app.
+
+STACK & CONSTRAINTS
+- Frontend: React + TypeScript, Wouter, TanStack Query, shadcn/ui, Tailwind, Vite.
+- Backend: Node.js + Express (TypeScript, ESM), Postgres (Neon) via Drizzle ORM, Zod validation, pg-boss for jobs.
+- Providers: SendGrid (email), Twilio or Clickatell (SMS) behind an SmsProvider abstraction; org-level selection.
+- Security: POPIA-aware; store UTC; timezone Africa/Johannesburg for UI. ECTA-friendly in-house e-signature with OTP (SMS preferred, email fallback).
+- On countersign: auto-create a Project and seed Tasks for the selected service package; attach PDFs to Document Library.
+- Edit ONLY files you add below plus necessary mounts/wiring. Keep the build green.
+
+FILE & FEATURE PLAN (create these paths; minimal changes elsewhere)
+1) DB & Drizzle (migrations + models)
+   - src/db/schema/contracts.ts defining tables:
+     • contract_templates { id, org_id, name, version, body_md (markdown with {{placeholders}}), fields JSONB, created_by, created_at, updated_at }
+     • contract_blocks { id, org_id, name, body_md, tags[], created_at }
+     • contracts { id, org_id, client_id, template_id, status(draft|issued|signed|countersigned|active|expired|void), expires_at, current_version, project_id?, created_by, created_at, updated_at }
+     • contract_versions { id, contract_id, version, body_md, merge_data JSONB, pdf_url?, evidence_url?, created_at }
+     • contract_signers { id, contract_id, role(client|client_representative|partner), name, email, phone?, order_index, has_signed, signed_at?, signature_method?, signature_data JSONB?, ip?, user_agent? }
+     • contract_events { id, contract_id, kind(issued|viewed|otp_sent|otp_verified|signed|countersigned|reminder_sent|expired|voided), actor(system|user:<id>|signer:<id>), meta JSONB, created_at }
+     • contract_tokens { id, contract_id, signer_id, token_hash, otp_hash?, otp_expires_at?, used, created_at }
+   - Add indexes on (org_id), (contract_id), (status, expires_at), (signer_id).
+   - Migration file under /drizzle.
+
+2) Providers & settings
+   - src/providers/email/sendgrid.ts implements EmailProvider { send(to, subject, html) }.
+   - src/providers/sms/twilio.ts and src/providers/sms/clickatell.ts implement SmsProvider { send(to, text) }.
+   - src/providers/index.ts exports resolveSmsProvider(orgId) reading org_integrations (sms_provider: 'twilio'|'clickatell', *_config JSON). Encrypt *_config at rest if we have helpers (otherwise TODO comment).
+
+3) Contracts API (Express + Zod) under src/api/contracts/*
+   - routes:
+     • POST /v1/contracts/templates  (create/update template; body_md + fields[])
+     • GET  /v1/contracts/templates   (list by org)
+     • POST /v1/contracts/templates/:id/preview { mergeData } -> returns { html }
+     • POST /v1/contracts              { templateId, clientId, mergeData, signers:[{name,email,phone,role}], expiresAt? } -> draft contract + version 1
+     • POST /v1/contracts/:id/issue    -> freeze current_version, create hashed magic-link tokens, send invites via SendGrid (and SMS with link), log event 'issued'
+     • GET  /v1/contracts/:id          -> detail (RBAC-checked)
+     • POST /v1/contracts/:id/send-otp -> generate 6-digit OTP, hash+TTL, send via SMS/email; event 'otp_sent'
+     • POST /v1/contracts/:id/verify-otp { code } -> verify; event 'otp_verified'
+     • POST /v1/contracts/:id/sign     { method:'typed'|'drawn', data, signerId } -> mark signer signed; generate PDFs; event 'signed'
+     • POST /v1/contracts/:id/countersign -> partner countersign; create Project & seed Tasks; attach PDFs; status=active; event 'countersigned'
+     • GET  /v1/contracts/:id/pdf      -> secure download
+     • GET  /v1/contracts/:id/evidence -> secure download
+     • POST /v1/contracts/:id/void     -> status=void; event 'voided'
+   - Use Zod schemas. Enforce org scoping via req.user.orgId. Never store raw tokens/OTPs (store hashes). Token TTL default 14 days.
+
+4) PDF generation & evidence (Node only, no headless Chrome)
+   - src/services/pdf/ContractPDF.tsx using @react-pdf/renderer; input { bodyHtml or bodyNodes, branding, signers, signatures }.
+   - src/services/pdf/EvidencePDF.tsx building a timeline PDF (events, IP/UA, timestamps, SHA-256 of final contract PDF).
+   - src/services/pdf/index.ts exports generateContractPdf(versionId) and generateEvidencePdf(versionId) -> uploads to Document Library; returns URLs; updates contract_versions.
+
+5) Jobs (pg-boss worker)
+   - src/jobs/contracts.remindUnsigned.ts -> schedule reminders at 24h, 72h after issue, and 3 days before expires_at; channels email/SMS; respect user/org quiet hours; log contract_events 'reminder_sent'.
+   - src/jobs/contracts.expire.ts -> at expires_at, mark status=expired, cancel tokens, log 'expired'.
+   - src/jobs/boss.ts registers above; ensure worker entry at src/worker/index.ts imports boss.ts.
+
+6) Back Office UI (React) under src/pages/contracts/*
+   - /contracts          (list with filters: status, client; columns: client, template, status, issued, expires, last event)
+   - /contracts/new      (wizard: pick template → fill merge fields (auto from client) → pick signers → preview → issue)
+   - /contracts/:id      (detail: status, timeline (contract_events), signers with statuses, actions: resend invite, send OTP, countersign, void; download PDF/Evidence)
+   - /contracts/templates (template list + editor: markdown textarea with {{fields}} and Block inserter; live preview via preview endpoint)
+   - Use shadcn/ui Cards, Dialogs, Command palette for client & signer selection. All dates shown in SAST.
+
+7) Client Portal signing (React)
+   - /sign/:contractId?token=... page:
+     • Load via GET /v1/contracts/:id/view?token=...
+     • Optional OTP: POST send-otp, verify-otp; lock after 5 failed attempts.
+     • Signature capture: typed (name) or drawn (canvas -> SVG path); POST sign.
+     • After all required client signers sign, show “Awaiting countersign”.
+     • Download Contract PDF once signed/countersigned.
+   - Accessibility: keyboard and SR-friendly. Mobile-friendly UI.
+
+8) Automation on countersign
+   - In countersign handler: if contracts.project_id is null, create Project { name derived from template/client } and seed default Tasks for the selected service package (e.g., VAT201 monthly workflow); attach PDFs to Document Library; link project_id on contract.
+
+9) Security & POPIA
+   - Hash magic-link tokens + OTPs (bcrypt/argon2). Do not log secrets. PII minimal in logs.
+   - Audit all actions in contract_events. Respect quiet hours in reminders.
+   - Validate signer email/phone; require OTP for SMS flow where phone exists; email fallback allowed.
+
+10) Types, tests, and wiring
+   - Add minimal shared types in src/contracts/contracts.types.ts for API payloads/responses.
+   - Vitest tests for token/OTP lifecycle, rendering preview, and status transitions.
+   - Mount routes in src/api/index.ts under /v1/contracts; add worker service entry if missing.
+   - Add envs: PUBLIC_BASE_URL, SENDGRID_API_KEY, SMS_PROVIDER, TWILIO_* or CLICKATELL_*, etc.
+
+ACCEPTANCE CRITERIA
+- Create template → preview with merge data → compose contract → issue invites (email/SMS) with magic links.
+- Client can open link, pass OTP, sign (typed/drawn). Evidence PDF contains IP/UA/time/OTP markers and SHA-256 of contract PDF.
+- Partner can countersign; system auto-creates Project + Tasks; PDFs stored in Document Library and downloadable.
+- Reminders fire at 24h/72h/−3d; expiries transition correctly; all events visible in timeline.
+- RBAC enforced (Admin/Partner manage templates & countersign; Practitioner issue/track; Client portal limited to own signing).
+- Build and tests pass (tsc --noEmit OK).
+
+COMMIT MESSAGE
+"feat(contracts): end-to-end contracts module with templates, in-house e-signature (OTP), PDFs, reminders, and project automation"
