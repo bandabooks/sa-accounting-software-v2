@@ -308,42 +308,42 @@ export default function Contracts() {
         </div>
       </div>
 
-      {/* Compact Status Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4">
-        <Card className="border border-gray-200">
-          <CardContent className="p-2">
-            <div className="text-xs text-gray-600">Total</div>
-            <div className="text-sm font-bold text-gray-900">{statusStats.total}</div>
+      {/* Ultra Compact Status Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-1 mb-3">
+        <Card className="border border-gray-200 h-12">
+          <CardContent className="p-1.5 h-full flex flex-col justify-center">
+            <div className="text-[10px] text-gray-500 leading-none">Total</div>
+            <div className="text-xs font-semibold text-gray-900 leading-none mt-0.5">{statusStats.total}</div>
           </CardContent>
         </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-2">
-            <div className="text-xs text-gray-600">Draft</div>
-            <div className="text-sm font-bold text-orange-600">{statusStats.draft}</div>
+        <Card className="border border-gray-200 h-12">
+          <CardContent className="p-1.5 h-full flex flex-col justify-center">
+            <div className="text-[10px] text-gray-500 leading-none">Draft</div>
+            <div className="text-xs font-semibold text-orange-600 leading-none mt-0.5">{statusStats.draft}</div>
           </CardContent>
         </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-2">
-            <div className="text-xs text-gray-600">Issued</div>
-            <div className="text-sm font-bold text-blue-600">{statusStats.issued}</div>
+        <Card className="border border-gray-200 h-12">
+          <CardContent className="p-1.5 h-full flex flex-col justify-center">
+            <div className="text-[10px] text-gray-500 leading-none">Issued</div>
+            <div className="text-xs font-semibold text-blue-600 leading-none mt-0.5">{statusStats.issued}</div>
           </CardContent>
         </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-2">
-            <div className="text-xs text-gray-600">Signed</div>
-            <div className="text-sm font-bold text-yellow-600">{statusStats.signed}</div>
+        <Card className="border border-gray-200 h-12">
+          <CardContent className="p-1.5 h-full flex flex-col justify-center">
+            <div className="text-[10px] text-gray-500 leading-none">Signed</div>
+            <div className="text-xs font-semibold text-yellow-600 leading-none mt-0.5">{statusStats.signed}</div>
           </CardContent>
         </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-2">
-            <div className="text-xs text-gray-600">Active</div>
-            <div className="text-sm font-bold text-green-600">{statusStats.active}</div>
+        <Card className="border border-gray-200 h-12">
+          <CardContent className="p-1.5 h-full flex flex-col justify-center">
+            <div className="text-[10px] text-gray-500 leading-none">Active</div>
+            <div className="text-xs font-semibold text-green-600 leading-none mt-0.5">{statusStats.active}</div>
           </CardContent>
         </Card>
-        <Card className="border border-gray-200">
-          <CardContent className="p-2">
-            <div className="text-xs text-gray-600">Completed</div>
-            <div className="text-sm font-bold text-purple-600">{statusStats.completed}</div>
+        <Card className="border border-gray-200 h-12">
+          <CardContent className="p-1.5 h-full flex flex-col justify-center">
+            <div className="text-[10px] text-gray-500 leading-none">Completed</div>
+            <div className="text-xs font-semibold text-purple-600 leading-none mt-0.5">{statusStats.completed}</div>
           </CardContent>
         </Card>
       </div>
