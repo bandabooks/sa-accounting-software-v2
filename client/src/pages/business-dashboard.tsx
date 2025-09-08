@@ -508,7 +508,13 @@ export default function BusinessDashboard() {
                   <p className="font-medium text-red-900">Overdue Invoices</p>
                   <p className="text-sm text-red-600">3 invoices totaling R3500</p>
                 </div>
-                <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-100">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-red-600 border-red-300 hover:bg-red-100"
+                  onClick={() => setLocation('/invoices?filter=overdue')}
+                  data-testid="button-view-overdue"
+                >
                   View All
                 </Button>
               </div>
@@ -518,7 +524,13 @@ export default function BusinessDashboard() {
                   <p className="font-medium text-yellow-900">Due This Week</p>
                   <p className="text-sm text-yellow-600">5 items pending and due</p>
                 </div>
-                <Button variant="outline" size="sm" className="text-yellow-600 border-yellow-300 hover:bg-yellow-100">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-yellow-600 border-yellow-300 hover:bg-yellow-100"
+                  onClick={() => setLocation('/invoices?filter=due-this-week')}
+                  data-testid="button-review-due"
+                >
                   Review
                 </Button>
               </div>
@@ -528,7 +540,13 @@ export default function BusinessDashboard() {
                   <p className="font-medium text-blue-900">Pending Approvals</p>
                   <p className="text-sm text-blue-600">8 draft invoices ready to send</p>
                 </div>
-                <Button variant="outline" size="sm" className="text-blue-600 border-blue-300 hover:bg-blue-100">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-blue-600 border-blue-300 hover:bg-blue-100"
+                  onClick={() => setLocation('/invoices?filter=pending-approval')}
+                  data-testid="button-approve-pending"
+                >
                   Approve
                 </Button>
               </div>
@@ -540,13 +558,23 @@ export default function BusinessDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold">Recent High-Value Activity</CardTitle>
-                <Button variant="outline" size="sm" className="text-xs">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-xs"
+                  onClick={() => setLocation('/activity-feed')}
+                  data-testid="button-view-all-activity"
+                >
                   View All
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <div 
+                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setLocation('/payments?search=ABC Company')}
+                data-testid="activity-payment-received"
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-100 rounded-full">
                     <TrendingUp className="h-4 w-4 text-green-600" />
@@ -562,7 +590,11 @@ export default function BusinessDashboard() {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <div 
+                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setLocation('/invoices?search=XYZ Corp')}
+                data-testid="activity-invoice-created"
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 rounded-full">
                     <FileText className="h-4 w-4 text-blue-600" />
@@ -578,7 +610,11 @@ export default function BusinessDashboard() {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <div 
+                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                onClick={() => setLocation('/customers?search=Tech Solutions')}
+                data-testid="activity-new-customer"
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-orange-100 rounded-full">
                     <Users className="h-4 w-4 text-orange-600" />
