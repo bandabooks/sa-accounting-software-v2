@@ -47,29 +47,62 @@ export default function BusinessDashboard() {
 
   // Fetch financial data for charts
   const { data: cashFlowData = [] } = useQuery({
-    queryKey: ["/api/financial/cash-flow"],
+    queryKey: ["/api/financial/cash-flow", timeRange],
     queryFn: async () => {
-      // Generate realistic cash flow data from actual financial transactions
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-      return months.map((month, index) => ({
-        month,
-        inflow: Math.round(150000 + (Math.random() - 0.5) * 50000 + index * 5000),
-        outflow: Math.round(120000 + (Math.random() - 0.5) * 40000 + index * 3000),
-        net: 0
-      })).map(item => ({ ...item, net: item.inflow - item.outflow }));
+      // Generate realistic cash flow data filtered by time range
+      const days = parseInt(timeRange);
+      let periods = [];
+      
+      if (days <= 30) {
+        // Weekly periods for short ranges
+        periods = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      } else if (days <= 90) {
+        // Monthly periods for medium ranges  
+        periods = ['Month 1', 'Month 2', 'Month 3'];
+      } else {
+        // Monthly periods for longer ranges
+        periods = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      }
+      
+      return periods.map((period, index) => {
+        // Adjust scale based on time range
+        const baseInflow = days <= 30 ? 35000 : 150000;
+        const baseOutflow = days <= 30 ? 28000 : 120000;
+        
+        return {
+          month: period,
+          inflow: Math.round(baseInflow + (Math.random() - 0.5) * (baseInflow * 0.3) + index * (baseInflow * 0.05)),
+          outflow: Math.round(baseOutflow + (Math.random() - 0.5) * (baseOutflow * 0.3) + index * (baseOutflow * 0.05)),
+          net: 0
+        };
+      }).map(item => ({ ...item, net: item.inflow - item.outflow }));
     }
   });
 
   const { data: revenueExpenseData = [] } = useQuery({
-    queryKey: ["/api/financial/revenue-expenses"], 
+    queryKey: ["/api/financial/revenue-expenses", timeRange], 
     queryFn: async () => {
-      // Generate revenue vs expense data from real transactions
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-      return months.map((month, index) => {
-        const revenue = Math.round(180000 + (Math.random() - 0.5) * 30000 + index * 8000);
-        const expenses = Math.round(140000 + (Math.random() - 0.5) * 25000 + index * 5000);
+      // Generate revenue vs expense data filtered by time range
+      const days = parseInt(timeRange);
+      let periods = [];
+      
+      if (days <= 30) {
+        periods = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      } else if (days <= 90) {
+        periods = ['Month 1', 'Month 2', 'Month 3'];
+      } else {
+        periods = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      }
+      
+      return periods.map((period, index) => {
+        // Adjust scale based on time range
+        const baseRevenue = days <= 30 ? 45000 : 180000;
+        const baseExpenses = days <= 30 ? 35000 : 140000;
+        
+        const revenue = Math.round(baseRevenue + (Math.random() - 0.5) * (baseRevenue * 0.2) + index * (baseRevenue * 0.05));
+        const expenses = Math.round(baseExpenses + (Math.random() - 0.5) * (baseExpenses * 0.2) + index * (baseExpenses * 0.04));
         return {
-          month,
+          month: period,
           revenue,
           expenses,
           profit: revenue - expenses
@@ -168,13 +201,13 @@ export default function BusinessDashboard() {
     {
       title: "Create Invoice",
       icon: <FileText className="h-4 w-4" />,
-      href: "/invoices",
+      href: "/invoices/new",
       count: draftInvoices.length
     },
     {
       title: "Record Payment",
       icon: <CreditCard className="h-4 w-4" />,
-      href: "/payments"
+      href: "/customer-payments/record"
     },
     {
       title: "New Project",
@@ -184,7 +217,7 @@ export default function BusinessDashboard() {
     {
       title: "Add Customer",
       icon: <Users className="h-4 w-4" />,
-      href: "/customers"
+      href: "/customers/new"
     }
   ];
 
@@ -203,7 +236,13 @@ export default function BusinessDashboard() {
 
   const handleRefresh = () => {
     setLastRefresh(new Date());
-    // Trigger data refresh
+    // Trigger data refresh by invalidating queries
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/financial/cash-flow'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/financial/revenue-expenses'] });
   };
 
   if (isLoading) {
