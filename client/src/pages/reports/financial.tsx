@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,24 +18,29 @@ export default function FinancialReportsPage() {
   const [, setLocation] = useLocation();
   const [period, setPeriod] = useState('6months');
   const [reportType, setReportType] = useState('profit-loss');
+  const { companyId } = useCompany();
 
   // Fetch the same dashboard data to ensure consistency
   const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ['/api/dashboard/stats'],
+    queryKey: ['/api/dashboard/stats', companyId],
+    enabled: !!companyId,
   });
 
   const { data: salesStats } = useQuery({
-    queryKey: ['/api/sales/stats'],
+    queryKey: ['/api/sales/stats', companyId],
+    enabled: !!companyId,
   });
 
   // Fetch Trial Balance Data
   const { data: trialBalanceData } = useQuery({
-    queryKey: ['/api/financial/trial-balance'],
+    queryKey: ['/api/financial/trial-balance', companyId],
+    enabled: !!companyId,
   });
 
   // Fetch Real Financial Ratios
   const { data: financialRatios, isLoading: ratiosLoading } = useQuery({
-    queryKey: ['/api/financial-ratios'],
+    queryKey: ['/api/financial-ratios', companyId],
+    enabled: !!companyId,
   });
 
   if (isLoading) {
