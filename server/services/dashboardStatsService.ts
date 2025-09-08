@@ -347,14 +347,21 @@ export class DashboardStatsService {
     const formatForFrontend = (value: number) => {
       return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
+
+    // Calculate profit margin from real company data
+    const totalRevenue = Number(invoiceData.rows[0]?.total_revenue || 0);
+    const totalExpenses = Number(expenseData.rows[0]?.total_expenses || 0);
+    const netProfit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0.0';
     
     return {
-      totalRevenue: formatForFrontend(Number(invoiceData.rows[0]?.total_revenue || 0)),
+      totalRevenue: formatForFrontend(totalRevenue),
       outstandingInvoices: formatForFrontend(Number(invoiceData.rows[0]?.outstanding_invoices || 0)),
       totalCustomers: Number(customerData.rows[0]?.total_customers || 0),
       pendingEstimates: Number(estimateData.rows[0]?.pending_estimates || 0),
-      totalExpenses: formatForFrontend(Number(expenseData.rows[0]?.total_expenses || 0)),
+      totalExpenses: formatForFrontend(totalExpenses),
       bankBalance: Number(bankData.rows[0]?.total_bank_balance || 0), // Total cash balance from all bank accounts
+      profitMargin: profitMargin, // Real profit margin calculated from company data
       recentActivities: [],
       recentInvoices: [],
       profitLossData: [],
