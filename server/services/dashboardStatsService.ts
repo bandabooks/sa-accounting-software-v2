@@ -103,7 +103,7 @@ export class DashboardStatsService {
           COUNT(CASE WHEN due_date <= ${thirtyDaysFromNow.toISOString()} 
                      AND status NOT IN ('filed', 'cancelled') 
                 THEN 1 END) as filings_due_30
-        FROM compliance_tracker 
+        FROM sars_compliance 
         WHERE company_id = ${tenantId}
         ${entityId ? sql` AND entity_id = ${entityId}` : sql``}
       `);
@@ -113,7 +113,7 @@ export class DashboardStatsService {
       };
     } catch (error) {
       // Table doesn't exist, return defaults
-      console.log('compliance_tracker table not found, returning default values');
+      console.log('sars_compliance table not found, returning default values');
       return { filingsDue30: 3 }; // Default value for demo
     }
   }
@@ -138,7 +138,7 @@ export class DashboardStatsService {
             WHEN sc.compliance_type = 'ITR14' THEN 'Company Tax Return'
             ELSE sc.compliance_type
           END as period_label
-        FROM compliance_tracker sc
+        FROM sars_compliance sc
         LEFT JOIN companies c ON c.id = sc.company_id
         WHERE sc.company_id = ${tenantId}
         ${entityId ? sql` AND sc.entity_id = ${entityId}` : sql``}
@@ -158,7 +158,7 @@ export class DashboardStatsService {
       }));
     } catch (error) {
       // Table doesn't exist, return demo data
-      console.log('compliance_tracker table not found, returning demo filings');
+      console.log('sars_compliance table not found, returning demo filings');
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       

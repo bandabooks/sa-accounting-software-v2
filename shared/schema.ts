@@ -6775,62 +6775,6 @@ export type AiMatchingMetrics = typeof aiMatchingMetrics.$inferSelect;
 export type InsertAiDuplicateDetection = z.infer<typeof insertAiDuplicateDetectionSchema>;
 export type AiDuplicateDetection = typeof aiDuplicateDetection.$inferSelect;
 
-// AI Learning interfaces for transaction matching
-export interface UserCorrection {
-  originalSuggestion: {
-    accountId: string;
-    accountName: string;
-    confidence: number;
-  };
-  userChoice: {
-    accountId: string;
-    accountName: string;
-  };
-  transactionPattern: {
-    description: string;
-    amount?: number;
-    type: 'income' | 'expense';
-  };
-  timestamp: Date;
-  userId: number;
-  companyId: number;
-}
-
-export interface LearningPattern {
-  id?: string;
-  pattern: string;
-  accountId: string;
-  accountName: string;
-  frequency: number;
-  lastUsed: Date;
-  averageAmount?: number;
-  confidence: number;
-  companyId: number;
-}
-
-export interface MatchingRule {
-  id?: string;
-  ruleType: 'keyword' | 'amount' | 'combined';
-  pattern: string;
-  accountId: string;
-  accountName: string;
-  confidence: number;
-  isActive: boolean;
-  lastUsed?: Date;
-  usageCount: number;
-  companyId: number;
-  createdBy: number;
-}
-
-export interface LearningMetrics {
-  totalTransactions: number;
-  correctPredictions: number;
-  userCorrections: number;
-  accuracy: number;
-  learningRate: number;
-  lastUpdated: Date;
-}
-
 // Bank Statement Import Management
 export const bankStatementImports = pgTable('bank_statement_imports', {
   id: serial('id').primaryKey(),

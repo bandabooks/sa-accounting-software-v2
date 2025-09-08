@@ -1577,7 +1577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ${permissions.map((perm: any) => `
                 <tr>
                   <td>${perm.roleId || 'N/A'}</td>
-                  <td>${roles.find((r: any) => r.id === perm.roleId)?.name || 'Unknown Role'}</td>
+                  <td>${roles.find((r: any) => r.id === perm.roleId)?.displayName || roles.find((r: any) => r.id === perm.roleId)?.name || 'Unknown Role'}</td>
                   <td>${perm.moduleId || perm.permission?.split(':')[0] || 'General'}</td>
                   <td>${perm.permissionType || perm.permission?.split(':')[1] || 'Unknown'}</td>
                   <td><span style="color: ${perm.enabled ? 'green' : 'red'};">${perm.enabled ? '✅ Enabled' : '❌ Disabled'}</span></td>
@@ -2649,8 +2649,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           invoice: invoiceUpdate ? {
             id: invoiceUpdate.id,
             status: invoiceUpdate.status,
-            total: invoiceUpdate.total,
-            subtotal: invoiceUpdate.subtotal
+            paidAmount: invoiceUpdate.paidAmount,
+            totalAmount: invoiceUpdate.totalAmount
           } : null,
           dashboardStats
         }
@@ -2767,7 +2767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <hr style="margin: 20px 0;">
             <h3>Invoice Details:</h3>
             <p><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
-            <p><strong>Date:</strong> ${new Date(invoice.issueDate).toLocaleDateString()}</p>
+            <p><strong>Date:</strong> ${new Date(invoice.date).toLocaleDateString()}</p>
             <p><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}</p>
             <p><strong>Total Amount:</strong> R ${invoice.total}</p>
             <p><strong>Status:</strong> ${invoice.status}</p>
@@ -2779,7 +2779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </p>
           </div>
         `,
-        bodyText: `Invoice #${invoice.invoiceNumber}\n\n${emailMessage}\n\nInvoice Details:\nInvoice Number: ${invoice.invoiceNumber}\nDate: ${new Date(invoice.issueDate).toLocaleDateString()}\nDue Date: ${new Date(invoice.dueDate).toLocaleDateString()}\nTotal Amount: R ${invoice.total}\nStatus: ${invoice.status}\n\nCustomer: ${invoice.customer?.name || 'N/A'}\n\nThis invoice was sent from Taxnify Business Management Platform.`
+        bodyText: `Invoice #${invoice.invoiceNumber}\n\n${emailMessage}\n\nInvoice Details:\nInvoice Number: ${invoice.invoiceNumber}\nDate: ${new Date(invoice.date).toLocaleDateString()}\nDue Date: ${new Date(invoice.dueDate).toLocaleDateString()}\nTotal Amount: R ${invoice.total}\nStatus: ${invoice.status}\n\nCustomer: ${invoice.customer?.name || 'N/A'}\n\nThis invoice was sent from Taxnify Business Management Platform.`
       });
       
       // Update invoice status to "sent" after successful email sending
@@ -6104,7 +6104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalSales = invoices
         .filter(invoice => invoice.status === 'paid' || invoice.status === 'sent')
         .reduce((sum, invoice) => {
-          const amount = parseFloat(invoice.total || '0');
+          const amount = parseFloat(invoice.total || invoice.totalAmount || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
@@ -6118,7 +6118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const outstandingAmount = outstandingInvoices
         .reduce((sum, invoice) => {
-          const amount = parseFloat(invoice.total || '0');
+          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
@@ -6146,24 +6146,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       const currentMonthInvoices = invoices.filter(invoice => {
-        const invoiceDate = new Date(invoice.issueDate);
+        const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
         return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
       });
       const currentMonthSales = currentMonthInvoices
         .reduce((sum, invoice) => {
-          const amount = parseFloat(invoice.total || '0');
+          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
       const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
       const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
       const previousMonthInvoices = invoices.filter(invoice => {
-        const invoiceDate = new Date(invoice.issueDate);
+        const invoiceDate = new Date(invoice.issueDate || invoice.invoiceDate);
         return invoiceDate.getMonth() === previousMonth && invoiceDate.getFullYear() === previousYear;
       });
       const previousMonthSales = previousMonthInvoices
         .reduce((sum, invoice) => {
-          const amount = parseFloat(invoice.total || '0');
+          const amount = parseFloat(invoice.totalAmount || invoice.total || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
       
@@ -6180,7 +6180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overdueInvoices: overdueInvoices.length,
         activeCustomers: activeCustomers,
         newCustomers: customers.filter(customer => {
-          const createdDate = new Date(customer.createdAt || '');
+          const createdDate = new Date(customer.createdAt || customer.createdDate || '');
           const oneMonthAgo = new Date();
           oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
           return createdDate > oneMonthAgo;
