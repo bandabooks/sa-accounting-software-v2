@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronLeft, FileText, Users, Calendar, DollarSign, Save, Send, Eye, Copy, Settings } from "lucide-react";
+import { ChevronLeft, FileText, Users, Calendar, DollarSign, Save, Send, Eye, Copy, Settings, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -100,15 +100,26 @@ export default function CreateContract() {
   // Create contract mutation
   const createContractMutation = useMutation({
     mutationFn: async (data: ContractForm) => {
-      return await apiRequest("/api/contracts", "POST", data);
+      const payload = {
+        ...data,
+        templateId: parseInt(data.templateId),
+        customerId: parseInt(data.customerId),
+        projectId: data.projectId ? parseInt(data.projectId) : undefined,
+        contractValue: data.contractValue ? parseFloat(data.contractValue) : undefined,
+        mergeFields,
+      };
+      return await apiRequest("/api/contracts", {
+        method: "POST",
+        body: payload,
+      });
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast({
         title: "Contract Created",
         description: "Your contract has been created successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
-      navigate("/contracts");
+      navigate(`/contracts/${response.id}`);
     },
     onError: (error: any) => {
       toast({
@@ -186,51 +197,252 @@ export default function CreateContract() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+    <div className="p-4 max-w-4xl mx-auto">
+      {/* Compact Header */}
+      <div className="flex items-center gap-3 mb-4">
         <Button 
           variant="ghost" 
+          size="sm"
           onClick={() => navigate("/contracts")}
-          className="p-2"
+          className="p-2 h-8 w-8"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contract Information</h1>
-          <p className="text-gray-600">Create a new professional engagement contract</p>
+          <h1 className="text-lg font-bold text-gray-900">Create New Contract</h1>
+          <p className="text-sm text-gray-600">Professional engagement letter</p>
         </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Card className="border border-gray-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <FileText className="w-4 h-4" />
                 Contract Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Options Row */}
-              <div className="flex gap-4">
+            <CardContent className="space-y-4">
+              {/* Compact Grid Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                 <FormField
                   control={form.control}
-                  name="trash"
+                  name="customerId"
                   render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormLabel className="text-sm font-normal">
-                        Trash
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium flex items-center gap-1">
+                        <span className="text-red-500">*</span>
+                        Customer
                       </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isLoadingCustomers ? (
+                            <SelectItem value="loading" disabled>
+                              Loading customers...
+                            </SelectItem>
+                          ) : customers.length === 0 ? (
+                            <SelectItem value="no-customers" disabled>
+                              No customers found.
+                            </SelectItem>
+                          ) : (
+                            customers.map((customer: Customer) => (
+                              <SelectItem key={customer.id} value={customer.id.toString()}>
+                                {customer.name} {customer.company && `(${customer.company})`}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium flex items-center gap-1">
+                        <span className="text-red-500">*</span>
+                        Subject
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter contract subject" 
+                          className="h-9" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <FormField
+                  control={form.control}
+                  name="contractValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Contract Value</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">R</span>
+                          <Input 
+                            placeholder="0.00" 
+                            className="pl-8 h-9" 
+                            {...field} 
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contractType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Contract Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {contractTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium flex items-center gap-1">
+                        <span className="text-red-500">*</span>
+                        Start Date
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          className="h-9"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">End Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          className="h-9" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+
+                <FormField
+                  control={form.control}
+                  name="templateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium flex items-center gap-1">
+                        <span className="text-red-500">*</span>
+                        Contract Template
+                      </FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        handleTemplateChange(value);
+                      }} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select template" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isLoadingTemplates ? (
+                            <SelectItem value="loading" disabled>
+                              Loading templates...
+                            </SelectItem>
+                          ) : templates.length === 0 ? (
+                            <SelectItem value="no-templates" disabled>
+                              No templates found.
+                            </SelectItem>
+                          ) : (
+                            templates.map((template: ContractTemplate) => (
+                              <SelectItem key={template.id} value={template.id.toString()}>
+                                {template.name} (v{template.version})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          rows={3}
+                          placeholder="Additional contract details and terms..."
+                          className="resize-none"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Options Row */}
+              <div className="flex gap-6 pt-2">
                 <FormField
                   control={form.control}
                   name="hideFromCustomer"
@@ -248,251 +460,70 @@ export default function CreateContract() {
                     </FormItem>
                   )}
                 />
-              </div>
-
-              {/* Customer Selection */}
-              <FormField
-                control={form.control}
-                name="customerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <span className="text-red-500">*</span>
-                      <Users className="w-4 h-4" />
-                      Customer
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select and begin typing" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingCustomers ? (
-                          <SelectItem value="loading" disabled>
-                            Loading customers...
-                          </SelectItem>
-                        ) : customers.length === 0 ? (
-                          <SelectItem value="no-customers" disabled>
-                            No customers found. Please add a customer first.
-                          </SelectItem>
-                        ) : (
-                          customers.map((customer: Customer) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {customer.name} {customer.company && `(${customer.company})`}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Subject */}
-              <FormField
-                control={form.control}
-                name="subject"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <span className="text-red-500">*</span>
-                      Subject
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter contract subject" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Contract Value */}
-              <FormField
-                control={form.control}
-                name="contractValue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contract Value</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                        <Input 
-                          placeholder="0.00" 
-                          className="pl-10" 
-                          {...field} 
-                        />
-                        <span className="absolute right-3 top-3 text-sm text-gray-500">R</span>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Contract Type */}
-              <FormField
-                control={form.control}
-                name="contractType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contract type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Nothing selected" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {contractTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2"
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Manage Types
-                    </Button>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Date Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="startDate"
+                  name="trash"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <span className="text-red-500">*</span>
-                        <Calendar className="w-4 h-4" />
-                        Start Date
+                    <FormItem className="flex items-center space-x-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal">
+                        Mark as draft
                       </FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          placeholder="06-09-2025"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-
-              {/* Template Selection */}
-              <FormField
-                control={form.control}
-                name="templateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contract Template</FormLabel>
-                    <Select onValueChange={(value) => {
-                      field.onChange(value);
-                      handleTemplateChange(value);
-                    }} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a professional template" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingTemplates ? (
-                          <SelectItem value="loading" disabled>
-                            Loading templates...
-                          </SelectItem>
-                        ) : templates.length === 0 ? (
-                          <SelectItem value="no-templates" disabled>
-                            No templates found. Please create a template first.
-                          </SelectItem>
-                        ) : (
-                          templates.map((template: ContractTemplate) => (
-                            <SelectItem key={template.id} value={template.id.toString()}>
-                              {template.name} (v{template.version})
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Description */}
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        rows={4}
-                        placeholder="Additional contract details and terms..."
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
 
           {/* Template Fields */}
           {selectedTemplate && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Template Merge Fields</CardTitle>
-                <CardDescription>
-                  Fill in the details for {selectedTemplate.name}
+            <Card className="border border-gray-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  Template Details
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Fill in the merge fields for <span className="font-medium">{selectedTemplate.name}</span>
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Array.isArray(selectedTemplate.fields) ? 
-                    selectedTemplate.fields.map((field) => (
-                      <div key={field} className="space-y-2">
-                        <Label htmlFor={field}>{field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</Label>
-                        <Input
-                          id={field}
-                          value={mergeFields[field] || ''}
-                          onChange={(e) => setMergeFields(prev => ({
-                            ...prev,
-                            [field]: e.target.value
-                          }))}
-                          placeholder={`Enter ${field.replace(/_/g, ' ')}`}
-                        />
-                      </div>
-                    )) : (
-                      <p className="text-gray-500 col-span-2">No merge fields available for this template.</p>
-                    )
+                  {(() => {
+                    const fields = typeof selectedTemplate.fields === 'string' 
+                      ? JSON.parse(selectedTemplate.fields) 
+                      : (Array.isArray(selectedTemplate.fields) ? selectedTemplate.fields : []);
+                    
+                    return Array.isArray(fields) && fields.length > 0 ? 
+                      fields.map((field: string) => (
+                        <div key={field} className="space-y-2">
+                          <Label htmlFor={field} className="text-sm font-medium">
+                            {field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </Label>
+                          <Input
+                            id={field}
+                            className="h-9"
+                            value={mergeFields[field] || ''}
+                            onChange={(e) => setMergeFields(prev => ({
+                              ...prev,
+                              [field]: e.target.value
+                            }))}
+                            placeholder={`Enter ${field.replace(/_/g, ' ')}`}
+                          />
+                        </div>
+                      )) : (
+                        <div className="col-span-2 text-center py-4">
+                          <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">This template has no merge fields.</p>
+                        </div>
+                      );
+                  })()
                   }
                 </div>
               </CardContent>
@@ -500,30 +531,59 @@ export default function CreateContract() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-6">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => navigate("/contracts")}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline"
-              disabled={!selectedTemplate}
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              Preview
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={createContractMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {createContractMutation.isPending ? "Creating..." : "Save"}
-            </Button>
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="text-sm text-gray-500">
+              {selectedTemplate ? (
+                <span className="flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  Template selected: {selectedTemplate.name}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  Select a template to continue
+                </span>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate("/contracts")}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline"
+                size="sm"
+                disabled={!selectedTemplate}
+                className="hidden md:inline-flex"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </Button>
+              <Button 
+                type="submit" 
+                size="sm"
+                disabled={createContractMutation.isPending || !form.formState.isValid}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {createContractMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Create Contract
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </Form>
