@@ -32,17 +32,79 @@ export default function BusinessDashboard() {
     refetchInterval: 300000, // 5 minutes
   });
 
+  // Calculate date range based on timeRange selection
+  const getDateRange = () => {
+    const today = new Date();
+    const days = parseInt(timeRange);
+    const startDate = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
+    return {
+      from: startDate.toISOString().split('T')[0],
+      to: today.toISOString().split('T')[0]
+    };
+  };
+
+  const { from, to } = getDateRange();
+
   // Fetch real chart data - Cash Flow 
-  const { data: cashFlowData } = useQuery({
-    queryKey: ["/api/reports/cash-flow", companyId, timeRange],
+  const { data: cashFlowRawData } = useQuery({
+    queryKey: [`/api/reports/cash-flow/${from}/${to}`, companyId, timeRange],
     enabled: !!companyId,
   });
 
-  // Fetch real chart data - Revenue vs Expenses
-  const { data: revenueExpenseData } = useQuery({
-    queryKey: ["/api/reports/revenue-expenses", companyId, timeRange], 
+  // Fetch real chart data - Profit & Loss (for revenue vs expenses)
+  const { data: profitLossData } = useQuery({
+    queryKey: [`/api/reports/profit-loss/${from}/${to}`, companyId, timeRange], 
     enabled: !!companyId,
   });
+
+  // Transform API data for charts
+  const transformCashFlowData = (rawData: any) => {
+    if (!rawData?.transactions) return null;
+    
+    // Group by time periods and calculate flows
+    const periodData = rawData.transactions.reduce((acc: any, transaction: any) => {
+      const date = new Date(transaction.date);
+      const period = `Week ${Math.floor(date.getDate() / 7) + 1}`;
+      
+      if (!acc[period]) {
+        acc[period] = { month: period, cashIn: 0, cashOut: 0, netFlow: 0 };
+      }
+      
+      if (transaction.amount > 0) {
+        acc[period].cashIn += transaction.amount;
+      } else {
+        acc[period].cashOut += Math.abs(transaction.amount);
+      }
+      acc[period].netFlow = acc[period].cashIn - acc[period].cashOut;
+      
+      return acc;
+    }, {});
+    
+    return Object.values(periodData);
+  };
+
+  const transformProfitLossData = (rawData: any) => {
+    if (!rawData) return null;
+    
+    // Create weekly data from profit/loss data
+    const weeks = [];
+    for (let i = 1; i <= 4; i++) {
+      const weekRevenue = (rawData.totalIncome || 0) / 4;
+      const weekExpenses = (rawData.totalExpenses || 0) / 4;
+      const profitMargin = weekRevenue > 0 ? ((weekRevenue - weekExpenses) / weekRevenue) * 100 : 0;
+      
+      weeks.push({
+        month: `Week ${i}`,
+        revenue: Math.round(weekRevenue),
+        expenses: Math.round(weekExpenses),
+        profitMargin: Math.round(profitMargin * 10) / 10
+      });
+    }
+    return weeks;
+  };
+
+  const cashFlowData = transformCashFlowData(cashFlowRawData);
+  const revenueExpenseData = transformProfitLossData(profitLossData);
 
   // Fallback data when API data is loading or unavailable
   const defaultCashFlowData = [
@@ -113,8 +175,8 @@ export default function BusinessDashboard() {
   const handleRefresh = () => {
     setLastRefresh(new Date());
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats', companyId] });
-    queryClient.invalidateQueries({ queryKey: ['/api/reports/cash-flow', companyId, timeRange] });
-    queryClient.invalidateQueries({ queryKey: ['/api/reports/revenue-expenses', companyId, timeRange] });
+    queryClient.invalidateQueries({ queryKey: [`/api/reports/cash-flow/${from}/${to}`, companyId, timeRange] });
+    queryClient.invalidateQueries({ queryKey: [`/api/reports/profit-loss/${from}/${to}`, companyId, timeRange] });
   };
 
   if (isLoading) {
