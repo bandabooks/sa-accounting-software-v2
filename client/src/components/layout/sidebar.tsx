@@ -777,11 +777,8 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
       <button
         ref={buttonRef}
         onClick={() => {
-          // For main menu groups, navigate to their first item and expand dropdown
-          if ((group.id === "sales" || group.id === "purchases" || group.id === "compliance" || group.id === "banking" || group.id === "employees" || group.id === "vat" || group.id === "contracts") && visibleItems.length > 0) {
-            setLocation(visibleItems[0].path); // Navigate to the first item (dashboard/main page)
-          }
-          onToggle(); // Always toggle the dropdown
+          // Simply toggle the dropdown - no automatic navigation
+          onToggle();
         }}
         className={`group w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
           hasActiveItem || isExpanded
@@ -878,14 +875,15 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
     "COMPANY_VIEW", "SETTINGS_VIEW", "COMPLIANCE_VIEW"
   ];
 
-  // Auto-expand the group containing the active page
+  // Auto-expand the group containing the active page (excluding Business Dashboard to prevent auto-opening)
   React.useEffect(() => {
     const activeGroup = roleBasedNavigationGroups.find(group => 
       group.items.some(item => 
         location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path))
       )
     );
-    if (activeGroup) {
+    // Only auto-expand if it's not the Business Dashboard (overview group) or if user explicitly navigated to dashboard items
+    if (activeGroup && (activeGroup.id !== "overview" || location === "/" || location === "/practice-dashboard")) {
       setExpandedGroup(activeGroup.id);
     }
   }, [location]);
