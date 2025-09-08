@@ -310,7 +310,7 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={cashFlowData}>
+                  <LineChart data={Array.isArray(cashFlowData) ? cashFlowData : []}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} className="text-xs" />
                     <YAxis 
@@ -371,7 +371,7 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueExpenseData}>
+                  <BarChart data={Array.isArray(revenueExpenseData) ? revenueExpenseData : []}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} className="text-xs" />
                     <YAxis 
