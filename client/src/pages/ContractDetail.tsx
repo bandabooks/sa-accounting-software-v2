@@ -17,7 +17,9 @@ import {
   Download,
   Copy,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Calendar,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,10 +113,7 @@ export default function ContractDetail() {
   // Email contract mutation
   const emailContractMutation = useMutation({
     mutationFn: async (email: string) => {
-      return apiRequest(`/api/contracts/${contractId}/send-email`, {
-        method: "POST",
-        body: { email }
-      });
+      return apiRequest(`/api/contracts/${contractId}/send-email`, "POST", { email });
     },
     onSuccess: () => {
       toast({
@@ -183,6 +182,34 @@ export default function ContractDetail() {
     // Navigate to create a new contract based on this one
     window.location.href = `/contracts/create?renewal=${contractId}`;
   };
+
+  // Renewal mutation
+  const renewContractMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/contracts/${contractId}/renew`, "POST");
+    },
+    onSuccess: (response: any) => {
+      toast({
+        title: "Contract Renewed",
+        description: `New contract #${response.id} has been created based on this contract.`,
+      });
+      // Navigate to the new contract
+      window.location.href = `/contracts/${response.id}`;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to renew contract.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch renewal history
+  const { data: renewalHistory = [], isLoading: renewalHistoryLoading } = useQuery<Contract[]>({
+    queryKey: [`/api/contracts/${contractId}/renewals`],
+    enabled: !!contractId,
+  });
 
   const handleAddAttachment = () => {
     // Create file input element
@@ -273,6 +300,10 @@ export default function ContractDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleRenewContract}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Renew Contract
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 <CheckSquare className="w-4 h-4 mr-2" />
                 Mark as signed
@@ -293,10 +324,11 @@ export default function ContractDetail() {
 
       {/* Compact Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 mb-4">
+        <TabsList className="grid w-full grid-cols-5 mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          <TabsTrigger value="renewals">Renewals</TabsTrigger>
           <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
         </TabsList>
 
@@ -509,6 +541,102 @@ export default function ContractDetail() {
                 <Paperclip className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-2">No attachments uploaded yet</p>
                 <p className="text-sm text-gray-500">Click "Add Attachment" or drag files here to upload</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Renewals Tab */}
+        <TabsContent value="renewals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5" />
+                    Contract Renewals
+                  </CardTitle>
+                  <CardDescription>
+                    Manage contract renewals and view renewal history
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={handleRenewContract}
+                  disabled={renewContractMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  {renewContractMutation.isPending ? "Creating..." : "Renew Contract"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current Contract Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Current Contract</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Status:</span>
+                    <span className="ml-2 font-medium">{contract?.status}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Created:</span>
+                    <span className="ml-2">{contract?.createdAt ? format(new Date(contract.createdAt), "MMM d, yyyy") : 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Value:</span>
+                    <span className="ml-2">{contract?.currency} {contract?.value?.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Expires:</span>
+                    <span className="ml-2">{contract?.expiresAt ? format(new Date(contract.expiresAt), "MMM d, yyyy") : 'No expiry'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Renewal History */}
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Renewal History
+                </h4>
+                
+                {renewalHistoryLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="animate-pulse bg-gray-200 h-16 rounded"></div>
+                    ))}
+                  </div>
+                ) : renewalHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {renewalHistory.map((renewal: any, index: number) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Contract #{renewal.id}</p>
+                            <p className="text-sm text-gray-600">
+                              Renewed on {format(new Date(renewal.createdAt), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="secondary" className="mb-1">
+                              {renewal.status}
+                            </Badge>
+                            <p className="text-sm text-gray-600">
+                              {renewal.currency} {renewal.value?.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <p>No renewal history found</p>
+                    <p className="text-sm">This contract has not been renewed yet</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

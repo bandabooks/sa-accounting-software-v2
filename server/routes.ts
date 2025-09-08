@@ -18827,6 +18827,64 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // Contract renewal endpoints
+  app.post("/api/contracts/:id/renew", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+      const originalContract = await contractService.getContract(req.user.companyId, contractId);
+      
+      if (!originalContract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+
+      // Create a new contract based on the original
+      const renewalData = {
+        templateId: originalContract.templateId,
+        customerId: originalContract.customerId,
+        title: `${originalContract.title} (Renewal)`,
+        status: 'draft',
+        value: originalContract.value,
+        currency: originalContract.currency,
+        createdBy: req.user.id,
+        // Set new dates - 1 year from now
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      };
+
+      const renewedContract = await contractService.createContract(req.user.companyId, renewalData);
+      
+      res.json(renewedContract);
+    } catch (error) {
+      console.error("Error renewing contract:", error);
+      res.status(500).json({ error: "Failed to renew contract" });
+    }
+  });
+
+  app.get("/api/contracts/:id/renewals", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+      
+      // Get all contracts that were created as renewals of this contract
+      // This is a simplified implementation - in a real system you'd track renewal relationships
+      const allContracts = await contractService.getContracts(req.user.companyId);
+      const originalContract = await contractService.getContract(req.user.companyId, contractId);
+      
+      if (!originalContract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      
+      const renewals = allContracts.filter(contract => 
+        contract.title?.includes('(Renewal)') && 
+        contract.customerId === originalContract.customerId
+      );
+
+      res.json(renewals);
+    } catch (error) {
+      console.error("Error fetching contract renewals:", error);
+      res.status(500).json({ error: "Failed to fetch contract renewals" });
+    }
+  });
+
   console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, Company Email Settings, Financial Ratios, and Contracts Module!");
   return httpServer;
 }
