@@ -27,6 +27,7 @@ export interface DashboardStats {
 
   // money
   bankBalances: Array<{ accountId: string; accountName: string; balance: number }>;
+  bankBalance: number; // Total of all bank account balances
   cashInflow: number; // period inflow
   cashOutflow: number; // period outflow
 
