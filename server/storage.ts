@@ -606,7 +606,7 @@ export interface IStorage {
     expenses: { category: string; amount: string }[];
     netProfit: string;
   }>;
-  getCashFlowReport(startDate: Date, endDate: Date): Promise<{
+  getCashFlowReport(companyId: number, startDate: Date, endDate: Date): Promise<{
     cashInflow: { source: string; amount: string }[];
     cashOutflow: { category: string; amount: string }[];
     netCashFlow: string;
@@ -4345,7 +4345,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getCashFlowReport(startDate: Date, endDate: Date): Promise<{
+  async getCashFlowReport(companyId: number, startDate: Date, endDate: Date): Promise<{
     cashInflow: { source: string; amount: string }[];
     cashOutflow: { category: string; amount: string }[];
     netCashFlow: string;
@@ -4355,7 +4355,9 @@ export class DatabaseStorage implements IStorage {
         source: sql<string>`'Customer Payments'`,
         amount: sql<string>`COALESCE(SUM(${payments.amount}), 0)`,
       }).from(payments)
+        .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
         .where(and(
+          eq(invoices.companyId, companyId),
           sql`${payments.paymentDate} >= ${startDate}`,
           sql`${payments.paymentDate} <= ${endDate}`,
           eq(payments.status, 'completed')
@@ -4366,6 +4368,7 @@ export class DatabaseStorage implements IStorage {
         amount: sql<string>`COALESCE(SUM(${expenses.amount}), 0)`,
       }).from(expenses)
         .where(and(
+          eq(expenses.companyId, companyId),
           sql`${expenses.expenseDate} >= ${startDate}`,
           sql`${expenses.expenseDate} <= ${endDate}`
         ))
