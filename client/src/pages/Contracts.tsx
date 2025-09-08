@@ -310,58 +310,58 @@ export default function Contracts() {
 
       {/* Ultra Compact Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-1 mb-3">
-        <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-[10px] text-gray-500 leading-none">Total</div>
-              <div className="text-xs font-semibold text-gray-900 leading-none mt-0.5">{statusStats.total}</div>
+        <Card className="border border-gray-200 h-6">
+          <CardContent className="p-1 h-full flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-[8px] text-gray-500 leading-none">Total</div>
+              <div className="text-[10px] font-semibold text-gray-900 leading-none">{statusStats.total}</div>
             </div>
-            <BarChart3 className="w-3 h-3 text-gray-400" />
+            <BarChart3 className="w-2.5 h-2.5 text-gray-400 flex-shrink-0" />
           </CardContent>
         </Card>
-        <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-[10px] text-gray-500 leading-none">Draft</div>
-              <div className="text-xs font-semibold text-orange-600 leading-none mt-0.5">{statusStats.draft}</div>
+        <Card className="border border-gray-200 h-6">
+          <CardContent className="p-1 h-full flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-[8px] text-gray-500 leading-none">Draft</div>
+              <div className="text-[10px] font-semibold text-orange-600 leading-none">{statusStats.draft}</div>
             </div>
-            <Edit3 className="w-3 h-3 text-orange-400" />
+            <Edit3 className="w-2.5 h-2.5 text-orange-400 flex-shrink-0" />
           </CardContent>
         </Card>
-        <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-[10px] text-gray-500 leading-none">Issued</div>
-              <div className="text-xs font-semibold text-blue-600 leading-none mt-0.5">{statusStats.issued}</div>
+        <Card className="border border-gray-200 h-6">
+          <CardContent className="p-1 h-full flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-[8px] text-gray-500 leading-none">Issued</div>
+              <div className="text-[10px] font-semibold text-blue-600 leading-none">{statusStats.issued}</div>
             </div>
-            <Send className="w-3 h-3 text-blue-400" />
+            <Send className="w-2.5 h-2.5 text-blue-400 flex-shrink-0" />
           </CardContent>
         </Card>
-        <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-[10px] text-gray-500 leading-none">Signed</div>
-              <div className="text-xs font-semibold text-yellow-600 leading-none mt-0.5">{statusStats.signed}</div>
+        <Card className="border border-gray-200 h-6">
+          <CardContent className="p-1 h-full flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-[8px] text-gray-500 leading-none">Signed</div>
+              <div className="text-[10px] font-semibold text-yellow-600 leading-none">{statusStats.signed}</div>
             </div>
-            <PenTool className="w-3 h-3 text-yellow-400" />
+            <PenTool className="w-2.5 h-2.5 text-yellow-400 flex-shrink-0" />
           </CardContent>
         </Card>
-        <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-[10px] text-gray-500 leading-none">Active</div>
-              <div className="text-xs font-semibold text-green-600 leading-none mt-0.5">{statusStats.active}</div>
+        <Card className="border border-gray-200 h-6">
+          <CardContent className="p-1 h-full flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-[8px] text-gray-500 leading-none">Active</div>
+              <div className="text-[10px] font-semibold text-green-600 leading-none">{statusStats.active}</div>
             </div>
-            <CheckCircle className="w-3 h-3 text-green-400" />
+            <CheckCircle className="w-2.5 h-2.5 text-green-400 flex-shrink-0" />
           </CardContent>
         </Card>
-        <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-[10px] text-gray-500 leading-none">Completed</div>
-              <div className="text-xs font-semibold text-purple-600 leading-none mt-0.5">{statusStats.completed}</div>
+        <Card className="border border-gray-200 h-6">
+          <CardContent className="p-1 h-full flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-[8px] text-gray-500 leading-none">Completed</div>
+              <div className="text-[10px] font-semibold text-purple-600 leading-none">{statusStats.completed}</div>
             </div>
-            <CheckCircle2 className="w-3 h-3 text-purple-400" />
+            <CheckCircle2 className="w-2.5 h-2.5 text-purple-400 flex-shrink-0" />
           </CardContent>
         </Card>
       </div>
