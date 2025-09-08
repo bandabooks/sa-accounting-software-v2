@@ -1816,7 +1816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertCustomerSchema.parse({
         ...req.body,
-        companyId: req.user.companyId || 1 // Use user's active company ID
+        companyId: req.user?.companyId || 1 // Use user's active company ID
       });
       const customer = await storage.createCustomer(validatedData);
       res.status(201).json(customer);
@@ -3215,7 +3215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check company access for non-super admins
-      if (req.user.role !== 'super_admin' && expense.companyId !== req.user.companyId) {
+      if (req.user?.role !== 'super_admin' && expense.companyId !== req.user?.companyId) {
         return res.status(403).json({ message: "Access denied" });
       }
       
