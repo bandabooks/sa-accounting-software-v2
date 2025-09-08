@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Download, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { RefreshCw, Download, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Minus, Plus, CreditCard, FolderPlus, UserPlus, FileText, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface BusinessMetric {
@@ -257,6 +257,161 @@ export default function BusinessDashboard() {
                     <Bar dataKey="expenses" fill="#f59e0b" name="Expenses" />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Row - Priority Actions, Quick Actions, Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-testid="actions-section">
+          {/* Priority Actions */}
+          <Card data-testid="priority-actions">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">Priority Actions</CardTitle>
+                <Button variant="outline" size="sm" className="text-xs">
+                  Filter
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                <div>
+                  <p className="font-medium text-red-900">Overdue Invoices</p>
+                  <p className="text-sm text-red-600">3 invoices totaling R3500</p>
+                </div>
+                <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-100">
+                  View All
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div>
+                  <p className="font-medium text-yellow-900">Due This Week</p>
+                  <p className="text-sm text-yellow-600">5 items pending and due</p>
+                </div>
+                <Button variant="outline" size="sm" className="text-yellow-600 border-yellow-300 hover:bg-yellow-100">
+                  Review
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div>
+                  <p className="font-medium text-blue-900">Pending Approvals</p>
+                  <p className="text-sm text-blue-600">8 draft invoices ready to send</p>
+                </div>
+                <Button variant="outline" size="sm" className="text-blue-600 border-blue-300 hover:bg-blue-100">
+                  Approve
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card data-testid="quick-actions">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => setLocation('/invoices/new')}
+                data-testid="button-create-invoice"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Invoice
+              </Button>
+              
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => setLocation('/payments/new')}
+                data-testid="button-record-payment"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Record Payment
+              </Button>
+              
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => setLocation('/projects/new')}
+                data-testid="button-new-project"
+              >
+                <FolderPlus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+              
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => setLocation('/customers/new')}
+                data-testid="button-add-customer"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Customer
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Recent High-Value Activity */}
+          <Card data-testid="recent-activity">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">Recent High-Value Activity</CardTitle>
+                <Button variant="outline" size="sm" className="text-xs">
+                  View All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-full">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Payment Received</p>
+                    <p className="text-sm text-gray-500">ABC Company - Invoice #1001</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-green-600">+R15,000</p>
+                  <p className="text-xs text-gray-500">2 hours ago</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-full">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Invoice Created</p>
+                    <p className="text-sm text-gray-500">XYZ Corp - Monthly Service</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-blue-600">R25,000</p>
+                  <p className="text-xs text-gray-500">4 hours ago</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-full">
+                    <Users className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">New Customer</p>
+                    <p className="text-sm text-gray-500">Tech Solutions Ltd</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-gray-600">New Lead</p>
+                  <p className="text-xs text-gray-500">1 day ago</p>
+                </div>
               </div>
             </CardContent>
           </Card>
