@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, Search, Filter, Download, Mail, PenTool, MoreVertical } from "lucide-react";
+import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, Search, Filter, Download, Mail, PenTool, MoreVertical, BarChart3, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -311,39 +311,57 @@ export default function Contracts() {
       {/* Ultra Compact Status Overview */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-1 mb-3">
         <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex flex-col justify-center">
-            <div className="text-[10px] text-gray-500 leading-none">Total</div>
-            <div className="text-xs font-semibold text-gray-900 leading-none mt-0.5">{statusStats.total}</div>
+          <CardContent className="p-1.5 h-full flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-[10px] text-gray-500 leading-none">Total</div>
+              <div className="text-xs font-semibold text-gray-900 leading-none mt-0.5">{statusStats.total}</div>
+            </div>
+            <BarChart3 className="w-3 h-3 text-gray-400" />
           </CardContent>
         </Card>
         <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex flex-col justify-center">
-            <div className="text-[10px] text-gray-500 leading-none">Draft</div>
-            <div className="text-xs font-semibold text-orange-600 leading-none mt-0.5">{statusStats.draft}</div>
+          <CardContent className="p-1.5 h-full flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-[10px] text-gray-500 leading-none">Draft</div>
+              <div className="text-xs font-semibold text-orange-600 leading-none mt-0.5">{statusStats.draft}</div>
+            </div>
+            <Edit3 className="w-3 h-3 text-orange-400" />
           </CardContent>
         </Card>
         <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex flex-col justify-center">
-            <div className="text-[10px] text-gray-500 leading-none">Issued</div>
-            <div className="text-xs font-semibold text-blue-600 leading-none mt-0.5">{statusStats.issued}</div>
+          <CardContent className="p-1.5 h-full flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-[10px] text-gray-500 leading-none">Issued</div>
+              <div className="text-xs font-semibold text-blue-600 leading-none mt-0.5">{statusStats.issued}</div>
+            </div>
+            <Send className="w-3 h-3 text-blue-400" />
           </CardContent>
         </Card>
         <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex flex-col justify-center">
-            <div className="text-[10px] text-gray-500 leading-none">Signed</div>
-            <div className="text-xs font-semibold text-yellow-600 leading-none mt-0.5">{statusStats.signed}</div>
+          <CardContent className="p-1.5 h-full flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-[10px] text-gray-500 leading-none">Signed</div>
+              <div className="text-xs font-semibold text-yellow-600 leading-none mt-0.5">{statusStats.signed}</div>
+            </div>
+            <PenTool className="w-3 h-3 text-yellow-400" />
           </CardContent>
         </Card>
         <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex flex-col justify-center">
-            <div className="text-[10px] text-gray-500 leading-none">Active</div>
-            <div className="text-xs font-semibold text-green-600 leading-none mt-0.5">{statusStats.active}</div>
+          <CardContent className="p-1.5 h-full flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-[10px] text-gray-500 leading-none">Active</div>
+              <div className="text-xs font-semibold text-green-600 leading-none mt-0.5">{statusStats.active}</div>
+            </div>
+            <CheckCircle className="w-3 h-3 text-green-400" />
           </CardContent>
         </Card>
         <Card className="border border-gray-200 h-12">
-          <CardContent className="p-1.5 h-full flex flex-col justify-center">
-            <div className="text-[10px] text-gray-500 leading-none">Completed</div>
-            <div className="text-xs font-semibold text-purple-600 leading-none mt-0.5">{statusStats.completed}</div>
+          <CardContent className="p-1.5 h-full flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-[10px] text-gray-500 leading-none">Completed</div>
+              <div className="text-xs font-semibold text-purple-600 leading-none mt-0.5">{statusStats.completed}</div>
+            </div>
+            <CheckCircle2 className="w-3 h-3 text-purple-400" />
           </CardContent>
         </Card>
       </div>
