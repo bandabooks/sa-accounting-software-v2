@@ -62,6 +62,9 @@ export class DashboardStatsService {
         level: classifyAlertLevel(new Date(filing.dueDate))
       }));
 
+      // Calculate total bank balance from all accounts
+      const totalBankBalance = bankData.reduce((sum, account) => sum + account.balance, 0);
+
       return {
         // SARS-first KPIs
         filingsDue30: filingsStats.filingsDue30,
@@ -74,6 +77,7 @@ export class DashboardStatsService {
         
         // Money
         bankBalances: bankData,
+        bankBalance: totalBankBalance, // Total cash balance for dashboard card
         cashInflow: cashFlowData.inflow,
         cashOutflow: cashFlowData.outflow,
         
@@ -312,7 +316,7 @@ export class DashboardStatsService {
    * Get legacy dashboard data for backwards compatibility
    */
   private static async getLegacyData(tenantId: number) {
-    const [invoiceData, customerData, estimateData, expenseData] = await Promise.all([
+    const [invoiceData, customerData, estimateData, expenseData, bankData] = await Promise.all([
       db.execute(sql`
         SELECT 
           COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as total_revenue,
@@ -334,6 +338,12 @@ export class DashboardStatsService {
         SELECT COALESCE(SUM(amount::numeric), 0) as total_expenses
         FROM expenses 
         WHERE company_id = ${tenantId}
+      `),
+      db.execute(sql`
+        SELECT COALESCE(SUM(current_balance::numeric), 0) as total_bank_balance
+        FROM bank_accounts 
+        WHERE company_id = ${tenantId}
+        AND is_active = true
       `)
     ]);
 
@@ -348,6 +358,7 @@ export class DashboardStatsService {
       totalCustomers: Number(customerData.rows[0]?.total_customers || 0),
       pendingEstimates: Number(estimateData.rows[0]?.pending_estimates || 0),
       totalExpenses: formatForFrontend(Number(expenseData.rows[0]?.total_expenses || 0)),
+      bankBalance: Number(bankData.rows[0]?.total_bank_balance || 0), // Total cash balance from all bank accounts
       recentActivities: [],
       recentInvoices: [],
       profitLossData: [],
@@ -367,6 +378,7 @@ export class DashboardStatsService {
       tasksToday: 0,
       complianceAlerts: [],
       bankBalances: [],
+      bankBalance: 0, // Default cash balance
       cashInflow: 0,
       cashOutflow: 0,
       arTotal: 0,
