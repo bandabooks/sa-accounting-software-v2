@@ -114,21 +114,40 @@ export class ContractService {
     return contract;
   }
 
-  async getContracts(companyId: number, status?: string): Promise<Contract[]> {
-    let query = db.select()
-      .from(contracts)
-      .where(eq(contracts.companyId, companyId));
+  async getContracts(companyId: number, status?: string): Promise<any[]> {
+    const baseQuery = db.select({
+      id: contracts.id,
+      companyId: contracts.companyId,
+      customerId: contracts.customerId,
+      templateId: contracts.templateId,
+      status: contracts.status,
+      expiresAt: contracts.expiresAt,
+      currentVersion: contracts.currentVersion,
+      projectId: contracts.projectId,
+      createdBy: contracts.createdBy,
+      createdAt: contracts.createdAt,
+      updatedAt: contracts.updatedAt,
+      // Join customer data
+      customerName: customers.name,
+      customerEmail: customers.email,
+      // Add template name if available
+      templateName: contractTemplates.name,
+    })
+    .from(contracts)
+    .leftJoin(customers, eq(contracts.customerId, customers.id))
+    .leftJoin(contractTemplates, eq(contracts.templateId, contractTemplates.id))
+    .where(eq(contracts.companyId, companyId));
     
     if (status) {
-      query = db.select()
-        .from(contracts)
+      return baseQuery
         .where(and(
           eq(contracts.companyId, companyId),
           eq(contracts.status, status)
-        ));
+        ))
+        .orderBy(desc(contracts.updatedAt));
     }
 
-    return query.orderBy(desc(contracts.updatedAt));
+    return baseQuery.orderBy(desc(contracts.updatedAt));
   }
 
   async getContract(companyId: number, contractId: number): Promise<Contract | null> {
