@@ -777,16 +777,11 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
       <button
         ref={buttonRef}
         onClick={() => {
-          // Always toggle the dropdown first to ensure proper state management
-          onToggle();
-          
-          // For main menu groups, navigate to their first item after dropdown is toggled
+          // For main menu groups, navigate to their first item and expand dropdown
           if ((group.id === "sales" || group.id === "purchases" || group.id === "compliance" || group.id === "banking" || group.id === "employees" || group.id === "vat" || group.id === "contracts") && visibleItems.length > 0) {
-            // Only navigate if the group is being expanded (not collapsed)
-            if (!isExpanded) {
-              setLocation(visibleItems[0].path);
-            }
+            setLocation(visibleItems[0].path); // Navigate to the first item (dashboard/main page)
           }
+          onToggle(); // Always toggle the dropdown
         }}
         className={`group w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 text-sm font-semibold rounded-xl transition-all duration-300 whitespace-nowrap transform hover:scale-[1.01] ${
           hasActiveItem || isExpanded
@@ -869,7 +864,6 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
   const { user } = useAuth();
   const { isModuleAvailable, currentPlan, subscription, planStatus, isSuperAdminOrOwner } = useCompanySubscription();
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [manuallyToggled, setManuallyToggled] = useState<boolean>(false);
 
   // Get role-specific navigation groups
   const userRole = user?.role || 'accountant';
@@ -884,7 +878,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
     "COMPANY_VIEW", "SETTINGS_VIEW", "COMPLIANCE_VIEW"
   ];
 
-  // Auto-expand the group containing the active page, but only if no group is manually expanded
+  // Auto-expand the group containing the active page
   React.useEffect(() => {
     const activeGroup = roleBasedNavigationGroups.find(group => 
       group.items.some(item => 
@@ -894,16 +888,11 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
     if (activeGroup) {
       setExpandedGroup(activeGroup.id);
     }
-  }, [location, roleBasedNavigationGroups]);
+  }, [location]);
 
   const toggleGroup = (groupId: string) => {
-    // Always ensure only one dropdown is open at a time
-    // If clicking the same group, collapse it. Otherwise, expand the new group and close others
-    setManuallyToggled(true);
+    // If clicking the same group, collapse it. Otherwise, expand the new group
     setExpandedGroup(prev => prev === groupId ? null : groupId);
-    
-    // Reset manual toggle flag after a short delay to allow auto-expand to work again
-    setTimeout(() => setManuallyToggled(false), 100);
   };
 
   return (
