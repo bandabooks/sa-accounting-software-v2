@@ -750,9 +750,9 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
         ref={buttonRef}
         onClick={() => {
           // For main menu groups with dashboards, navigate to their dashboard and expand dropdown
-          if (group.id === "revenue" && visibleItems.length > 0) {
+          if (group.id === "sales" && visibleItems.length > 0) {
             setLocation("/sales-dashboard"); // Navigate to sales dashboard
-          } else if (group.id === "expenses" && visibleItems.length > 0) {
+          } else if (group.id === "purchases" && visibleItems.length > 0) {
             setLocation("/purchase-dashboard"); // Navigate to purchase dashboard
           } else if (group.id === "tax_compliance" && visibleItems.length > 0) {
             setLocation("/practice-dashboard"); // Navigate to practice dashboard
