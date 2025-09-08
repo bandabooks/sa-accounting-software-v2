@@ -726,11 +726,12 @@ export interface IStorage {
   updateVatReport(id: number, data: Partial<InsertVatReport>): Promise<VatReport | undefined>;
   getVatTransactions(companyId: number): Promise<VatTransaction[]>;
   createVatTransaction(data: InsertVatTransaction): Promise<VatTransaction>;
-  updateCompanyVatSettings(companyId: number, settings: { 
-    vatRegistered: boolean; 
-    vatNumber?: string; 
-    vatPeriod?: string; 
-    vatSubmissionDate?: number;
+  updateCompanyVatSettings(companyId: number, vatSettings: {
+    isVatRegistered: boolean;
+    vatNumber?: string;
+    vatRegistrationDate?: string;
+    vatPeriodMonths?: number;
+    vatSubmissionDay?: number;
   }): Promise<Company | undefined>;
   
   // VAT Report Generation
