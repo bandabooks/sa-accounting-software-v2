@@ -84,7 +84,11 @@ export default function ContractDetail() {
   });
 
   // Fetch contract content/version
-  const { data: contractVersion, isLoading: versionLoading } = useQuery({
+  const { data: contractVersion, isLoading: versionLoading } = useQuery<{
+    bodyMd?: string;
+    version?: number;
+    mergeData?: any;
+  } | null>({
     queryKey: [`/api/contracts/${contractId}/versions/current`],
     enabled: !!contractId,
   });
