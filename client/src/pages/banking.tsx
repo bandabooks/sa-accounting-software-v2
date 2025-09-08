@@ -560,66 +560,54 @@ export default function Banking() {
         </Dialog>
       </div>
 
-        {/* Advanced Overview Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-emerald-500 to-green-600 text-white border-0 shadow-xl shadow-emerald-200">
-            <CardContent className="p-6">
+        {/* Compact Overview KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card className="bg-gradient-to-br from-emerald-500 to-green-600 text-white border-0 shadow-md">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-emerald-100 text-sm font-medium mb-1">Total Balance</p>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-emerald-100 text-xs font-medium">Total Balance</p>
+                  <p className="text-lg font-bold text-white">
                     R {totalBalance.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
                   </p>
-                  <p className="text-emerald-200 text-xs mt-1">All accounts combined</p>
                 </div>
-                <div className="p-3 bg-white/20 rounded-full">
-                  <Landmark className="h-8 w-8 text-white" />
-                </div>
+                <Landmark className="h-5 w-5 text-white opacity-80" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-xl shadow-blue-200">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-md">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-100 text-sm font-medium mb-1">Bank Accounts</p>
-                  <p className="text-3xl font-bold text-white">{bankAccounts.length}</p>
-                  <p className="text-blue-200 text-xs mt-1">Total registered</p>
+                  <p className="text-blue-100 text-xs font-medium">Bank Accounts</p>
+                  <p className="text-lg font-bold text-white">{bankAccounts.length}</p>
                 </div>
-                <div className="p-3 bg-white/20 rounded-full">
-                  <Building className="h-8 w-8 text-white" />
-                </div>
+                <Building className="h-5 w-5 text-white opacity-80" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-violet-600 text-white border-0 shadow-xl shadow-purple-200">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-purple-500 to-violet-600 text-white border-0 shadow-md">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-sm font-medium mb-1">Active Accounts</p>
-                  <p className="text-3xl font-bold text-white">{activeAccounts}</p>
-                  <p className="text-purple-200 text-xs mt-1">With positive balance</p>
+                  <p className="text-purple-100 text-xs font-medium">Active Accounts</p>
+                  <p className="text-lg font-bold text-white">{activeAccounts}</p>
                 </div>
-                <div className="p-3 bg-white/20 rounded-full">
-                  <TrendingUp className="h-8 w-8 text-white" />
-                </div>
+                <TrendingUp className="h-5 w-5 text-white opacity-80" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 shadow-xl shadow-orange-200">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 shadow-md">
+            <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-orange-100 text-sm font-medium mb-1">Last Activity</p>
-                  <p className="text-2xl font-bold text-white">Today</p>
-                  <p className="text-orange-200 text-xs mt-1">Recent transaction</p>
+                  <p className="text-orange-100 text-xs font-medium">Last Activity</p>
+                  <p className="text-base font-bold text-white">Today</p>
                 </div>
-                <div className="p-3 bg-white/20 rounded-full">
-                  <Clock className="h-8 w-8 text-white" />
-                </div>
+                <Clock className="h-5 w-5 text-white opacity-80" />
               </div>
             </CardContent>
           </Card>
@@ -775,124 +763,47 @@ export default function Banking() {
               </CardContent>
             </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {bankAccounts.map((account: any) => (
-              <Card key={account.id} className="group relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-gray-100 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02]">
-                {/* Bank Card Style Header */}
-                <div className={`h-40 bg-gradient-to-br ${
-                  account.accountName.toLowerCase().includes('current') 
-                    ? 'from-blue-600 via-indigo-600 to-purple-700' 
-                    : account.accountName.toLowerCase().includes('savings')
-                    ? 'from-green-600 via-emerald-600 to-teal-700'
-                    : account.accountName.toLowerCase().includes('credit')
-                    ? 'from-red-600 via-pink-600 to-rose-700'
-                    : 'from-gray-600 via-slate-600 to-zinc-700'
-                } relative overflow-hidden`}>
-                  {/* Bank Card Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
-                  <div className="absolute top-4 right-4 w-12 h-8 bg-white/20 rounded backdrop-blur-sm"></div>
-                  
-                  <CardContent className="p-6 relative z-10 h-full flex flex-col justify-between">
-                    <div className="flex items-start justify-between">
-                      <div className="text-white">
-                        <p className="text-white/80 text-xs font-medium uppercase tracking-wider">{account.bankName}</p>
-                        <h3 className="text-white font-bold text-lg mt-1 leading-tight">{account.accountName}</h3>
-                      </div>
-                      <Badge className={`${
-                        account.isActive 
-                          ? 'bg-green-500/20 text-green-100 border-green-300/30' 
-                          : 'bg-gray-500/20 text-gray-200 border-gray-300/30'
-                      } backdrop-blur-sm`}>
-                        {account.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    
-                    <div className="text-white mt-4">
-                      <p className="text-white/70 text-sm mb-2 font-medium">Available Balance</p>
-                      <p className="text-3xl font-bold leading-none">
-                        R {parseFloat(account.balance || "0").toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  </CardContent>
-                </div>
-
-                {/* Account Details */}
-                <CardContent className="p-6 space-y-4">
-                  {/* Account Information */}
-                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-100">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 font-medium mb-1">Account Code</p>
-                        <p className="font-mono text-sm text-gray-800">{account.accountCode}</p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Bank Accounts</CardTitle>
+              <CardDescription>Manage and monitor all your financial accounts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {bankAccounts.map((account: any) => (
+                  <div key={account.id} className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors border border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <Landmark className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 font-medium mb-1">Account Type</p>
-                        <p className="font-mono text-sm text-gray-800">{account.accountType}</p>
+                        <h3 className="font-semibold text-gray-900">{account.accountName}</h3>
+                        <p className="text-sm text-gray-500">{account.bankName} • {account.accountNumber}</p>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-3 mt-3">
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-2 py-1">
-                        <CreditCard className="h-3 w-3 mr-1" />
-                        Bank Account
-                      </Badge>
-                      <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
-                        {account.currency}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Chart of Accounts Info */}
-                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 bg-emerald-100 rounded-lg">
-                        <Shield className="h-4 w-4 text-emerald-600" />
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="font-semibold text-lg text-gray-900">R {parseFloat(account.currentBalance || "0").toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-sm text-gray-500">{account.accountType}</p>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-emerald-700 mb-1">Chart of Accounts</p>
-                        <p className="text-xs text-emerald-600">
-                          {account.accountCode} - {account.accountName}
-                        </p>
-                        <p className="text-xs text-emerald-500 mt-1">
-                          {account.transactions?.length || 0} recent transactions
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={account.isActive ? "default" : "secondary"}>
+                          {account.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditAccount(account)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex space-x-3 pt-2">
-                    <Button
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 shadow-md"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedAccount(account);
-                        setShowTransactionDialog(true);
-                        transactionForm.setValue("bankAccountId", account.id);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Transaction
-                    </Button>
-                    <Button 
-                      variant={account.isActive ? "outline" : "secondary"}
-                      size="sm" 
-                      className={`px-4 ${account.isActive 
-                        ? 'border-red-300 hover:bg-red-50 hover:border-red-400 text-red-600' 
-                        : 'border-green-300 hover:bg-green-50 hover:border-green-400 text-green-600'
-                      }`}
-                      onClick={() => {
-                        // Toggle bank account status
-                        toggleAccountMutation.mutate(account.id);
-                      }}
-                    >
-                      {account.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
           </TabsContent>
 
