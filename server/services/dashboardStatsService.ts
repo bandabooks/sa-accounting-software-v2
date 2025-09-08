@@ -62,11 +62,6 @@ export class DashboardStatsService {
         level: classifyAlertLevel(new Date(filing.dueDate))
       }));
 
-      // Calculate total bank balance from all accounts
-      const totalBankBalance = Array.isArray(bankData) 
-        ? bankData.reduce((total, account) => total + (account.balance || 0), 0)
-        : 0;
-
       return {
         // SARS-first KPIs
         filingsDue30: filingsStats.filingsDue30,
@@ -79,7 +74,6 @@ export class DashboardStatsService {
         
         // Money
         bankBalances: bankData,
-        bankBalance: totalBankBalance, // Add total bank balance for dashboard
         cashInflow: cashFlowData.inflow,
         cashOutflow: cashFlowData.outflow,
         
@@ -373,7 +367,6 @@ export class DashboardStatsService {
       tasksToday: 0,
       complianceAlerts: [],
       bankBalances: [],
-      bankBalance: 0, // Add default bank balance
       cashInflow: 0,
       cashOutflow: 0,
       arTotal: 0,
