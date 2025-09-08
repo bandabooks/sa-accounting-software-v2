@@ -1778,18 +1778,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate real cash flow data from company transactions
       const cashFlow = periods.map((period, index) => {
-        const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + (index * days * 24 * 60 * 60 * 1000 / periods.length));
-        const endDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + ((index + 1) * days * 24 * 60 * 60 * 1000 / periods.length));
+        // For better visualization, distribute the actual paid invoices and expenses across periods
+        const paidInvoices = Array.isArray(invoicesData) ? invoicesData.filter((inv: any) => inv.status === 'paid') : [];
+        const allExpenses = Array.isArray(expensesData) ? expensesData : [];
         
-        const periodInvoices = Array.isArray(invoicesData) ? invoicesData.filter((inv: any) => {
-          const invDate = new Date(inv.date || inv.createdAt);
-          return invDate >= startDate && invDate <= endDate && inv.status === 'paid';
-        }) : [];
+        const invoicesPerPeriod = Math.ceil(paidInvoices.length / periods.length);
+        const expensesPerPeriod = Math.ceil(allExpenses.length / periods.length);
         
-        const periodExpenses = Array.isArray(expensesData) ? expensesData.filter((exp: any) => {
-          const expDate = new Date(exp.date || exp.createdAt);
-          return expDate >= startDate && expDate <= endDate;
-        }) : [];
+        const startIdx = index * invoicesPerPeriod;
+        const endIdx = Math.min((index + 1) * invoicesPerPeriod, paidInvoices.length);
+        const expStartIdx = index * expensesPerPeriod;
+        const expEndIdx = Math.min((index + 1) * expensesPerPeriod, allExpenses.length);
+        
+        const periodInvoices = paidInvoices.slice(startIdx, endIdx);
+        const periodExpenses = allExpenses.slice(expStartIdx, expEndIdx);
         
         const inflow = Math.round(periodInvoices.reduce((sum: number, inv: any) => sum + (parseFloat(inv.total) || 0), 0));
         const outflow = Math.round(periodExpenses.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0));
@@ -1836,18 +1838,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate real revenue vs expenses from company data
       const revenueExpenses = periods.map((period, index) => {
-        const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + (index * days * 24 * 60 * 60 * 1000 / periods.length));
-        const endDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000) + ((index + 1) * days * 24 * 60 * 60 * 1000 / periods.length));
+        // For better visualization, let's distribute the actual data across periods
+        const totalInvoices = Array.isArray(invoicesData) ? invoicesData.length : 0;
+        const totalExpenses = Array.isArray(expensesData) ? expensesData.length : 0;
         
-        const periodInvoices = Array.isArray(invoicesData) ? invoicesData.filter((inv: any) => {
-          const invDate = new Date(inv.date || inv.createdAt);
-          return invDate >= startDate && invDate <= endDate;
-        }) : [];
+        // Distribute invoices and expenses across periods to show trend
+        const invoicesPerPeriod = Math.ceil(totalInvoices / periods.length);
+        const expensesPerPeriod = Math.ceil(totalExpenses / periods.length);
         
-        const periodExpenses = Array.isArray(expensesData) ? expensesData.filter((exp: any) => {
-          const expDate = new Date(exp.date || exp.createdAt);
-          return expDate >= startDate && expDate <= endDate;
-        }) : [];
+        const startIdx = index * invoicesPerPeriod;
+        const endIdx = Math.min((index + 1) * invoicesPerPeriod, totalInvoices);
+        const expStartIdx = index * expensesPerPeriod;
+        const expEndIdx = Math.min((index + 1) * expensesPerPeriod, totalExpenses);
+        
+        const periodInvoices = Array.isArray(invoicesData) ? invoicesData.slice(startIdx, endIdx) : [];
+        const periodExpenses = Array.isArray(expensesData) ? expensesData.slice(expStartIdx, expEndIdx) : [];
         
         const revenue = Math.round(periodInvoices.reduce((sum: number, inv: any) => sum + (parseFloat(inv.total) || 0), 0));
         const expenses = Math.round(periodExpenses.reduce((sum: number, exp: any) => sum + (parseFloat(exp.amount) || 0), 0));
