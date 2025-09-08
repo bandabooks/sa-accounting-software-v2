@@ -149,7 +149,7 @@ export default function BusinessDashboard() {
 
   const businessMetrics: BusinessMetric[] = [
     {
-      title: "Cash Balance",
+      title: "Bank Balance",
       value: Math.round((dashboardStats as any)?.bankBalance || 245800),
       change: 5.2,
       changeType: 'increase',
