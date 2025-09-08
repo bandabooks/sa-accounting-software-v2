@@ -31,10 +31,10 @@ export default function BusinessDashboard() {
 
   // Sample chart data
   const cashFlowData = [
-    {month: "Week 1", net: 10000},
-    {month: "Week 2", net: 12000},
-    {month: "Week 3", net: 11000},
-    {month: "Week 4", net: 13000}
+    {month: "Week 1", cashIn: 25000, cashOut: 15000, netFlow: 10000},
+    {month: "Week 2", cashIn: 28000, cashOut: 16000, netFlow: 12000},
+    {month: "Week 3", cashIn: 27000, cashOut: 16000, netFlow: 11000},
+    {month: "Week 4", cashIn: 29000, cashOut: 16000, netFlow: 13000}
   ];
 
   const revenueExpenseData = [
@@ -223,13 +223,7 @@ export default function BusinessDashboard() {
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={cashFlowData}>
-                    <defs>
-                      <linearGradient id="cashFlowGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
+                  <LineChart data={cashFlowData}>
                     <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
                     <XAxis 
                       dataKey="month" 
@@ -246,7 +240,7 @@ export default function BusinessDashboard() {
                       tick={{ fill: '#64748b' }}
                     />
                     <Tooltip 
-                      formatter={(value) => [`R${Number(value).toLocaleString()}`, 'Net Cash Flow']}
+                      formatter={(value, name) => [`R${Number(value).toLocaleString()}`, name]}
                       contentStyle={{
                         backgroundColor: '#ffffff',
                         border: '1px solid #e2e8f0',
@@ -254,15 +248,34 @@ export default function BusinessDashboard() {
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <Area 
+                    <Line 
                       type="monotone" 
-                      dataKey="net" 
+                      dataKey="cashIn" 
                       stroke="#22c55e" 
                       strokeWidth={2}
-                      fill="url(#cashFlowGradient)" 
-                      name="Net Cash Flow"
+                      dot={{ fill: '#22c55e', strokeWidth: 2, r: 3 }}
+                      activeDot={{ r: 5, stroke: '#22c55e', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Cash In"
                     />
-                  </AreaChart>
+                    <Line 
+                      type="monotone" 
+                      dataKey="cashOut" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      dot={{ fill: '#ef4444', strokeWidth: 2, r: 3 }}
+                      activeDot={{ r: 5, stroke: '#ef4444', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Cash Out"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="netFlow" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2}
+                      dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
+                      activeDot={{ r: 5, stroke: '#3b82f6', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Net Flow"
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
