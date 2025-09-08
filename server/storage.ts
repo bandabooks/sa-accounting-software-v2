@@ -477,6 +477,18 @@ import {
   type InsertAiMatchingMetrics,
   type AiDuplicateDetection,
   type InsertAiDuplicateDetection,
+  // Proforma Invoice types
+  type ProformaInvoice,
+  type InsertProformaInvoice,
+  type ProformaInvoiceItem,
+  type InsertProformaInvoiceItem,
+  type ProformaInvoiceWithCustomer,
+  type ProformaInvoiceWithItems,
+  // AI Learning interfaces
+  type UserCorrection,
+  type LearningPattern,
+  type MatchingRule,
+  type LearningMetrics,
   bankStatementImports,
   transactionStatuses,
   transactionFingerprints,
