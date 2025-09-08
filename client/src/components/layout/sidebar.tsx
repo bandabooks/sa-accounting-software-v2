@@ -741,36 +741,8 @@ function NavigationGroup({ group, location, userPermissions, userRole, isExpande
     location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path))
   );
 
-  // Single item groups (like Dashboard) don't need collapsing
-  if (visibleItems.length === 1 && group.id === "overview") {
-    const item = visibleItems[0];
-    const Icon = item.icon;
-    const isActive = location === item.path;
-    
-    return (
-      <Link
-        href={item.path}
-        className={`group relative flex items-center ${isCollapsed ? 'justify-center px-2' : 'space-x-4 px-4'} py-3 text-slate-700 rounded-xl transition-all duration-300 transform hover:scale-[1.02] ${
-          isActive 
-            ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white shadow-lg shadow-blue-500/25" 
-            : "hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:text-green-800 hover:shadow-md"
-        }`}
-        title={isCollapsed ? item.label : undefined}
-      >
-        <div className={`p-2 rounded-lg transition-all duration-300 ${
-          isActive 
-            ? "bg-white/20 shadow-md" 
-            : "bg-slate-100 group-hover:bg-white group-hover:shadow-sm"
-        }`}>
-          <Icon size={18} className={isActive ? "text-white" : "text-slate-600 group-hover:text-slate-700"} />
-        </div>
-        {!isCollapsed && <span className="font-semibold tracking-tight">{item.label}</span>}
-        {!isCollapsed && isActive && (
-          <div className="absolute right-2 w-2 h-2 bg-white rounded-full shadow-sm"></div>
-        )}
-      </Link>
-    );
-  }
+  // Business Dashboard should be treated as a regular expandable group  
+  // This allows users to choose between Business Operations and Practice Management
 
   return (
     <div className="mb-1">
