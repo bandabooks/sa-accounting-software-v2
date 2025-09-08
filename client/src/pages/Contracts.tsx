@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send } from "lucide-react";
+import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, Search, Filter, Download, Mail, PenTool, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 
 interface ContractTemplate {
   id: number;
@@ -58,6 +60,7 @@ const statusIcons = {
 export default function Contracts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("contracts");
@@ -89,76 +92,133 @@ export default function Contracts() {
     completed: (contracts || []).filter((c: Contract) => c.status === "completed").length,
   };
 
+  // Issue contract mutation
+  const issueContractMutation = useMutation({
+    mutationFn: (contractId: number) => apiRequest(`/api/contracts/${contractId}/issue`, {
+      method: "POST",
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Contract Issued",
+        description: "Contract has been issued successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
+    },
+  });
+
+  // Send email mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: ({ contractId, email }: { contractId: number; email: string }) =>
+      apiRequest(`/api/contracts/${contractId}/send-email`, {
+        method: "POST",
+        body: { email },
+      }),
+    onSuccess: () => {
+      toast({
+        title: "Email Sent",
+        description: "Contract email has been sent successfully",
+      });
+    },
+  });
+
   const handleCreateContract = () => {
-    // TODO: Open contract creation modal/page
-    toast({
-      title: "Contract Creation",
-      description: "Contract creation interface coming soon",
-    });
+    setLocation("/contracts/create");
   };
 
   const handleViewContract = (contractId: number) => {
-    // TODO: Navigate to contract details page
-    toast({
-      title: "Contract Details",
-      description: `Viewing contract ${contractId}`,
-    });
+    setLocation(`/contracts/${contractId}`);
+  };
+
+  const handleIssueContract = (contractId: number) => {
+    issueContractMutation.mutate(contractId);
+  };
+
+  const handleSendEmail = (contractId: number, email: string) => {
+    sendEmailMutation.mutate({ contractId, email });
+  };
+
+  const handleDownloadContract = (contractId: number) => {
+    // Open contract view in new tab for download
+    window.open(`/api/contracts/${contractId}/view`, '_blank');
   };
 
   const ContractCard = ({ contract }: { contract: Contract }) => {
     const StatusIcon = statusIcons[contract.status as keyof typeof statusIcons];
     
     return (
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
+      <Card className="hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300">
+        <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <CardTitle className="text-lg font-semibold text-gray-900">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base font-semibold text-gray-900 truncate">
                 {contract.title}
               </CardTitle>
-              <CardDescription className="mt-1">
-                Contract #{contract.id} • Created {format(new Date(contract.createdAt), "MMM d, yyyy")}
+              <CardDescription className="text-sm mt-1">
+                #{contract.id} • {format(new Date(contract.createdAt), "MMM d, yyyy")}
               </CardDescription>
             </div>
-            <Badge className={statusColors[contract.status as keyof typeof statusColors]}>
-              <StatusIcon className="w-3 h-3 mr-1" />
-              {contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className={`text-xs ${statusColors[contract.status as keyof typeof statusColors]}`}>
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
+              </Badge>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleViewContract(contract.id)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownloadContract(contract.id)}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PDF
+                  </DropdownMenuItem>
+                  {contract.status === 'draft' && (
+                    <DropdownMenuItem onClick={() => handleIssueContract(contract.id)}>
+                      <Send className="mr-2 h-4 w-4" />
+                      Issue Contract
+                    </DropdownMenuItem>
+                  )}
+                  {(contract.status === 'issued' || contract.status === 'active') && (
+                    <DropdownMenuItem onClick={() => handleSendEmail(contract.id, 'client@example.com')}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Email
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
-            {contract.value && (
+        <CardContent className="pt-2 pb-3">
+          <div className="flex items-center justify-between text-xs text-gray-600">
+            <div className="flex items-center gap-4">
               <div>
-                <span className="font-medium">Value:</span> {contract.currency} {contract.value.toLocaleString()}
+                <span className="font-medium text-gray-900">
+                  {contract.value ? `${contract.currency} ${contract.value.toLocaleString()}` : 'Value TBD'}
+                </span>
               </div>
-            )}
-            {contract.expiresAt && (
-              <div>
-                <span className="font-medium">Expires:</span> {format(new Date(contract.expiresAt), "MMM d, yyyy")}
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+              {contract.expiresAt && (
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  <span>Expires {format(new Date(contract.expiresAt), "MMM d")}</span>
+                </div>
+              )}
+            </div>
+            <Button 
+              size="sm" 
+              variant="outline" 
               onClick={() => handleViewContract(contract.id)}
+              className="h-7 px-3 text-xs"
               data-testid={`button-view-contract-${contract.id}`}
             >
-              <Eye className="w-4 h-4 mr-1" />
+              <Eye className="w-3 h-3 mr-1" />
               View
             </Button>
-            {contract.status === "draft" && (
-              <Button
-                variant="outline"
-                size="sm"
-                data-testid={`button-edit-contract-${contract.id}`}
-              >
-                <Edit3 className="w-4 h-4 mr-1" />
-                Edit
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -230,91 +290,91 @@ export default function Contracts() {
   );
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contracts</h1>
-          <p className="text-gray-600 mt-1">
-            Manage engagement letters and professional agreements
-          </p>
+          <h1 className="text-xl font-bold text-gray-900">Contracts & Engagement Letters</h1>
+          <p className="text-sm text-gray-600">Professional client agreements and service contracts</p>
         </div>
-        <Button onClick={handleCreateContract} data-testid="button-create-contract">
-          <Plus className="w-4 h-4 mr-2" />
-          New Contract
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLocation('/contracts/templates')}>
+            <FileText className="w-4 h-4 mr-2" />
+            Templates
+          </Button>
+          <Button onClick={handleCreateContract}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Contract
+          </Button>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:w-96">
-          <TabsTrigger value="contracts" data-testid="tab-contracts">
-            Contracts
-          </TabsTrigger>
-          <TabsTrigger value="templates" data-testid="tab-templates">
-            Templates
-          </TabsTrigger>
-        </TabsList>
+      {/* Compact Status Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+        <Card className="border border-gray-200">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600">Total</div>
+            <div className="text-lg font-bold text-gray-900">{statusStats.total}</div>
+          </CardContent>
+        </Card>
+        <Card className="border border-gray-200">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600">Draft</div>
+            <div className="text-lg font-bold text-orange-600">{statusStats.draft}</div>
+          </CardContent>
+        </Card>
+        <Card className="border border-gray-200">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600">Issued</div>
+            <div className="text-lg font-bold text-blue-600">{statusStats.issued}</div>
+          </CardContent>
+        </Card>
+        <Card className="border border-gray-200">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600">Signed</div>
+            <div className="text-lg font-bold text-yellow-600">{statusStats.signed}</div>
+          </CardContent>
+        </Card>
+        <Card className="border border-gray-200">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600">Active</div>
+            <div className="text-lg font-bold text-green-600">{statusStats.active}</div>
+          </CardContent>
+        </Card>
+        <Card className="border border-gray-200">
+          <CardContent className="p-3">
+            <div className="text-xs text-gray-600">Completed</div>
+            <div className="text-lg font-bold text-purple-600">{statusStats.completed}</div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <TabsContent value="contracts" className="space-y-6">
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatsCard
-              title="Total Contracts"
-              value={statusStats.total}
-              icon={FileText}
-              color="bg-blue-500"
-            />
-            <StatsCard
-              title="Draft"
-              value={statusStats.draft}
-              icon={Edit3}
-              color="bg-gray-500"
-            />
-            <StatsCard
-              title="Issued"
-              value={statusStats.issued}
-              icon={Send}
-              color="bg-blue-500"
-            />
-            <StatsCard
-              title="Active"
-              value={statusStats.active}
-              icon={CheckCircle}
-              color="bg-green-500"
-            />
-            <StatsCard
-              title="Completed"
-              value={statusStats.completed}
-              icon={CheckCircle}
-              color="bg-purple-500"
-            />
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search contracts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                data-testid="input-search-contracts"
-              />
-            </div>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-48" data-testid="select-contract-status">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" data-testid="option-status-all">All Statuses</SelectItem>
-                <SelectItem value="draft" data-testid="option-status-draft">Draft</SelectItem>
-                <SelectItem value="issued" data-testid="option-status-issued">Issued</SelectItem>
-                <SelectItem value="signed" data-testid="option-status-signed">Signed</SelectItem>
-                <SelectItem value="active" data-testid="option-status-active">Active</SelectItem>
-                <SelectItem value="completed" data-testid="option-status-completed">Completed</SelectItem>
-                <SelectItem value="cancelled" data-testid="option-status-cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Compact Search and Filters */}
+      <div className="flex gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search contracts..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-9"
+          />
+        </div>
+        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+          <SelectTrigger className="w-[140px] h-9">
+            <Filter className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="issued">Issued</SelectItem>
+            <SelectItem value="signed">Signed</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
           {/* Contracts Grid */}
           {contractsLoading ? (
