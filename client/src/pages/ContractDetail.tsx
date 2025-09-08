@@ -464,7 +464,7 @@ export default function ContractDetail() {
                 </CardContent>
               </Card>
             ) : (
-              templates.map((template: ContractTemplate) => (
+              templates?.map((template: ContractTemplate) => (
                 <Card key={template.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
