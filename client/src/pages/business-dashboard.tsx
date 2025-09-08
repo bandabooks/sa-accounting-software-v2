@@ -144,7 +144,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Profit Margin",
-      value: dashboardData?.profitMargin ? `${dashboardData.profitMargin}%` : "0%",
+      value: dashboardStats?.profitMargin ? `${dashboardStats.profitMargin}%` : "0%",
       change: 2.1,
       changeType: 'increase',
       trend: 'up',
