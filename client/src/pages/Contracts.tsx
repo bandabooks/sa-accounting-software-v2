@@ -27,13 +27,14 @@ interface ContractTemplate {
 
 interface Contract {
   id: number;
-  templateId: number;
-  title: string;
-  clientId: number;
+  templateId?: number;
+  customerId: number;
+  customerName?: string;
+  customerEmail?: string;
+  templateName?: string;
   projectId?: number;
   status: string;
   value?: number;
-  currency: string;
   createdAt: string;
   updatedAt: string;
   expiresAt?: string;
@@ -78,9 +79,15 @@ export default function Contracts() {
   });
 
   // Filter contracts by search term
-  const filteredContracts = (contracts || []).filter((contract: Contract) =>
-    contract.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredContracts = (contracts || []).filter((contract: Contract) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      contract.customerName?.toLowerCase().includes(searchLower) ||
+      contract.templateName?.toLowerCase().includes(searchLower) ||
+      contract.status?.toLowerCase().includes(searchLower)
+    );
+  });
 
   // Status statistics
   const statusStats = {
@@ -151,10 +158,10 @@ export default function Contracts() {
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base font-semibold text-gray-900 truncate">
-                {contract.title}
+                {contract.customerName || 'Unnamed Contract'}
               </CardTitle>
               <CardDescription className="text-sm mt-1">
-                #{contract.id} • {format(new Date(contract.createdAt), "MMM d, yyyy")}
+                #{contract.id} • {contract.templateName || 'No Template'} • {format(new Date(contract.createdAt), "MMM d, yyyy")}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -199,7 +206,7 @@ export default function Contracts() {
             <div className="flex items-center gap-4">
               <div>
                 <span className="font-medium text-gray-900">
-                  {contract.value ? `${contract.currency} ${contract.value.toLocaleString()}` : 'Value TBD'}
+                  {contract.value ? `R ${contract.value.toLocaleString()}` : 'Value TBD'}
                 </span>
               </div>
               {contract.expiresAt && (

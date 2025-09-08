@@ -197,7 +197,6 @@ import ProfessionalServices from "@/pages/professional-services";
 import FinancialReportsPage from "@/pages/reports/financial";
 import ProfitLossDetailedPage from "@/pages/reports/profit-loss-detailed";
 import AppLayout from "@/components/layout/app-layout";
-import { AIHealthBanner } from "@/components/ai-assistant/AIHealthBanner";
 import AIMonitorPage from "@/pages/ai-monitor";
 import AuditTrail from "@/pages/audit-trail";
 import { SubscriptionProtectedRoute } from "@/components/SubscriptionProtectedRoute";
@@ -275,7 +274,6 @@ function AuthenticatedApp() {
   return (
     <CompanyProvider>
       <AppLayout>
-        <AIHealthBanner />
         <Switch>
         <Route path="/login">
           <BusinessDashboard />
