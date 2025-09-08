@@ -48,15 +48,19 @@ export default function BusinessDashboard() {
   });
 
   // Fetch real cash flow data from backend
-  const { data: cashFlowData = [] } = useQuery({
+  const { data: cashFlowData = [], isLoading: cashFlowLoading, error: cashFlowError } = useQuery({
     queryKey: ["/api/financial/cash-flow", timeRange],
     refetchInterval: 300000, // 5 minutes
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Fetch real revenue vs expenses data from backend
-  const { data: revenueExpenseData = [] } = useQuery({
+  const { data: revenueExpenseData = [], isLoading: revenueExpenseLoading, error: revenueExpenseError } = useQuery({
     queryKey: ["/api/financial/revenue-expenses", timeRange],
     refetchInterval: 300000, // 5 minutes
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const { data: invoices = [] } = useQuery({
@@ -303,14 +307,28 @@ export default function BusinessDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold">Cash Flow Trend</CardTitle>
                 <Badge variant="outline" className="text-xs">
-                  {timeRange} days
+                  {timeRange === "7" ? "7 days" : timeRange === "30" ? "30 days" : timeRange === "90" ? "90 days" : "1 year"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={Array.isArray(cashFlowData) ? cashFlowData : []}>
+              {cashFlowLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-gray-500">Loading cash flow data...</div>
+                </div>
+              ) : cashFlowError ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-red-500 text-sm">Unable to load cash flow data</div>
+                </div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={Array.isArray(cashFlowData) ? (cashFlowData.length > 0 ? cashFlowData : [
+                      { month: 'Week 1', inflow: 0, outflow: 0, net: 0 },
+                      { month: 'Week 2', inflow: 0, outflow: 0, net: 0 },
+                      { month: 'Week 3', inflow: 0, outflow: 0, net: 0 },
+                      { month: 'Week 4', inflow: 0, outflow: 0, net: 0 }
+                    ]) : []}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} className="text-xs" />
                     <YAxis 
@@ -352,9 +370,10 @@ export default function BusinessDashboard() {
                       strokeWidth={4}
                       dot={{ r: 5, fill: '#3b82f6' }}
                     />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -364,14 +383,28 @@ export default function BusinessDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold">Revenue vs Expenses</CardTitle>
                 <Badge variant="outline" className="text-xs">
-                  Monthly
+                  {timeRange === "7" ? "7 days" : timeRange === "30" ? "30 days" : timeRange === "90" ? "90 days" : "1 year"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={Array.isArray(revenueExpenseData) ? revenueExpenseData : []}>
+              {revenueExpenseLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-gray-500">Loading revenue data...</div>
+                </div>
+              ) : revenueExpenseError ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-red-500 text-sm">Unable to load revenue data</div>
+                </div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={Array.isArray(revenueExpenseData) ? (revenueExpenseData.length > 0 ? revenueExpenseData : [
+                      { month: 'Week 1', revenue: 0, expenses: 0, profit: 0 },
+                      { month: 'Week 2', revenue: 0, expenses: 0, profit: 0 },
+                      { month: 'Week 3', revenue: 0, expenses: 0, profit: 0 },
+                      { month: 'Week 4', revenue: 0, expenses: 0, profit: 0 }
+                    ]) : []}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} className="text-xs" />
                     <YAxis 
@@ -394,9 +427,10 @@ export default function BusinessDashboard() {
                     />
                     <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

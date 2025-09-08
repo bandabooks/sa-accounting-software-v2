@@ -8950,13 +8950,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cashFlowResult = await db.execute(sql`
         SELECT 
           DATE_TRUNC(${periodFormat}, transaction_date) as period_date,
-          COALESCE(SUM(CASE WHEN amount > 0 THEN amount::numeric ELSE 0 END), 0) as inflow,
-          COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount::numeric) ELSE 0 END), 0) as outflow
+          COALESCE(SUM(CASE WHEN amount::numeric > 0 THEN amount::numeric ELSE 0 END), 0) as inflow,
+          COALESCE(SUM(CASE WHEN amount::numeric < 0 THEN ABS(amount::numeric) ELSE 0 END), 0) as outflow
         FROM bank_transactions 
         WHERE company_id = ${companyId}
-        AND transaction_date >= ${startDate.toISOString()}
-        AND transaction_date <= ${endDate.toISOString()}
-        AND reconciled = true
+        AND transaction_date >= ${startDate.toISOString()}::timestamp
+        AND transaction_date <= ${endDate.toISOString()}::timestamp
         GROUP BY DATE_TRUNC(${periodFormat}, transaction_date)
         ORDER BY period_date
       `);
@@ -9020,8 +9019,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as revenue
         FROM invoices 
         WHERE company_id = ${companyId}
-        AND created_at >= ${startDate.toISOString()}
-        AND created_at <= ${endDate.toISOString()}
+        AND created_at >= ${startDate.toISOString()}::timestamp
+        AND created_at <= ${endDate.toISOString()}::timestamp
         GROUP BY DATE_TRUNC(${periodFormat}, created_at)
         ORDER BY period_date
       `);
@@ -9033,8 +9032,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           COALESCE(SUM(amount::numeric), 0) as expenses
         FROM expenses
         WHERE company_id = ${companyId}
-        AND expense_date >= ${startDate.toISOString()}
-        AND expense_date <= ${endDate.toISOString()}
+        AND expense_date >= ${startDate.toISOString()}::timestamp
+        AND expense_date <= ${endDate.toISOString()}::timestamp
         GROUP BY DATE_TRUNC(${periodFormat}, expense_date)
         ORDER BY period_date
       `);
