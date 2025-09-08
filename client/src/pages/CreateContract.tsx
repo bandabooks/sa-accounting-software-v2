@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
 const contractSchema = z.object({
-  templateId: z.string().min(1, "Please select a template"),
   customerId: z.string().min(1, "Please select a customer"),
   subject: z.string().min(1, "Subject is required"),
   contractValue: z.string().optional(),
@@ -33,14 +32,6 @@ const contractSchema = z.object({
 
 type ContractForm = z.infer<typeof contractSchema>;
 
-interface ContractTemplate {
-  id: number;
-  name: string;
-  version: number;
-  bodyMd: string;
-  fields: string | string[];
-  servicePackage: string;
-}
 
 interface Customer {
   id: number;
@@ -53,12 +44,10 @@ export default function CreateContract() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
 
   const form = useForm<ContractForm>({
     resolver: zodResolver(contractSchema),
     defaultValues: {
-      templateId: "",
       customerId: "",
       subject: "",
       contractValue: "",
@@ -72,13 +61,6 @@ export default function CreateContract() {
     },
   });
 
-  // Fetch templates
-  const { data: templatesData, isLoading: isLoadingTemplates, error: templatesError } = useQuery({
-    queryKey: ["/api/contracts/templates"],
-    retry: 1,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-  });
 
   // Fetch customers  
   const { data: customersData, isLoading: isLoadingCustomers, error: customersError } = useQuery({
@@ -87,7 +69,6 @@ export default function CreateContract() {
   });
 
   // Ensure data is array
-  const templates = Array.isArray(templatesData) ? templatesData : [];
   const customers = Array.isArray(customersData) ? customersData : [];
 
   // Create contract mutation
@@ -95,7 +76,6 @@ export default function CreateContract() {
     mutationFn: async (data: ContractForm) => {
       const payload = {
         ...data,
-        templateId: parseInt(data.templateId),
         customerId: parseInt(data.customerId),
         projectId: data.projectId ? parseInt(data.projectId) : undefined,
         contractValue: data.contractValue ? parseFloat(data.contractValue) : undefined,
@@ -120,39 +100,6 @@ export default function CreateContract() {
     },
   });
 
-  const handleTemplateChange = (templateId: string) => {
-    const template = templates.find((t: ContractTemplate) => t.id.toString() === templateId);
-    setSelectedTemplate(template || null);
-    
-    if (template) {
-      // Auto-populate contract subject based on template
-      const subjectMap: Record<string, string> = {
-        'Business Advisory Services': 'Business Advisory Services Engagement',
-        'TAX PRACTITIONER': 'Tax Practitioner Services Engagement',
-        'ITR12 Individual Tax Returns': 'Individual Tax Return Services',
-        'ITR14 Trust Tax Returns': 'Trust Tax Return Services',
-        'VAT201 Practitioner Services': 'VAT Practitioner Services',
-        'Audit Services': 'Audit Services Engagement',
-        'Bookkeeping Services': 'Bookkeeping Services Agreement',
-        'Payroll Services': 'Payroll Services Agreement'
-      };
-      
-      form.setValue("subject", subjectMap[template.name] || `${template.name} - Professional Services Engagement`);
-      
-      // Set contract type based on template service package
-      const packageToType: Record<string, string> = {
-        'basic': 'bookkeeping',
-        'standard': 'engagement_letter',
-        'premium': 'advisory',
-        'enterprise': 'other',
-        'tax_compliance': 'tax_compliance',
-        'vat_services': 'vat_services',
-        'audit': 'audit',
-        'payroll': 'payroll'
-      };
-      form.setValue("contractType", packageToType[template.servicePackage] || "engagement_letter");
-    }
-  };
 
   const onSubmit = (data: ContractForm) => {
     createContractMutation.mutate(data);
@@ -172,31 +119,19 @@ export default function CreateContract() {
 
 
   // Show loading state while data is being fetched
-  if (isLoadingTemplates || isLoadingCustomers) {
+  if (isLoadingCustomers) {
     return (
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading contract data...</p>
+            <p className="text-muted-foreground">Loading customers...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Show error state if templates failed to load
-  if (templatesError) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <div className="text-center py-12">
-          <h1 className="text-xl font-bold text-gray-900 mb-4">Failed to Load Templates</h1>
-          <p className="text-gray-600 mb-4">Could not load contract templates. Please try refreshing the page.</p>
-          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
@@ -382,46 +317,6 @@ export default function CreateContract() {
 
               <div className="space-y-4">
 
-                <FormField
-                  control={form.control}
-                  name="templateId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium flex items-center gap-1">
-                        <span className="text-red-500">*</span>
-                        Contract Template
-                      </FormLabel>
-                      <Select onValueChange={(value) => {
-                        field.onChange(value);
-                        handleTemplateChange(value);
-                      }} value={field.value || ""}>
-                        <FormControl>
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select template" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isLoadingTemplates ? (
-                            <SelectItem value="loading" disabled>
-                              Loading templates...
-                            </SelectItem>
-                          ) : templates.length === 0 ? (
-                            <SelectItem value="no-templates" disabled>
-                              No templates found.
-                            </SelectItem>
-                          ) : (
-                            templates.map((template: ContractTemplate) => (
-                              <SelectItem key={template.id} value={template.id.toString()}>
-                                {template.name} (v{template.version})
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
@@ -483,48 +378,14 @@ export default function CreateContract() {
             </CardContent>
           </Card>
 
-          {/* Template Preview */}
-          {selectedTemplate && (
-            <Card className="border border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Template Selected
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  <span className="font-medium">{selectedTemplate.name}</span> - Client information will be automatically populated
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Auto-populated fields:</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                    <div>• Client name and details</div>
-                    <div>• Company information</div>
-                    <div>• Contract dates</div>
-                    <div>• Service details</div>
-                    <div>• Professional signatures</div>
-                    <div>• Contact information</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="text-sm text-gray-500">
-              {selectedTemplate ? (
-                <span className="flex items-center gap-1">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Template selected: {selectedTemplate.name}
-                </span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4 text-amber-500" />
-                  Select a template to continue
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                Contract ready to create
+              </span>
             </div>
             <div className="flex gap-3">
               <Button 
@@ -534,16 +395,6 @@ export default function CreateContract() {
                 onClick={() => navigate("/contracts")}
               >
                 Cancel
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline"
-                size="sm"
-                disabled={!selectedTemplate}
-                className="hidden md:inline-flex"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Preview
               </Button>
               <Button 
                 type="submit" 

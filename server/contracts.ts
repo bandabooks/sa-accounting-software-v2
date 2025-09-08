@@ -95,15 +95,17 @@ export class ContractService {
       .values({ ...data, companyId })
       .returning();
     
-    // Create initial version
-    const template = await this.getTemplate(companyId, data.templateId);
-    if (template) {
-      await this.createVersion(contract.id, {
-        contractId: contract.id,
-        version: 1,
-        bodyMd: template.bodyMd,
-        mergeData: {},
-      });
+    // Create initial version (only if template is provided)
+    if (data.templateId) {
+      const template = await this.getTemplate(companyId, data.templateId);
+      if (template) {
+        await this.createVersion(contract.id, {
+          contractId: contract.id,
+          version: 1,
+          bodyMd: template.bodyMd,
+          mergeData: {},
+        });
+      }
     }
 
     // Log creation event

@@ -7052,7 +7052,7 @@ export const contracts = pgTable("contracts", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   customerId: integer("customer_id").references(() => customers.id).notNull(),
-  templateId: integer("template_id").references(() => contractTemplates.id).notNull(),
+  templateId: integer("template_id").references(() => contractTemplates.id),
   status: text("status").notNull().default("draft"), // draft|issued|signed|countersigned|active|expired|void
   expiresAt: timestamp("expires_at"),
   currentVersion: integer("current_version").notNull().default(1),
