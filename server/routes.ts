@@ -8912,6 +8912,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cash Flow Data for Dashboard Charts
+  app.get("/api/financial/cash-flow", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID is required" });
+      }
+
+      const { timeRange = "30" } = req.query;
+      const days = parseInt(timeRange as string);
+      
+      // Calculate date range
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+
+      // Determine period grouping based on time range
+      let periodFormat: string;
+      let periodLabels: string[];
+      
+      if (days <= 30) {
+        // Weekly periods for short ranges
+        periodFormat = 'week';
+        periodLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      } else if (days <= 90) {
+        // Monthly periods for medium ranges  
+        periodFormat = 'month';
+        periodLabels = ['Month 1', 'Month 2', 'Month 3'];
+      } else {
+        // Monthly periods for longer ranges
+        periodFormat = 'month';
+        periodLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      }
+
+      // Get real cash flow data from bank transactions
+      const cashFlowResult = await db.execute(sql`
+        SELECT 
+          DATE_TRUNC(${periodFormat}, transaction_date) as period_date,
+          COALESCE(SUM(CASE WHEN amount > 0 THEN amount::numeric ELSE 0 END), 0) as inflow,
+          COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount::numeric) ELSE 0 END), 0) as outflow
+        FROM bank_transactions 
+        WHERE company_id = ${companyId}
+        AND transaction_date >= ${startDate.toISOString()}
+        AND transaction_date <= ${endDate.toISOString()}
+        AND reconciled = true
+        GROUP BY DATE_TRUNC(${periodFormat}, transaction_date)
+        ORDER BY period_date
+      `);
+
+      // Format the data for frontend charts
+      const cashFlowData = periodLabels.map((label, index) => {
+        const dataPoint = cashFlowResult.rows[index];
+        const inflow = dataPoint ? Number(dataPoint.inflow) : 0;
+        const outflow = dataPoint ? Number(dataPoint.outflow) : 0;
+        
+        return {
+          month: label,
+          inflow: Math.round(inflow),
+          outflow: Math.round(outflow),
+          net: Math.round(inflow - outflow)
+        };
+      });
+
+      res.json(cashFlowData);
+    } catch (error) {
+      console.error("Error fetching cash flow data:", error);
+      res.status(500).json({ error: "Failed to fetch cash flow data" });
+    }
+  });
+
+  // Revenue vs Expenses Data for Dashboard Charts  
+  app.get("/api/financial/revenue-expenses", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID is required" });
+      }
+
+      const { timeRange = "30" } = req.query;
+      const days = parseInt(timeRange as string);
+      
+      // Calculate date range
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+
+      // Determine period grouping based on time range
+      let periodFormat: string;
+      let periodLabels: string[];
+      
+      if (days <= 30) {
+        periodLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        periodFormat = 'week';
+      } else if (days <= 90) {
+        periodLabels = ['Month 1', 'Month 2', 'Month 3'];
+        periodFormat = 'month';
+      } else {
+        periodLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        periodFormat = 'month';
+      }
+
+      // Get revenue data from paid invoices
+      const revenueResult = await db.execute(sql`
+        SELECT 
+          DATE_TRUNC(${periodFormat}, created_at) as period_date,
+          COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as revenue
+        FROM invoices 
+        WHERE company_id = ${companyId}
+        AND created_at >= ${startDate.toISOString()}
+        AND created_at <= ${endDate.toISOString()}
+        GROUP BY DATE_TRUNC(${periodFormat}, created_at)
+        ORDER BY period_date
+      `);
+
+      // Get expense data
+      const expenseResult = await db.execute(sql`
+        SELECT 
+          DATE_TRUNC(${periodFormat}, expense_date) as period_date,
+          COALESCE(SUM(amount::numeric), 0) as expenses
+        FROM expenses
+        WHERE company_id = ${companyId}
+        AND expense_date >= ${startDate.toISOString()}
+        AND expense_date <= ${endDate.toISOString()}
+        GROUP BY DATE_TRUNC(${periodFormat}, expense_date)
+        ORDER BY period_date
+      `);
+
+      // Combine revenue and expense data by period
+      const revenueExpenseData = periodLabels.map((label, index) => {
+        const revenuePoint = revenueResult.rows[index];
+        const expensePoint = expenseResult.rows[index];
+        
+        const revenue = revenuePoint ? Number(revenuePoint.revenue) : 0;
+        const expenses = expensePoint ? Number(expensePoint.expenses) : 0;
+        
+        return {
+          month: label,
+          revenue: Math.round(revenue),
+          expenses: Math.round(expenses),
+          profit: Math.round(revenue - expenses)
+        };
+      });
+
+      res.json(revenueExpenseData);
+    } catch (error) {
+      console.error("Error fetching revenue vs expenses data:", error);
+      res.status(500).json({ error: "Failed to fetch revenue vs expenses data" });
+    }
+  });
+
   app.get("/api/reports/account-balances", authenticate, async (req, res) => {
     try {
       const companyId = (req as AuthenticatedRequest).user?.companyId || 1;
