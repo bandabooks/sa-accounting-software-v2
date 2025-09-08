@@ -810,7 +810,7 @@ export default function Banking() {
                     <div className="text-white mt-4">
                       <p className="text-white/70 text-sm mb-2 font-medium">Available Balance</p>
                       <p className="text-3xl font-bold leading-none">
-                        R {parseFloat(account.balance || "0").toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                        R {parseFloat(account.currentBalance || "0").toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </CardContent>
