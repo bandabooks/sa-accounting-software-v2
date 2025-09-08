@@ -196,6 +196,8 @@ export default function BusinessDashboard() {
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats', companyId] });
     queryClient.invalidateQueries({ queryKey: [`/api/reports/cash-flow/${from}/${to}`, companyId, timeRange] });
     queryClient.invalidateQueries({ queryKey: [`/api/reports/profit-loss/${from}/${to}`, companyId, timeRange] });
+    queryClient.invalidateQueries({ queryKey: [`/api/dashboard/priority-actions`, companyId] });
+    queryClient.invalidateQueries({ queryKey: [`/api/dashboard/recent-activity`, companyId] });
   };
 
   if (isLoading) {
@@ -601,65 +603,45 @@ export default function BusinessDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div 
-                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
-                onClick={() => setLocation('/payments?search=ABC Company')}
-                data-testid="activity-payment-received"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-full">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+              {recentActivity?.map((activity, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                  onClick={() => setLocation(activity.link)}
+                  data-testid={`activity-${activity.type}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${
+                      activity.type === 'payment' ? 'bg-green-100' :
+                      activity.type === 'invoice' ? 'bg-blue-100' :
+                      activity.type === 'customer' ? 'bg-orange-100' : 'bg-gray-100'
+                    }`}>
+                      {activity.type === 'payment' && <TrendingUp className="h-4 w-4 text-green-600" />}
+                      {activity.type === 'invoice' && <FileText className="h-4 w-4 text-blue-600" />}
+                      {activity.type === 'customer' && <Users className="h-4 w-4 text-orange-600" />}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{activity.title}</p>
+                      <p className="text-sm text-gray-500">{activity.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Payment Received</p>
-                    <p className="text-sm text-gray-500">ABC Company - Invoice #1001</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-green-600">+R15,000</p>
-                  <p className="text-xs text-gray-500">2 hours ago</p>
-                </div>
-              </div>
-              
-              <div 
-                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
-                onClick={() => setLocation('/invoices?search=XYZ Corp')}
-                data-testid="activity-invoice-created"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-full">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Invoice Created</p>
-                    <p className="text-sm text-gray-500">XYZ Corp - Monthly Service</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-blue-600">R25,000</p>
-                  <p className="text-xs text-gray-500">4 hours ago</p>
-                </div>
-              </div>
-              
-              <div 
-                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
-                onClick={() => setLocation('/customers?search=Tech Solutions')}
-                data-testid="activity-new-customer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 rounded-full">
-                    <Users className="h-4 w-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">New Customer</p>
-                    <p className="text-sm text-gray-500">Tech Solutions Ltd</p>
+                  <div className="text-right">
+                    {activity.amount && (
+                      <p className={`font-semibold ${
+                        activity.type === 'payment' ? 'text-green-600' :
+                        activity.type === 'invoice' ? 'text-blue-600' : 'text-gray-600'
+                      }`}>
+                        {activity.type === 'payment' ? '+' : ''}R{activity.amount}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">{activity.timeAgo}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-600">New Lead</p>
-                  <p className="text-xs text-gray-500">1 day ago</p>
+              )) || (
+                <div className="flex items-center justify-center p-8 text-gray-500">
+                  <p className="text-sm">No recent activity</p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
