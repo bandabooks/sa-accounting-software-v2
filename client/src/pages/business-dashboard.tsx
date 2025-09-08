@@ -50,17 +50,21 @@ export default function BusinessDashboard() {
   // Fetch real cash flow data from backend
   const { data: cashFlowData = [], isLoading: cashFlowLoading, error: cashFlowError } = useQuery({
     queryKey: ["/api/financial/cash-flow", timeRange],
+    queryFn: () => fetch(`/api/financial/cash-flow?timeRange=${timeRange}`).then(res => res.json()),
     refetchInterval: 300000, // 5 minutes
     retry: 3,
     retryDelay: 1000,
+    staleTime: 0, // Always refetch
   });
 
   // Fetch real revenue vs expenses data from backend
   const { data: revenueExpenseData = [], isLoading: revenueExpenseLoading, error: revenueExpenseError } = useQuery({
     queryKey: ["/api/financial/revenue-expenses", timeRange],
+    queryFn: () => fetch(`/api/financial/revenue-expenses?timeRange=${timeRange}`).then(res => res.json()),
     refetchInterval: 300000, // 5 minutes
     retry: 3,
     retryDelay: 1000,
+    staleTime: 0, // Always refetch
   });
 
   const { data: invoices = [] } = useQuery({
@@ -192,6 +196,11 @@ export default function BusinessDashboard() {
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
     queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
     queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/financial/cash-flow'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/financial/revenue-expenses'] });
+    // Force refetch with current timeRange
+    queryClient.refetchQueries({ queryKey: ['/api/financial/cash-flow', timeRange] });
+    queryClient.refetchQueries({ queryKey: ['/api/financial/revenue-expenses', timeRange] });
     queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
     queryClient.invalidateQueries({ queryKey: ['/api/financial/cash-flow'] });
     queryClient.invalidateQueries({ queryKey: ['/api/financial/revenue-expenses'] });
