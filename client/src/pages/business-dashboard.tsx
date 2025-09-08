@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,10 @@ import {
 import {
   TrendingUp, TrendingDown, DollarSign, Users, Target, AlertCircle,
   ArrowUpRight, ArrowDownRight, Calendar, RefreshCw, Filter, Download,
-  CreditCard, Banknote, FileText, Plus, Clock, CheckCircle2
+  CreditCard, Banknote, FileText, Plus, Clock, CheckCircle2, Eye, Edit
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils-invoice";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 interface BusinessMetric {
@@ -38,6 +38,8 @@ interface QuickAction {
 export default function BusinessDashboard() {
   const [timeRange, setTimeRange] = useState("30");
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Fetch business metrics
   const { data: dashboardStats, isLoading } = useQuery({
@@ -561,36 +563,88 @@ export default function BusinessDashboard() {
           <CardContent>
             <div className="space-y-3">
               {recentTransactions.length > 0 ? recentTransactions.map((transaction: any) => (
-                <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50" data-testid={`transaction-${transaction.id}`}>
-                  <div className="flex items-center gap-4">
+                <div 
+                  key={transaction.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors group" 
+                  data-testid={`transaction-${transaction.id}`}
+                  onClick={() => setLocation(`/invoices/${transaction.id}`)}
+                >
+                  <div className="flex items-center gap-4 flex-1">
                     <div className={`w-2 h-2 rounded-full ${
                       transaction.status === 'paid' ? 'bg-green-500' :
                       transaction.status === 'pending' ? 'bg-yellow-500' :
                       'bg-red-500'
                     }`}></div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{transaction.client}</p>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600">{transaction.client}</p>
                       <p className="text-xs text-gray-600">
                         {transaction.type} • {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'Recent'}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">
-                      {formatCurrency(transaction.amount)}
-                    </p>
-                    <Badge 
-                      variant={transaction.status === 'paid' ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {transaction.status}
-                    </Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-gray-900">
+                        {formatCurrency(transaction.amount)}
+                      </p>
+                      <Badge 
+                        variant={transaction.status === 'paid' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {transaction.status}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {transaction.status === 'draft' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/invoices/${transaction.id}/edit`);
+                          }}
+                          data-testid={`button-edit-${transaction.id}`}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {transaction.status === 'pending' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation('/customer-payments/record');
+                          }}
+                          data-testid={`button-record-payment-${transaction.id}`}
+                        >
+                          <CreditCard className="h-3 w-3" />
+                        </Button>
+                      )}
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/invoices/${transaction.id}`);
+                        }}
+                        data-testid={`button-view-${transaction.id}`}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )) : (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">No high-value transactions yet</p>
                   <p className="text-xs">Create invoices to see activity here</p>
+                  <Link href="/invoices/new">
+                    <Button className="mt-2" size="sm" data-testid="button-create-first-invoice">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Invoice
+                    </Button>
+                  </Link>
                 </div>
               )}
             </div>
