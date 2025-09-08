@@ -79,18 +79,12 @@ export default function CreateContract() {
     retry: 1,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
-    onError: (error: any) => {
-      console.error("Failed to fetch templates:", error);
-    }
   });
 
   // Fetch customers  
   const { data: customersData, isLoading: isLoadingCustomers, error: customersError } = useQuery({
     queryKey: ["/api/customers"],
     retry: 1,
-    onError: (error: any) => {
-      console.error("Failed to fetch customers:", error);
-    }
   });
 
   // Ensure data is array
@@ -108,12 +102,9 @@ export default function CreateContract() {
         contractValue: data.contractValue ? parseFloat(data.contractValue) : undefined,
         mergeFields,
       };
-      return await apiRequest("/api/contracts", {
-        method: "POST",
-        body: payload,
-      });
+      return await apiRequest("/api/contracts", "POST", payload);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       toast({
         title: "Contract Created",
         description: "Your contract has been created successfully.",
@@ -159,15 +150,7 @@ export default function CreateContract() {
   };
 
   const onSubmit = (data: ContractForm) => {
-    const contractData = {
-      ...data,
-      templateId: parseInt(data.templateId),
-      customerId: parseInt(data.customerId),
-      projectId: data.projectId ? parseInt(data.projectId) : null,
-      mergeData: mergeFields,
-    };
-    
-    createContractMutation.mutate(contractData);
+    createContractMutation.mutate(data);
   };
 
   const contractTypes = [
@@ -182,6 +165,12 @@ export default function CreateContract() {
     { value: "other", label: "Other Professional Services" }
   ];
 
+  // Debug templates
+  console.log('Templates data:', templatesData);
+  console.log('Templates array:', templates);
+  console.log('Loading templates:', isLoadingTemplates);
+  console.log('Templates error:', templatesError);
+
   // Show loading state while data is being fetched
   if (isLoadingTemplates || isLoadingCustomers) {
     return (
@@ -191,6 +180,19 @@ export default function CreateContract() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading contract data...</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if templates failed to load
+  if (templatesError) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="text-center py-12">
+          <h1 className="text-xl font-bold text-gray-900 mb-4">Failed to Load Templates</h1>
+          <p className="text-gray-600 mb-4">Could not load contract templates. Please try refreshing the page.</p>
+          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
         </div>
       </div>
     );
