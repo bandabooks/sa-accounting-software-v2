@@ -75,10 +75,17 @@ export default function ContractDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
+  const [contractContent, setContractContent] = useState<string>("");
 
   // Fetch contract details
   const { data: contract, isLoading: contractLoading } = useQuery<Contract>({
     queryKey: [`/api/contracts/${contractId}`],
+    enabled: !!contractId,
+  });
+
+  // Fetch contract content/version
+  const { data: contractVersion, isLoading: versionLoading } = useQuery({
+    queryKey: [`/api/contracts/${contractId}/versions/current`],
     enabled: !!contractId,
   });
 
@@ -100,6 +107,8 @@ export default function ContractDetail() {
         description: "The template has been successfully inserted into the contract.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/contracts/${contractId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contracts/${contractId}/versions/current`] });
+      setActiveTab("content"); // Switch to content tab to show the inserted template
     },
     onError: (error: any) => {
       toast({
@@ -154,6 +163,10 @@ export default function ContractDetail() {
 
   const handleInsertTemplate = (templateId: number) => {
     insertTemplateMutation.mutate(templateId);
+  };
+
+  const handleAddContent = () => {
+    setActiveTab("templates");
   };
 
   const handleEmailContract = () => {
@@ -373,40 +386,24 @@ export default function ContractDetail() {
             <CardContent>
               {/* Contract content display area */}
               <div className="bg-white p-6 rounded-lg border min-h-96">
-                <div className="space-y-4">
-                  <p className="text-gray-800">{"{"}dark_logo_image_with_uri{"}"}</p>
-                  <div className="space-y-2">
-                    <p>To : {"{"}contact_firstname{"}"} {"{"}contact_lastname{"}"}</p>
-                    <p>{"{"}client_company{"}"}</p>
+                {versionLoading ? (
+                  <div className="flex items-center justify-center h-48">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </div>
-                  <p>{"{"}contract_subject{"}"}</p>
-                  <p>{"{"}contract_created_at{"}"}</p>
-                  <div className="space-y-2">
-                    <p>Start Date:{"{"}contract_datestart{"}"}</p>
-                    <p>Expiry Date :{"{"}contract_dateend{"}"}</p>
+                ) : !contractVersion?.bodyMd ? (
+                  <div 
+                    className="flex items-center justify-center h-48 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg border-2 border-dashed border-gray-300"
+                    onClick={handleAddContent}
+                  >
+                    <div className="text-center">
+                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-red-500 font-medium text-lg mb-2">CLICK HERE TO ADD CONTENT</p>
+                      <p className="text-gray-500 text-sm">Select a template from the Templates tab to add content</p>
+                    </div>
                   </div>
-                  
-                  <div className="mt-8 space-y-4">
-                    <h3 className="text-lg font-semibold">WHY AN EMPLOYER NEED TO REGISTER WITH CF?</h3>
-                    <p className="text-gray-700">
-                      According to the law, an employer must insure his/her workers against occupational injuries or diseases contracted during the course of employment. CF is not insuring the employer's business but, insuring the workers.
-                    </p>
-                    
-                    <h3 className="text-lg font-semibold">REGISTERING AS AN EMPLOYER</h3>
-                    <p className="text-gray-700">
-                      According to law, an employer must register with the Compensation Fund (CF) within 7 after appointing an employee/s.
-                    </p>
-                    
-                    <p className="text-gray-700">For Employers - if you want to apply for registration at CF:</p>
-                    <ul className="list-disc ml-6 text-gray-700 space-y-1">
-                      <li>Register online <span className="text-blue-600">www.labour.gov.za</span>, click Online Services, click ROE Online (CFonline.labour.gov.za) or</li>
-                      <li>Complete the Registration Form</li>
-                      <li>Attach the CIPC certificate, UIF Proof of Registration, ID copies of the owners/directors, a proof of the business residence.</li>
-                      <li>For the Non-Profit Organisation (NPO), attach the CIPC certificate, UIF Proof of Registration, NPO certificate, ID copies of the owners/directors, a proof of the business residence</li>
-                      <li>For the Trust</li>
-                    </ul>
-                  </div>
-                </div>
+                ) : (
+                  <div className="space-y-4" dangerouslySetInnerHTML={{ __html: contractVersion.bodyMd }} />
+                )}
               </div>
             </CardContent>
           </Card>

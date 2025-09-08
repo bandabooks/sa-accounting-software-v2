@@ -18827,6 +18827,25 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // Get current contract version
+  app.get("/api/contracts/:id/versions/current", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contractId = parseInt(req.params.id);
+      
+      // First verify the contract belongs to the user's company
+      const contract = await contractService.getContract(req.user.companyId, contractId);
+      if (!contract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      
+      const version = await contractService.getCurrentVersion(contractId);
+      res.json(version);
+    } catch (error) {
+      console.error("Error fetching contract version:", error);
+      res.status(500).json({ error: "Failed to fetch contract version" });
+    }
+  });
+
   // Contract renewal endpoints
   app.post("/api/contracts/:id/renew", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
