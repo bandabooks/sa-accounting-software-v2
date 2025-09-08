@@ -54,7 +54,6 @@ export default function CreateContract() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
-  const [mergeFields, setMergeFields] = useState<Record<string, string>>({});
 
   const form = useForm<ContractForm>({
     resolver: zodResolver(contractSchema),
@@ -100,7 +99,6 @@ export default function CreateContract() {
         customerId: parseInt(data.customerId),
         projectId: data.projectId ? parseInt(data.projectId) : undefined,
         contractValue: data.contractValue ? parseFloat(data.contractValue) : undefined,
-        mergeFields,
       };
       return await apiRequest("/api/contracts", "POST", payload);
     },
@@ -126,13 +124,19 @@ export default function CreateContract() {
     setSelectedTemplate(template || null);
     
     if (template) {
-      // Initialize merge fields for the template
-      const fields = typeof template.fields === 'string' ? JSON.parse(template.fields) : (Array.isArray(template.fields) ? template.fields : []);
-      const initialFields: Record<string, string> = {};
-      fields.forEach((field: string) => {
-        initialFields[field] = '';
-      });
-      setMergeFields(initialFields);
+      // Auto-populate contract subject based on template
+      const subjectMap: Record<string, string> = {
+        'Business Advisory Services': 'Business Advisory Services Engagement',
+        'TAX PRACTITIONER': 'Tax Practitioner Services Engagement',
+        'ITR12 Individual Tax Returns': 'Individual Tax Return Services',
+        'ITR14 Trust Tax Returns': 'Trust Tax Return Services',
+        'VAT201 Practitioner Services': 'VAT Practitioner Services',
+        'Audit Services': 'Audit Services Engagement',
+        'Bookkeeping Services': 'Bookkeeping Services Agreement',
+        'Payroll Services': 'Payroll Services Agreement'
+      };
+      
+      form.setValue("subject", subjectMap[template.name] || `${template.name} - Professional Services Engagement`);
       
       // Set contract type based on template service package
       const packageToType: Record<string, string> = {
@@ -145,7 +149,7 @@ export default function CreateContract() {
         'audit': 'audit',
         'payroll': 'payroll'
       };
-      form.setValue("contractType", packageToType[template.servicePackage] || "other");
+      form.setValue("contractType", packageToType[template.servicePackage] || "engagement_letter");
     }
   };
 
@@ -165,11 +169,6 @@ export default function CreateContract() {
     { value: "other", label: "Other Professional Services" }
   ];
 
-  // Debug templates
-  console.log('Templates data:', templatesData);
-  console.log('Templates array:', templates);
-  console.log('Loading templates:', isLoadingTemplates);
-  console.log('Templates error:', templatesError);
 
   // Show loading state while data is being fetched
   if (isLoadingTemplates || isLoadingCustomers) {
@@ -483,50 +482,29 @@ export default function CreateContract() {
             </CardContent>
           </Card>
 
-          {/* Template Fields */}
+          {/* Template Preview */}
           {selectedTemplate && (
             <Card className="border border-gray-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  Template Details
+                  Template Selected
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Fill in the merge fields for <span className="font-medium">{selectedTemplate.name}</span>
+                  <span className="font-medium">{selectedTemplate.name}</span> - Client information will be automatically populated
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(() => {
-                    const fields = typeof selectedTemplate.fields === 'string' 
-                      ? JSON.parse(selectedTemplate.fields) 
-                      : (Array.isArray(selectedTemplate.fields) ? selectedTemplate.fields : []);
-                    
-                    return Array.isArray(fields) && fields.length > 0 ? 
-                      fields.map((field: string) => (
-                        <div key={field} className="space-y-2">
-                          <Label htmlFor={field} className="text-sm font-medium">
-                            {field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                          </Label>
-                          <Input
-                            id={field}
-                            className="h-9"
-                            value={mergeFields[field] || ''}
-                            onChange={(e) => setMergeFields(prev => ({
-                              ...prev,
-                              [field]: e.target.value
-                            }))}
-                            placeholder={`Enter ${field.replace(/_/g, ' ')}`}
-                          />
-                        </div>
-                      )) : (
-                        <div className="col-span-2 text-center py-4">
-                          <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500">This template has no merge fields.</p>
-                        </div>
-                      );
-                  })()
-                  }
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Auto-populated fields:</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div>• Client name and details</div>
+                    <div>• Company information</div>
+                    <div>• Contract dates</div>
+                    <div>• Service details</div>
+                    <div>• Professional signatures</div>
+                    <div>• Contact information</div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
