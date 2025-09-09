@@ -2047,6 +2047,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lastReconciledAt = new Date();
       lastReconciledAt.setDate(lastReconciledAt.getDate() - 1); // Yesterday
 
+      // Anomaly Detection
+      const anomalies = [];
+      
+      // Check for duplicate invoices (same customer, amount, and close dates)
+      const duplicateInvoices = allInvoices.filter((inv, index, arr) => 
+        arr.findIndex(other => 
+          other.customerId === inv.customerId && 
+          other.total === inv.total && 
+          Math.abs(new Date(other.invoiceDate).getTime() - new Date(inv.invoiceDate).getTime()) < 86400000 // Same day
+        ) !== index
+      );
+      
+      if (duplicateInvoices.length > 0) {
+        anomalies.push({
+          type: 'duplicate_invoices',
+          severity: 'medium',
+          count: duplicateInvoices.length,
+          description: `${duplicateInvoices.length} potential duplicate invoices detected`
+        });
+      }
+
+      // Check for stale data (invoices older than 6 months not reconciled)
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const staleInvoices = outstandingInvoices.filter(inv => new Date(inv.invoiceDate) < sixMonthsAgo);
+      
+      if (staleInvoices.length > 0) {
+        anomalies.push({
+          type: 'stale_invoices',
+          severity: 'high',
+          count: staleInvoices.length,
+          description: `${staleInvoices.length} invoices older than 6 months still outstanding`
+        });
+      }
+
+      // Check for unusual amounts (over R100k)
+      const highValueInvoices = allInvoices.filter(inv => parseFloat(inv.total) > 100000);
+      
+      if (highValueInvoices.length > 0) {
+        anomalies.push({
+          type: 'high_value_transactions',
+          severity: 'low',
+          count: highValueInvoices.length,
+          description: `${highValueInvoices.length} high-value invoices (>R100k) require review`
+        });
+      }
+
+      // Check GL posting frequency (warn if no posts in last 7 days)
+      const daysSinceLastPost = (new Date().getTime() - lastGlPost.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceLastPost > 7) {
+        anomalies.push({
+          type: 'stale_gl_data',
+          severity: 'high',
+          count: Math.floor(daysSinceLastPost),
+          description: `No GL postings in ${Math.floor(daysSinceLastPost)} days`
+        });
+      }
+
       // Compile all dashboard data in the specified format
       const dashboardData = {
         asOf: toDate.toISOString().split('T')[0],
@@ -2108,7 +2166,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               dueDate: inv.dueDate,
               daysOverdue: Math.floor((new Date().getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))
             }))
-        }
+        },
+        anomalies: anomalies
       };
 
       console.log(`✅ Business Dashboard data compiled for company ${companyId}`);

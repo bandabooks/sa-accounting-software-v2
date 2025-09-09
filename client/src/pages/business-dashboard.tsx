@@ -91,6 +91,12 @@ interface DashboardData {
       daysOverdue: number;
     }>;
   };
+  anomalies?: Array<{
+    type: string;
+    severity: 'low' | 'medium' | 'high';
+    count: number;
+    description: string;
+  }>;
 }
 
 export default function BusinessDashboard() {
@@ -571,12 +577,47 @@ export default function BusinessDashboard() {
               </Card>
             </div>
 
+            {/* Data Anomalies & Validation Warnings */}
+            {dashboardData.anomalies && dashboardData.anomalies.length > 0 && (
+              <Card className="border-yellow-200 dark:border-yellow-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-2 text-yellow-500" />
+                    Data Quality Alerts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {dashboardData.anomalies.map((anomaly, index) => (
+                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
+                        anomaly.severity === 'high' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
+                        anomaly.severity === 'medium' ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' :
+                        'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                      }`}>
+                        <div>
+                          <h4 className="font-medium">{anomaly.description}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Type: {anomaly.type.replace(/_/g, ' ')} • Severity: {anomaly.severity}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={anomaly.severity === 'high' ? 'destructive' : anomaly.severity === 'medium' ? 'default' : 'secondary'}>
+                            {anomaly.count}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Priority Actions */}
             {dashboardData.priorityActions.overdueInvoices.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 text-orange-500 mr-2" />
+                    <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
                     Priority Actions
                   </CardTitle>
                 </CardHeader>
