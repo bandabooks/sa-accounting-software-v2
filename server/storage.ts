@@ -7696,32 +7696,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const asOfDate = asOf || new Date();
       
-      // Get bank accounts from the bankAccounts table that are linked to Chart of Accounts
-      const result = await db.select({
-        totalBalance: sql<string>`COALESCE(SUM(
-          CASE 
-            WHEN coa.normal_balance = 'Debit' THEN 
-              COALESCE(SUM(jl.debit_amount), 0) - COALESCE(SUM(jl.credit_amount), 0)
-            ELSE 
-              COALESCE(SUM(jl.credit_amount), 0) - COALESCE(SUM(jl.debit_amount), 0)
-          END
-        ), 0)`
-      })
-      .from(bankAccounts)
-      .innerJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
-      .leftJoin(journalEntryLines, eq(journalEntryLines.accountId, chartOfAccounts.id))
-      .leftJoin(journalEntries, and(
-        eq(journalEntryLines.journalEntryId, journalEntries.id),
-        eq(journalEntries.isPosted, true),
-        lte(journalEntries.transactionDate, asOfDate)
-      ))
-      .where(and(
-        eq(bankAccounts.companyId, companyId),
-        eq(bankAccounts.isActive, true)
-      ))
-      .groupBy(chartOfAccounts.id, chartOfAccounts.normalBalance);
-
-      // Alternative approach: Get all bank account IDs first, then sum their GL balances
+      // Get all bank account IDs first, then sum their GL balances
       const bankAccountIds = await db.select({
         chartAccountId: bankAccounts.chartAccountId
       })

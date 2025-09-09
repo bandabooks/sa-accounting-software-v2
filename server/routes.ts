@@ -1917,6 +1917,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get bank balance using canonical GL-first calculation
       const totalBankBalance = await storage.getBankBalance(companyId, asOfDate);
+      
+      // Get legacy balance calculation for comparison (guardrail check)
+      const legacyBankAccounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
+      const legacyBankBalance = legacyBankAccounts.reduce((sum, account) => sum + parseFloat(account.currentBalance || "0"), 0);
+      const balanceDifference = Math.abs(totalBankBalance - legacyBankBalance);
 
       // Get all invoices for AR calculation
       const allInvoices = await storage.getAllInvoices(companyId);
@@ -2119,6 +2124,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         kpis: {
           bankBalance: parseFloat(totalBankBalance.toFixed(2)),
+          bankBalanceGuardrail: {
+            glBalance: parseFloat(totalBankBalance.toFixed(2)),
+            legacyBalance: parseFloat(legacyBankBalance.toFixed(2)),
+            difference: parseFloat(balanceDifference.toFixed(2)),
+            hasDiscrepancy: balanceDifference > 0.01
+          },
           recon: {
             lastReconciledAt: lastReconciledAt.toISOString().split('T')[0],
             percentMatched: 0.95 + (Math.random() * 0.04) // 95-99% matched

@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell 
+  Tooltip as ChartTooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell 
 } from "recharts";
 import { 
   TrendingUp, TrendingDown, DollarSign, CreditCard, Users, 
@@ -15,6 +15,7 @@ import {
   ArrowUpRight, ArrowDownRight, Calendar, Target, Eye, Banknote
 } from "lucide-react";
 import { KPIStat, SuccessKPIStat, InfoKPIStat, WarningKPIStat, DangerKPIStat, PurpleKPIStat } from "@/components/ui/kpi-stat";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
@@ -32,6 +33,12 @@ interface DashboardData {
   };
   kpis: {
     bankBalance: number;
+    bankBalanceGuardrail?: {
+      glBalance: number;
+      legacyBalance: number;
+      difference: number;
+      hasDiscrepancy: boolean;
+    };
     recon: {
       lastReconciledAt: string;
       percentMatched: number;
@@ -343,12 +350,40 @@ export default function BusinessDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Bank Balance */}
               <div onClick={navigateToBankTransactions} className="cursor-pointer">
-                <InfoKPIStat
-                  title="Bank Balance"
-                  value={dashboardData.kpis.bankBalance}
-                  icon={Banknote}
-                  subtitle={`${formatPercentage(dashboardData.kpis.recon.percentMatched * 100)} reconciled • Last: ${dashboardData.kpis.recon.lastReconciledAt}`}
-                />
+                <TooltipProvider>
+                  <div className="relative">
+                    <InfoKPIStat
+                      title="Bank Balance"
+                      value={dashboardData.kpis.bankBalance}
+                      icon={Banknote}
+                      subtitle={`${formatPercentage(dashboardData.kpis.recon.percentMatched * 100)} reconciled • Last: ${dashboardData.kpis.recon.lastReconciledAt}`}
+                    />
+                    {dashboardData.kpis.bankBalanceGuardrail?.hasDiscrepancy && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center cursor-help animate-pulse">
+                            <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="text-sm">
+                            <p className="font-medium text-yellow-800 mb-1">Balance Discrepancy Detected</p>
+                            <div className="space-y-1 text-xs">
+                              <p>GL Balance: {formatCurrency(dashboardData.kpis.bankBalanceGuardrail.glBalance)}</p>
+                              <p>Legacy Balance: {formatCurrency(dashboardData.kpis.bankBalanceGuardrail.legacyBalance)}</p>
+                              <p className="text-yellow-700">
+                                Difference: {formatCurrency(dashboardData.kpis.bankBalanceGuardrail.difference)}
+                              </p>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-2">
+                              The GL calculation differs from the stored balance. This may indicate data sync issues.
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TooltipProvider>
               </div>
 
               {/* Monthly Revenue */}
@@ -452,7 +487,7 @@ export default function BusinessDashboard() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="week" />
                       <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                      <Tooltip formatter={(value) => [formatCurrency(value as number)]} />
+                      <ChartTooltip formatter={(value) => [formatCurrency(value as number)]} />
                       <Legend />
                       <Bar dataKey="actualIn" fill="#10b981" name="Actual In" />
                       <Bar dataKey="actualOut" fill="#ef4444" name="Actual Out" />
@@ -474,7 +509,7 @@ export default function BusinessDashboard() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                      <Tooltip formatter={(value) => [formatCurrency(value as number)]} />
+                      <ChartTooltip formatter={(value) => [formatCurrency(value as number)]} />
                       <Legend />
                       <Bar dataKey="income" fill="#10b981" name="Income" />
                       <Bar dataKey="expense" fill="#ef4444" name="Expense" />
@@ -516,7 +551,7 @@ export default function BusinessDashboard() {
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [formatCurrency(value as number)]} />
+                      <ChartTooltip formatter={(value) => [formatCurrency(value as number)]} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
