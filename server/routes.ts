@@ -1914,11 +1914,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📊 Dashboard period: ${fromDate.toISOString()} to ${toDate.toISOString()}, basis: ${basis}`);
 
-      // Use canonical bank balance calculation from GL
-      const { BankBalanceService } = await import("./services/bankBalanceService");
-      const asOfDate = to ? new Date(to as string) : new Date();
-      const bankBalanceData = await BankBalanceService.getBankBalanceWithValidation(companyId, asOfDate);
-      const totalBankBalance = bankBalanceData.balance;
+      // Get bank balances from existing Chart of Accounts banking functionality
+      const bankAccounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
+      const totalBankBalance = bankAccounts.reduce((sum, account) => sum + parseFloat(account.currentBalance || "0"), 0);
 
       // Get all invoices for AR calculation
       const allInvoices = await storage.getAllInvoices(companyId);
@@ -2120,9 +2118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: "Open"
         },
         kpis: {
-          bankBalance: Math.round(totalBankBalance * 100) / 100, // Round to 2 decimal places
-          bankBalanceHasDiscrepancy: bankBalanceData.hasDiscrepancy,
-          bankBalanceDiscrepancy: bankBalanceData.discrepancyAmount,
+          bankBalance: parseFloat(totalBankBalance.toFixed(2)),
           recon: {
             lastReconciledAt: lastReconciledAt.toISOString().split('T')[0],
             percentMatched: 0.95 + (Math.random() * 0.04) // 95-99% matched
