@@ -58,15 +58,15 @@ const BusinessDashboard = () => {
     enabled: !!companyId
   });
 
-  // Fetch invoices summary
-  const { data: invoicesSummary } = useQuery<any>({
-    queryKey: ['/api/invoices/summary', companyId],
+  // Fetch all invoices to calculate totals
+  const { data: invoices } = useQuery<any[]>({
+    queryKey: ['/api/invoices', companyId],
     enabled: !!companyId
   });
 
-  // Fetch bills summary  
-  const { data: billsSummary } = useQuery<any>({
-    queryKey: ['/api/bills/summary', companyId],
+  // Fetch all bills to calculate totals
+  const { data: bills } = useQuery<any[]>({
+    queryKey: ['/api/bills', companyId],
     enabled: !!companyId
   });
 
@@ -76,9 +76,9 @@ const BusinessDashboard = () => {
     enabled: !!companyId
   });
 
-  // Fetch expenses summary
-  const { data: expensesSummary } = useQuery<any>({
-    queryKey: [`/api/expenses/summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`, companyId],
+  // Fetch expenses
+  const { data: expenses } = useQuery<any[]>({
+    queryKey: ['/api/expenses', companyId],
     enabled: !!companyId
   });
 
@@ -95,10 +95,31 @@ const BusinessDashboard = () => {
   });
 
   // Calculate key metrics from real data
-  const totalReceivables = invoicesSummary?.unpaidTotal || dashboardStats?.arTotal || 0;
-  const overdueReceivables = invoicesSummary?.overdueTotal || 0;
-  const totalPayables = billsSummary?.unpaidTotal || dashboardStats?.apTotal || 0;
-  const overduePayables = billsSummary?.overdueTotal || 0;
+  const unpaidInvoices = invoices?.filter((inv: any) => 
+    inv.status === 'unpaid' || inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'partially_paid'
+  ) || [];
+  const totalReceivables = unpaidInvoices.reduce((sum: number, inv: any) => 
+    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
+  ) || dashboardStats?.arTotal || dashboardStats?.outstandingInvoices || 0;
+  
+  const overdueInvoices = invoices?.filter((inv: any) => inv.status === 'overdue') || [];
+  const overdueReceivables = overdueInvoices.reduce((sum: number, inv: any) => 
+    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
+  );
+  
+  const unpaidBills = bills?.filter((bill: any) => 
+    bill.status === 'unpaid' || bill.status === 'partially_paid'
+  ) || [];
+  const totalPayables = unpaidBills.reduce((sum: number, bill: any) => 
+    sum + parseFloat(bill.total || bill.totalAmount || 0), 0
+  ) || dashboardStats?.apTotal || 0;
+  
+  const overdueBills = bills?.filter((bill: any) => 
+    bill.status === 'overdue' || (bill.dueDate && new Date(bill.dueDate) < new Date())
+  ) || [];
+  const overduePayables = overdueBills.reduce((sum: number, bill: any) => 
+    sum + parseFloat(bill.total || bill.totalAmount || 0), 0
+  );
   
   // Cash flow calculations
   const cashInflow = cashFlowData?.cashInflow?.[0]?.amount || dashboardStats?.cashInflow || 0;
@@ -106,9 +127,16 @@ const BusinessDashboard = () => {
     sum + parseFloat(item.amount || 0), 0) || dashboardStats?.cashOutflow || 0;
   const netCashFlow = parseFloat(cashInflow) - parseFloat(cashOutflow);
   
-  // Income and expense calculations
-  const totalIncome = profitLossData?.revenue?.total || dashboardStats?.totalRevenue || 0;
-  const totalExpenses = profitLossData?.expenses?.total || dashboardStats?.totalExpenses || expensesSummary?.total || 0;
+  // Income calculations from paid invoices
+  const paidInvoices = invoices?.filter((inv: any) => inv.status === 'paid') || [];
+  const totalIncome = paidInvoices.reduce((sum: number, inv: any) => 
+    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
+  ) || profitLossData?.revenue?.total || dashboardStats?.totalRevenue || dashboardStats?.monthlyRevenue || 0;
+  
+  // Expense calculations
+  const totalExpenses = expenses?.reduce((sum: number, exp: any) => 
+    sum + parseFloat(exp.amount || 0), 0
+  ) || profitLossData?.expenses?.total || dashboardStats?.totalExpenses || 0;
 
   // Prepare cash flow chart data
   const prepareCashFlowChartData = () => {
@@ -147,8 +175,15 @@ const BusinessDashboard = () => {
     ];
   };
 
-  // Prepare expense breakdown
-  const expenseCategories = expensesSummary?.categories || [];
+  // Prepare expense breakdown by category
+  const expensesByCategory: Record<string, number> = {};
+  expenses?.forEach((exp: any) => {
+    const category = exp.category || 'Other';
+    expensesByCategory[category] = (expensesByCategory[category] || 0) + parseFloat(exp.amount || 0);
+  });
+  const expenseCategories = Object.entries(expensesByCategory)
+    .map(([category, total]) => ({ category, total }))
+    .sort((a, b) => b.total - a.total);
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   const handleRefresh = () => {
@@ -415,14 +450,18 @@ const BusinessDashboard = () => {
           <CardContent>
             <div className="space-y-3">
               {bankAccounts?.length > 0 ? (
-                bankAccounts.slice(0, 5).map((account: any) => (
-                  <div key={account.id} className="flex justify-between items-center">
-                    <span className="text-sm">{account.accountName}</span>
-                    <span className="text-sm font-medium text-blue-600">
-                      {formatCurrency(account.currentBalance || account.balance || 0)}
-                    </span>
-                  </div>
-                ))
+                bankAccounts.slice(0, 5).map((account: any) => {
+                  // Calculate real balance from the account data
+                  const balance = parseFloat(account.currentBalance || account.balance || '0');
+                  return (
+                    <div key={account.id} className="flex justify-between items-center">
+                      <span className="text-sm">{account.accountName}</span>
+                      <span className="text-sm font-medium text-blue-600">
+                        {formatCurrency(balance)}
+                      </span>
+                    </div>
+                  );
+                })
               ) : dashboardStats?.bankBalances?.length > 0 ? (
                 dashboardStats.bankBalances.map((account: any) => (
                   <div key={account.accountId} className="flex justify-between items-center">
