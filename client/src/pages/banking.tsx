@@ -40,6 +40,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
+import { useCompany } from "@/contexts/CompanyContext";
 import type { BankAccountWithTransactions, ChartOfAccount } from "@shared/schema";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
@@ -79,9 +80,11 @@ export default function Banking() {
   const [editingAccount, setEditingAccount] = useState<BankAccountWithTransactions | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { companyId } = useCompany();
 
   const { data: bankAccounts = [], isLoading, error } = useQuery<BankAccountWithTransactions[]>({
-    queryKey: ["/api/bank-accounts"],
+    queryKey: ["/api/bank-accounts", companyId],
+    enabled: !!companyId,
     retry: (failureCount, error: any) => {
       // Don't retry on authentication errors
       if (error?.message?.includes('401')) return false;
@@ -90,13 +93,14 @@ export default function Banking() {
   });
 
   const { data: chartAccounts = [] } = useQuery<ChartOfAccount[]>({
-    queryKey: ["/api/chart-of-accounts"],
+    queryKey: ["/api/chart-of-accounts", companyId],
+    enabled: !!companyId,
   });
 
   const createAccountMutation = useMutation({
     mutationFn: (data: BankAccountForm) => apiRequest("/api/bank-accounts", "POST", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts", companyId] });
       setShowAccountDialog(false);
       toast({ title: "Success", description: "Bank account created successfully" });
     },
@@ -109,7 +113,7 @@ export default function Banking() {
     mutationFn: ({ id, data }: { id: number; data: Partial<BankAccountForm> }) => 
       apiRequest(`/api/bank-accounts/${id}`, "PATCH", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts", companyId] });
       setShowEditDialog(false);
       setEditingAccount(null);
       toast({ title: "Success", description: "Bank account updated successfully" });
@@ -122,7 +126,7 @@ export default function Banking() {
   const createTransactionMutation = useMutation({
     mutationFn: (data: TransactionForm) => apiRequest("/api/bank-transactions", "POST", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts", companyId] });
       setShowTransactionDialog(false);
       toast({ title: "Success", description: "Transaction created successfully" });
     },
@@ -134,7 +138,7 @@ export default function Banking() {
   const toggleAccountMutation = useMutation({
     mutationFn: (accountId: number) => apiRequest(`/api/bank-accounts/${accountId}/toggle`, "PATCH"),
     onSuccess: (updatedAccount: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts", companyId] });
       toast({ 
         title: "Success", 
         description: `Bank account ${updatedAccount.isActive ? 'activated' : 'deactivated'} successfully` 
