@@ -12,8 +12,9 @@ import {
 import { 
   TrendingUp, TrendingDown, DollarSign, CreditCard, Users, 
   AlertTriangle, CheckCircle, Clock, RefreshCw, Download, 
-  ArrowUpRight, ArrowDownRight, Calendar, Target, Eye
+  ArrowUpRight, ArrowDownRight, Calendar, Target, Eye, Banknote
 } from "lucide-react";
+import { KPIStat, SuccessKPIStat, InfoKPIStat, WarningKPIStat, DangerKPIStat, PurpleKPIStat } from "@/components/ui/kpi-stat";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
@@ -341,145 +342,101 @@ export default function BusinessDashboard() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Bank Balance */}
-              <Card data-testid="card-bank-balance" className="cursor-pointer hover:shadow-md transition-shadow" onClick={navigateToBankTransactions}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Bank Balance</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-bank-balance">
-                    {formatCurrency(dashboardData.kpis.bankBalance)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatPercentage(dashboardData.kpis.recon.percentMatched * 100)} reconciled • Last: {dashboardData.kpis.recon.lastReconciledAt}
-                  </p>
-                </CardContent>
-              </Card>
+              <div onClick={navigateToBankTransactions} className="cursor-pointer">
+                <InfoKPIStat
+                  title="Bank Balance"
+                  value={dashboardData.kpis.bankBalance}
+                  icon={Banknote}
+                  subtitle={`${formatPercentage(dashboardData.kpis.recon.percentMatched * 100)} reconciled • Last: ${dashboardData.kpis.recon.lastReconciledAt}`}
+                />
+              </div>
 
               {/* Monthly Revenue */}
-              <Card data-testid="card-revenue">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-revenue">
-                    {formatCurrency(dashboardData.kpis.monthlyRevenue)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatPercentage(dashboardData.kpis.grossMargin * 100)} gross margin • {dashboardData.basis} basis
-                  </p>
-                </CardContent>
-              </Card>
+              <SuccessKPIStat
+                title="Monthly Revenue"
+                value={dashboardData.kpis.monthlyRevenue}
+                icon={TrendingUp}
+                subtitle={`${formatPercentage(dashboardData.kpis.grossMargin * 100)} gross margin • ${dashboardData.basis} basis`}
+              />
 
               {/* Net Profit */}
-              <Card data-testid="card-net-profit">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-                  <Target className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-net-profit">
-                    {formatCurrency(dashboardData.kpis.netProfit)}
-                  </div>
-                  <p className="text-xs text-muted-foreground flex items-center">
-                    {dashboardData.kpis.profitMargin >= 0 ? (
-                      <ArrowUpRight className="w-3 h-3 text-green-500 mr-1" />
-                    ) : (
-                      <ArrowDownRight className="w-3 h-3 text-red-500 mr-1" />
-                    )}
-                    {formatPercentage(dashboardData.kpis.profitMargin * 100)} margin
-                  </p>
-                </CardContent>
-              </Card>
+              <KPIStat
+                title="Net Profit"
+                value={dashboardData.kpis.netProfit}
+                icon={Target}
+                variant={dashboardData.kpis.netProfit >= 0 ? 'success' : 'danger'}
+                change={{
+                  value: dashboardData.kpis.profitMargin * 100,
+                  period: 'margin',
+                  type: dashboardData.kpis.profitMargin >= 0 ? 'increase' : 'decrease'
+                }}
+              />
 
               {/* VAT Position */}
-              <Card data-testid="card-vat-position" className="cursor-pointer hover:shadow-md transition-shadow" onClick={navigateToVATReturns}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">VAT Position</CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-vat-position">
-                    {formatCurrency(Math.abs(dashboardData.kpis.vat.position))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {dashboardData.kpis.vat.status} • Due: {dashboardData.kpis.vat.dueDate}
-                  </p>
-                </CardContent>
-              </Card>
+              <div onClick={navigateToVATReturns} className="cursor-pointer">
+                <WarningKPIStat
+                  title="VAT Position"
+                  value={Math.abs(dashboardData.kpis.vat.position)}
+                  icon={AlertTriangle}
+                  subtitle={`${dashboardData.kpis.vat.status} • Due: ${dashboardData.kpis.vat.dueDate}`}
+                  badge={{
+                    text: dashboardData.kpis.vat.status,
+                    variant: dashboardData.kpis.vat.status === 'Payable' ? 'destructive' : 'default'
+                  }}
+                />
+              </div>
             </div>
 
             {/* Additional KPI Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Accounts Receivable */}
-              <Card data-testid="card-accounts-receivable" className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigateToInvoices('sent')}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Receivables (AR)</CardTitle>
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-receivables">
-                    {formatCurrency(dashboardData.kpis.ar.total)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(dashboardData.kpis.ar.overdue)} overdue ({dashboardData.kpis.ar.total > 0 ? formatPercentage((dashboardData.kpis.ar.overdue / dashboardData.kpis.ar.total) * 100) : '0%'})
-                  </p>
-                </CardContent>
-              </Card>
+              <div onClick={() => navigateToInvoices('sent')} className="cursor-pointer">
+                <SuccessKPIStat
+                  title="Receivables (AR)"
+                  value={dashboardData.kpis.ar.total}
+                  icon={CreditCard}
+                  subtitle={`${formatCurrency(dashboardData.kpis.ar.overdue)} overdue (${dashboardData.kpis.ar.total > 0 ? formatPercentage((dashboardData.kpis.ar.overdue / dashboardData.kpis.ar.total) * 100) : '0%'})`}
+                  badge={dashboardData.kpis.ar.overdue > 0 ? {
+                    text: 'Overdue',
+                    variant: 'destructive'
+                  } : undefined}
+                />
+              </div>
 
               {/* Accounts Payable */}
-              <Card data-testid="card-accounts-payable">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Payables (AP)</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-payables">
-                    {formatCurrency(dashboardData.kpis.ap.total)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(dashboardData.kpis.ap.overdue)} overdue
-                  </p>
-                </CardContent>
-              </Card>
+              <DangerKPIStat
+                title="Payables (AP)"
+                value={dashboardData.kpis.ap.total}
+                icon={Users}
+                subtitle={`${formatCurrency(dashboardData.kpis.ap.overdue)} overdue`}
+              />
 
               {/* Cash Flow (Weekly Avg) */}
-              <Card data-testid="card-cash-flow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Weekly Cash Flow</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-cash-flow">
-                    {dashboardData.charts.cashFlow13w.length > 0 ? 
-                      formatCurrency(
-                        dashboardData.charts.cashFlow13w
-                          .slice(0, 4)
-                          .reduce((sum, week) => sum + (week.actualIn - week.actualOut), 0) / 4
-                      ) : formatCurrency(0)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    4-week average net flow
-                  </p>
-                </CardContent>
-              </Card>
+              <PurpleKPIStat
+                title="Weekly Cash Flow"
+                value={dashboardData.charts.cashFlow13w.length > 0 ? 
+                  dashboardData.charts.cashFlow13w
+                    .slice(0, 4)
+                    .reduce((sum, week) => sum + (week.actualIn - week.actualOut), 0) / 4
+                  : 0}
+                icon={TrendingUp}
+                subtitle="4-week average net flow"
+              />
 
               {/* AR Aging Summary */}
-              <Card data-testid="card-ar-aging">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">AR Aging</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-ar-aging">
-                    {formatCurrency(dashboardData.charts.aging.ar["90_plus"])}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    90+ days overdue
-                  </p>
-                </CardContent>
-              </Card>
+              <WarningKPIStat
+                title="AR Aging"
+                value={dashboardData.charts.aging.ar["90_plus"]}
+                icon={Calendar}
+                subtitle="90+ days overdue"
+                badge={dashboardData.charts.aging.ar["90_plus"] > 0 ? {
+                  text: 'Action Needed',
+                  variant: 'destructive'
+                } : {
+                  text: 'Good',
+                  variant: 'outline'
+                }}
+              />
             </div>
 
             {/* Charts Section */}
