@@ -350,6 +350,24 @@ export default function BusinessDashboard() {
                     />
                     <Line 
                       type="monotone" 
+                      dataKey="cashIn" 
+                      stroke="#10b981" 
+                      strokeWidth={2.5}
+                      dot={{ fill: '#10b981', strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5, stroke: '#10b981', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Cash Inflow"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="cashOut" 
+                      stroke="#ef4444" 
+                      strokeWidth={2.5}
+                      dot={{ fill: '#ef4444', strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5, stroke: '#ef4444', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Cash Outflow"
+                    />
+                    <Line 
+                      type="monotone" 
                       dataKey="netFlow" 
                       stroke="#2563eb" 
                       strokeWidth={2.5}
