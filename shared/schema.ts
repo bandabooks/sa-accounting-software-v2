@@ -6791,6 +6791,12 @@ export type AiMatchingMetrics = typeof aiMatchingMetrics.$inferSelect;
 export type InsertAiDuplicateDetection = z.infer<typeof insertAiDuplicateDetectionSchema>;
 export type AiDuplicateDetection = typeof aiDuplicateDetection.$inferSelect;
 
+// Type aliases for storage interface compatibility
+export type UserCorrection = AiMatchingCorrection;
+export type LearningPattern = AiTransactionPattern;
+export type MatchingRule = AiTransactionPattern;
+export type LearningMetrics = AiMatchingMetrics;
+
 // Bank Statement Import Management
 export const bankStatementImports = pgTable('bank_statement_imports', {
   id: serial('id').primaryKey(),
