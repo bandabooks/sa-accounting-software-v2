@@ -37,7 +37,9 @@ export interface DashboardStats {
 
   // existing fields (preserve compatibility)
   totalRevenue?: string | number;
+  monthlyRevenue?: string | number; // Added monthlyRevenue
   totalExpenses?: string | number;
+  profitMargin?: string; // Added profitMargin
   recentActivities?: Array<any>;
   recentInvoices?: Array<any>;
   profitLossData?: Array<any>;

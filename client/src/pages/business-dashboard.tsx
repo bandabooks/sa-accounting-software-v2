@@ -33,13 +33,13 @@ export default function BusinessDashboard() {
   });
 
   // Fetch priority actions data
-  const { data: priorityActions } = useQuery({
+  const { data: priorityActions } = useQuery<any>({
     queryKey: [`/api/dashboard/priority-actions`, companyId],
     enabled: !!companyId,
   });
 
   // Fetch recent activity data
-  const { data: recentActivity } = useQuery({
+  const { data: recentActivity } = useQuery<any[]>({
     queryKey: [`/api/dashboard/recent-activity`, companyId],
     enabled: !!companyId,
   });
