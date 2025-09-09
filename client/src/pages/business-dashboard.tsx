@@ -143,7 +143,7 @@ export default function BusinessDashboard() {
   const businessMetrics: BusinessMetric[] = [
     {
       title: "Bank Balance",
-      value: dashboardStats?.bankBalance ? Math.round(parseFloat(dashboardStats.bankBalance.toString())) : 0,
+      value: dashboardStats?.bankBalance || 0,
       change: 5.2,
       changeType: 'increase',
       trend: 'up',
@@ -151,7 +151,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Total Receivables",
-      value: `R ${((dashboardStats as any)?.outstandingInvoices || '0.00')}`,
+      value: `R ${dashboardStats?.outstandingInvoices || '0.00'}`,
       change: 15.4,
       changeType: 'increase',
       trend: 'up',
@@ -159,7 +159,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Total Payables",
-      value: dashboardStats?.totalPayables ? Math.round(parseFloat(dashboardStats.totalPayables.toString())) : 0,
+      value: dashboardStats?.apTotal || 0,
       change: -8.3,
       changeType: 'decrease',
       trend: 'down',
@@ -167,7 +167,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Monthly Revenue",
-      value: `R ${((dashboardStats as any)?.totalRevenue || '0.00')}`,
+      value: `R ${dashboardStats?.monthlyRevenue || '0.00'}`,
       change: 8.2,
       changeType: 'increase', 
       trend: 'up',
@@ -175,7 +175,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Active Projects",
-      value: dashboardStats?.activeProjects || 0,
+      value: dashboardStats?.totalCustomers || 0,
       change: 15.0,
       changeType: 'increase',
       trend: 'up',
@@ -183,7 +183,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Profit Margin",
-      value: (dashboardStats as any)?.profitMargin ? `${(dashboardStats as any).profitMargin}%` : "0%",
+      value: `${dashboardStats?.profitMargin || '0'}%`,
       change: 2.1,
       changeType: 'increase',
       trend: 'up',
