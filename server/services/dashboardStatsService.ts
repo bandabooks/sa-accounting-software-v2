@@ -337,7 +337,8 @@ export class DashboardStatsService {
       db.execute(sql`
         SELECT 
           COALESCE(SUM(CASE WHEN status = 'paid' THEN total::numeric ELSE 0 END), 0) as total_revenue,
-          COALESCE(SUM(CASE WHEN status != 'paid' THEN total::numeric ELSE 0 END), 0) as outstanding_invoices
+          COALESCE(SUM(CASE WHEN status IN ('draft', 'sent', 'overdue', 'partially_paid') THEN total::numeric ELSE 0 END), 0) as outstanding_invoices,
+          COALESCE(SUM(CASE WHEN status = 'paid' AND issue_date >= DATE_TRUNC('month', CURRENT_DATE) THEN total::numeric ELSE 0 END), 0) as monthly_revenue
         FROM invoices 
         WHERE company_id = ${tenantId}
       `),
@@ -371,24 +372,23 @@ export class DashboardStatsService {
 
     // Calculate profit margin from real company data
     const totalRevenue = Number(invoiceData.rows[0]?.total_revenue || 0);
+    const monthlyRevenue = Number(invoiceData.rows[0]?.monthly_revenue || 0);
+    const outstandingInvoices = Number(invoiceData.rows[0]?.outstanding_invoices || 0);
     const totalExpenses = Number(expenseData.rows[0]?.total_expenses || 0);
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0.0';
     
-    // Calculate total bank balance from revenue if no actual bank balances exist
-    let totalBankBalance = Number(bankData.rows[0]?.total_bank_balance || 0);
-    if (totalBankBalance === 0 && totalRevenue > 0) {
-      // Use 60% of total revenue as realistic bank balance if none exists
-      totalBankBalance = totalRevenue * 0.6;
-    }
+    // Use actual bank balance from database
+    const totalBankBalance = Number(bankData.rows[0]?.total_bank_balance || 0);
     
     return {
       totalRevenue: formatForFrontend(totalRevenue),
-      outstandingInvoices: formatForFrontend(Number(invoiceData.rows[0]?.outstanding_invoices || 0)),
+      monthlyRevenue: formatForFrontend(monthlyRevenue), // Add monthly revenue
+      outstandingInvoices: formatForFrontend(outstandingInvoices),
       totalCustomers: Number(customerData.rows[0]?.total_customers || 0),
       pendingEstimates: Number(estimateData.rows[0]?.pending_estimates || 0),
       totalExpenses: formatForFrontend(totalExpenses),
-      bankBalance: Math.round(totalBankBalance), // Total cash balance from all bank accounts or calculated from revenue
+      bankBalance: Math.round(totalBankBalance), // Use actual bank balance
       profitMargin: profitMargin, // Real profit margin calculated from company data
       recentActivities: [],
       recentInvoices: [],
@@ -415,10 +415,12 @@ export class DashboardStatsService {
       arTotal: 0,
       apTotal: 0,
       totalRevenue: 0,
+      monthlyRevenue: 0,
       totalExpenses: 0,
       totalCustomers: 0,
       pendingEstimates: 0,
       outstandingInvoices: 0,
+      profitMargin: '0.0',
       recentActivities: [],
       recentInvoices: [],
       profitLossData: [],
