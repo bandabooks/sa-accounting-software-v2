@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Plus, 
@@ -83,17 +83,31 @@ export default function Banking() {
   const { companyId } = useCompany();
 
   const { data: bankAccounts = [], isLoading, error } = useQuery<BankAccountWithTransactions[]>({
-    queryKey: ["/api/bank-accounts"],
+    queryKey: ["/api/bank-accounts", companyId],
+    enabled: !!companyId,
     retry: (failureCount, error: any) => {
       // Don't retry on authentication errors
       if (error?.message?.includes('401')) return false;
       return failureCount < 2;
-    }
+    },
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: false
   });
 
   const { data: chartAccounts = [] } = useQuery<ChartOfAccount[]>({
-    queryKey: ["/api/chart-of-accounts"],
+    queryKey: ["/api/chart-of-accounts", companyId],
+    enabled: !!companyId,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: false
   });
+
+  // Force refresh of banking data when company changes
+  useEffect(() => {
+    if (companyId) {
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts", companyId] });
+    }
+  }, [companyId, queryClient]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data: BankAccountForm) => apiRequest("/api/bank-accounts", "POST", data),
