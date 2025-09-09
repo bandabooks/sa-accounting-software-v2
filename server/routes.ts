@@ -1862,7 +1862,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recentInvoices = await db.select({
         id: invoices.id,
         total: invoices.total,
-        invoiceDate: invoices.invoiceDate,
+        issueDate: invoices.issueDate,
         customer: customers.name
       }).from(invoices)
         .innerJoin(customers, eq(invoices.customerId, customers.id))
