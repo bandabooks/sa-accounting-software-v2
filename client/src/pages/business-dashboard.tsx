@@ -131,9 +131,10 @@ export default function BusinessDashboard() {
   const { from, to } = getPeriodDates();
 
   const { data: dashboardData, isLoading, error, refetch } = useQuery<DashboardData>({
-    queryKey: ['/api/dashboard/business', companyId, from.toISOString(), to.toISOString(), accountingBasis],
+    queryKey: [`/api/dashboard/business?basis=${accountingBasis}&period=${period}&from=${from.toISOString()}&to=${to.toISOString()}`],
     enabled: !!companyId,
     staleTime: 30000, // 30 seconds
+    retry: 3,
   });
 
   const formatCurrency = (amount: string | number) => {
