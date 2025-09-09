@@ -350,30 +350,12 @@ export default function BusinessDashboard() {
                     />
                     <Line 
                       type="monotone" 
-                      dataKey="cashIn" 
-                      stroke="#22c55e" 
-                      strokeWidth={2}
-                      dot={{ fill: '#22c55e', strokeWidth: 2, r: 3 }}
-                      activeDot={{ r: 5, stroke: '#22c55e', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Cash In"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="cashOut" 
-                      stroke="#ef4444" 
-                      strokeWidth={2}
-                      dot={{ fill: '#ef4444', strokeWidth: 2, r: 3 }}
-                      activeDot={{ r: 5, stroke: '#ef4444', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Cash Out"
-                    />
-                    <Line 
-                      type="monotone" 
                       dataKey="netFlow" 
-                      stroke="#3b82f6" 
-                      strokeWidth={2}
-                      dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
-                      activeDot={{ r: 5, stroke: '#3b82f6', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Net Flow"
+                      stroke="#2563eb" 
+                      strokeWidth={2.5}
+                      dot={{ fill: '#2563eb', strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5, stroke: '#2563eb', strokeWidth: 2, fill: '#ffffff' }}
+                      name="Net Cash Flow"
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -451,9 +433,9 @@ export default function BusinessDashboard() {
                       type="monotone" 
                       dataKey="profitMargin" 
                       stroke="#8b5cf6" 
-                      strokeWidth={3}
-                      dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6, stroke: '#8b5cf6', strokeWidth: 2, fill: '#ffffff' }}
+                      strokeWidth={2.5}
+                      dot={{ fill: '#8b5cf6', strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5, stroke: '#8b5cf6', strokeWidth: 2, fill: '#ffffff' }}
                       name="Profit Margin"
                     />
                   </ComposedChart>
