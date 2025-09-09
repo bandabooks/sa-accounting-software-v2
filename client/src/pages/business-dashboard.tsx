@@ -19,74 +19,74 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
 interface DashboardData {
-  companyId: number;
-  period: { from: Date; to: Date };
+  asOf: string;
   basis: string;
-  lastUpdated: Date;
-  dataFreshness: {
-    lastGLPost: Date;
-    trialBalanceValid: boolean;
-    lastBankSync: Date;
+  freshness: {
+    lastGlPostAt: string;
+    lastBankSyncAt: string;
+  };
+  closeStatus: {
+    period: string;
+    status: string;
   };
   kpis: {
-    bankBalance: {
-      total: string;
-      accounts: number;
-      reconciliationStatus: number;
+    bankBalance: number;
+    recon: {
+      lastReconciledAt: string;
+      percentMatched: number;
     };
-    revenue: {
-      total: string;
-      basis: string;
-      growth: number;
+    ar: {
+      total: number;
+      overdue: number;
     };
-    expenses: {
-      total: string;
-      basis: string;
+    ap: {
+      total: number;
+      overdue: number;
     };
-    netProfit: {
-      amount: string;
-      margin: string;
-      basis: string;
-    };
-    accountsReceivable: {
-      total: string;
-      overdue: string;
-      overduePercentage: string;
-    };
-    accountsPayable: {
-      total: string;
-      overdue: string;
-      overduePercentage: string;
-    };
-    vatPosition: {
-      amount: string;
+    monthlyRevenue: number;
+    grossMargin: number;
+    netProfit: number;
+    profitMargin: number;
+    vat: {
+      position: number;
+      dueDate: string;
       status: string;
-      dueDate: Date | null;
     };
   };
   charts: {
-    monthlyRevenue: Array<{
-      month: string;
-      revenue: number;
-      name: string;
+    cashFlow13w: Array<{
+      week: string;
+      actualIn: number;
+      actualOut: number;
+      forecastIn: number;
+      forecastOut: number;
     }>;
-    incomeVsExpense: Array<{
+    incomeVsExpenseT12M: Array<{
       month: string;
-      name: string;
       income: number;
       expense: number;
-      netProfit: number;
     }>;
-    cashFlowForecast: any[];
-    arAging: any[];
-    apAging: any[];
+    aging: {
+      ar: {
+        "0_30": number;
+        "31_60": number;
+        "61_90": number;
+        "90_plus": number;
+      };
+      ap: {
+        "0_30": number;
+        "31_60": number;
+        "61_90": number;
+        "90_plus": number;
+      };
+    };
   };
   priorityActions: {
     billsDueThisWeek: any[];
     overdueInvoices: Array<{
       id: number;
       customer: string;
-      amount: string;
+      amount: number;
       dueDate: string;
       daysOverdue: number;
     }>;
@@ -233,14 +233,21 @@ export default function BusinessDashboard() {
             <div className="flex items-center space-x-4 mt-3 text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center space-x-1">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Trial Balance: {dashboardData.dataFreshness.trialBalanceValid ? 'Valid' : 'Invalid'}</span>
+                <span>Period: {dashboardData.closeStatus.status}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>Last Updated: {new Date(dashboardData.lastUpdated).toLocaleTimeString()}</span>
+                <span>GL: {new Date(dashboardData.freshness.lastGlPostAt).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="w-4 h-4 text-blue-500" />
+                <span>Bank: {new Date(dashboardData.freshness.lastBankSyncAt).toLocaleString()}</span>
               </div>
               <Badge variant="outline" className="text-xs">
                 {accountingBasis.toUpperCase()} Basis
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                As of {dashboardData.asOf}
               </Badge>
             </div>
           )}
@@ -275,26 +282,26 @@ export default function BusinessDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold" data-testid="text-bank-balance">
-                    {formatCurrency(dashboardData.kpis.bankBalance.total)}
+                    {formatCurrency(dashboardData.kpis.bankBalance)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {dashboardData.kpis.bankBalance.accounts} accounts • {formatPercentage(dashboardData.kpis.bankBalance.reconciliationStatus * 100)} reconciled
+                    {formatPercentage(dashboardData.kpis.recon.percentMatched * 100)} reconciled • Last: {dashboardData.kpis.recon.lastReconciledAt}
                   </p>
                 </CardContent>
               </Card>
 
-              {/* Revenue */}
+              {/* Monthly Revenue */}
               <Card data-testid="card-revenue">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+                  <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold" data-testid="text-revenue">
-                    {formatCurrency(dashboardData.kpis.revenue.total)}
+                    {formatCurrency(dashboardData.kpis.monthlyRevenue)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {dashboardData.kpis.revenue.basis} basis • {period} period
+                    {formatPercentage(dashboardData.kpis.grossMargin * 100)} gross margin • {dashboardData.basis} basis
                   </p>
                 </CardContent>
               </Card>
@@ -307,31 +314,103 @@ export default function BusinessDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold" data-testid="text-net-profit">
-                    {formatCurrency(dashboardData.kpis.netProfit.amount)}
+                    {formatCurrency(dashboardData.kpis.netProfit)}
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center">
-                    {parseFloat(dashboardData.kpis.netProfit.margin) >= 0 ? (
+                    {dashboardData.kpis.profitMargin >= 0 ? (
                       <ArrowUpRight className="w-3 h-3 text-green-500 mr-1" />
                     ) : (
                       <ArrowDownRight className="w-3 h-3 text-red-500 mr-1" />
                     )}
-                    {dashboardData.kpis.netProfit.margin}% margin
+                    {formatPercentage(dashboardData.kpis.profitMargin * 100)} margin
                   </p>
                 </CardContent>
               </Card>
 
+              {/* VAT Position */}
+              <Card data-testid="card-vat-position">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">VAT Position</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-vat-position">
+                    {formatCurrency(Math.abs(dashboardData.kpis.vat.position))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardData.kpis.vat.status} • Due: {dashboardData.kpis.vat.dueDate}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Additional KPI Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Accounts Receivable */}
               <Card data-testid="card-accounts-receivable">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Receivables</CardTitle>
+                  <CardTitle className="text-sm font-medium">Receivables (AR)</CardTitle>
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold" data-testid="text-receivables">
-                    {formatCurrency(dashboardData.kpis.accountsReceivable.total)}
+                    {formatCurrency(dashboardData.kpis.ar.total)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {formatCurrency(dashboardData.kpis.accountsReceivable.overdue)} overdue ({dashboardData.kpis.accountsReceivable.overduePercentage}%)
+                    {formatCurrency(dashboardData.kpis.ar.overdue)} overdue ({dashboardData.kpis.ar.total > 0 ? formatPercentage((dashboardData.kpis.ar.overdue / dashboardData.kpis.ar.total) * 100) : '0%'})
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Accounts Payable */}
+              <Card data-testid="card-accounts-payable">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Payables (AP)</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-payables">
+                    {formatCurrency(dashboardData.kpis.ap.total)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(dashboardData.kpis.ap.overdue)} overdue
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Cash Flow (Weekly Avg) */}
+              <Card data-testid="card-cash-flow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Weekly Cash Flow</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-cash-flow">
+                    {dashboardData.charts.cashFlow13w.length > 0 ? 
+                      formatCurrency(
+                        dashboardData.charts.cashFlow13w
+                          .slice(0, 4)
+                          .reduce((sum, week) => sum + (week.actualIn - week.actualOut), 0) / 4
+                      ) : formatCurrency(0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    4-week average net flow
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* AR Aging Summary */}
+              <Card data-testid="card-ar-aging">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">AR Aging</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-ar-aging">
+                    {formatCurrency(dashboardData.charts.aging.ar["90_plus"])}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    90+ days overdue
                   </p>
                 </CardContent>
               </Card>
@@ -339,40 +418,38 @@ export default function BusinessDashboard() {
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Monthly Revenue Trend */}
+              {/* 13-Week Cash Flow Forecast */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Revenue Trend (12 Months)</CardTitle>
+                  <CardTitle>13-Week Cash Flow Forecast</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={dashboardData.charts.monthlyRevenue}>
+                    <BarChart data={dashboardData.charts.cashFlow13w}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="week" />
                       <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                      <Tooltip formatter={(value) => [formatCurrency(value as number), 'Revenue']} />
-                      <Line 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="#3b82f6" 
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
+                      <Tooltip formatter={(value) => [formatCurrency(value as number)]} />
+                      <Legend />
+                      <Bar dataKey="actualIn" fill="#10b981" name="Actual In" />
+                      <Bar dataKey="actualOut" fill="#ef4444" name="Actual Out" />
+                      <Bar dataKey="forecastIn" fill="#82ca9d" name="Forecast In" opacity={0.6} />
+                      <Bar dataKey="forecastOut" fill="#ff8a65" name="Forecast Out" opacity={0.6} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
 
-              {/* Income vs Expense */}
+              {/* Income vs Expense (T12M) */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Income vs Expense</CardTitle>
+                  <CardTitle>Income vs Expense (12 Months)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={dashboardData.charts.incomeVsExpense}>
+                    <BarChart data={dashboardData.charts.incomeVsExpenseT12M}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="month" />
                       <YAxis tickFormatter={(value) => formatCurrency(value)} />
                       <Tooltip formatter={(value) => [formatCurrency(value as number)]} />
                       <Legend />
@@ -380,6 +457,93 @@ export default function BusinessDashboard() {
                       <Bar dataKey="expense" fill="#ef4444" name="Expense" />
                     </BarChart>
                   </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* AR/AP Aging Analysis */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* AR Aging */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Accounts Receivable Aging</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: '0-30 Days', value: dashboardData.charts.aging.ar["0_30"], fill: '#10b981' },
+                          { name: '31-60 Days', value: dashboardData.charts.aging.ar["31_60"], fill: '#f59e0b' },
+                          { name: '61-90 Days', value: dashboardData.charts.aging.ar["61_90"], fill: '#ef4444' },
+                          { name: '90+ Days', value: dashboardData.charts.aging.ar["90_plus"], fill: '#991b1b' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        label={(entry) => entry.value > 0 ? formatCurrency(entry.value) : ''}
+                      >
+                        {[
+                          { name: '0-30 Days', value: dashboardData.charts.aging.ar["0_30"], fill: '#10b981' },
+                          { name: '31-60 Days', value: dashboardData.charts.aging.ar["31_60"], fill: '#f59e0b' },
+                          { name: '61-90 Days', value: dashboardData.charts.aging.ar["61_90"], fill: '#ef4444' },
+                          { name: '90+ Days', value: dashboardData.charts.aging.ar["90_plus"], fill: '#991b1b' }
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [formatCurrency(value as number)]} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Key Performance Metrics Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Revenue Growth</span>
+                      <span className="font-medium">
+                        {dashboardData.charts.incomeVsExpenseT12M.length >= 2 ? 
+                          formatPercentage(
+                            ((dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 1].income - 
+                              dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 2].income) / 
+                              dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 2].income) * 100
+                          ) : '0%'
+                        }
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Collection Period</span>
+                      <span className="font-medium">
+                        {dashboardData.kpis.ar.total > 0 && dashboardData.kpis.monthlyRevenue > 0 ?
+                          Math.round((dashboardData.kpis.ar.total / dashboardData.kpis.monthlyRevenue) * 30) + ' days' :
+                          '0 days'
+                        }
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Working Capital</span>
+                      <span className="font-medium">
+                        {formatCurrency(dashboardData.kpis.bankBalance + dashboardData.kpis.ar.total - dashboardData.kpis.ap.total)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Current Ratio</span>
+                      <span className="font-medium">
+                        {dashboardData.kpis.ap.total > 0 ? 
+                          ((dashboardData.kpis.bankBalance + dashboardData.kpis.ar.total) / dashboardData.kpis.ap.total).toFixed(2) :
+                          '∞'
+                        }
+                      </span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
