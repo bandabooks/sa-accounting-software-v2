@@ -1,522 +1,427 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Users, 
-  CreditCard,
-  ArrowUp,
-  ArrowDown,
-  FileText,
-  Package,
-  RefreshCw
-} from 'lucide-react';
+  LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell 
+} from "recharts";
 import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import { useCompany } from '@/contexts/CompanyContext';
-import { format, subDays } from 'date-fns';
+  TrendingUp, TrendingDown, DollarSign, CreditCard, Users, 
+  AlertTriangle, CheckCircle, Clock, RefreshCw, Download, 
+  ArrowUpRight, ArrowDownRight, Calendar, Target, Eye
+} from "lucide-react";
+import { useCompany } from "@/contexts/CompanyContext";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
-const BusinessDashboard = () => {
+interface DashboardData {
+  companyId: number;
+  period: { from: Date; to: Date };
+  basis: string;
+  lastUpdated: Date;
+  dataFreshness: {
+    lastGLPost: Date;
+    trialBalanceValid: boolean;
+    lastBankSync: Date;
+  };
+  kpis: {
+    bankBalance: {
+      total: string;
+      accounts: number;
+      reconciliationStatus: number;
+    };
+    revenue: {
+      total: string;
+      basis: string;
+      growth: number;
+    };
+    expenses: {
+      total: string;
+      basis: string;
+    };
+    netProfit: {
+      amount: string;
+      margin: string;
+      basis: string;
+    };
+    accountsReceivable: {
+      total: string;
+      overdue: string;
+      overduePercentage: string;
+    };
+    accountsPayable: {
+      total: string;
+      overdue: string;
+      overduePercentage: string;
+    };
+    vatPosition: {
+      amount: string;
+      status: string;
+      dueDate: Date | null;
+    };
+  };
+  charts: {
+    monthlyRevenue: Array<{
+      month: string;
+      revenue: number;
+      name: string;
+    }>;
+    incomeVsExpense: Array<{
+      month: string;
+      name: string;
+      income: number;
+      expense: number;
+      netProfit: number;
+    }>;
+    cashFlowForecast: any[];
+    arAging: any[];
+    apAging: any[];
+  };
+  priorityActions: {
+    billsDueThisWeek: any[];
+    overdueInvoices: Array<{
+      id: number;
+      customer: string;
+      amount: string;
+      dueDate: string;
+      daysOverdue: number;
+    }>;
+  };
+}
+
+export default function BusinessDashboard() {
   const { companyId } = useCompany();
-  const [dateRange, setDateRange] = useState('30');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { toast } = useToast();
+  const [accountingBasis, setAccountingBasis] = useState<'accrual' | 'cash'>('accrual');
+  const [period, setPeriod] = useState('YTD');
 
-  // Calculate date range
-  const endDate = new Date();
-  const startDate = subDays(endDate, parseInt(dateRange));
+  // Calculate period dates
+  const getPeriodDates = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    
+    switch (period) {
+      case 'MTD':
+        return { from: new Date(year, now.getMonth(), 1), to: now };
+      case 'QTD':
+        const quarter = Math.floor(now.getMonth() / 3);
+        return { from: new Date(year, quarter * 3, 1), to: now };
+      case 'YTD':
+        return { from: new Date(year, 0, 1), to: now };
+      case 'Last30':
+        return { from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), to: now };
+      case 'T12M':
+        return { from: new Date(year - 1, now.getMonth(), now.getDate()), to: now };
+      default:
+        return { from: new Date(year, 0, 1), to: now };
+    }
+  };
 
-  // Format currency
-  const formatCurrency = (amount: number | string) => {
+  const { from, to } = getPeriodDates();
+
+  const { data: dashboardData, isLoading, error, refetch } = useQuery<DashboardData>({
+    queryKey: ['/api/dashboard/business', companyId, from.toISOString(), to.toISOString(), accountingBasis],
+    enabled: !!companyId,
+    staleTime: 30000, // 30 seconds
+  });
+
+  const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-ZA', { 
-      style: 'currency', 
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
       currency: 'ZAR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(num || 0);
+      minimumFractionDigits: 2,
+    }).format(num);
   };
 
-  // Fetch dashboard stats
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery<any>({
-    queryKey: ['/api/dashboard/stats', companyId, refreshKey],
-    enabled: !!companyId
-  });
-
-  // Fetch all invoices to calculate totals
-  const { data: invoicesData } = useQuery<any>({
-    queryKey: ['/api/invoices', companyId],
-    enabled: !!companyId
-  });
-  const invoices = Array.isArray(invoicesData) ? invoicesData : [];
-
-  // Fetch all bills to calculate totals
-  const { data: billsData } = useQuery<any>({
-    queryKey: ['/api/bills', companyId],
-    enabled: !!companyId
-  });
-  const bills = Array.isArray(billsData) ? billsData : [];
-
-  // Fetch bank accounts
-  const { data: bankAccountsData } = useQuery<any>({
-    queryKey: ['/api/bank-accounts', companyId],
-    enabled: !!companyId
-  });
-  const bankAccounts = Array.isArray(bankAccountsData) ? bankAccountsData : [];
-
-  // Fetch expenses
-  const { data: expensesData } = useQuery<any>({
-    queryKey: ['/api/expenses', companyId],
-    enabled: !!companyId
-  });
-  const expenses = Array.isArray(expensesData) ? expensesData : [];
-
-  // Fetch cash flow data
-  const { data: cashFlowData } = useQuery<any>({
-    queryKey: [`/api/reports/cash-flow/${startDate.toISOString()}/${endDate.toISOString()}`, companyId, dateRange],
-    enabled: !!companyId
-  });
-
-  // Fetch profit & loss data
-  const { data: profitLossData } = useQuery<any>({
-    queryKey: [`/api/reports/profit-loss/${startDate.toISOString()}/${endDate.toISOString()}`, companyId, dateRange],
-    enabled: !!companyId
-  });
-
-  // Calculate key metrics from real data
-  const unpaidInvoices = invoices.filter((inv: any) => 
-    inv.status === 'unpaid' || inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'partially_paid'
-  );
-  const totalReceivables = unpaidInvoices.length > 0 
-    ? unpaidInvoices.reduce((sum: number, inv: any) => 
-        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
-    : (dashboardStats?.arTotal || dashboardStats?.outstandingInvoices || 0);
-  
-  const overdueInvoices = invoices.filter((inv: any) => inv.status === 'overdue');
-  const overdueReceivables = overdueInvoices.reduce((sum: number, inv: any) => 
-    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
-  );
-  
-  const unpaidBills = bills.filter((bill: any) => 
-    bill.status === 'unpaid' || bill.status === 'partially_paid'
-  );
-  const totalPayables = unpaidBills.length > 0
-    ? unpaidBills.reduce((sum: number, bill: any) => 
-        sum + parseFloat(bill.total || bill.totalAmount || 0), 0)
-    : (dashboardStats?.apTotal || 0);
-  
-  const overdueBills = bills.filter((bill: any) => 
-    bill.status === 'overdue' || (bill.dueDate && new Date(bill.dueDate) < new Date())
-  );
-  const overduePayables = overdueBills.reduce((sum: number, bill: any) => 
-    sum + parseFloat(bill.total || bill.totalAmount || 0), 0
-  );
-  
-  // Cash flow calculations
-  const cashInflow = cashFlowData?.cashInflow?.[0]?.amount || dashboardStats?.cashInflow || 0;
-  const cashOutflow = cashFlowData?.cashOutflow?.reduce((sum: number, item: any) => 
-    sum + parseFloat(item.amount || 0), 0) || dashboardStats?.cashOutflow || 0;
-  const netCashFlow = parseFloat(cashInflow) - parseFloat(cashOutflow);
-  
-  // Income calculations from paid invoices
-  const paidInvoices = invoices.filter((inv: any) => inv.status === 'paid');
-  const totalIncome = paidInvoices.length > 0
-    ? paidInvoices.reduce((sum: number, inv: any) => 
-        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
-    : (profitLossData?.revenue?.total || dashboardStats?.totalRevenue || dashboardStats?.monthlyRevenue || 0);
-  
-  // Expense calculations
-  const totalExpenses = expenses.length > 0
-    ? expenses.reduce((sum: number, exp: any) => 
-        sum + parseFloat(exp.amount || 0), 0)
-    : (profitLossData?.expenses?.total || dashboardStats?.totalExpenses || 0);
-
-  // Prepare cash flow chart data
-  const prepareCashFlowChartData = () => {
-    if (cashFlowData?.weeklyCashFlow?.length > 0) {
-      return cashFlowData.weeklyCashFlow.map((week: any, index: number) => ({
-        name: `W${index + 1}`,
-        value: week.inflow - week.outflow
-      }));
-    }
-    
-    // Default data if no real data
-    return [
-      { name: 'W1', value: 50000 },
-      { name: 'W2', value: 45000 },
-      { name: 'W3', value: 60000 },
-      { name: 'W4', value: 55000 }
-    ];
+  const formatPercentage = (value: string | number) => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return `${num.toFixed(1)}%`;
   };
-
-  // Prepare income/expense chart data
-  const prepareIncomeExpenseChartData = () => {
-    if (profitLossData?.weeklyTrends?.length > 0) {
-      return profitLossData.weeklyTrends.map((week: any, index: number) => ({
-        name: `W${index + 1}`,
-        income: week.revenue,
-        expense: week.expenses
-      }));
-    }
-    
-    // Default data if no real data
-    return [
-      { name: 'W1', value: 50000 },
-      { name: 'W2', value: 45000 },
-      { name: 'W3', value: 60000 },
-      { name: 'W4', value: 55000 }
-    ];
-  };
-
-  // Prepare expense breakdown by category
-  const expensesByCategory: Record<string, number> = {};
-  if (expenses.length > 0) {
-    expenses.forEach((exp: any) => {
-      const category = exp.category || 'Other';
-      expensesByCategory[category] = (expensesByCategory[category] || 0) + parseFloat(exp.amount || 0);
-    });
-  }
-  const expenseCategories = Object.entries(expensesByCategory)
-    .map(([category, total]) => ({ category, total }))
-    .sort((a, b) => b.total - a.total);
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    refetch();
+    toast({
+      title: "Dashboard Refreshed",
+      description: "Financial data has been updated with the latest information.",
+    });
   };
 
-  if (statsLoading) {
+  const handleExport = () => {
+    toast({
+      title: "Export Started",
+      description: "Your dashboard report is being prepared for download.",
+    });
+  };
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-red-700">Error Loading Dashboard</h3>
+              <p className="text-gray-600 mt-2">Failed to load dashboard data. Please try again.</p>
+              <Button onClick={handleRefresh} className="mt-4">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Welcome back, let's check your business metrics</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 Days</SelectItem>
-              <SelectItem value="30">Last 30 Days</SelectItem>
-              <SelectItem value="90">Last 90 Days</SelectItem>
-              <SelectItem value="365">This Fiscal Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex gap-6 border-b pb-2">
-        <button className="text-sm font-medium border-b-2 border-primary pb-2">Dashboard</button>
-        <button className="text-sm text-muted-foreground pb-2">Getting Started</button>
-        <button className="text-sm text-muted-foreground pb-2">Recent Updates</button>
-      </div>
-
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Total Receivables Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-start">
-              <CardTitle className="text-sm font-medium">Total Receivables</CardTitle>
-              <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">
-                New
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Total Unpaid Invoices {formatCurrency(totalReceivables)}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Current</p>
-                <p className="text-xl font-semibold">{formatCurrency(totalReceivables - overdueReceivables)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Overdue</p>
-                <p className="text-xl font-semibold text-orange-600">
-                  {formatCurrency(overdueReceivables)}
-                </p>
-              </div>
-            </div>
-            {overdueReceivables > 0 && (
-              <div className="mt-3">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-orange-600 h-2 rounded-full"
-                    style={{ width: `${Math.min((overdueReceivables / totalReceivables) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Total Payables Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-start">
-              <CardTitle className="text-sm font-medium">Total Payables</CardTitle>
-              <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">
-                New
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Total Unpaid Bills {formatCurrency(totalPayables)}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Current</p>
-                <p className="text-xl font-semibold">{formatCurrency(totalPayables - overduePayables)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase">Overdue</p>
-                <p className="text-xl font-semibold text-orange-600">
-                  {formatCurrency(overduePayables)}
-                </p>
-              </div>
-            </div>
-            {overduePayables > 0 && (
-              <div className="mt-3">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-orange-600 h-2 rounded-full"
-                    style={{ width: `${Math.min((overduePayables / totalPayables) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cash Flow Section */}
-      <Card>
-        <CardHeader>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-6 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle className="text-sm font-medium">Cash Flow</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Cash as on {format(endDate, 'dd-MM-yy')}
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Business Dashboard
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Real-time financial insights
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold">{formatCurrency(netCashFlow)}</p>
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex items-center gap-1">
-                  <ArrowUp className="h-3 w-3 text-green-600" />
-                  <span className="text-xs">Incoming</span>
-                  <span className="text-sm font-medium">{formatCurrency(cashInflow)}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <ArrowDown className="h-3 w-3 text-red-600" />
-                  <span className="text-xs">Outgoing</span>
-                  <span className="text-sm font-medium">{formatCurrency(cashOutflow)}</span>
-                </div>
-              </div>
+            
+            <div className="flex items-center space-x-3">
+              {/* Period Filter */}
+              <Select value={period} onValueChange={setPeriod} data-testid="select-period">
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MTD">MTD</SelectItem>
+                  <SelectItem value="QTD">QTD</SelectItem>
+                  <SelectItem value="YTD">YTD</SelectItem>
+                  <SelectItem value="Last30">Last 30</SelectItem>
+                  <SelectItem value="T12M">T12M</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Accounting Basis Toggle */}
+              <Tabs value={accountingBasis} onValueChange={(value) => setAccountingBasis(value as 'accrual' | 'cash')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="accrual" data-testid="button-accrual-basis">Accrual</TabsTrigger>
+                  <TabsTrigger value="cash" data-testid="button-cash-basis">Cash</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <Button variant="outline" onClick={handleRefresh} data-testid="button-refresh">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+
+              <Button variant="outline" onClick={handleExport} data-testid="button-export">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={prepareCashFlowChartData()}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} />
-              <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-              <Tooltip formatter={(value) => formatCurrency(value as number)} />
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#3b82f6" 
-                strokeWidth={2}
-                dot={{ fill: '#3b82f6', r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
 
-      {/* Income and Expense Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Income and Expense</CardTitle>
-            <p className="text-xs text-muted-foreground">This Fiscal Year</p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-600 rounded-full" />
-                  <span className="text-sm">Total Income</span>
-                </div>
-                <span className="font-medium">{formatCurrency(totalIncome)}</span>
+          {/* Data Freshness Indicators */}
+          {dashboardData && (
+            <div className="flex items-center space-x-4 mt-3 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Trial Balance: {dashboardData.dataFreshness.trialBalanceValid ? 'Valid' : 'Invalid'}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-600 rounded-full" />
-                  <span className="text-sm">Total Expenses</span>
-                </div>
-                <span className="font-medium">{formatCurrency(totalExpenses)}</span>
+              <div className="flex items-center space-x-1">
+                <Clock className="w-4 h-4" />
+                <span>Last Updated: {new Date(dashboardData.lastUpdated).toLocaleTimeString()}</span>
               </div>
-              <div className="pt-2 border-t">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Net Profit</span>
-                  <span className={`font-bold ${(totalIncome - totalExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(totalIncome - totalExpenses)}
-                  </span>
-                </div>
-              </div>
+              <Badge variant="outline" className="text-xs">
+                {accountingBasis.toUpperCase()} Basis
+              </Badge>
             </div>
-            
-            {profitLossData?.weeklyTrends?.length > 0 ? (
-              <ResponsiveContainer width="100%" height={150} className="mt-4">
-                <BarChart data={prepareIncomeExpenseChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                  <Bar dataKey="income" fill="#10b981" />
-                  <Bar dataKey="expense" fill="#ef4444" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="text-sm">* Income and expense values displayed are exclusive of taxes.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Top Expenses</CardTitle>
-            <p className="text-xs text-muted-foreground">This Fiscal Year</p>
-          </CardHeader>
-          <CardContent>
-            {expenseCategories.length > 0 ? (
-              <div className="space-y-3">
-                {expenseCategories.slice(0, 5).map((category: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <span className="text-sm">{category.category}</span>
-                    </div>
-                    <span className="text-sm font-medium">{formatCurrency(category.total)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">No Expense recorded for this fiscal year</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
 
-      {/* Bank and Credit Cards Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Bank and Credit Cards</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {bankAccounts.length > 0 ? (
-                bankAccounts.slice(0, 5).map((account: any) => {
-                  // Calculate real balance from the account data
-                  const balance = parseFloat(account.currentBalance || account.balance || '0');
-                  return (
-                    <div key={account.id} className="flex justify-between items-center">
-                      <span className="text-sm">{account.accountName}</span>
-                      <span className="text-sm font-medium text-blue-600">
-                        {formatCurrency(balance)}
-                      </span>
-                    </div>
-                  );
-                })
-              ) : dashboardStats?.bankBalances?.length > 0 ? (
-                dashboardStats.bankBalances.map((account: any) => (
-                  <div key={account.accountId} className="flex justify-between items-center">
-                    <span className="text-sm">{account.accountName}</span>
-                    <span className="text-sm font-medium text-blue-600">
-                      {formatCurrency(account.balance || account.currentBalance || 0)}
-                    </span>
+      {/* Dashboard Content */}
+      <div className="p-6 space-y-6">
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="pb-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : dashboardData ? (
+          <>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Bank Balance */}
+              <Card data-testid="card-bank-balance">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Bank Balance</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-bank-balance">
+                    {formatCurrency(dashboardData.kpis.bankBalance.total)}
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <CreditCard className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No bank accounts configured</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardData.kpis.bankBalance.accounts} accounts • {formatPercentage(dashboardData.kpis.bankBalance.reconciliationStatus * 100)} reconciled
+                  </p>
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Account Watchlist</CardTitle>
-            <p className="text-xs text-muted-foreground">Monitor key accounts</p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {dashboardStats?.accountWatchlist?.length > 0 ? (
-                dashboardStats.accountWatchlist.map((account: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm">{account.name}</span>
-                    <span className="text-sm font-medium">{formatCurrency(account.balance)}</span>
+              {/* Revenue */}
+              <Card data-testid="card-revenue">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-revenue">
+                    {formatCurrency(dashboardData.kpis.revenue.total)}
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No accounts in watchlist</p>
-                </div>
-              )}
+                  <p className="text-xs text-muted-foreground">
+                    {dashboardData.kpis.revenue.basis} basis • {period} period
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Net Profit */}
+              <Card data-testid="card-net-profit">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-net-profit">
+                    {formatCurrency(dashboardData.kpis.netProfit.amount)}
+                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center">
+                    {parseFloat(dashboardData.kpis.netProfit.margin) >= 0 ? (
+                      <ArrowUpRight className="w-3 h-3 text-green-500 mr-1" />
+                    ) : (
+                      <ArrowDownRight className="w-3 h-3 text-red-500 mr-1" />
+                    )}
+                    {dashboardData.kpis.netProfit.margin}% margin
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Accounts Receivable */}
+              <Card data-testid="card-accounts-receivable">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Receivables</CardTitle>
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-receivables">
+                    {formatCurrency(dashboardData.kpis.accountsReceivable.total)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(dashboardData.kpis.accountsReceivable.overdue)} overdue ({dashboardData.kpis.accountsReceivable.overduePercentage}%)
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Monthly Revenue Trend */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Trend (12 Months)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={dashboardData.charts.monthlyRevenue}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                      <Tooltip formatter={(value) => [formatCurrency(value as number), 'Revenue']} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Income vs Expense */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Income vs Expense</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={dashboardData.charts.incomeVsExpense}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                      <Tooltip formatter={(value) => [formatCurrency(value as number)]} />
+                      <Legend />
+                      <Bar dataKey="income" fill="#10b981" name="Income" />
+                      <Bar dataKey="expense" fill="#ef4444" name="Expense" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Priority Actions */}
+            {dashboardData.priorityActions.overdueInvoices.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-orange-500 mr-2" />
+                    Priority Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-red-600">Overdue Invoices ({dashboardData.priorityActions.overdueInvoices.length})</h4>
+                    <div className="space-y-2">
+                      {dashboardData.priorityActions.overdueInvoices.map((invoice) => (
+                        <div key={invoice.id} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                          <div>
+                            <p className="font-medium">{invoice.customer}</p>
+                            <p className="text-sm text-gray-600">{invoice.daysOverdue} days overdue</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-red-600">{formatCurrency(invoice.amount)}</p>
+                            <Link href={`/invoices/${invoice.id}`}>
+                              <Button size="sm" variant="outline" data-testid={`button-view-invoice-${invoice.id}`}>
+                                <Eye className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        ) : null}
       </div>
     </div>
   );
-};
-
-export default BusinessDashboard;
+}
