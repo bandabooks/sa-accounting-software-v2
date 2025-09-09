@@ -123,6 +123,17 @@ export default function BusinessDashboard() {
         return { from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), to: now };
       case 'T12M':
         return { from: new Date(year - 1, now.getMonth(), now.getDate()), to: now };
+      case 'LastMonth':
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const lastMonthYear = now.getMonth() === 0 ? year - 1 : year;
+        return { from: new Date(lastMonthYear, lastMonth, 1), to: new Date(year, now.getMonth(), 0) };
+      case 'LastQuarter':
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const lastQuarter = currentQuarter === 0 ? 3 : currentQuarter - 1;
+        const lastQuarterYear = currentQuarter === 0 ? year - 1 : year;
+        const lastQuarterStart = new Date(lastQuarterYear, lastQuarter * 3, 1);
+        const lastQuarterEnd = new Date(lastQuarterYear, lastQuarter * 3 + 3, 0);
+        return { from: lastQuarterStart, to: lastQuarterEnd };
       default:
         return { from: new Date(year, 0, 1), to: now };
     }
@@ -244,15 +255,17 @@ export default function BusinessDashboard() {
             <div className="flex items-center space-x-3">
               {/* Period Filter */}
               <Select value={period} onValueChange={setPeriod} data-testid="select-period">
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MTD">MTD</SelectItem>
-                  <SelectItem value="QTD">QTD</SelectItem>
-                  <SelectItem value="YTD">YTD</SelectItem>
-                  <SelectItem value="Last30">Last 30</SelectItem>
-                  <SelectItem value="T12M">T12M</SelectItem>
+                  <SelectItem value="MTD">This month</SelectItem>
+                  <SelectItem value="QTD">This quarter</SelectItem>
+                  <SelectItem value="YTD">This year so far</SelectItem>
+                  <SelectItem value="LastMonth">Last month</SelectItem>
+                  <SelectItem value="LastQuarter">Last quarter</SelectItem>
+                  <SelectItem value="Last30">Past 30 days</SelectItem>
+                  <SelectItem value="T12M">Past 12 months</SelectItem>
                 </SelectContent>
               </Select>
 
