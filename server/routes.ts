@@ -1908,15 +1908,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🏢 Fetching Business Dashboard for company ${companyId}`);
 
-      const { from, to, basis = 'accrual' } = req.query;
+      const { from, to, basis = 'accrual', asOf } = req.query;
       const fromDate = from ? new Date(from as string) : new Date(new Date().getFullYear(), 0, 1);
       const toDate = to ? new Date(to as string) : new Date();
+      const asOfDate = asOf ? new Date(asOf as string) : toDate;
       
       console.log(`📊 Dashboard period: ${fromDate.toISOString()} to ${toDate.toISOString()}, basis: ${basis}`);
 
-      // Get bank balances from existing Chart of Accounts banking functionality
-      const bankAccounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
-      const totalBankBalance = bankAccounts.reduce((sum, account) => sum + parseFloat(account.currentBalance || "0"), 0);
+      // Get bank balance using canonical GL-first calculation
+      const totalBankBalance = await storage.getBankBalance(companyId, asOfDate);
 
       // Get all invoices for AR calculation
       const allInvoices = await storage.getAllInvoices(companyId);
@@ -2107,7 +2107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Compile all dashboard data in the specified format
       const dashboardData = {
-        asOf: toDate.toISOString().split('T')[0],
+        asOf: asOfDate.toISOString().split('T')[0],
         basis,
         freshness: {
           lastGlPostAt: lastGlPost.toISOString(),
