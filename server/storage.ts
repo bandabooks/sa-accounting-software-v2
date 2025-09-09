@@ -4349,7 +4349,36 @@ export class DatabaseStorage implements IStorage {
     cashInflow: { source: string; amount: string }[];
     cashOutflow: { category: string; amount: string }[];
     netCashFlow: string;
+    weeklyCashFlow?: { week: string; inflow: number; outflow: number }[];
   }> {
+    // Get weekly cash flow data
+    const [weeklyInflow, weeklyOutflow] = await Promise.all([
+      db.select({
+        week: sql<string>`strftime('%Y-W%W', ${payments.paymentDate})`,
+        amount: sql<number>`COALESCE(SUM(${payments.amount}), 0)`,
+      }).from(payments)
+        .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
+        .where(and(
+          eq(invoices.companyId, companyId),
+          sql`${payments.paymentDate} >= ${startDate}`,
+          sql`${payments.paymentDate} <= ${endDate}`,
+          eq(payments.status, 'completed')
+        ))
+        .groupBy(sql`strftime('%Y-W%W', ${payments.paymentDate})`),
+      
+      db.select({
+        week: sql<string>`strftime('%Y-W%W', ${expenses.expenseDate})`,
+        amount: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
+      }).from(expenses)
+        .where(and(
+          eq(expenses.companyId, companyId),
+          sql`${expenses.expenseDate} >= ${startDate}`,
+          sql`${expenses.expenseDate} <= ${endDate}`
+        ))
+        .groupBy(sql`strftime('%Y-W%W', ${expenses.expenseDate})`)
+    ]);
+
+    // Get totals for summary
     const [inflowData, outflowData] = await Promise.all([
       db.select({
         source: sql<string>`'Customer Payments'`,
@@ -4375,6 +4404,27 @@ export class DatabaseStorage implements IStorage {
         .groupBy(expenses.category)
     ]);
 
+    // Combine weekly data
+    const weekMap = new Map<string, { inflow: number; outflow: number }>();
+    
+    weeklyInflow.forEach(item => {
+      if (!weekMap.has(item.week)) {
+        weekMap.set(item.week, { inflow: 0, outflow: 0 });
+      }
+      weekMap.get(item.week)!.inflow = item.amount;
+    });
+    
+    weeklyOutflow.forEach(item => {
+      if (!weekMap.has(item.week)) {
+        weekMap.set(item.week, { inflow: 0, outflow: 0 });
+      }
+      weekMap.get(item.week)!.outflow = item.amount;
+    });
+    
+    const weeklyCashFlow = Array.from(weekMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([week, data]) => ({ week, ...data }));
+
     const totalInflow = parseFloat(inflowData[0]?.amount || '0');
     const totalOutflow = outflowData.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
     const netCashFlow = totalInflow - totalOutflow;
@@ -4383,6 +4433,7 @@ export class DatabaseStorage implements IStorage {
       cashInflow: inflowData,
       cashOutflow: outflowData,
       netCashFlow: netCashFlow.toFixed(2),
+      weeklyCashFlow: weeklyCashFlow.length > 0 ? weeklyCashFlow : undefined,
     };
   }
 
@@ -11384,7 +11435,40 @@ export class DatabaseStorage implements IStorage {
   // Comprehensive Financial Reporting Methods - Integrate all transaction data
   async getComprehensiveProfitLoss(companyId: number, startDate: Date, endDate: Date) {
     try {
-      // Get all revenue sources: invoice totals
+      // Get revenue grouped by week
+      const weeklyRevenue = await db
+        .select({
+          week: sql<string>`strftime('%Y-W%W', ${invoices.invoiceDate})`,
+          amount: sql<number>`COALESCE(SUM(${invoices.total}), 0)`,
+        })
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.companyId, companyId),
+            gte(invoices.invoiceDate, startDate),
+            lte(invoices.invoiceDate, endDate),
+            ne(invoices.status, "draft")
+          )
+        )
+        .groupBy(sql`strftime('%Y-W%W', ${invoices.invoiceDate})`);
+
+      // Get expenses grouped by week
+      const weeklyExpenses = await db
+        .select({
+          week: sql<string>`strftime('%Y-W%W', ${expenses.expenseDate})`,
+          amount: sql<number>`COALESCE(SUM(${expenses.amount}), 0)`,
+        })
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.companyId, companyId),
+            gte(expenses.expenseDate, startDate),
+            lte(expenses.expenseDate, endDate)
+          )
+        )
+        .groupBy(sql`strftime('%Y-W%W', ${expenses.expenseDate})`);
+
+      // Get totals for summary
       const invoiceRevenue = await db
         .select({
           category: sql<string>`'Sales Revenue'`,
@@ -11478,6 +11562,8 @@ export class DatabaseStorage implements IStorage {
         totalExpenses,
         grossProfit: totalRevenue,
         netProfit,
+        weeklyRevenue,
+        weeklyExpenses,
       };
     } catch (error) {
       console.error("Error generating comprehensive profit & loss:", error);

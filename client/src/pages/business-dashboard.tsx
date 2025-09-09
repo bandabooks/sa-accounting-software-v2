@@ -73,53 +73,93 @@ export default function BusinessDashboard() {
   const transformCashFlowData = (rawData: any) => {
     if (!rawData?.cashInflow && !rawData?.cashOutflow) return null;
     
-    // Calculate totals from API data
+    // Use actual weekly data if available
+    if (rawData.weeklyCashFlow && rawData.weeklyCashFlow.length > 0) {
+      return rawData.weeklyCashFlow.map((week: any, index: number) => ({
+        month: `Week ${index + 1}`,
+        cashIn: week.inflow || 0,
+        cashOut: week.outflow || 0,
+        netFlow: (week.inflow || 0) - (week.outflow || 0)
+      }));
+    }
+    
+    // Fallback to totals if no weekly data
     const totalCashIn = rawData.cashInflow?.reduce((sum: number, item: any) => 
       sum + parseFloat(item.amount || '0'), 0) || 0;
     const totalCashOut = rawData.cashOutflow?.reduce((sum: number, item: any) => 
       sum + parseFloat(item.amount || '0'), 0) || 0;
-    const netFlow = totalCashIn - totalCashOut;
     
-    // Create weekly distribution for chart visualization
-    const weeks = [];
-    for (let i = 1; i <= 4; i++) {
-      const weekCashIn = Math.round((totalCashIn / 4) + (Math.random() * totalCashIn * 0.2 - totalCashIn * 0.1));
-      const weekCashOut = Math.round((totalCashOut / 4) + (Math.random() * totalCashOut * 0.2 - totalCashOut * 0.1));
-      const weekNetFlow = weekCashIn - weekCashOut;
-      
-      weeks.push({
-        month: `Week ${i}`,
-        cashIn: Math.max(0, weekCashIn),
-        cashOut: Math.max(0, weekCashOut),
-        netFlow: weekNetFlow
-      });
+    // Show single data point if we only have totals
+    if (totalCashIn > 0 || totalCashOut > 0) {
+      return [{
+        month: 'Period Total',
+        cashIn: totalCashIn,
+        cashOut: totalCashOut,
+        netFlow: totalCashIn - totalCashOut
+      }];
     }
-    return weeks;
+    
+    return null;
   };
 
   const transformProfitLossData = (rawData: any) => {
     if (!rawData?.totalRevenue && !rawData?.totalExpenses) return null;
     
-    // Use actual totals from API
+    // Use actual weekly data if available
+    if (rawData.weeklyRevenue && rawData.weeklyExpenses) {
+      const weekMap = new Map();
+      
+      // Combine revenue data
+      rawData.weeklyRevenue.forEach((item: any) => {
+        const week = item.week;
+        if (!weekMap.has(week)) {
+          weekMap.set(week, { revenue: 0, expenses: 0 });
+        }
+        weekMap.get(week).revenue = item.amount || 0;
+      });
+      
+      // Combine expense data
+      rawData.weeklyExpenses.forEach((item: any) => {
+        const week = item.week;
+        if (!weekMap.has(week)) {
+          weekMap.set(week, { revenue: 0, expenses: 0 });
+        }
+        weekMap.get(week).expenses = item.amount || 0;
+      });
+      
+      // Convert to array and calculate profit margins
+      const weeks = Array.from(weekMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(-4) // Last 4 weeks
+        .map((entry, index) => {
+          const [week, data] = entry;
+          const profitMargin = data.revenue > 0 ? ((data.revenue - data.expenses) / data.revenue) * 100 : 0;
+          return {
+            month: `Week ${index + 1}`,
+            revenue: Math.round(data.revenue),
+            expenses: Math.round(data.expenses),
+            profitMargin: Math.round(profitMargin * 10) / 10
+          };
+        });
+      
+      if (weeks.length > 0) return weeks;
+    }
+    
+    // Fallback to totals if no weekly data
     const totalRevenue = parseFloat(rawData.totalRevenue || '0');
     const totalExpenses = parseFloat(rawData.totalExpenses || '0');
-    const overallMargin = totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0;
+    const profitMargin = totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0;
     
-    // Create weekly distribution for chart visualization
-    const weeks = [];
-    for (let i = 1; i <= 4; i++) {
-      const weekRevenue = Math.round((totalRevenue / 4) + (Math.random() * totalRevenue * 0.15 - totalRevenue * 0.075));
-      const weekExpenses = Math.round((totalExpenses / 4) + (Math.random() * totalExpenses * 0.15 - totalExpenses * 0.075));
-      const profitMargin = weekRevenue > 0 ? ((weekRevenue - weekExpenses) / weekRevenue) * 100 : 0;
-      
-      weeks.push({
-        month: `Week ${i}`,
-        revenue: Math.max(0, weekRevenue),
-        expenses: Math.max(0, weekExpenses),
+    if (totalRevenue > 0 || totalExpenses > 0) {
+      return [{
+        month: 'Period Total',
+        revenue: Math.round(totalRevenue),
+        expenses: Math.round(totalExpenses),
         profitMargin: Math.round(profitMargin * 10) / 10
-      });
+      }];
     }
-    return weeks;
+    
+    return null;
   };
 
   const cashFlowData = transformCashFlowData(cashFlowRawData);
