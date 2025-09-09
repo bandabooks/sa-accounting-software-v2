@@ -31,10 +31,9 @@ import {
 } from 'recharts';
 import { useCompany } from '@/contexts/CompanyContext';
 import { format, subDays } from 'date-fns';
-import { apiRequest } from '@/lib/queryClient';
 
 const BusinessDashboard = () => {
-  const { company } = useCompany();
+  const { companyId } = useCompany();
   const [dateRange, setDateRange] = useState('30');
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -54,67 +53,45 @@ const BusinessDashboard = () => {
   };
 
   // Fetch dashboard stats
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
-    queryKey: ['/api/dashboard/stats', company?.id, refreshKey],
-    enabled: !!company?.id
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery<any>({
+    queryKey: ['/api/dashboard/stats', companyId, refreshKey],
+    enabled: !!companyId
   });
 
   // Fetch invoices summary
-  const { data: invoicesSummary } = useQuery({
-    queryKey: ['/api/invoices/summary', company?.id],
-    enabled: !!company?.id
+  const { data: invoicesSummary } = useQuery<any>({
+    queryKey: ['/api/invoices/summary', companyId],
+    enabled: !!companyId
   });
 
   // Fetch bills summary  
-  const { data: billsSummary } = useQuery({
-    queryKey: ['/api/bills/summary', company?.id],
-    enabled: !!company?.id
+  const { data: billsSummary } = useQuery<any>({
+    queryKey: ['/api/bills/summary', companyId],
+    enabled: !!companyId
   });
 
   // Fetch bank accounts
-  const { data: bankAccounts } = useQuery({
-    queryKey: ['/api/bank-accounts', company?.id],
-    enabled: !!company?.id
+  const { data: bankAccounts } = useQuery<any>({
+    queryKey: ['/api/bank-accounts', companyId],
+    enabled: !!companyId
   });
 
   // Fetch expenses summary
-  const { data: expensesSummary } = useQuery({
-    queryKey: [`/api/expenses/summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`, company?.id],
-    enabled: !!company?.id
+  const { data: expensesSummary } = useQuery<any>({
+    queryKey: [`/api/expenses/summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`, companyId],
+    enabled: !!companyId
   });
 
   // Fetch cash flow data
-  const { data: cashFlowData } = useQuery({
-    queryKey: [`/api/reports/cash-flow`, company?.id, dateRange],
-    queryFn: async () => {
-      const response = await apiRequest(`/api/reports/cash-flow`, {
-        method: 'POST',
-        body: JSON.stringify({
-          companyId: company?.id,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString()
-        })
-      });
-      return response;
-    },
-    enabled: !!company?.id
+  const { data: cashFlowData } = useQuery<any>({
+    queryKey: [`/api/reports/cash-flow/${startDate.toISOString()}/${endDate.toISOString()}`, companyId, dateRange],
+    enabled: !!companyId
   });
 
   // Fetch profit & loss data
-  const { data: profitLossData } = useQuery({
-    queryKey: [`/api/reports/comprehensive-profit-loss`, company?.id, dateRange],
-    queryFn: async () => {
-      const response = await apiRequest(`/api/reports/comprehensive-profit-loss`, {
-        method: 'POST',
-        body: JSON.stringify({
-          companyId: company?.id,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString()
-        })
-      });
-      return response;
-    },
-    enabled: !!company?.id
+  const { data: profitLossData } = useQuery<any>({
+    queryKey: [`/api/reports/profit-loss/${startDate.toISOString()}/${endDate.toISOString()}`, companyId, dateRange],
+    enabled: !!companyId
   });
 
   // Calculate key metrics from real data
@@ -191,8 +168,8 @@ const BusinessDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Hello, {company?.name || 'Business Owner'}</h1>
-          <p className="text-muted-foreground text-sm">{company?.description || 'Welcome to your dashboard'}</p>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Welcome back, let's check your business metrics</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={dateRange} onValueChange={setDateRange}>
