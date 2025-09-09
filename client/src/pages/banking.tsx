@@ -83,29 +83,23 @@ export default function Banking() {
   const { companyId } = useCompany();
 
   const { data: bankAccounts = [], isLoading, error } = useQuery<BankAccountWithTransactions[]>({
-    queryKey: ["/api/bank-accounts", companyId],
-    enabled: !!companyId,
+    queryKey: ["/api/bank-accounts"],
     retry: (failureCount, error: any) => {
       // Don't retry on authentication errors
       if (error?.message?.includes('401')) return false;
       return failureCount < 2;
-    },
-    staleTime: 0, // Always fetch fresh data
-    refetchOnWindowFocus: false
+    }
   });
 
   const { data: chartAccounts = [] } = useQuery<ChartOfAccount[]>({
-    queryKey: ["/api/chart-of-accounts", companyId],
-    enabled: !!companyId,
-    staleTime: 0, // Always fetch fresh data
-    refetchOnWindowFocus: false
+    queryKey: ["/api/chart-of-accounts"],
   });
 
-  // Force refresh of banking data when company changes
+  // Refresh banking data when company changes
   useEffect(() => {
     if (companyId) {
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts", companyId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts", companyId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chart-of-accounts"] });
     }
   }, [companyId, queryClient]);
 
