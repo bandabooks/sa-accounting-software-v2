@@ -17,6 +17,7 @@ import {
 import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
+import KPIStat from "@/components/KPIStat";
 
 interface DashboardData {
   asOf: string;
@@ -31,6 +32,8 @@ interface DashboardData {
   };
   kpis: {
     bankBalance: number;
+    bankBalanceHasDiscrepancy?: boolean;
+    bankBalanceDiscrepancy?: number;
     recon: {
       lastReconciledAt: string;
       percentMatched: number;
