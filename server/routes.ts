@@ -180,7 +180,8 @@ import {
   products,
   productCategories,
   suppliers,
-  purchaseOrders
+  purchaseOrders,
+  payments
 } from "@shared/schema";
 
 // Validation middleware

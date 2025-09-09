@@ -3910,7 +3910,7 @@ export class DatabaseStorage implements IStorage {
     return reference;
   }
 
-  private async createExpenseJournalEntry(expense: Expense): Promise<void> {
+  async createExpenseJournalEntry(expense: Expense): Promise<void> {
     try {
       // Create journal entry for expense
       const journalEntry = await this.createJournalEntry({
