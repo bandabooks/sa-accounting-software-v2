@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 interface DashboardData {
   asOf: string;
@@ -96,6 +96,7 @@ interface DashboardData {
 export default function BusinessDashboard() {
   const { companyId } = useCompany();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [accountingBasis, setAccountingBasis] = useState<'accrual' | 'cash'>('accrual');
   const [period, setPeriod] = useState('YTD');
 
@@ -141,6 +142,28 @@ export default function BusinessDashboard() {
   const formatPercentage = (value: string | number) => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     return `${num.toFixed(1)}%`;
+  };
+
+  // Drill-through navigation functions
+  const navigateToInvoices = (status?: string) => {
+    const query = status ? `?status=${status}` : '';
+    setLocation(`/invoices${query}`);
+  };
+
+  const navigateToBankTransactions = () => {
+    setLocation('/banking');
+  };
+
+  const navigateToExpenses = () => {
+    setLocation('/expenses');
+  };
+
+  const navigateToVATReturns = () => {
+    setLocation('/vat-returns');
+  };
+
+  const navigateToARReports = () => {
+    setLocation('/reports/accounts-receivable');
   };
 
   const handleRefresh = () => {
@@ -275,7 +298,7 @@ export default function BusinessDashboard() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Bank Balance */}
-              <Card data-testid="card-bank-balance">
+              <Card data-testid="card-bank-balance" className="cursor-pointer hover:shadow-md transition-shadow" onClick={navigateToBankTransactions}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Bank Balance</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -328,7 +351,7 @@ export default function BusinessDashboard() {
               </Card>
 
               {/* VAT Position */}
-              <Card data-testid="card-vat-position">
+              <Card data-testid="card-vat-position" className="cursor-pointer hover:shadow-md transition-shadow" onClick={navigateToVATReturns}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">VAT Position</CardTitle>
                   <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -347,7 +370,7 @@ export default function BusinessDashboard() {
             {/* Additional KPI Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Accounts Receivable */}
-              <Card data-testid="card-accounts-receivable">
+              <Card data-testid="card-accounts-receivable" className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigateToInvoices('sent')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Receivables (AR)</CardTitle>
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
