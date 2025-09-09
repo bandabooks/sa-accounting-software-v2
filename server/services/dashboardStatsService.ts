@@ -212,65 +212,67 @@ export class DashboardStatsService {
    * Get bank account balances
    */
   private static async getBankBalances(tenantId: number, entityId?: number) {
-    // First, get total revenue to calculate realistic bank balances
-    const revenueResult = await db.execute(sql`
-      SELECT COALESCE(SUM(total::numeric), 0) as total_revenue
-      FROM invoices
-      WHERE company_id = ${tenantId}
-      AND status = 'paid'
-    `);
-    
-    const totalRevenue = Number(revenueResult.rows[0]?.total_revenue || 0);
-    
-    const result = await db.execute(sql`
-      SELECT 
-        ba.id::text as account_id,
-        ba.account_name,
-        ba.account_type,
-        COALESCE(ba.current_balance::numeric, 0) as current_balance
-      FROM bank_accounts ba
-      WHERE ba.company_id = ${tenantId}
-      ${entityId ? sql` AND ba.entity_id = ${entityId}` : sql``}
-      AND ba.is_active = true
-      ORDER BY ba.account_name ASC
-      LIMIT 5
-    `);
+    try {
+      // Get bank accounts from chart of accounts with real balances from journal entries
+      const result = await db.execute(sql`
+        SELECT 
+          coa.id::text as account_id,
+          coa.account_name,
+          coa.account_code,
+          COALESCE(
+            (
+              SELECT SUM(CASE 
+                WHEN coa.normal_balance = 'debit' THEN 
+                  jel.debit_amount::numeric - jel.credit_amount::numeric
+                ELSE 
+                  jel.credit_amount::numeric - jel.debit_amount::numeric
+              END)
+              FROM journal_entry_lines jel
+              JOIN journal_entries je ON jel.journal_entry_id = je.id
+              WHERE jel.account_id = coa.id
+              AND je.company_id = ${tenantId}
+              AND je.status = 'posted'
+            ), 0
+          ) as current_balance
+        FROM chart_of_accounts coa
+        WHERE coa.company_id = ${tenantId}
+        AND coa.account_code IN ('1100', '1101', '1102', '1103', '1000')
+        AND coa.is_active = true
+        ORDER BY coa.account_code ASC
+        LIMIT 5
+      `);
 
-    // If we have bank accounts but they have zero balances, distribute revenue across them
-    const bankAccounts = result.rows;
-    if (bankAccounts.length > 0 && totalRevenue > 0) {
-      const hasAnyBalance = bankAccounts.some(acc => Number(acc.current_balance) > 0);
-      
-      if (!hasAnyBalance) {
-        // Distribute revenue realistically across bank accounts
-        return bankAccounts.map((row, index) => {
-          let balance = 0;
-          if (index === 0) {
-            // Main account gets 70% of revenue
-            balance = totalRevenue * 0.7;
-          } else if (index === 1) {
-            // Second account gets 25% 
-            balance = totalRevenue * 0.25;
-          } else {
-            // Other accounts get remaining 5%
-            balance = totalRevenue * 0.05;
-          }
-          
-          return {
-            accountId: String(row.account_id),
-            accountName: String(row.account_name),
-            balance: Math.round(balance)
-          };
-        });
+      if (result.rows.length > 0) {
+        return result.rows.map(row => ({
+          accountId: String(row.account_id),
+          accountName: String(row.account_name),
+          balance: Number(row.current_balance) || 0
+        }));
       }
-    }
 
-    // Return actual balances if they exist
-    return result.rows.map(row => ({
-      accountId: String(row.account_id),
-      accountName: String(row.account_name),
-      balance: Number(row.current_balance)
-    }));
+      // Fallback: Try bank_accounts table if it exists
+      const bankResult = await db.execute(sql`
+        SELECT 
+          ba.id::text as account_id,
+          ba.account_name,
+          COALESCE(ba.current_balance::numeric, 0) as current_balance
+        FROM bank_accounts ba
+        WHERE ba.company_id = ${tenantId}
+        ${entityId ? sql` AND ba.entity_id = ${entityId}` : sql``}
+        AND ba.is_active = true
+        ORDER BY ba.account_name ASC
+        LIMIT 5
+      `);
+
+      return bankResult.rows.map(row => ({
+        accountId: String(row.account_id),
+        accountName: String(row.account_name),
+        balance: Number(row.current_balance) || 0
+      }));
+    } catch (error) {
+      console.error('Error fetching bank balances:', error);
+      return [];
+    }
   }
 
   /**
