@@ -98,53 +98,21 @@ const BusinessDashboard = () => {
     enabled: !!companyId
   });
 
-  // Calculate key metrics from real data
-  const unpaidInvoices = invoices.filter((inv: any) => 
-    inv.status === 'unpaid' || inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'partially_paid'
-  );
-  const totalReceivables = unpaidInvoices.length > 0 
-    ? unpaidInvoices.reduce((sum: number, inv: any) => 
-        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
-    : (dashboardStats?.arTotal || dashboardStats?.outstandingInvoices || 0);
+  // Use dashboard stats as primary data source (more reliable than individual arrays)
+  const totalReceivables = dashboardStats?.arTotal || dashboardStats?.outstandingInvoices || 0;
+  const overdueReceivables = 0; // Will implement proper overdue calculation later
   
-  const overdueInvoices = invoices.filter((inv: any) => inv.status === 'overdue');
-  const overdueReceivables = overdueInvoices.reduce((sum: number, inv: any) => 
-    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
-  );
+  const totalPayables = dashboardStats?.apTotal || 0;
+  const overduePayables = 0; // Will implement proper overdue calculation later
   
-  const unpaidBills = bills.filter((bill: any) => 
-    bill.status === 'unpaid' || bill.status === 'partially_paid'
-  );
-  const totalPayables = unpaidBills.length > 0
-    ? unpaidBills.reduce((sum: number, bill: any) => 
-        sum + parseFloat(bill.total || bill.totalAmount || 0), 0)
-    : (dashboardStats?.apTotal || 0);
+  // Cash flow from dashboard stats
+  const cashInflow = dashboardStats?.cashInflow || 0;
+  const cashOutflow = dashboardStats?.cashOutflow || 0;
+  const netCashFlow = parseFloat(cashInflow.toString()) - parseFloat(cashOutflow.toString());
   
-  const overdueBills = bills.filter((bill: any) => 
-    bill.status === 'overdue' || (bill.dueDate && new Date(bill.dueDate) < new Date())
-  );
-  const overduePayables = overdueBills.reduce((sum: number, bill: any) => 
-    sum + parseFloat(bill.total || bill.totalAmount || 0), 0
-  );
-  
-  // Cash flow calculations
-  const cashInflow = cashFlowData?.cashInflow?.[0]?.amount || dashboardStats?.cashInflow || 0;
-  const cashOutflow = cashFlowData?.cashOutflow?.reduce((sum: number, item: any) => 
-    sum + parseFloat(item.amount || 0), 0) || dashboardStats?.cashOutflow || 0;
-  const netCashFlow = parseFloat(cashInflow) - parseFloat(cashOutflow);
-  
-  // Income calculations from paid invoices
-  const paidInvoices = invoices.filter((inv: any) => inv.status === 'paid');
-  const totalIncome = paidInvoices.length > 0
-    ? paidInvoices.reduce((sum: number, inv: any) => 
-        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
-    : (profitLossData?.revenue?.total || dashboardStats?.totalRevenue || dashboardStats?.monthlyRevenue || 0);
-  
-  // Expense calculations
-  const totalExpenses = expenses.length > 0
-    ? expenses.reduce((sum: number, exp: any) => 
-        sum + parseFloat(exp.amount || 0), 0)
-    : (profitLossData?.expenses?.total || dashboardStats?.totalExpenses || 0);
+  // Income and expenses from dashboard stats
+  const totalIncome = dashboardStats?.totalRevenue || dashboardStats?.monthlyRevenue || 0;
+  const totalExpenses = dashboardStats?.totalExpenses || 0;
 
   // Prepare cash flow chart data
   const prepareCashFlowChartData = () => {
