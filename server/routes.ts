@@ -1744,15 +1744,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }, 30000); // 30 second cache
       
-      console.log(`📊 Dashboard Stats for Company ${companyId}:`, {
-        totalRevenue: dashboardData.totalRevenue,
-        totalExpenses: dashboardData.totalExpenses,
-        outstandingInvoices: dashboardData.outstandingInvoices,
-        bankBalance: dashboardData.bankBalance,
-        arTotal: dashboardData.arTotal,
-        apTotal: dashboardData.apTotal
-      });
-      
       res.json(dashboardData);
     } catch (error) {
       console.error("Error fetching enhanced dashboard stats:", error);

@@ -52,9 +52,9 @@ const BusinessDashboard = () => {
     }).format(num || 0);
   };
 
-  // Fetch sales stats (this works correctly and shows real data)
-  const { data: salesStats } = useQuery<any>({
-    queryKey: ['/api/sales/stats', companyId, refreshKey],
+  // Fetch dashboard stats
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery<any>({
+    queryKey: ['/api/dashboard/stats', companyId, refreshKey],
     enabled: !!companyId
   });
 
@@ -85,12 +85,6 @@ const BusinessDashboard = () => {
     enabled: !!companyId
   });
   const expenses = Array.isArray(expensesData) ? expensesData : [];
-  
-  // Also fetch the old dashboard stats as fallback
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery<any>({
-    queryKey: ['/api/dashboard/stats', companyId, refreshKey],
-    enabled: !!companyId
-  });
 
   // Fetch cash flow data
   const { data: cashFlowData } = useQuery<any>({
@@ -104,35 +98,53 @@ const BusinessDashboard = () => {
     enabled: !!companyId
   });
 
-  // Use the working sales stats data (same as Sales Dashboard which shows real data)
-  const totalReceivables = salesStats?.outstandingInvoices || 
-    invoices.filter((inv: any) => inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'partially_paid')
-      .reduce((sum: number, inv: any) => sum + parseFloat(inv.total || inv.totalAmount || 0), 0) || 0;
+  // Calculate key metrics from real data
+  const unpaidInvoices = invoices.filter((inv: any) => 
+    inv.status === 'unpaid' || inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'partially_paid'
+  );
+  const totalReceivables = unpaidInvoices.length > 0 
+    ? unpaidInvoices.reduce((sum: number, inv: any) => 
+        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
+    : (dashboardStats?.arTotal || dashboardStats?.outstandingInvoices || 0);
   
-  const overdueReceivables = salesStats?.overdueAmount || 
-    invoices.filter((inv: any) => inv.status === 'overdue')
-      .reduce((sum: number, inv: any) => sum + parseFloat(inv.total || inv.totalAmount || 0), 0) || 0;
+  const overdueInvoices = invoices.filter((inv: any) => inv.status === 'overdue');
+  const overdueReceivables = overdueInvoices.reduce((sum: number, inv: any) => 
+    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
+  );
   
-  const totalPayables = bills.filter((bill: any) => bill.status === 'unpaid' || bill.status === 'partially_paid')
-    .reduce((sum: number, bill: any) => sum + parseFloat(bill.total || bill.totalAmount || 0), 0) || 0;
+  const unpaidBills = bills.filter((bill: any) => 
+    bill.status === 'unpaid' || bill.status === 'partially_paid'
+  );
+  const totalPayables = unpaidBills.length > 0
+    ? unpaidBills.reduce((sum: number, bill: any) => 
+        sum + parseFloat(bill.total || bill.totalAmount || 0), 0)
+    : (dashboardStats?.apTotal || 0);
   
-  const overduePayables = bills.filter((bill: any) => 
-    bill.status === 'overdue' || (bill.dueDate && new Date(bill.dueDate) < new Date()))
-    .reduce((sum: number, bill: any) => sum + parseFloat(bill.total || bill.totalAmount || 0), 0) || 0;
+  const overdueBills = bills.filter((bill: any) => 
+    bill.status === 'overdue' || (bill.dueDate && new Date(bill.dueDate) < new Date())
+  );
+  const overduePayables = overdueBills.reduce((sum: number, bill: any) => 
+    sum + parseFloat(bill.total || bill.totalAmount || 0), 0
+  );
   
-  // Use sales stats for income (this works and shows real data)
-  const totalIncome = salesStats?.totalSales || 
-    invoices.filter((inv: any) => inv.status === 'paid')
-      .reduce((sum: number, inv: any) => sum + parseFloat(inv.total || inv.totalAmount || 0), 0) || 0;
+  // Cash flow calculations
+  const cashInflow = cashFlowData?.cashInflow?.[0]?.amount || dashboardStats?.cashInflow || 0;
+  const cashOutflow = cashFlowData?.cashOutflow?.reduce((sum: number, item: any) => 
+    sum + parseFloat(item.amount || 0), 0) || dashboardStats?.cashOutflow || 0;
+  const netCashFlow = parseFloat(cashInflow) - parseFloat(cashOutflow);
   
-  // Calculate expenses from actual expense records
-  const totalExpenses = expenses.reduce((sum: number, exp: any) => 
-    sum + parseFloat(exp.amount || 0), 0) || 0;
+  // Income calculations from paid invoices
+  const paidInvoices = invoices.filter((inv: any) => inv.status === 'paid');
+  const totalIncome = paidInvoices.length > 0
+    ? paidInvoices.reduce((sum: number, inv: any) => 
+        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
+    : (profitLossData?.revenue?.total || dashboardStats?.totalRevenue || dashboardStats?.monthlyRevenue || 0);
   
-  // Calculate cash flow
-  const cashInflow = totalIncome;
-  const cashOutflow = totalExpenses;
-  const netCashFlow = cashInflow - cashOutflow;
+  // Expense calculations
+  const totalExpenses = expenses.length > 0
+    ? expenses.reduce((sum: number, exp: any) => 
+        sum + parseFloat(exp.amount || 0), 0)
+    : (profitLossData?.expenses?.total || dashboardStats?.totalExpenses || 0);
 
   // Prepare cash flow chart data
   const prepareCashFlowChartData = () => {
