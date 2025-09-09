@@ -59,28 +59,32 @@ const BusinessDashboard = () => {
   });
 
   // Fetch all invoices to calculate totals
-  const { data: invoices } = useQuery<any[]>({
+  const { data: invoicesData } = useQuery<any>({
     queryKey: ['/api/invoices', companyId],
     enabled: !!companyId
   });
+  const invoices = Array.isArray(invoicesData) ? invoicesData : [];
 
   // Fetch all bills to calculate totals
-  const { data: bills } = useQuery<any[]>({
+  const { data: billsData } = useQuery<any>({
     queryKey: ['/api/bills', companyId],
     enabled: !!companyId
   });
+  const bills = Array.isArray(billsData) ? billsData : [];
 
   // Fetch bank accounts
-  const { data: bankAccounts } = useQuery<any>({
+  const { data: bankAccountsData } = useQuery<any>({
     queryKey: ['/api/bank-accounts', companyId],
     enabled: !!companyId
   });
+  const bankAccounts = Array.isArray(bankAccountsData) ? bankAccountsData : [];
 
   // Fetch expenses
-  const { data: expenses } = useQuery<any[]>({
+  const { data: expensesData } = useQuery<any>({
     queryKey: ['/api/expenses', companyId],
     enabled: !!companyId
   });
+  const expenses = Array.isArray(expensesData) ? expensesData : [];
 
   // Fetch cash flow data
   const { data: cashFlowData } = useQuery<any>({
@@ -95,28 +99,30 @@ const BusinessDashboard = () => {
   });
 
   // Calculate key metrics from real data
-  const unpaidInvoices = invoices?.filter((inv: any) => 
+  const unpaidInvoices = invoices.filter((inv: any) => 
     inv.status === 'unpaid' || inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'partially_paid'
-  ) || [];
-  const totalReceivables = unpaidInvoices.reduce((sum: number, inv: any) => 
-    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
-  ) || dashboardStats?.arTotal || dashboardStats?.outstandingInvoices || 0;
+  );
+  const totalReceivables = unpaidInvoices.length > 0 
+    ? unpaidInvoices.reduce((sum: number, inv: any) => 
+        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
+    : (dashboardStats?.arTotal || dashboardStats?.outstandingInvoices || 0);
   
-  const overdueInvoices = invoices?.filter((inv: any) => inv.status === 'overdue') || [];
+  const overdueInvoices = invoices.filter((inv: any) => inv.status === 'overdue');
   const overdueReceivables = overdueInvoices.reduce((sum: number, inv: any) => 
     sum + parseFloat(inv.total || inv.totalAmount || 0), 0
   );
   
-  const unpaidBills = bills?.filter((bill: any) => 
+  const unpaidBills = bills.filter((bill: any) => 
     bill.status === 'unpaid' || bill.status === 'partially_paid'
-  ) || [];
-  const totalPayables = unpaidBills.reduce((sum: number, bill: any) => 
-    sum + parseFloat(bill.total || bill.totalAmount || 0), 0
-  ) || dashboardStats?.apTotal || 0;
+  );
+  const totalPayables = unpaidBills.length > 0
+    ? unpaidBills.reduce((sum: number, bill: any) => 
+        sum + parseFloat(bill.total || bill.totalAmount || 0), 0)
+    : (dashboardStats?.apTotal || 0);
   
-  const overdueBills = bills?.filter((bill: any) => 
+  const overdueBills = bills.filter((bill: any) => 
     bill.status === 'overdue' || (bill.dueDate && new Date(bill.dueDate) < new Date())
-  ) || [];
+  );
   const overduePayables = overdueBills.reduce((sum: number, bill: any) => 
     sum + parseFloat(bill.total || bill.totalAmount || 0), 0
   );
@@ -128,15 +134,17 @@ const BusinessDashboard = () => {
   const netCashFlow = parseFloat(cashInflow) - parseFloat(cashOutflow);
   
   // Income calculations from paid invoices
-  const paidInvoices = invoices?.filter((inv: any) => inv.status === 'paid') || [];
-  const totalIncome = paidInvoices.reduce((sum: number, inv: any) => 
-    sum + parseFloat(inv.total || inv.totalAmount || 0), 0
-  ) || profitLossData?.revenue?.total || dashboardStats?.totalRevenue || dashboardStats?.monthlyRevenue || 0;
+  const paidInvoices = invoices.filter((inv: any) => inv.status === 'paid');
+  const totalIncome = paidInvoices.length > 0
+    ? paidInvoices.reduce((sum: number, inv: any) => 
+        sum + parseFloat(inv.total || inv.totalAmount || 0), 0)
+    : (profitLossData?.revenue?.total || dashboardStats?.totalRevenue || dashboardStats?.monthlyRevenue || 0);
   
   // Expense calculations
-  const totalExpenses = expenses?.reduce((sum: number, exp: any) => 
-    sum + parseFloat(exp.amount || 0), 0
-  ) || profitLossData?.expenses?.total || dashboardStats?.totalExpenses || 0;
+  const totalExpenses = expenses.length > 0
+    ? expenses.reduce((sum: number, exp: any) => 
+        sum + parseFloat(exp.amount || 0), 0)
+    : (profitLossData?.expenses?.total || dashboardStats?.totalExpenses || 0);
 
   // Prepare cash flow chart data
   const prepareCashFlowChartData = () => {
@@ -177,10 +185,12 @@ const BusinessDashboard = () => {
 
   // Prepare expense breakdown by category
   const expensesByCategory: Record<string, number> = {};
-  expenses?.forEach((exp: any) => {
-    const category = exp.category || 'Other';
-    expensesByCategory[category] = (expensesByCategory[category] || 0) + parseFloat(exp.amount || 0);
-  });
+  if (expenses.length > 0) {
+    expenses.forEach((exp: any) => {
+      const category = exp.category || 'Other';
+      expensesByCategory[category] = (expensesByCategory[category] || 0) + parseFloat(exp.amount || 0);
+    });
+  }
   const expenseCategories = Object.entries(expensesByCategory)
     .map(([category, total]) => ({ category, total }))
     .sort((a, b) => b.total - a.total);
@@ -449,7 +459,7 @@ const BusinessDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {bankAccounts?.length > 0 ? (
+              {bankAccounts.length > 0 ? (
                 bankAccounts.slice(0, 5).map((account: any) => {
                   // Calculate real balance from the account data
                   const balance = parseFloat(account.currentBalance || account.balance || '0');
