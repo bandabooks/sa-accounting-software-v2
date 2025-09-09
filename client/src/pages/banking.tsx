@@ -83,7 +83,7 @@ export default function Banking() {
   const { companyId } = useCompany();
 
   const { data: bankAccounts = [], isLoading, error } = useQuery<BankAccountWithTransactions[]>({
-    queryKey: companyId ? ["/api/bank-accounts", companyId] : ["/api/bank-accounts"],
+    queryKey: ["/api/bank-accounts"],
     retry: (failureCount, error: any) => {
       // Don't retry on authentication errors
       if (error?.message?.includes('401')) return false;
@@ -92,7 +92,7 @@ export default function Banking() {
   });
 
   const { data: chartAccounts = [] } = useQuery<ChartOfAccount[]>({
-    queryKey: companyId ? ["/api/chart-of-accounts", companyId] : ["/api/chart-of-accounts"],
+    queryKey: ["/api/chart-of-accounts"],
   });
 
   const createAccountMutation = useMutation({

@@ -73,6 +73,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bank-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chart-of-accounts'] });
       
       // Clear ALL cached queries to ensure fresh data for new company
       queryClient.clear();
