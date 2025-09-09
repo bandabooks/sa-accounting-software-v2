@@ -1,0 +1,129 @@
+Goals
+
+Deliver a single‑page Business Dashboard that loads in <2s (p95) on typical datasets and is responsive.
+
+All KPIs and charts must be computed from posted journal lines (GL) or from clearly defined source tables that reconcile to GL. No “magic numbers.”
+
+Provide drill‑through from every KPI/chart point to the underlying lists and then to the source transaction.
+
+Include data trust indicators: trial balance in‑balance, last sync times, reconciliation status, and anomaly flags.
+
+Stack & Project Setup
+
+Frontend: React + TypeScript + Vite, TailwindCSS, React Router, Recharts (or Chart.js) for charts.
+
+Backend: Node.js (Express) + TypeScript. ORM: Prisma on PostgreSQL. AuthN: simple email/password (JWT) with tenant isolation.
+
+Migrations/Seed: Prisma migrations + seed script to create demo data (companies, chart of accounts, invoices, bills, payments, journals, bank txns, VAT entries) covering 6+ months.
+
+Testing: Vitest/Jest for unit tests; Playwright/Cypress for E2E; seed deterministic fixtures for repeatability.
+
+Observability: Minimal request logging, error tracing, and perf timings for dashboard load.
+
+Data Model (minimum viable)
+
+Use singular table names; include tenant_id on all business tables.
+
+companies(id, name, base_currency, vat_number, fiscal_year_start)
+
+users(id, email, hashed_password)
+
+user_roles(id, user_id, company_id, role) // Owner, Admin, Staff
+
+accounts(id, company_id, code, name, type, is_bank, currency) // type: Asset/Liability/Equity/Income/COGS/Expense
+
+journals(id, company_id, txn_date, description, source, source_id, posted_at)
+
+journal_lines(id, journal_id, account_id, debit, credit, currency, fx_rate)
+
+invoices(id, company_id, customer_id, issue_date, due_date, status, total, tax_total)
+
+invoice_lines(id, invoice_id, account_id, qty, unit_price, tax_rate)
+
+bills(id, company_id, vendor_id, issue_date, due_date, status, total, tax_total)
+
+bill_lines(id, bill_id, account_id, qty, unit_price, tax_rate)
+
+customer_payments(id, company_id, invoice_id, received_date, amount, account_id)
+
+vendor_payments(id, company_id, bill_id, paid_date, amount, account_id)
+
+bank_accounts(id, company_id, name, account_id, last_reconciled_at)
+
+bank_transactions(id, bank_account_id, date, description, amount, matched_journal_id)
+
+bank_reconciliations(id, bank_account_id, statement_start, statement_end, matched_total, stmt_closing_balance)
+
+tax_returns(id, company_id, period_start, period_end, tax_due, tax_refund, due_date, status)
+
+periods(id, company_id, month, year, status, closed_by, closed_at) // status: Open/Closed
+
+exchange_rates(date, from_ccy, to_ccy, rate) (if needed)
+
+Posting rule: all commercial docs (invoices, bills, payments) must create journals + journal_lines that drive the ledger. KPIs read from ledger first.
+
+Accounting Basis Toggle (Default Accrual)
+
+Implement a basis selector in the dashboard header: Accrual | Cash (default Accrual). This affects:
+
+Revenue: Accrual → sum of journal_lines where account.type = Income in period. Cash → sum of customer_payments.received_date within period.
+
+Expenses: Accrual → sum of journal_lines where account.type IN (COGS, Expense). Cash → sum of vendor_payments.paid_date within period.
+
+Cash Flow: Always cash‑based; for Accrual view, show both actual (cash) and forecasted (from open AR/AP + tax + payroll) as separate series.
+
+Net Profit: Accrual → Income − (COGS + Expense). Cash → Cash In − Cash Out.
+
+KPIs & Formulas (all tenant‑scoped)
+
+Bank Balance: Σ balance(accounts where is_bank=true) computed from ledger up to as_of date.
+
+Reconciliation status: from bank_reconciliations.last_reconciled_at and % matched (matched_total / abs(sum(bank_transactions.amount during stmt))).
+
+Total Receivables (AR) + Overdue: sum of open invoices (accrual) or unpaid balances; overdue where due_date < today.
+
+Total Payables (AP) + Overdue: sum of open bills; overdue where due_date < today.
+
+Monthly Revenue, Gross Margin, Net Profit, Profit Margin (basis‑aware per above; Gross Margin = (Revenue − COGS) / Revenue).
+
+VAT/GST Position: from tax_returns for the active period (payable or receivable) + due_date badge.
+
+Data Freshness: last_gl_post_at = max(journals.posted_at); last_bank_sync_at = max(bank_transactions.date or sync_logs.created_at).
+
+Month‑Close Status: from periods.status; show Open/Closed with closed_by/closed_at when closed.
+
+Cash Runway (Should‑have): days = bank_balance / average_daily_net_burn(last_90_days).
+
+Charts
+
+13‑Week Cash‑Flow Forecast (line or area): weeks W+0..W+12. Inflows = expected invoice receipts (use due_date + avg(DSO) or promise_date if present). Outflows = bills by due_date, recurring payroll (seeded), VAT due within horizon. Show Actual vs Forecast split lines.
+
+Income vs Expense (T12M): grouped columns by month, basis‑aware.
+
+AR/AP Aging: stacked bars or table for 0–30, 31–60, 61–90, 90+ days with totals.
+
+UI/UX Requirements
+
+Header: Company switcher, period filter (MTD/QTD/YTD/Last 30/T12M/custom), Accrual/Cash toggle (default Accrual), Refresh, Export.
+
+Top KPI cards: Bank Balance + reconciliation badge; AR (overdue highlighted); AP (overdue highlighted); Monthly Revenue; Net Profit; Profit Margin; VAT status; Data Freshness; Close Status.
+
+Middle: Cash‑Flow Forecast; Income vs Expense; AR/AP Aging.
+
+Right rail/Actions: Create Invoice, Record Payment, Create Bill, Pay Bill, Reconcile Bank, Add Customer/Vendor.
+
+Bottom: Priority Actions (bills due this week, invoices to collect, approvals pending), Recent High‑Value Activity.
+
+Drill‑through: Clicking any KPI or chart point routes to the filtered list; clicking a row opens the transaction, and then the journal entry.
+
+Accessibility: keyboard nav, landmarks, focus ring, ARIA labels.
+
+API Endpoints (REST; adjust as needed)
+
+GET /api/dashboard?companyId=…&from=…&to=…&basis=accrual|cash
+
+Returns JSON with all KPIs & chart series in a single payload for fast load.
+
+GET /api/drilldown/:metric with query params for range, filters → returns list rows and links to sources.
+
+POST /api/actions/* endpoints for quick actions (create invoice, record payment, etc.)
