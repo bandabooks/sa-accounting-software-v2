@@ -367,11 +367,6 @@ export class DashboardStatsService {
       `)
     ]);
 
-    // Format numbers as strings with commas for frontend compatibility
-    const formatForFrontend = (value: number) => {
-      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
-
     // Calculate profit margin from real company data
     const totalRevenue = Number(invoiceData.rows[0]?.total_revenue || 0);
     const monthlyRevenue = Number(invoiceData.rows[0]?.monthly_revenue || 0);
@@ -384,13 +379,13 @@ export class DashboardStatsService {
     const totalBankBalance = Number(bankData.rows[0]?.total_bank_balance || 0);
     
     return {
-      totalRevenue: formatForFrontend(totalRevenue),
-      monthlyRevenue: formatForFrontend(monthlyRevenue), // Add monthly revenue
-      outstandingInvoices: formatForFrontend(outstandingInvoices),
+      totalRevenue: totalRevenue,
+      monthlyRevenue: monthlyRevenue, // Add monthly revenue
+      outstandingInvoices: outstandingInvoices,
       totalCustomers: Number(customerData.rows[0]?.total_customers || 0),
       pendingEstimates: Number(estimateData.rows[0]?.pending_estimates || 0),
-      totalExpenses: formatForFrontend(totalExpenses),
-      bankBalance: Math.round(totalBankBalance), // Use actual bank balance
+      totalExpenses: totalExpenses,
+      bankBalance: totalBankBalance, // Use actual bank balance
       profitMargin: profitMargin, // Real profit margin calculated from company data
       recentActivities: [],
       recentInvoices: [],
