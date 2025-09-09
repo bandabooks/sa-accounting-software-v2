@@ -7691,6 +7691,102 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Canonical GL-first bank balance calculation for dashboard consistency
+  async getBankBalance(companyId: number, asOf?: Date): Promise<number> {
+    try {
+      const asOfDate = asOf || new Date();
+      
+      // Get bank accounts from the bankAccounts table that are linked to Chart of Accounts
+      const result = await db.select({
+        totalBalance: sql<string>`COALESCE(SUM(
+          CASE 
+            WHEN coa.normal_balance = 'Debit' THEN 
+              COALESCE(SUM(jl.debit_amount), 0) - COALESCE(SUM(jl.credit_amount), 0)
+            ELSE 
+              COALESCE(SUM(jl.credit_amount), 0) - COALESCE(SUM(jl.debit_amount), 0)
+          END
+        ), 0)`
+      })
+      .from(bankAccounts)
+      .innerJoin(chartOfAccounts, eq(bankAccounts.chartAccountId, chartOfAccounts.id))
+      .leftJoin(journalEntryLines, eq(journalEntryLines.accountId, chartOfAccounts.id))
+      .leftJoin(journalEntries, and(
+        eq(journalEntryLines.journalEntryId, journalEntries.id),
+        eq(journalEntries.isPosted, true),
+        lte(journalEntries.transactionDate, asOfDate)
+      ))
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.isActive, true)
+      ))
+      .groupBy(chartOfAccounts.id, chartOfAccounts.normalBalance);
+
+      // Alternative approach: Get all bank account IDs first, then sum their GL balances
+      const bankAccountIds = await db.select({
+        chartAccountId: bankAccounts.chartAccountId
+      })
+      .from(bankAccounts)
+      .where(and(
+        eq(bankAccounts.companyId, companyId),
+        eq(bankAccounts.isActive, true),
+        isNotNull(bankAccounts.chartAccountId)
+      ));
+
+      if (bankAccountIds.length === 0) {
+        return 0;
+      }
+
+      let totalBankBalance = 0;
+
+      // Calculate balance for each bank account using the GL
+      for (const bankAccount of bankAccountIds) {
+        if (bankAccount.chartAccountId) {
+          // Get account details to know normal balance
+          const [account] = await db.select()
+            .from(chartOfAccounts)
+            .where(eq(chartOfAccounts.id, bankAccount.chartAccountId));
+
+          if (!account) continue;
+
+          // Sum journal lines for this account
+          const [balanceResult] = await db.select({
+            debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), 0)`,
+            creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), 0)`
+          })
+          .from(journalEntryLines)
+          .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+          .where(
+            and(
+              eq(journalEntryLines.accountId, bankAccount.chartAccountId),
+              eq(journalEntries.companyId, companyId),
+              eq(journalEntries.isPosted, true),
+              lte(journalEntries.transactionDate, asOfDate)
+            )
+          );
+
+          const debitTotal = parseFloat(balanceResult?.debitTotal || "0");
+          const creditTotal = parseFloat(balanceResult?.creditTotal || "0");
+
+          // Calculate balance based on normal balance type (bank accounts are assets, so debit normal balance)
+          let accountBalance: number;
+          if (account.normalBalance === "Debit") {
+            accountBalance = debitTotal - creditTotal;
+          } else {
+            accountBalance = creditTotal - debitTotal;
+          }
+
+          totalBankBalance += accountBalance;
+        }
+      }
+
+      return parseFloat(totalBankBalance.toFixed(2));
+    } catch (error) {
+      console.error("Error calculating GL-based bank balance:", error);
+      // Fallback to zero on error to prevent dashboard crashes
+      return 0;
+    }
+  }
+
   // Toggle Chart of Accounts account status
   async toggleChartAccountStatus(accountId: number, companyId: number): Promise<any> {
     try {
