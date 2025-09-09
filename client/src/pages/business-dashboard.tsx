@@ -134,6 +134,8 @@ export default function BusinessDashboard() {
         const lastQuarterStart = new Date(lastQuarterYear, lastQuarter * 3, 1);
         const lastQuarterEnd = new Date(lastQuarterYear, lastQuarter * 3 + 3, 0);
         return { from: lastQuarterStart, to: lastQuarterEnd };
+      case 'AllTime':
+        return { from: new Date(2020, 0, 1), to: now }; // From 2020 to now
       default:
         return { from: new Date(year, 0, 1), to: now };
     }
@@ -266,6 +268,7 @@ export default function BusinessDashboard() {
                   <SelectItem value="LastQuarter">Last quarter</SelectItem>
                   <SelectItem value="Last30">Past 30 days</SelectItem>
                   <SelectItem value="T12M">Past 12 months</SelectItem>
+                  <SelectItem value="AllTime">All time</SelectItem>
                 </SelectContent>
               </Select>
 
