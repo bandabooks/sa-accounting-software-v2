@@ -1,691 +1,496 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Download, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Minus, Plus, CreditCard, FolderPlus, UserPlus, FileText, Users } from "lucide-react";
-import { AreaChart, Area, LineChart, Line, ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useCompany } from "@/contexts/CompanyContext";
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Users, 
+  CreditCard,
+  ArrowUp,
+  ArrowDown,
+  FileText,
+  Package,
+  RefreshCw
+} from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+import { useCompany } from '@/contexts/CompanyContext';
+import { format, subDays } from 'date-fns';
+import { apiRequest } from '@/lib/queryClient';
 
-interface BusinessMetric {
-  title: string;
-  value: string | number;
-  change: number;
-  changeType: 'increase' | 'decrease' | 'neutral';
-  trend: 'up' | 'down' | 'stable';
-  period: string;
-}
+const BusinessDashboard = () => {
+  const { company } = useCompany();
+  const [dateRange, setDateRange] = useState('30');
+  const [refreshKey, setRefreshKey] = useState(0);
 
-export default function BusinessDashboard() {
-  const [timeRange, setTimeRange] = useState("30");
-  const [lastRefresh, setLastRefresh] = useState(new Date());
-  const queryClient = useQueryClient();
-  const [, setLocation] = useLocation();
-  const { companyId } = useCompany();
+  // Calculate date range
+  const endDate = new Date();
+  const startDate = subDays(endDate, parseInt(dateRange));
 
-  // Fetch business metrics with company context
-  const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ["/api/dashboard/stats", companyId],
-    enabled: !!companyId,
-    refetchInterval: 300000, // 5 minutes
-  });
-
-  // Fetch priority actions data
-  const { data: priorityActions } = useQuery<any>({
-    queryKey: [`/api/dashboard/priority-actions`, companyId],
-    enabled: !!companyId,
-  });
-
-  // Fetch recent activity data
-  const { data: recentActivity } = useQuery<any[]>({
-    queryKey: [`/api/dashboard/recent-activity`, companyId],
-    enabled: !!companyId,
-  });
-
-  // Calculate date range based on timeRange selection
-  const getDateRange = () => {
-    const today = new Date();
-    const days = parseInt(timeRange);
-    const startDate = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
-    return {
-      from: startDate.toISOString().split('T')[0],
-      to: today.toISOString().split('T')[0]
-    };
+  // Format currency
+  const formatCurrency = (amount: number | string) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('en-ZA', { 
+      style: 'currency', 
+      currency: 'ZAR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(num || 0);
   };
 
-  const { from, to } = getDateRange();
-
-  // Fetch real chart data - Cash Flow 
-  const { data: cashFlowRawData } = useQuery({
-    queryKey: [`/api/reports/cash-flow/${from}/${to}`, companyId, timeRange],
-    enabled: !!companyId,
+  // Fetch dashboard stats
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['/api/dashboard/stats', company?.id, refreshKey],
+    enabled: !!company?.id
   });
 
-  // Fetch real chart data - Profit & Loss (for revenue vs expenses)
+  // Fetch invoices summary
+  const { data: invoicesSummary } = useQuery({
+    queryKey: ['/api/invoices/summary', company?.id],
+    enabled: !!company?.id
+  });
+
+  // Fetch bills summary  
+  const { data: billsSummary } = useQuery({
+    queryKey: ['/api/bills/summary', company?.id],
+    enabled: !!company?.id
+  });
+
+  // Fetch bank accounts
+  const { data: bankAccounts } = useQuery({
+    queryKey: ['/api/bank-accounts', company?.id],
+    enabled: !!company?.id
+  });
+
+  // Fetch expenses summary
+  const { data: expensesSummary } = useQuery({
+    queryKey: [`/api/expenses/summary?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`, company?.id],
+    enabled: !!company?.id
+  });
+
+  // Fetch cash flow data
+  const { data: cashFlowData } = useQuery({
+    queryKey: [`/api/reports/cash-flow`, company?.id, dateRange],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/cash-flow`, {
+        method: 'POST',
+        body: JSON.stringify({
+          companyId: company?.id,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
+        })
+      });
+      return response;
+    },
+    enabled: !!company?.id
+  });
+
+  // Fetch profit & loss data
   const { data: profitLossData } = useQuery({
-    queryKey: [`/api/reports/profit-loss/${from}/${to}`, companyId, timeRange], 
-    enabled: !!companyId,
+    queryKey: [`/api/reports/comprehensive-profit-loss`, company?.id, dateRange],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/reports/comprehensive-profit-loss`, {
+        method: 'POST',
+        body: JSON.stringify({
+          companyId: company?.id,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
+        })
+      });
+      return response;
+    },
+    enabled: !!company?.id
   });
 
-  // Transform API data for charts
-  const transformCashFlowData = (rawData: any) => {
-    if (!rawData?.cashInflow && !rawData?.cashOutflow) return null;
-    
-    // Use actual weekly data if available
-    if (rawData.weeklyCashFlow && rawData.weeklyCashFlow.length > 0) {
-      return rawData.weeklyCashFlow.map((week: any, index: number) => ({
-        month: `Week ${index + 1}`,
-        cashIn: week.inflow || 0,
-        cashOut: week.outflow || 0,
-        netFlow: (week.inflow || 0) - (week.outflow || 0)
+  // Calculate key metrics from real data
+  const totalReceivables = invoicesSummary?.unpaidTotal || dashboardStats?.arTotal || 0;
+  const overdueReceivables = invoicesSummary?.overdueTotal || 0;
+  const totalPayables = billsSummary?.unpaidTotal || dashboardStats?.apTotal || 0;
+  const overduePayables = billsSummary?.overdueTotal || 0;
+  
+  // Cash flow calculations
+  const cashInflow = cashFlowData?.cashInflow?.[0]?.amount || dashboardStats?.cashInflow || 0;
+  const cashOutflow = cashFlowData?.cashOutflow?.reduce((sum: number, item: any) => 
+    sum + parseFloat(item.amount || 0), 0) || dashboardStats?.cashOutflow || 0;
+  const netCashFlow = parseFloat(cashInflow) - parseFloat(cashOutflow);
+  
+  // Income and expense calculations
+  const totalIncome = profitLossData?.revenue?.total || dashboardStats?.totalRevenue || 0;
+  const totalExpenses = profitLossData?.expenses?.total || dashboardStats?.totalExpenses || expensesSummary?.total || 0;
+
+  // Prepare cash flow chart data
+  const prepareCashFlowChartData = () => {
+    if (cashFlowData?.weeklyCashFlow?.length > 0) {
+      return cashFlowData.weeklyCashFlow.map((week: any, index: number) => ({
+        name: `W${index + 1}`,
+        value: week.inflow - week.outflow
       }));
     }
     
-    // Fallback to totals if no weekly data
-    const totalCashIn = rawData.cashInflow?.reduce((sum: number, item: any) => 
-      sum + parseFloat(item.amount || '0'), 0) || 0;
-    const totalCashOut = rawData.cashOutflow?.reduce((sum: number, item: any) => 
-      sum + parseFloat(item.amount || '0'), 0) || 0;
-    
-    // Show single data point if we only have totals
-    if (totalCashIn > 0 || totalCashOut > 0) {
-      return [{
-        month: 'Period Total',
-        cashIn: totalCashIn,
-        cashOut: totalCashOut,
-        netFlow: totalCashIn - totalCashOut
-      }];
-    }
-    
-    return null;
+    // Default data if no real data
+    return [
+      { name: 'W1', value: 50000 },
+      { name: 'W2', value: 45000 },
+      { name: 'W3', value: 60000 },
+      { name: 'W4', value: 55000 }
+    ];
   };
 
-  const transformProfitLossData = (rawData: any) => {
-    if (!rawData?.totalRevenue && !rawData?.totalExpenses) return null;
-    
-    // Use actual weekly data if available
-    if (rawData.weeklyRevenue && rawData.weeklyExpenses) {
-      const weekMap = new Map();
-      
-      // Combine revenue data
-      rawData.weeklyRevenue.forEach((item: any) => {
-        const week = item.week;
-        if (!weekMap.has(week)) {
-          weekMap.set(week, { revenue: 0, expenses: 0 });
-        }
-        weekMap.get(week).revenue = item.amount || 0;
-      });
-      
-      // Combine expense data
-      rawData.weeklyExpenses.forEach((item: any) => {
-        const week = item.week;
-        if (!weekMap.has(week)) {
-          weekMap.set(week, { revenue: 0, expenses: 0 });
-        }
-        weekMap.get(week).expenses = item.amount || 0;
-      });
-      
-      // Convert to array and calculate profit margins
-      const weeks = Array.from(weekMap.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .slice(-4) // Last 4 weeks
-        .map((entry, index) => {
-          const [week, data] = entry;
-          const profitMargin = data.revenue > 0 ? ((data.revenue - data.expenses) / data.revenue) * 100 : 0;
-          return {
-            month: `Week ${index + 1}`,
-            revenue: Math.round(data.revenue),
-            expenses: Math.round(data.expenses),
-            profitMargin: Math.round(profitMargin * 10) / 10
-          };
-        });
-      
-      if (weeks.length > 0) return weeks;
+  // Prepare income/expense chart data
+  const prepareIncomeExpenseChartData = () => {
+    if (profitLossData?.weeklyTrends?.length > 0) {
+      return profitLossData.weeklyTrends.map((week: any, index: number) => ({
+        name: `W${index + 1}`,
+        income: week.revenue,
+        expense: week.expenses
+      }));
     }
     
-    // Fallback to totals if no weekly data
-    const totalRevenue = parseFloat(rawData.totalRevenue || '0');
-    const totalExpenses = parseFloat(rawData.totalExpenses || '0');
-    const profitMargin = totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0;
-    
-    if (totalRevenue > 0 || totalExpenses > 0) {
-      return [{
-        month: 'Period Total',
-        revenue: Math.round(totalRevenue),
-        expenses: Math.round(totalExpenses),
-        profitMargin: Math.round(profitMargin * 10) / 10
-      }];
-    }
-    
-    return null;
+    // Default data if no real data
+    return [
+      { name: 'W1', value: 50000 },
+      { name: 'W2', value: 45000 },
+      { name: 'W3', value: 60000 },
+      { name: 'W4', value: 55000 }
+    ];
   };
 
-  const cashFlowData = transformCashFlowData(cashFlowRawData);
-  const revenueExpenseData = transformProfitLossData(profitLossData);
-
-  // Fallback data when API data is loading or unavailable
-  const defaultCashFlowData = [
-    {month: "Week 1", cashIn: 25000, cashOut: 15000, netFlow: 10000},
-    {month: "Week 2", cashIn: 28000, cashOut: 16000, netFlow: 12000},
-    {month: "Week 3", cashIn: 27000, cashOut: 16000, netFlow: 11000},
-    {month: "Week 4", cashIn: 29000, cashOut: 16000, netFlow: 13000}
-  ];
-
-  const defaultRevenueExpenseData = [
-    {month: "Week 1", revenue: 60000, expenses: 40000, profitMargin: 33.3},
-    {month: "Week 2", revenue: 62000, expenses: 38000, profitMargin: 38.7},
-    {month: "Week 3", revenue: 61000, expenses: 42000, profitMargin: 31.1},
-    {month: "Week 4", revenue: 63000, expenses: 39000, profitMargin: 38.1}
-  ];
-
-  const businessMetrics: BusinessMetric[] = [
-    {
-      title: "Bank Balance",
-      value: `R ${(dashboardStats?.bankBalance || 0).toLocaleString()}`,
-      change: 5.2,
-      changeType: 'increase',
-      trend: 'up',
-      period: "vs last month"
-    },
-    {
-      title: "Total Receivables",
-      value: `R ${parseFloat(dashboardStats?.outstandingInvoices?.toString() || '0').toLocaleString()}`,
-      change: 15.4,
-      changeType: 'increase',
-      trend: 'up',
-      period: "vs last month"
-    },
-    {
-      title: "Total Payables",
-      value: `R ${(dashboardStats?.apTotal || 0).toLocaleString()}`,
-      change: -8.3,
-      changeType: 'decrease',
-      trend: 'down',
-      period: "vs last month"
-    },
-    {
-      title: "Monthly Revenue",
-      value: `R ${parseFloat(dashboardStats?.monthlyRevenue?.toString() || '0').toLocaleString()}`,
-      change: 8.2,
-      changeType: 'increase', 
-      trend: 'up',
-      period: "vs last month"
-    },
-    {
-      title: "Active Projects",
-      value: dashboardStats?.totalCustomers || 0,
-      change: 15.0,
-      changeType: 'increase',
-      trend: 'up',
-      period: "vs last month"
-    },
-    {
-      title: "Profit Margin",
-      value: `${dashboardStats?.profitMargin || '0'}%`,
-      change: 2.1,
-      changeType: 'increase',
-      trend: 'up',
-      period: "vs last month"
-    }
-  ];
+  // Prepare expense breakdown
+  const expenseCategories = expensesSummary?.categories || [];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   const handleRefresh = () => {
-    setLastRefresh(new Date());
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats', companyId] });
-    queryClient.invalidateQueries({ queryKey: [`/api/reports/cash-flow/${from}/${to}`, companyId, timeRange] });
-    queryClient.invalidateQueries({ queryKey: [`/api/reports/profit-loss/${from}/${to}`, companyId, timeRange] });
-    queryClient.invalidateQueries({ queryKey: [`/api/dashboard/priority-actions`, companyId] });
-    queryClient.invalidateQueries({ queryKey: [`/api/dashboard/recent-activity`, companyId] });
+    setRefreshKey(prev => prev + 1);
   };
 
-  if (isLoading) {
+  if (statsLoading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50" data-testid="business-dashboard">
-      {/* Header with Global Controls */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Business Dashboard</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Financial performance and operational insights
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Time Range Selector */}
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-32 z-50" data-testid="time-range-selector">
-                <SelectValue placeholder="Last 30..." />
-              </SelectTrigger>
-              <SelectContent className="z-50 bg-white border border-gray-200 shadow-lg">
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-                <SelectItem value="365">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Refresh Button */}
-            <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="button-refresh">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-
-            {/* Export Button */}
-            <Button variant="outline" size="sm" data-testid="button-export">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Hello, {company?.name || 'Business Owner'}</h1>
+          <p className="text-muted-foreground text-sm">{company?.description || 'Welcome to your dashboard'}</p>
         </div>
-
-        {/* Last Update Indicator */}
-        <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
-          <div className="w-2 h-2 bg-green-500 rounded-full" data-testid="status-indicator"></div>
-          <span data-testid="text-last-updated">Last updated: {lastRefresh.toLocaleTimeString()}</span>
+        <div className="flex items-center gap-3">
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 Days</SelectItem>
+              <SelectItem value="30">Last 30 Days</SelectItem>
+              <SelectItem value="90">Last 90 Days</SelectItem>
+              <SelectItem value="365">This Fiscal Year</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      <div className="p-6 space-y-8">
-        {/* KPI Strip - 6 Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" data-testid="kpi-grid">
-          {businessMetrics.map((metric, index) => (
-            <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer" data-testid={`kpi-card-${index}`}
-                  onClick={() => {
-                    if (metric.title.includes('Revenue')) setLocation('/invoices');
-                    else if (metric.title.includes('Bank')) setLocation('/banking');
-                    else if (metric.title.includes('Receivables')) setLocation('/invoices');
-                    else if (metric.title.includes('Projects')) setLocation('/projects');
-                    else if (metric.title.includes('Profit')) setLocation('/reports/financial');
-                    else if (metric.title.includes('Payables')) setLocation('/suppliers');
-                  }}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                      {metric.title}
-                    </p>
-                    <div className="flex items-baseline gap-2 mt-2">
-                      <span className="text-xl font-medium text-gray-900">
-                        {typeof metric.value === 'string' ? metric.value : metric.value.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-2">
-                      {metric.trend === 'up' ? (
-                        <ArrowUpRight className="h-3 w-3 text-green-600" />
-                      ) : metric.trend === 'down' ? (
-                        <ArrowDownRight className="h-3 w-3 text-red-600" />
-                      ) : null}
-                      <span className={`text-xs font-medium ${
-                        metric.changeType === 'increase' ? 'text-green-600' : 
-                        metric.changeType === 'decrease' ? 'text-red-600' : 
-                        'text-gray-600'
-                      }`}>
-                        {metric.change > 0 ? '+' : ''}{metric.change}%
-                      </span>
-                      <span className="text-xs text-gray-500">{metric.period}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* Navigation Tabs */}
+      <div className="flex gap-6 border-b pb-2">
+        <button className="text-sm font-medium border-b-2 border-primary pb-2">Dashboard</button>
+        <button className="text-sm text-muted-foreground pb-2">Getting Started</button>
+        <button className="text-sm text-muted-foreground pb-2">Recent Updates</button>
+      </div>
 
-        {/* Charts and Quick Actions Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-testid="charts-actions-section">
-          {/* Cash Flow Chart - Compact */}
-          <Card data-testid="chart-cashflow">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold">Cash Flow Trend</CardTitle>
-                <Badge variant="outline" className="text-xs">
-                  {timeRange === "7" ? "7 days" : timeRange === "30" ? "30 days" : timeRange === "90" ? "90 days" : "1 year"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={cashFlowData || (cashFlowRawData ? [] : defaultCashFlowData)}>
-                    <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
-                    <XAxis 
-                      dataKey="month" 
-                      fontSize={11} 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748b' }}
-                    />
-                    <YAxis 
-                      tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} 
-                      fontSize={11}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748b' }}
-                    />
-                    <Tooltip 
-                      formatter={(value, name) => [`R${Number(value).toLocaleString()}`, name]}
-                      contentStyle={{
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="cashIn" 
-                      stroke="#10b981" 
-                      strokeWidth={2.5}
-                      dot={{ fill: '#10b981', strokeWidth: 0, r: 3 }}
-                      activeDot={{ r: 5, stroke: '#10b981', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Cash Inflow"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="cashOut" 
-                      stroke="#ef4444" 
-                      strokeWidth={2.5}
-                      dot={{ fill: '#ef4444', strokeWidth: 0, r: 3 }}
-                      activeDot={{ r: 5, stroke: '#ef4444', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Cash Outflow"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="netFlow" 
-                      stroke="#2563eb" 
-                      strokeWidth={2.5}
-                      dot={{ fill: '#2563eb', strokeWidth: 0, r: 3 }}
-                      activeDot={{ r: 5, stroke: '#2563eb', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Net Cash Flow"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Revenue vs Expenses Chart - Compact */}
-          <Card data-testid="chart-revenue-expenses">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold">Revenue vs Expenses</CardTitle>
-                <Badge variant="outline" className="text-xs">
-                  {timeRange === "7" ? "7 days" : timeRange === "30" ? "30 days" : timeRange === "90" ? "90 days" : "1 year"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={revenueExpenseData || (profitLossData ? [] : defaultRevenueExpenseData)}>
-                    <CartesianGrid strokeDasharray="1 3" stroke="#e2e8f0" strokeOpacity={0.5} />
-                    <XAxis 
-                      dataKey="month" 
-                      fontSize={11}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748b' }}
-                    />
-                    <YAxis 
-                      yAxisId="left"
-                      tickFormatter={(value) => `R${(value/1000).toFixed(0)}k`} 
-                      fontSize={11}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748b' }}
-                    />
-                    <YAxis 
-                      yAxisId="right"
-                      orientation="right"
-                      tickFormatter={(value) => `${value}%`}
-                      fontSize={11}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748b' }}
-                    />
-                    <Tooltip 
-                      formatter={(value, name) => {
-                        if (name === 'Profit Margin') return [`${value}%`, name];
-                        return [`R${Number(value).toLocaleString()}`, name];
-                      }}
-                      contentStyle={{
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }}
-                    />
-                    <Bar 
-                      yAxisId="left"
-                      dataKey="revenue" 
-                      fill="#22c55e" 
-                      name="Revenue"
-                      radius={[2, 2, 0, 0]}
-                    />
-                    <Bar 
-                      yAxisId="left"
-                      dataKey="expenses" 
-                      fill="#f59e0b" 
-                      name="Expenses"
-                      radius={[2, 2, 0, 0]}
-                    />
-                    <Line 
-                      yAxisId="right"
-                      type="monotone" 
-                      dataKey="profitMargin" 
-                      stroke="#8b5cf6" 
-                      strokeWidth={2.5}
-                      dot={{ fill: '#8b5cf6', strokeWidth: 0, r: 3 }}
-                      activeDot={{ r: 5, stroke: '#8b5cf6', strokeWidth: 2, fill: '#ffffff' }}
-                      name="Profit Margin"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card data-testid="quick-actions">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button 
-                className="w-full justify-start h-8 text-sm" 
-                variant="outline"
-                onClick={() => setLocation('/invoices/new')}
-                data-testid="button-create-invoice"
-              >
-                <Plus className="h-3 w-3 mr-2" />
-                Create Invoice
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Total Receivables Card */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-start">
+              <CardTitle className="text-sm font-medium">Total Receivables</CardTitle>
+              <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">
+                New
               </Button>
-              
-              <Button 
-                className="w-full justify-start h-8 text-sm" 
-                variant="outline"
-                onClick={() => setLocation('/payments/new')}
-                data-testid="button-record-payment"
-              >
-                <CreditCard className="h-3 w-3 mr-2" />
-                Record Payment
-              </Button>
-              
-              <Button 
-                className="w-full justify-start h-8 text-sm" 
-                variant="outline"
-                onClick={() => setLocation('/projects/new')}
-                data-testid="button-new-project"
-              >
-                <FolderPlus className="h-3 w-3 mr-2" />
-                New Project
-              </Button>
-              
-              <Button 
-                className="w-full justify-start h-8 text-sm" 
-                variant="outline"
-                onClick={() => setLocation('/customers/new')}
-                data-testid="button-add-customer"
-              >
-                <UserPlus className="h-3 w-3 mr-2" />
-                Add Customer
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bottom Row - Priority Actions and Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-testid="actions-section">
-          {/* Priority Actions */}
-          <Card data-testid="priority-actions">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Priority Actions</CardTitle>
-                <Button variant="outline" size="sm" className="text-xs">
-                  Filter
-                </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Total Unpaid Invoices {formatCurrency(totalReceivables)}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">Current</p>
+                <p className="text-xl font-semibold">{formatCurrency(totalReceivables - overdueReceivables)}</p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {priorityActions?.overdueInvoices && priorityActions.overdueInvoices.count > 0 && (
-                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                  <div>
-                    <p className="font-medium text-red-900">Overdue Invoices</p>
-                    <p className="text-sm text-red-600">{priorityActions.overdueInvoices.count} invoices totaling R{priorityActions.overdueInvoices.total}</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-red-600 border-red-300 hover:bg-red-100"
-                    onClick={() => setLocation('/invoices?filter=overdue')}
-                    data-testid="button-view-overdue"
-                  >
-                    View All
-                  </Button>
-                </div>
-              )}
-              
-              {priorityActions?.dueThisWeek && priorityActions.dueThisWeek.count > 0 && (
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div>
-                    <p className="font-medium text-yellow-900">Due This Week</p>
-                    <p className="text-sm text-yellow-600">{priorityActions.dueThisWeek.count} items pending and due</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-yellow-600 border-yellow-300 hover:bg-yellow-100"
-                    onClick={() => setLocation('/invoices?filter=due-this-week')}
-                    data-testid="button-review-due"
-                  >
-                    Review
-                  </Button>
-                </div>
-              )}
-              
-              {priorityActions?.pendingApprovals && priorityActions.pendingApprovals.count > 0 && (
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div>
-                    <p className="font-medium text-blue-900">Pending Approvals</p>
-                    <p className="text-sm text-blue-600">{priorityActions.pendingApprovals.count} draft invoices ready to send</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-blue-600 border-blue-300 hover:bg-blue-100"
-                    onClick={() => setLocation('/invoices?filter=pending-approval')}
-                    data-testid="button-approve-pending"
-                  >
-                    Approve
-                  </Button>
-                </div>
-              )}
-              
-              {(!priorityActions?.overdueInvoices?.count && !priorityActions?.dueThisWeek?.count && !priorityActions?.pendingApprovals?.count) && (
-                <div className="flex items-center justify-center p-8 text-gray-500">
-                  <p className="text-sm">No priority actions at this time</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent High-Value Activity */}
-          <Card data-testid="recent-activity">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Recent High-Value Activity</CardTitle>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => setLocation('/activity-feed')}
-                  data-testid="button-view-all-activity"
-                >
-                  View All
-                </Button>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">Overdue</p>
+                <p className="text-xl font-semibold text-orange-600">
+                  {formatCurrency(overdueReceivables)}
+                </p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {recentActivity?.map((activity, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
-                  onClick={() => setLocation(activity.link)}
-                  data-testid={`activity-${activity.type}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${
-                      activity.type === 'payment' ? 'bg-green-100' :
-                      activity.type === 'invoice' ? 'bg-blue-100' :
-                      activity.type === 'customer' ? 'bg-orange-100' : 'bg-gray-100'
-                    }`}>
-                      {activity.type === 'payment' && <TrendingUp className="h-4 w-4 text-green-600" />}
-                      {activity.type === 'invoice' && <FileText className="h-4 w-4 text-blue-600" />}
-                      {activity.type === 'customer' && <Users className="h-4 w-4 text-orange-600" />}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{activity.title}</p>
-                      <p className="text-sm text-gray-500">{activity.description}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {activity.amount && (
-                      <p className={`font-semibold ${
-                        activity.type === 'payment' ? 'text-green-600' :
-                        activity.type === 'invoice' ? 'text-blue-600' : 'text-gray-600'
-                      }`}>
-                        {activity.type === 'payment' ? '+' : ''}R{activity.amount}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500">{activity.timeAgo}</p>
-                  </div>
+            </div>
+            {overdueReceivables > 0 && (
+              <div className="mt-3">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-orange-600 h-2 rounded-full"
+                    style={{ width: `${Math.min((overdueReceivables / totalReceivables) * 100, 100)}%` }}
+                  />
                 </div>
-              )) || (
-                <div className="flex items-center justify-center p-8 text-gray-500">
-                  <p className="text-sm">No recent activity</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Total Payables Card */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-start">
+              <CardTitle className="text-sm font-medium">Total Payables</CardTitle>
+              <Button variant="link" size="sm" className="h-auto p-0 text-blue-600">
+                New
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Total Unpaid Bills {formatCurrency(totalPayables)}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">Current</p>
+                <p className="text-xl font-semibold">{formatCurrency(totalPayables - overduePayables)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase">Overdue</p>
+                <p className="text-xl font-semibold text-orange-600">
+                  {formatCurrency(overduePayables)}
+                </p>
+              </div>
+            </div>
+            {overduePayables > 0 && (
+              <div className="mt-3">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-orange-600 h-2 rounded-full"
+                    style={{ width: `${Math.min((overduePayables / totalPayables) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cash Flow Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-sm font-medium">Cash Flow</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Cash as on {format(endDate, 'dd-MM-yy')}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold">{formatCurrency(netCashFlow)}</p>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-1">
+                  <ArrowUp className="h-3 w-3 text-green-600" />
+                  <span className="text-xs">Incoming</span>
+                  <span className="text-sm font-medium">{formatCurrency(cashInflow)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <ArrowDown className="h-3 w-3 text-red-600" />
+                  <span className="text-xs">Outgoing</span>
+                  <span className="text-sm font-medium">{formatCurrency(cashOutflow)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={prepareCashFlowChartData()}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} />
+              <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+              <Tooltip formatter={(value) => formatCurrency(value as number)} />
+              <Line 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#3b82f6" 
+                strokeWidth={2}
+                dot={{ fill: '#3b82f6', r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Income and Expense Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Income and Expense</CardTitle>
+            <p className="text-xs text-muted-foreground">This Fiscal Year</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600 rounded-full" />
+                  <span className="text-sm">Total Income</span>
+                </div>
+                <span className="font-medium">{formatCurrency(totalIncome)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-600 rounded-full" />
+                  <span className="text-sm">Total Expenses</span>
+                </div>
+                <span className="font-medium">{formatCurrency(totalExpenses)}</span>
+              </div>
+              <div className="pt-2 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Net Profit</span>
+                  <span className={`font-bold ${(totalIncome - totalExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(totalIncome - totalExpenses)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {profitLossData?.weeklyTrends?.length > 0 ? (
+              <ResponsiveContainer width="100%" height={150} className="mt-4">
+                <BarChart data={prepareIncomeExpenseChartData()}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                  <Bar dataKey="income" fill="#10b981" />
+                  <Bar dataKey="expense" fill="#ef4444" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">* Income and expense values displayed are exclusive of taxes.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Top Expenses</CardTitle>
+            <p className="text-xs text-muted-foreground">This Fiscal Year</p>
+          </CardHeader>
+          <CardContent>
+            {expenseCategories.length > 0 ? (
+              <div className="space-y-3">
+                {expenseCategories.slice(0, 5).map((category: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-sm">{category.category}</span>
+                    </div>
+                    <span className="text-sm font-medium">{formatCurrency(category.total)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No Expense recorded for this fiscal year</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bank and Credit Cards Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Bank and Credit Cards</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {bankAccounts?.length > 0 ? (
+                bankAccounts.slice(0, 5).map((account: any) => (
+                  <div key={account.id} className="flex justify-between items-center">
+                    <span className="text-sm">{account.accountName}</span>
+                    <span className="text-sm font-medium text-blue-600">
+                      {formatCurrency(account.currentBalance || account.balance || 0)}
+                    </span>
+                  </div>
+                ))
+              ) : dashboardStats?.bankBalances?.length > 0 ? (
+                dashboardStats.bankBalances.map((account: any) => (
+                  <div key={account.accountId} className="flex justify-between items-center">
+                    <span className="text-sm">{account.accountName}</span>
+                    <span className="text-sm font-medium text-blue-600">
+                      {formatCurrency(account.balance || account.currentBalance || 0)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <CreditCard className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No bank accounts configured</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Account Watchlist</CardTitle>
+            <p className="text-xs text-muted-foreground">Monitor key accounts</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {dashboardStats?.accountWatchlist?.length > 0 ? (
+                dashboardStats.accountWatchlist.map((account: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm">{account.name}</span>
+                    <span className="text-sm font-medium">{formatCurrency(account.balance)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No accounts in watchlist</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
-}
+};
+
+export default BusinessDashboard;
