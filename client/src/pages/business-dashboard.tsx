@@ -143,7 +143,7 @@ export default function BusinessDashboard() {
   const businessMetrics: BusinessMetric[] = [
     {
       title: "Bank Balance",
-      value: dashboardStats?.bankBalance || 0,
+      value: `R ${(dashboardStats?.bankBalance || 0).toLocaleString()}`,
       change: 5.2,
       changeType: 'increase',
       trend: 'up',
@@ -151,7 +151,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Total Receivables",
-      value: `R ${dashboardStats?.outstandingInvoices || '0.00'}`,
+      value: `R ${parseFloat(dashboardStats?.outstandingInvoices?.toString() || '0').toLocaleString()}`,
       change: 15.4,
       changeType: 'increase',
       trend: 'up',
@@ -159,7 +159,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Total Payables",
-      value: dashboardStats?.apTotal || 0,
+      value: `R ${(dashboardStats?.apTotal || 0).toLocaleString()}`,
       change: -8.3,
       changeType: 'decrease',
       trend: 'down',
@@ -167,7 +167,7 @@ export default function BusinessDashboard() {
     },
     {
       title: "Monthly Revenue",
-      value: `R ${dashboardStats?.monthlyRevenue || '0.00'}`,
+      value: `R ${parseFloat(dashboardStats?.monthlyRevenue?.toString() || '0').toLocaleString()}`,
       change: 8.2,
       changeType: 'increase', 
       trend: 'up',
