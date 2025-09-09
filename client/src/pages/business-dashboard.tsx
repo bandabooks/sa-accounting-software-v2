@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -128,13 +128,31 @@ export default function BusinessDashboard() {
     }
   };
 
-  const { from, to } = getPeriodDates();
+  // Memoize period dates to prevent recalculation on every render
+  const periodDates = useMemo(() => getPeriodDates(), [period]);
+  const { from, to } = periodDates;
 
+  // Stabilize query key to prevent excessive refetching
+  const stableFromDate = useMemo(() => from.toISOString().split('T')[0], [from]);
+  const stableToDate = useMemo(() => to.toISOString().split('T')[0], [to]);
+  
   const { data: dashboardData, isLoading, error, refetch } = useQuery<DashboardData>({
-    queryKey: [`/api/dashboard/business?basis=${accountingBasis}&period=${period}&from=${from.toISOString()}&to=${to.toISOString()}`],
+    queryKey: [`/api/dashboard/business?basis=${accountingBasis}&period=${period}&from=${stableFromDate}&to=${stableToDate}`],
     enabled: !!companyId,
-    staleTime: 30000, // 30 seconds
-    retry: 3,
+    staleTime: 60000, // 1 minute
+    retry: 2,
+    refetchOnWindowFocus: false,
+    refetchInterval: false, // Disable automatic refetching
+  });
+
+  // Debug logging
+  console.log('Dashboard Query State:', { 
+    companyId, 
+    isLoading, 
+    error: error?.message, 
+    hasData: !!dashboardData,
+    dataKeys: dashboardData ? Object.keys(dashboardData) : [],
+    queryKey: `/api/dashboard/business?basis=${accountingBasis}&period=${period}&from=${stableFromDate}&to=${stableToDate}`
   });
 
   const formatCurrency = (amount: string | number) => {
@@ -197,7 +215,7 @@ export default function BusinessDashboard() {
               <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-red-700">Error Loading Dashboard</h3>
               <p className="text-gray-600 mt-2">Failed to load dashboard data. Please try again.</p>
-              <Button onClick={handleRefresh} className="mt-4">
+              <Button onClick={() => refetch()} className="mt-4">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Retry
               </Button>
@@ -300,7 +318,7 @@ export default function BusinessDashboard() {
               </Card>
             ))}
           </div>
-        ) : dashboardData ? (
+        ) : dashboardData && dashboardData.kpis ? (
           <>
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -649,7 +667,23 @@ export default function BusinessDashboard() {
               </Card>
             )}
           </>
-        ) : null}
+        ) : (
+          // Fallback when no data is available yet
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No Dashboard Data
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Dashboard data is being prepared. Please try refreshing.
+              </p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh Dashboard
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
