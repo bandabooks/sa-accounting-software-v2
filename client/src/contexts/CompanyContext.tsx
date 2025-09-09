@@ -60,12 +60,22 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setCompanyId(newCompanyId);
       localStorage.setItem('activeCompanyId', newCompanyId.toString());
 
-      // 2. Optimistic cache invalidation for instant UI updates
+      // 2. Optimistic cache invalidation for instant UI updates - invalidate ALL company-specific data
       queryClient.invalidateQueries({ queryKey: ['/api/companies/active'] });
+      
+      // Invalidate all dashboard queries (including company-specific ones)
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/priority-actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-activity'] });
+      
+      // Invalidate other company-specific data
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      
+      // Clear ALL cached queries to ensure fresh data for new company
+      queryClient.clear();
 
       // 3. Update company in backend
       const response = await fetch('/api/companies/switch', {

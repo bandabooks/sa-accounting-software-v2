@@ -114,7 +114,7 @@ export class DashboardStatsService {
     } catch (error) {
       // Table doesn't exist, return defaults
       console.log('sars_compliance table not found, returning default values');
-      return { filingsDue30: 3 }; // Default value for demo
+      return { filingsDue30: 0 }; // Return 0 for companies without compliance data
     }
   }
 
@@ -157,29 +157,9 @@ export class DashboardStatsService {
         status: String(row.status) as any
       }));
     } catch (error) {
-      // Table doesn't exist, return demo data
-      console.log('sars_compliance table not found, returning demo filings');
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      
-      return [
-        {
-          id: '1',
-          service: 'VAT201' as any,
-          entityName: 'ABC Trading Pty Ltd',
-          periodLabel: 'VAT Return - Feb 2025',
-          dueDate: tomorrow,
-          status: 'not_started' as any
-        },
-        {
-          id: '2', 
-          service: 'EMP201' as any,
-          entityName: 'XYZ Services CC',
-          periodLabel: 'Payroll Return - Feb 2025',
-          dueDate: nextWeek,
-          status: 'in_progress' as any
-        }
-      ];
+      // Table doesn't exist, return empty array
+      console.log('sars_compliance table not found, returning empty filings');
+      return []; // Return empty array for companies without compliance data
     }
   }
 
@@ -224,7 +204,7 @@ export class DashboardStatsService {
     } catch (error) {
       // Table doesn't exist, return default
       console.log('compliance_tasks table not found, returning default value');
-      return { count: 5 }; // Default value for demo
+      return { count: 0 }; // Return 0 for companies without task data
     }
   }
 
@@ -345,7 +325,7 @@ export class DashboardStatsService {
     } catch (error) {
       // Tables don't exist or column issues, return defaults
       console.log('AR/AP tables not found, returning default values');
-      return { arTotal: 15500, apTotal: 8200 }; // Demo values
+      return { arTotal: 0, apTotal: 0 }; // Return 0 for companies without AR/AP data
     }
   }
 
