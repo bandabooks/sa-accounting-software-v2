@@ -18314,6 +18314,19 @@ export class DatabaseStorage implements IStorage {
     forecastIn: number;
     forecastOut: number;
   }>> {
+    // Pre-check if bills table exists to avoid repeated failures
+    let supportsBills = false;
+    try {
+      await db.execute(sql`SELECT 1 FROM bills LIMIT 1`);
+      supportsBills = true;
+    } catch (error) {
+      if (this.isMissingRelation(error)) {
+        supportsBills = false;
+      } else {
+        throw error;
+      }
+    }
+
     const forecast = [];
     
     for (let week = 1; week <= 13; week++) {
@@ -18364,7 +18377,11 @@ export class DatabaseStorage implements IStorage {
           .where(
             and(
               eq(invoices.companyId, companyId),
-              inArray(invoices.status, ['sent', 'overdue', 'partially_paid']),
+              or(
+                eq(invoices.status, 'sent'),
+                eq(invoices.status, 'overdue'), 
+                eq(invoices.status, 'partially_paid')
+              ),
               gte(invoices.dueDate, weekStart),
               lte(invoices.dueDate, weekEnd)
             )
@@ -18372,37 +18389,36 @@ export class DatabaseStorage implements IStorage {
 
         // Forecast Out: Outstanding AP expected to be paid
         let forecastOutResult;
-        try {
-          // Try using bills table first
+        if (supportsBills) {
+          // Use bills table
           forecastOutResult = await db
             .select({ total: sum(bills.total) })
             .from(bills)
             .where(
               and(
                 eq(bills.companyId, companyId),
-                inArray(bills.status, ['unpaid', 'partially_paid']),
+                or(
+                  eq(bills.status, 'unpaid'),
+                  eq(bills.status, 'partially_paid')
+                ),
                 eq(bills.approvalStatus, 'approved'),
                 gte(bills.dueDate, weekStart),
                 lte(bills.dueDate, weekEnd)
               )
             );
-        } catch (error) {
-          if (this.isMissingRelation(error)) {
-            // Fallback to expenses table when bills doesn't exist
-            forecastOutResult = await db
-              .select({ total: sum(expenses.amount) })
-              .from(expenses)
-              .where(
-                and(
-                  eq(expenses.companyId, companyId),
-                  inArray(expenses.status, ['approved']),
-                  gte(expenses.expenseDate, weekStart),
-                  lte(expenses.expenseDate, weekEnd)
-                )
-              );
-          } else {
-            throw error;
-          }
+        } else {
+          // Fallback to expenses table when bills doesn't exist
+          forecastOutResult = await db
+            .select({ total: sum(expenses.amount) })
+            .from(expenses)
+            .where(
+              and(
+                eq(expenses.companyId, companyId),
+                eq(expenses.status, 'approved'),
+                gte(expenses.expenseDate, weekStart),
+                lte(expenses.expenseDate, weekEnd)
+              )
+            );
         }
 
         forecastIn = Number(forecastInResult[0]?.total || 0);
