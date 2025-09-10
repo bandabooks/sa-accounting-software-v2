@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { KPIStat, SuccessKPIStat, InfoKPIStat, WarningKPIStat, DangerKPIStat, PurpleKPIStat } from "@/components/ui/kpi-stat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DuplicateInvoicesModal } from "@/components/dashboard/DuplicateInvoicesModal";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
@@ -104,6 +105,7 @@ interface DashboardData {
     severity: 'low' | 'medium' | 'high';
     count: number;
     description: string;
+    actionable?: boolean;
   }>;
 }
 
@@ -113,6 +115,7 @@ export default function BusinessDashboard() {
   const [, setLocation] = useLocation();
   const [accountingBasis, setAccountingBasis] = useState<'accrual' | 'cash'>('accrual');
   const [period, setPeriod] = useState('YTD');
+  const [duplicatesModalOpen, setDuplicatesModalOpen] = useState(false);
 
   // Calculate period dates
   const getPeriodDates = () => {
@@ -618,15 +621,31 @@ export default function BusinessDashboard() {
                 <CardContent>
                   <div className="space-y-3">
                     {dashboardData.anomalies.map((anomaly, index) => (
-                      <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
-                        anomaly.severity === 'high' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
-                        anomaly.severity === 'medium' ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' :
-                        'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                      }`}>
+                      <div 
+                        key={index} 
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          anomaly.severity === 'high' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
+                          anomaly.severity === 'medium' ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' :
+                          'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                        } ${anomaly.actionable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+                        onClick={() => {
+                          if (anomaly.actionable && anomaly.type === 'duplicate_invoices') {
+                            setDuplicatesModalOpen(true);
+                          }
+                        }}
+                      >
                         <div>
-                          <h4 className="font-medium">{anomaly.description}</h4>
+                          <h4 className="font-medium flex items-center">
+                            {anomaly.description}
+                            {anomaly.actionable && (
+                              <Eye className="w-4 h-4 ml-2 text-blue-500" />
+                            )}
+                          </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Type: {anomaly.type.replace(/_/g, ' ')} • Severity: {anomaly.severity}
+                            {anomaly.actionable && (
+                              <span className="text-blue-600 ml-2">• Click to view details</span>
+                            )}
                           </p>
                         </div>
                         <div className="text-right">
@@ -695,6 +714,12 @@ export default function BusinessDashboard() {
           </div>
         )}
       </div>
+
+      {/* Duplicate Invoices Modal */}
+      <DuplicateInvoicesModal 
+        open={duplicatesModalOpen} 
+        onOpenChange={setDuplicatesModalOpen} 
+      />
     </div>
   );
 }

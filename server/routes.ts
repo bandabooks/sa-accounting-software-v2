@@ -2069,7 +2069,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'duplicate_invoices',
           severity: 'medium',
           count: duplicateInvoices.length,
-          description: `${duplicateInvoices.length} potential duplicate invoices detected`
+          description: `${duplicateInvoices.length} potential duplicate invoices detected`,
+          actionable: true // Flag that this anomaly can be expanded for details
         });
       }
 
@@ -2187,6 +2188,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("❌ Error fetching business dashboard:", error);
       res.status(500).json({ message: "Failed to fetch dashboard data" });
+    }
+  });
+
+  // Duplicate Invoices Details endpoint
+  app.get("/api/dashboard/duplicates", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const companyId = req.user.companyId || parseInt(req.headers['x-company-id'] as string);
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      console.log(`🔍 Fetching duplicate invoices for company ${companyId}`);
+
+      // Get all invoices for duplicate detection
+      const allInvoices = await storage.getAllInvoices(companyId);
+      
+      // Group potential duplicates
+      const duplicateGroups = [];
+      const processedInvoices = new Set();
+
+      for (const invoice of allInvoices) {
+        if (processedInvoices.has(invoice.id)) continue;
+
+        // Find all invoices that match this one
+        const matches = allInvoices.filter(other => 
+          other.id !== invoice.id &&
+          other.customerId === invoice.customerId && 
+          other.total === invoice.total && 
+          Math.abs(new Date(other.invoiceDate).getTime() - new Date(invoice.invoiceDate).getTime()) < 86400000
+        );
+
+        if (matches.length > 0) {
+          // Mark all as processed
+          processedInvoices.add(invoice.id);
+          matches.forEach(match => processedInvoices.add(match.id));
+
+          // Get customer name for display
+          const customer = await storage.getCustomer(invoice.customerId);
+          
+          duplicateGroups.push({
+            id: `group-${invoice.id}`,
+            customer: {
+              id: invoice.customerId,
+              name: customer?.name || 'Unknown Customer'
+            },
+            amount: parseFloat(invoice.total),
+            invoices: [
+              {
+                id: invoice.id,
+                invoiceNumber: invoice.invoiceNumber,
+                invoiceDate: invoice.invoiceDate,
+                dueDate: invoice.dueDate,
+                status: invoice.status,
+                total: parseFloat(invoice.total),
+                createdAt: invoice.createdAt
+              },
+              ...matches.map(match => ({
+                id: match.id,
+                invoiceNumber: match.invoiceNumber,
+                invoiceDate: match.invoiceDate,
+                dueDate: match.dueDate,
+                status: match.status,
+                total: parseFloat(match.total),
+                createdAt: match.createdAt
+              }))
+            ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          });
+        }
+      }
+
+      console.log(`✅ Found ${duplicateGroups.length} duplicate groups for company ${companyId}`);
+      
+      res.json({
+        duplicateGroups,
+        totalDuplicates: duplicateGroups.reduce((sum, group) => sum + group.invoices.length, 0),
+        summary: {
+          groupCount: duplicateGroups.length,
+          totalAmount: duplicateGroups.reduce((sum, group) => sum + (group.amount * group.invoices.length), 0)
+        }
+      });
+
+    } catch (error) {
+      console.error("❌ Error fetching duplicate invoices:", error);
+      res.status(500).json({ message: "Failed to fetch duplicate invoices" });
     }
   });
 
