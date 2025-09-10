@@ -181,7 +181,7 @@ export default function Onboarding() {
         title: "Company Setup Complete!",
         description: "Welcome to Think MyBiz Accounting. Your company has been successfully configured.",
       });
-      setLocation("/dashboard");
+      setLocation("/business-dashboard");
     },
     onError: (error: any) => {
       toast({
@@ -195,7 +195,7 @@ export default function Onboarding() {
   // Redirect if onboarding not needed
   useEffect(() => {
     if (onboardingStatus && !onboardingStatus.needsOnboarding) {
-      setLocation("/dashboard");
+      setLocation("/business-dashboard");
     }
   }, [onboardingStatus, setLocation]);
 

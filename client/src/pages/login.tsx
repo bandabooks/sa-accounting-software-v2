@@ -117,7 +117,7 @@ export default function Login() {
     // Use setTimeout to ensure authentication state is fully processed
     setTimeout(() => {
       // Redirect to dashboard using react router to avoid full page reload
-      setLocation('/dashboard');
+      setLocation('/business-dashboard');
       // Also trigger a window reload after navigation to ensure fresh state
       setTimeout(() => {
         window.location.reload();
