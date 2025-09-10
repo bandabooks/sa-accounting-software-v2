@@ -54,6 +54,7 @@ interface DashboardData {
     };
     monthlyRevenue: number;
     grossMargin: number;
+    cashFlowAvg4w: number;
     netProfit: number;
     profitMargin: number;
     vat: {
@@ -452,11 +453,7 @@ export default function BusinessDashboard() {
               {/* Cash Flow (Weekly Avg) */}
               <PurpleKPIStat
                 title="Weekly Cash Flow"
-                value={dashboardData.charts.cashFlow13w.length > 0 ? 
-                  dashboardData.charts.cashFlow13w
-                    .slice(0, 4)
-                    .reduce((sum, week) => sum + (week.actualIn - week.actualOut), 0) / 4
-                  : 0}
+                value={dashboardData.kpis.cashFlowAvg4w || 0}
                 icon={TrendingUp}
                 subtitle="4-week average net flow"
               />

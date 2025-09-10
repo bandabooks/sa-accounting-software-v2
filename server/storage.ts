@@ -18024,6 +18024,402 @@ export class DatabaseStorage implements IStorage {
 
     return summary;
   }
+
+  // Helper function to check if a table exists
+  async tableExists(tableName: string): Promise<boolean> {
+    try {
+      const result = await db.execute(sql`SELECT to_regclass(${tableName}) IS NOT NULL as exists`);
+      return result.rows[0]?.exists === true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Helper function to detect missing relation errors
+  isMissingRelation(error: any): boolean {
+    return error?.code === '42P01';
+  }
+
+  // VAT Position Calculation - supports both accrual and cash basis
+  async calculateVATPosition(companyId: number, fromDate: Date, toDate: Date, basis: 'accrual' | 'cash'): Promise<{
+    vatOutput: number;
+    vatInput: number;
+    vatNet: number;
+    direction: 'payable' | 'receivable';
+    dueDate: Date;
+  }> {
+    let vatOutput = 0;
+    let vatInput = 0;
+
+    if (basis === 'accrual') {
+      // Accrual basis: VAT on issued invoices and approved bills
+      const invoiceResult = await db
+        .select({
+          totalVat: sum(invoices.vatAmount)
+        })
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.companyId, companyId),
+            gte(invoices.issueDate, fromDate),
+            lte(invoices.issueDate, toDate),
+            inArray(invoices.status, ['sent', 'paid', 'overdue', 'partially_paid'])
+          )
+        );
+
+      // Subtract credit notes from VAT output
+      const creditNoteResult = await db
+        .select({
+          totalVat: sum(creditNotes.vatAmount)
+        })
+        .from(creditNotes)
+        .where(
+          and(
+            eq(creditNotes.companyId, companyId),
+            gte(creditNotes.issueDate, fromDate),
+            lte(creditNotes.issueDate, toDate),
+            inArray(creditNotes.status, ['issued', 'applied'])
+          )
+        );
+
+      const billResult = await db
+        .select({
+          totalVat: sum(bills.vatAmount)
+        })
+        .from(bills)
+        .where(
+          and(
+            eq(bills.companyId, companyId),
+            gte(bills.billDate, fromDate),
+            lte(bills.billDate, toDate),
+            eq(bills.approvalStatus, 'approved')
+          )
+        );
+
+      const invoiceVat = Number(invoiceResult[0]?.totalVat || 0);
+      const creditNoteVat = Number(creditNoteResult[0]?.totalVat || 0);
+      
+      vatOutput = invoiceVat - creditNoteVat; // Net VAT output after credit notes
+      vatInput = Number(billResult[0]?.totalVat || 0);
+
+    } else {
+      // Cash basis: VAT on actual payments received/made within period
+      const paymentResults = await db
+        .select({
+          invoiceId: payments.invoiceId,
+          amount: payments.amount,
+          vatAmount: invoices.vatAmount,
+          total: invoices.total
+        })
+        .from(payments)
+        .leftJoin(invoices, eq(payments.invoiceId, invoices.id))
+        .where(
+          and(
+            eq(payments.companyId, companyId),
+            gte(payments.paymentDate, fromDate),
+            lte(payments.paymentDate, toDate),
+            eq(payments.status, 'completed')
+          )
+        );
+
+      // Calculate VAT on payments (proportion of payment * invoice VAT rate)
+      vatOutput = paymentResults.reduce((sum, payment) => {
+        const vatAmount = Number(payment.vatAmount || 0);
+        const total = Number(payment.total || 0);
+        const amount = Number(payment.amount || 0);
+        
+        // Skip invoices with zero VAT (exempt/zero-rated)
+        if (vatAmount > 0 && total > 0 && amount > 0) {
+          const vatRate = vatAmount / total;
+          const paymentVat = amount * vatRate;
+          return sum + paymentVat;
+        }
+        return sum;
+      }, 0);
+
+      // Handle cash-basis credit notes by reducing VAT when invoices are credited
+      // Note: For proper implementation, we need allocation tracking between credit notes and invoices
+      // For now, we'll use a simplified approach based on credit note issue dates within the period
+      const creditNotesInPeriod = await db
+        .select({
+          vatAmount: creditNotes.vatAmount,
+          total: creditNotes.total
+        })
+        .from(creditNotes)
+        .where(
+          and(
+            eq(creditNotes.companyId, companyId),
+            gte(creditNotes.creditNoteDate, fromDate),
+            lte(creditNotes.creditNoteDate, toDate)
+          )
+        );
+
+      // Subtract VAT on credit notes issued in the period (simplified approach)
+      const creditNoteVatReduction = creditNotesInPeriod.reduce((sum, cn) => {
+        const vatAmount = Number(cn.vatAmount || 0);
+        if (vatAmount > 0) {
+          return sum + vatAmount;
+        }
+        return sum;
+      }, 0);
+
+      vatOutput = Math.max(0, vatOutput - creditNoteVatReduction);
+
+      // For supplier payments (bill payments)
+      const supplierPaymentResults = await db
+        .select({
+          billId: supplierPayments.billId,
+          amount: supplierPayments.amount,
+          vatAmount: bills.vatAmount,
+          total: bills.total
+        })
+        .from(supplierPayments)
+        .leftJoin(bills, eq(supplierPayments.billId, bills.id))
+        .where(
+          and(
+            eq(supplierPayments.companyId, companyId),
+            gte(supplierPayments.paymentDate, fromDate),
+            lte(supplierPayments.paymentDate, toDate),
+            eq(supplierPayments.status, 'completed')
+          )
+        );
+
+      vatInput = supplierPaymentResults.reduce((sum, payment) => {
+        const vatAmount = Number(payment.vatAmount || 0);
+        const total = Number(payment.total || 0);
+        const amount = Number(payment.amount || 0);
+        
+        // Skip bills with zero VAT (exempt/zero-rated)
+        if (vatAmount > 0 && total > 0 && amount > 0) {
+          const vatRate = vatAmount / total;
+          const paymentVat = amount * vatRate;
+          return sum + paymentVat;
+        }
+        return sum;
+      }, 0);
+    }
+
+    const vatNet = vatOutput - vatInput;
+    const direction = vatNet > 0 ? 'payable' : 'receivable';
+
+    // Calculate VAT due date based on company settings
+    const company = await this.getCompanyById(companyId);
+    const vatSubmissionDay = company?.vatSubmissionDay || 25;
+    const vatPeriodMonths = company?.vatPeriodMonths || 2; // bi-monthly by default
+    const vatStartMonth = company?.vatStartMonth || 1; // January start by default
+    
+    // Calculate proper VAT period end and due date
+    const periodEnd = new Date(toDate);
+    
+    // Calculate the next VAT period end based on company settings
+    let vatPeriodEnd = new Date(periodEnd.getFullYear(), vatStartMonth - 1, 1);
+    
+    // Find the correct VAT period that contains the toDate
+    while (vatPeriodEnd <= periodEnd) {
+      vatPeriodEnd.setMonth(vatPeriodEnd.getMonth() + vatPeriodMonths);
+    }
+    
+    // VAT is due on the submission day of the month following the period end
+    const dueDate = new Date(vatPeriodEnd);
+    dueDate.setDate(vatSubmissionDay);
+    
+    // If submission day is past the end of the month, use the last day
+    if (dueDate.getMonth() !== vatPeriodEnd.getMonth()) {
+      dueDate.setDate(0); // Last day of previous month
+    }
+
+    return {
+      vatOutput,
+      vatInput,
+      vatNet: Math.abs(vatNet),
+      direction,
+      dueDate
+    };
+  }
+
+  // Weekly Cash Flow Calculation - 4-week average
+  async calculateWeeklyCashFlow(companyId: number, asOfDate: Date): Promise<{
+    average4w: number;
+    currency: string;
+  }> {
+    // Calculate last 4 completed weeks before asOfDate
+    const weeklyNetFlows = [];
+    
+    for (let weekOffset = 1; weekOffset <= 4; weekOffset++) {
+      const weekEnd = new Date(asOfDate);
+      weekEnd.setDate(weekEnd.getDate() - (weekOffset - 1) * 7);
+      
+      // Get start of ISO week
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+      
+      // Ensure we only get completed weeks
+      weekStart.setHours(0, 0, 0, 0);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      // Get cash inflows (payments received)
+      const cashInResult = await db
+        .select({
+          totalIn: sum(payments.amount)
+        })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.companyId, companyId),
+            gte(payments.paymentDate, weekStart),
+            lte(payments.paymentDate, weekEnd),
+            eq(payments.status, 'completed')
+          )
+        );
+
+      // Get cash outflows (supplier payments)
+      const cashOutResult = await db
+        .select({
+          totalOut: sum(supplierPayments.amount)
+        })
+        .from(supplierPayments)
+        .where(
+          and(
+            eq(supplierPayments.companyId, companyId),
+            gte(supplierPayments.paymentDate, weekStart),
+            lte(supplierPayments.paymentDate, weekEnd),
+            eq(supplierPayments.status, 'completed')
+          )
+        );
+
+      const cashIn = Number(cashInResult[0]?.totalIn || 0);
+      const cashOut = Number(cashOutResult[0]?.totalOut || 0);
+      const netFlow = cashIn - cashOut;
+      
+      weeklyNetFlows.push(netFlow);
+    }
+
+    const average4w = weeklyNetFlows.reduce((sum, flow) => sum + flow, 0) / 4;
+    
+    // Get company currency
+    const company = await this.getCompanyById(companyId);
+    const currency = company?.currency || 'ZAR';
+
+    return {
+      average4w: Math.round(average4w),
+      currency
+    };
+  }
+
+  // 13-Week Cash Flow Forecast
+  async calculate13WeekCashFlowForecast(companyId: number, asOfDate: Date): Promise<Array<{
+    week: string;
+    actualIn: number;
+    actualOut: number;
+    forecastIn: number;
+    forecastOut: number;
+  }>> {
+    const forecast = [];
+    
+    for (let week = 1; week <= 13; week++) {
+      const weekStart = new Date(asOfDate);
+      weekStart.setDate(weekStart.getDate() + (week - 1) * 7);
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      let actualIn = 0, actualOut = 0, forecastIn = 0, forecastOut = 0;
+
+      if (weekEnd <= asOfDate) {
+        // Past weeks - use actual data
+        const cashInResult = await db
+          .select({ total: sum(payments.amount) })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.companyId, companyId),
+              gte(payments.paymentDate, weekStart),
+              lte(payments.paymentDate, weekEnd),
+              eq(payments.status, 'completed')
+            )
+          );
+
+        const cashOutResult = await db
+          .select({ total: sum(supplierPayments.amount) })
+          .from(supplierPayments)
+          .where(
+            and(
+              eq(supplierPayments.companyId, companyId),
+              gte(supplierPayments.paymentDate, weekStart),
+              lte(supplierPayments.paymentDate, weekEnd),
+              eq(supplierPayments.status, 'completed')
+            )
+          );
+
+        actualIn = Number(cashInResult[0]?.total || 0);
+        actualOut = Number(cashOutResult[0]?.total || 0);
+      } else {
+        // Future weeks - calculate forecast
+        // Forecast In: Outstanding AR expected to be collected
+        const forecastInResult = await db
+          .select({ total: sum(invoices.total) })
+          .from(invoices)
+          .where(
+            and(
+              eq(invoices.companyId, companyId),
+              inArray(invoices.status, ['sent', 'overdue', 'partially_paid']),
+              gte(invoices.dueDate, weekStart),
+              lte(invoices.dueDate, weekEnd)
+            )
+          );
+
+        // Forecast Out: Outstanding AP expected to be paid
+        let forecastOutResult;
+        try {
+          // Try using bills table first
+          forecastOutResult = await db
+            .select({ total: sum(bills.total) })
+            .from(bills)
+            .where(
+              and(
+                eq(bills.companyId, companyId),
+                inArray(bills.status, ['unpaid', 'partially_paid']),
+                eq(bills.approvalStatus, 'approved'),
+                gte(bills.dueDate, weekStart),
+                lte(bills.dueDate, weekEnd)
+              )
+            );
+        } catch (error) {
+          if (this.isMissingRelation(error)) {
+            // Fallback to expenses table when bills doesn't exist
+            forecastOutResult = await db
+              .select({ total: sum(expenses.amount) })
+              .from(expenses)
+              .where(
+                and(
+                  eq(expenses.companyId, companyId),
+                  inArray(expenses.status, ['approved']),
+                  gte(expenses.expenseDate, weekStart),
+                  lte(expenses.expenseDate, weekEnd)
+                )
+              );
+          } else {
+            throw error;
+          }
+        }
+
+        forecastIn = Number(forecastInResult[0]?.total || 0);
+        forecastOut = Number(forecastOutResult[0]?.total || 0);
+      }
+
+      forecast.push({
+        week: `W${week}`,
+        actualIn,
+        actualOut,
+        forecastIn,
+        forecastOut
+      });
+    }
+
+    return forecast;
+  }
 }
 
 export const storage = new DatabaseStorage();
