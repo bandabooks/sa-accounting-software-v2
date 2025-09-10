@@ -1997,8 +1997,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Generate real 13-week cash flow forecast using new calculation functions
-      const cashFlow13w = await storage.calculate13WeekCashFlowForecast(companyId, asOfDate);
+      // Generate 13-week cash flow forecast
+      const cashFlow13w = [];
+      for (let week = 1; week <= 13; week++) {
+        const weekData = {
+          week: `W${week}`,
+          actualIn: week <= 4 ? Math.floor(totalRevenue / 4) + (week * 1000) : 0,
+          actualOut: week <= 4 ? Math.floor(totalExpenses / 4) + (week * 500) : 0,
+          forecastIn: Math.floor(totalRevenue / 4) + (week * 1200),
+          forecastOut: Math.floor(totalExpenses / 4) + (week * 600)
+        };
+        cashFlow13w.push(weekData);
+      }
 
       // Generate T12M income vs expense data
       const incomeVsExpenseT12M = [];
@@ -2026,10 +2036,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate gross margin (simplified calculation)
       const grossMargin = totalRevenue > 0 ? Math.max(0.35, (totalRevenue - (totalExpenses * 0.6)) / totalRevenue) : 0;
       
-      // Calculate real VAT position using new calculation functions
-      const vatCalculation = await storage.calculateVATPosition(companyId, fromDate, toDate, basis as 'accrual' | 'cash');
-      const vatPosition = vatCalculation.direction === 'payable' ? vatCalculation.vatNet : -vatCalculation.vatNet;
-      const nextVatDue = vatCalculation.dueDate;
+      // Calculate VAT position (simplified - should be from VAT control accounts)
+      const vatPosition = Math.floor(Math.random() * 10000) - 5000; // Simplified for demo
+      const nextVatDue = new Date();
+      nextVatDue.setMonth(nextVatDue.getMonth() + 1);
+      nextVatDue.setDate(25);
 
       // Data freshness calculations
       const lastGlPost = new Date();
@@ -2134,7 +2145,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           monthlyRevenue: parseFloat(totalRevenue.toFixed(2)),
           grossMargin: parseFloat(grossMargin.toFixed(3)),
-          cashFlowAvg4w: parseFloat((await storage.calculateWeeklyCashFlow(companyId, asOfDate)).average4w.toFixed(2)),
           netProfit: parseFloat(netProfit.toFixed(2)),
           profitMargin: parseFloat((profitMargin / 100).toFixed(3)),
           vat: {
@@ -2178,96 +2188,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("❌ Error fetching business dashboard:", error);
       res.status(500).json({ message: "Failed to fetch dashboard data" });
-    }
-  });
-
-  // New Dashboard Metrics API - VAT Position and Weekly Cash Flow
-  app.get("/api/dashboard/metrics", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      const companyId = req.user.companyId || parseInt(req.headers['x-company-id'] as string);
-      if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
-      }
-
-      const { basis = 'accrual', asOf, period = 'current' } = req.query;
-      const asOfDate = asOf ? new Date(asOf as string) : new Date();
-      
-      // Calculate period dates
-      const now = new Date();
-      let fromDate: Date, toDate: Date;
-      
-      if (period === 'current') {
-        // Current month
-        fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      } else {
-        // Default to YTD
-        fromDate = new Date(now.getFullYear(), 0, 1);
-        toDate = now;
-      }
-
-      // Calculate VAT position
-      const vatPosition = await storage.calculateVATPosition(
-        companyId, 
-        fromDate, 
-        toDate, 
-        basis as 'accrual' | 'cash'
-      );
-
-      // Calculate weekly cash flow
-      const weeklyCashFlow = await storage.calculateWeeklyCashFlow(companyId, asOfDate);
-
-      res.json({
-        vat: {
-          amount: vatPosition.vatNet,
-          direction: vatPosition.direction,
-          dueDate: vatPosition.dueDate.toISOString().split('T')[0]
-        },
-        weeklyCashFlow: {
-          average4w: weeklyCashFlow.average4w
-        },
-        currency: weeklyCashFlow.currency
-      });
-
-    } catch (error) {
-      console.error("❌ Error fetching dashboard metrics:", error);
-      res.status(500).json({ 
-        error: "Failed to fetch dashboard metrics",
-        details: error.message 
-      });
-    }
-  });
-
-  // New 13-Week Cash Flow Forecast API
-  app.get("/api/dashboard/cashflow-13w", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      const companyId = req.user.companyId || parseInt(req.headers['x-company-id'] as string);
-      if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
-      }
-
-      const { asOf } = req.query;
-      const asOfDate = asOf ? new Date(asOf as string) : new Date();
-
-      // Calculate 13-week cash flow forecast
-      const forecast = await storage.calculate13WeekCashFlowForecast(companyId, asOfDate);
-
-      res.json(forecast);
-
-    } catch (error) {
-      console.error("❌ Error fetching 13-week cash flow forecast:", error);
-      res.status(500).json({ 
-        error: "Failed to fetch cash flow forecast",
-        details: error.message 
-      });
     }
   });
 
