@@ -10,7 +10,7 @@ import { companies } from "../shared/schema";
 const app: Express = express();
 const server = createServer(app);
 
-// Function to ensure SA templates exist for all companies (run once on startup)
+// Function to ensure SA templates exist for all companies (run in background after startup)
 let templatesInitialized = false;
 async function ensureSATemplatesForAllCompanies() {
   if (templatesInitialized) {
@@ -21,16 +21,35 @@ async function ensureSATemplatesForAllCompanies() {
     const { seedContractTemplates } = await import('./contractTemplatesSeeder');
     const allCompanies = await db.select().from(companies);
     
+    console.log(`🔄 Starting background template seeding for ${allCompanies.length} companies...`);
+    
+    // Process companies in background without blocking
     for (const company of allCompanies) {
-      await seedContractTemplates(company.id, 1); // Use system user ID 1
+      try {
+        await seedContractTemplates(company.id, 1); // Use system user ID 1
+        console.log(`✓ Templates seeded for company ${company.id}`);
+      } catch (companyError) {
+        console.error(`⚠️ Failed to seed templates for company ${company.id}:`, companyError);
+        // Continue with other companies even if one fails
+      }
     }
     
     templatesInitialized = true;
-    console.log("✅ Ensured SA professional templates are available for all companies");
+    console.log("✅ Background template seeding completed for all companies");
   } catch (error) {
     console.error("⚠️ Warning: Could not ensure SA templates:", error);
     // Don't fail startup, just log the warning
   }
+}
+
+// Background task runner - runs template seeding after server starts
+function runBackgroundTasks() {
+  // Run template seeding in background without blocking server startup
+  setTimeout(() => {
+    ensureSATemplatesForAllCompanies().catch(error => {
+      console.error("Background template seeding failed:", error);
+    });
+  }, 5000); // Wait 5 seconds after server starts
 }
 
 // Setup function to initialize the app
@@ -38,8 +57,8 @@ export async function setupApp() {
   // Register all routes and middleware
   await registerRoutes(app);
   
-  // Ensure SA templates exist for all companies
-  await ensureSATemplatesForAllCompanies();
+  // Template seeding will be handled in background after server starts
+  // (removed blocking call to avoid startup delays)
   
   // Set up proper static file serving based on environment
   if (process.env.NODE_ENV === 'production') {
@@ -67,4 +86,4 @@ export async function setupApp() {
 }
 
 export default app;
-export { server };
+export { server, runBackgroundTasks };
