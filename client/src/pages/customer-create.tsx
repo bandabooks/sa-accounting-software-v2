@@ -28,8 +28,10 @@ export default function CustomerCreate() {
 
   const createMutation = useMutation({
     mutationFn: customersApi.create,
-    onSuccess: (customer) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    onSuccess: async (customer) => {
+      // Force immediate refetch of customers data
+      await queryClient.invalidateQueries({ queryKey: ["/api/customers"], refetchType: 'active' });
+      
       showSuccess(
         "Customer Created Successfully",
         `${customer.name} has been added to your customer database.`
