@@ -139,18 +139,19 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
 
   const getInventoryAccounts = () => {
     return accounts.filter(acc => {
-      const accountType = (acc.accountType || '').toLowerCase();
       const accountName = (acc.accountName || '').toLowerCase();
+      const accountCode = acc.accountCode || '';
       
-      return accountType.includes('asset') ||
-             accountType.includes('inventory') ||
-             accountName.includes('inventory') ||
+      // Only show inventory-specific asset accounts
+      return accountName.includes('inventory') ||
              accountName.includes('stock') ||
-             accountName.includes('finished') ||
-             accountName.includes('goods') ||
+             accountName.includes('finished goods') ||
+             accountName.includes('raw materials') ||
+             accountName.includes('work in progress') ||
+             accountName.includes('goods for resale') ||
              accountName.includes('materials') ||
-             acc.accountCode?.startsWith('15') || // 15xx accounts are typically inventory
-             acc.accountCode?.startsWith('12'); // 12xx accounts are also inventory
+             accountCode.startsWith('120') || // 120x accounts are inventory
+             (accountCode.startsWith('12') && accountName.includes('inventory'));
     });
   };
 
