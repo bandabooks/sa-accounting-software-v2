@@ -295,6 +295,24 @@ export default function Products() {
           <p className="text-gray-600 dark:text-gray-400">Manage your products and services inventory</p>
         </div>
         <div className="flex items-center gap-4">
+          <Tabs 
+            value={typeFilter} 
+            onValueChange={(value) => {
+              setTypeFilter(value as any);
+              // Clear status filter when switching type filter to avoid conflicts
+              if (value !== "all") {
+                setStatusFilter("");
+              }
+            }} 
+            className="w-auto"
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all" data-testid="filter-all">All</TabsTrigger>
+              <TabsTrigger value="products" data-testid="filter-products">Products Only</TabsTrigger>
+              <TabsTrigger value="services" data-testid="filter-services">Services Only</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
           <Link href="/products/categories">
             <Button 
               variant="outline" 
@@ -335,7 +353,7 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Professional Filtering */}
+      {/* Search and Clear Filters */}
       <div className="flex items-center space-x-4 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -347,24 +365,6 @@ export default function Products() {
             data-testid="input-search-products"
           />
         </div>
-        
-        <Tabs 
-          value={typeFilter} 
-          onValueChange={(value) => {
-            setTypeFilter(value as any);
-            // Clear status filter when switching type filter to avoid conflicts
-            if (value !== "all") {
-              setStatusFilter("");
-            }
-          }} 
-          className="w-auto"
-        >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all" data-testid="filter-all">All</TabsTrigger>
-            <TabsTrigger value="products" data-testid="filter-products">Products Only</TabsTrigger>
-            <TabsTrigger value="services" data-testid="filter-services">Services Only</TabsTrigger>
-          </TabsList>
-        </Tabs>
 
         {(statusFilter || typeFilter !== "all") && (
           <Button
