@@ -8,15 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { customersApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useGlobalNotification } from "@/contexts/NotificationContext";
+import { useCompany } from "@/contexts/CompanyContext";
 import type { InsertCustomer } from "@shared/schema";
 
 export default function CustomerCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { showSuccess } = useGlobalNotification();
+  const { companyId } = useCompany();
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<InsertCustomer>({
+    companyId: companyId || 0,
     name: "",
     email: "",
     phone: "",
