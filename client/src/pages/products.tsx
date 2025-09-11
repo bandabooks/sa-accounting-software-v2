@@ -134,7 +134,14 @@ export default function Products() {
     return <PageLoader message="Loading products..." />;
   }
 
-  const filteredProducts = (Array.isArray(products) ? products : []).filter((product) => {
+  // Deduplicate products first, then filter
+  const uniqueProducts = (Array.isArray(products) ? products : [])
+    .filter((product, index, self) => 
+      // Remove duplicates based on product ID
+      index === self.findIndex(p => p.id === product.id)
+    );
+
+  const filteredProducts = uniqueProducts.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -253,28 +260,28 @@ export default function Products() {
       <MiniDashboard title="Products Overview">
         <DashboardCard
           title="Total Products"
-          value={stats?.total || products.length}
+          value={stats?.total || uniqueProducts.length}
           icon={Package}
           color="blue"
           onClick={() => setStatusFilter("")}
         />
         <DashboardCard
           title="Active"
-          value={stats?.active || products.filter(p => p.isActive !== false).length}
+          value={stats?.active || uniqueProducts.filter(p => p.isActive !== false).length}
           icon={CheckCircle}
           color="green"
           onClick={() => setStatusFilter("active")}
         />
         <DashboardCard
           title="Services"
-          value={stats?.services || products.filter(p => p.isService === true).length}
+          value={stats?.services || uniqueProducts.filter(p => p.isService === true).length}
           icon={Tag}
           color="purple"
           onClick={() => setStatusFilter("services")}
         />
         <DashboardCard
           title="Low Stock"
-          value={stats?.lowStock || products.filter(p => p.isService !== true && 
+          value={stats?.lowStock || uniqueProducts.filter(p => p.isService !== true && 
             p.stockQuantity !== null && p.stockQuantity <= (p.minStockLevel || 10)).length}
           icon={AlertTriangle}
           color="orange"
@@ -282,12 +289,12 @@ export default function Products() {
         />
       </MiniDashboard>
 
-      <div className="flex justify-between items-center mb-8">
-        <div>
+      <div className="flex justify-between items-start mb-8">
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Products & Services</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your products and services inventory</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex items-center gap-4">
           <Link href="/products/categories">
             <Button 
               variant="outline" 
@@ -375,11 +382,7 @@ export default function Products() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Products & Services</CardTitle>
-          <CardDescription>All your products and services</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
 
           {productsLoading ? (
             <div className="flex items-center justify-center h-32">
