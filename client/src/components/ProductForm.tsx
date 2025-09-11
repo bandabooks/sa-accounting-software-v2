@@ -82,44 +82,69 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
   const vatRate = parseFloat(form.watch("vatRate") || "15");
   const vatInclusive = form.watch("vatInclusive");
 
-  // Get filtered accounts based on type
+  // Get ALL accounts by type - More inclusive filtering
   const getRevenueAccounts = () => {
-    return accounts.filter(acc => 
-      acc.accountType === "Revenue" || 
-      acc.accountType === "revenue" || 
-      acc.accountName?.toLowerCase().includes("revenue") ||
-      acc.accountName?.toLowerCase().includes("sales") ||
-      acc.accountName?.toLowerCase().includes("service")
-    );
+    return accounts.filter(acc => {
+      const accountType = (acc.accountType || '').toLowerCase();
+      const accountName = (acc.accountName || '').toLowerCase();
+      
+      return accountType.includes('revenue') || 
+             accountType.includes('income') ||
+             accountName.includes('revenue') ||
+             accountName.includes('income') ||
+             accountName.includes('sales') ||
+             accountName.includes('service') ||
+             acc.accountCode?.startsWith('4'); // 4xxx accounts are typically revenue
+    });
   };
 
   const getExpenseAccounts = () => {
     if (isService) {
-      return accounts.filter(acc => 
-        acc.accountType === "Expense" ||
-        acc.accountType === "expense" ||
-        acc.accountName?.toLowerCase().includes("professional") ||
-        acc.accountName?.toLowerCase().includes("service") ||
-        acc.accountName?.toLowerCase().includes("consulting")
-      );
+      // For services, show ALL service-related expense accounts
+      return accounts.filter(acc => {
+        const accountType = (acc.accountType || '').toLowerCase();
+        const accountName = (acc.accountName || '').toLowerCase();
+        
+        return accountType.includes('expense') ||
+               accountName.includes('professional') ||
+               accountName.includes('service') ||
+               accountName.includes('consulting') ||
+               accountName.includes('labor') ||
+               accountName.includes('admin') ||
+               acc.accountCode?.startsWith('6'); // 6xxx accounts are typically expenses
+      });
     } else {
-      return accounts.filter(acc => 
-        acc.accountType === "Cost of Goods Sold" ||
-        acc.accountType === "cost of goods sold" ||
-        acc.accountName?.toLowerCase().includes("cost of goods") ||
-        acc.accountName?.toLowerCase().includes("cogs")
-      );
+      // For products, show ALL cost of goods sold accounts
+      return accounts.filter(acc => {
+        const accountType = (acc.accountType || '').toLowerCase();
+        const accountName = (acc.accountName || '').toLowerCase();
+        
+        return accountType.includes('cost') ||
+               accountType.includes('cogs') ||
+               accountName.includes('cost') ||
+               accountName.includes('goods') ||
+               accountName.includes('materials') ||
+               accountName.includes('manufacturing') ||
+               acc.accountCode?.startsWith('5'); // 5xxx accounts are typically COGS
+      });
     }
   };
 
   const getInventoryAccounts = () => {
-    return accounts.filter(acc => 
-      acc.accountType === "Asset" ||
-      acc.accountType === "asset" ||
-      acc.accountName?.toLowerCase().includes("inventory") ||
-      acc.accountName?.toLowerCase().includes("finished goods") ||
-      acc.accountName?.toLowerCase().includes("stock")
-    );
+    return accounts.filter(acc => {
+      const accountType = (acc.accountType || '').toLowerCase();
+      const accountName = (acc.accountName || '').toLowerCase();
+      
+      return accountType.includes('asset') ||
+             accountType.includes('inventory') ||
+             accountName.includes('inventory') ||
+             accountName.includes('stock') ||
+             accountName.includes('finished') ||
+             accountName.includes('goods') ||
+             accountName.includes('materials') ||
+             acc.accountCode?.startsWith('15') || // 15xx accounts are typically inventory
+             acc.accountCode?.startsWith('12'); // 12xx accounts are also inventory
+    });
   };
 
   // Calculate VAT and pricing
@@ -441,10 +466,16 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                           {account.accountCode} - {account.accountName}
                         </SelectItem>
                       ))}
+                      {/* Show ALL revenue accounts if none found via API */}
                       {getRevenueAccounts().length === 0 && (
-                        <SelectItem value="4000" className="text-gray-500">
-                          4000 - Sales Revenue (Default)
-                        </SelectItem>
+                        <>
+                          <SelectItem value="4000">4000 - Sales Revenue</SelectItem>
+                          <SelectItem value="4001">4001 - Service Revenue</SelectItem>
+                          <SelectItem value="4002">4002 - Consulting Revenue</SelectItem>
+                          <SelectItem value="4003">4003 - Rental Revenue</SelectItem>
+                          <SelectItem value="4100">4100 - Other Revenue</SelectItem>
+                          <SelectItem value="4101">4101 - Interest Income</SelectItem>
+                        </>
                       )}
                     </SelectContent>
                   </Select>
@@ -473,10 +504,30 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                           {account.accountCode} - {account.accountName}
                         </SelectItem>
                       ))}
+                      {/* Show ALL appropriate accounts if none found via API */}
                       {getExpenseAccounts().length === 0 && (
-                        <SelectItem value={isService ? "6000" : "5000"} className="text-gray-500">
-                          {isService ? "6000 - Professional Services (Default)" : "5000 - Cost of Goods Sold (Default)"}
-                        </SelectItem>
+                        <>
+                          {isService ? (
+                            // Service cost accounts
+                            <>
+                              <SelectItem value="6000">6000 - Administrative Expenses</SelectItem>
+                              <SelectItem value="6200">6200 - Professional Fees</SelectItem>
+                              <SelectItem value="6203">6203 - Consulting Fees</SelectItem>
+                              <SelectItem value="6001">6001 - Salaries & Wages - Admin</SelectItem>
+                              <SelectItem value="6002">6002 - Employee Benefits</SelectItem>
+                            </>
+                          ) : (
+                            // Product cost accounts
+                            <>
+                              <SelectItem value="5000">5000 - Cost of Goods Sold</SelectItem>
+                              <SelectItem value="5001">5001 - Cost of Materials</SelectItem>
+                              <SelectItem value="5002">5002 - Cost of Labor - Direct</SelectItem>
+                              <SelectItem value="5003">5003 - Manufacturing Overhead</SelectItem>
+                              <SelectItem value="5010">5010 - Freight & Shipping Costs</SelectItem>
+                              <SelectItem value="5011">5011 - Import Duties</SelectItem>
+                            </>
+                          )}
+                        </>
                       )}
                     </SelectContent>
                   </Select>
@@ -505,10 +556,16 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                             {account.accountCode} - {account.accountName}
                           </SelectItem>
                         ))}
+                        {/* Show ALL inventory accounts if none found via API */}
                         {getInventoryAccounts().length === 0 && (
-                          <SelectItem value="1500" className="text-gray-500">
-                            1500 - Finished Goods (Default)
-                          </SelectItem>
+                          <>
+                            <SelectItem value="1500">1500 - Finished Goods</SelectItem>
+                            <SelectItem value="1501">1501 - Raw Materials</SelectItem>
+                            <SelectItem value="1502">1502 - Work in Progress</SelectItem>
+                            <SelectItem value="1503">1503 - Merchandise Inventory</SelectItem>
+                            <SelectItem value="1200">1200 - Inventory</SelectItem>
+                            <SelectItem value="1201">1201 - Parts & Supplies</SelectItem>
+                          </>
                         )}
                       </SelectContent>
                     </Select>
