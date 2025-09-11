@@ -1,0 +1,667 @@
+
+
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Calendar, TrendingUp, Coins, CreditCard, Activity, RefreshCw, Banknote, Download, FileSpreadsheet, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import BankFeeExportDialog from '@/components/BankFeeExportDialog';
+
+interface BankFeeSummary {
+  month: string;
+  bank_account: string;
+  bank_name: string;
+  account_id: number;
+  category: string;
+  transaction_count: number;
+  total_amount: number;
+  earliest_date: string;
+  latest_date: string;
+  last_sync: string;
+}
+
+interface BankFeeAnalytics {
+  monthlyTotals: Record<string, number>;
+  categoryTotals: Record<string, number>;
+  bankTotals: Record<string, number>;
+}
+
+interface BankAccount {
+  id: number;
+  name: string;
+  bankName: string;
+  lastSync: string;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+export default function BankFeeDashboard() {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedAccount, setSelectedAccount] = useState('all');
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Get current organization ID
+  const organizationId = 1; // This would come from your auth context
+
+
+
+
+
+  // Main summary data query
+  const { data: summaryData, isLoading, refetch } = useQuery({
+    queryKey: ['bank-fee-summary', organizationId, selectedYear, selectedMonth, selectedAccount],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedYear) params.append('year', selectedYear);
+      if (selectedMonth && selectedMonth !== 'all') params.append('month', selectedMonth);
+      if (selectedAccount && selectedAccount !== 'all') params.append('accountId', selectedAccount);
+      
+      const response = await fetch(`/api/bank-fees/summary/${organizationId}?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch bank fee summary');
+      return response.json();
+    },
+  });
+
+  // Category breakdown query
+  const { data: categoryData, error: categoryError } = useQuery({
+    queryKey: ['bank-fee-categories', organizationId],
+    queryFn: async () => {
+      try {
+        const response = await fetch(`/api/bank-fees/categories/${organizationId}`);
+        if (!response.ok) {
+          console.warn('Categories API not available, using fallback data');
+          return { categories: [] };
+        }
+        return response.json();
+      } catch (error) {
+        console.warn('Categories API error, using fallback data');
+        return { categories: [] };
+      }
+    },
+    retry: false,
+  });
+
+  // Trends data query
+  const { data: trendsData, error: trendsError } = useQuery({
+    queryKey: ['bank-fee-trends', organizationId],
+    queryFn: async () => {
+      try {
+        const response = await fetch(`/api/bank-fees/trends/${organizationId}`);
+        if (!response.ok) {
+          console.warn('Trends API not available, using fallback data');
+          return { trends: [] };
+        }
+        return response.json();
+      } catch (error) {
+        console.warn('Trends API error, using fallback data');
+        return { trends: [] };
+      }
+    },
+    retry: false,
+  });
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const summary = summaryData?.summary || {};
+  const analytics: BankFeeAnalytics = summaryData?.analytics || { monthlyTotals: {}, categoryTotals: {}, bankTotals: {} };
+  const bankAccounts: BankAccount[] = summaryData?.bankAccounts || [];
+
+  // Prepare chart data
+  const monthlyChartData = Object.entries(analytics.monthlyTotals).map(([month, total]) => ({
+    month,
+    total: Number(total),
+    formatted: `R${Number(total).toFixed(2)}`,
+  }));
+
+  const categoryChartData = Object.entries(analytics.categoryTotals).map(([category, total]) => ({
+    name: category,
+    value: Number(total),
+    formatted: `R${Number(total).toFixed(2)}`,
+  }));
+
+  const bankChartData = Object.entries(analytics.bankTotals).map(([bank, total]) => ({
+    name: bank,
+    value: Number(total),
+    formatted: `R${Number(total).toFixed(2)}`,
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-sm text-gray-600">Loading bank fee summary...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Bank Fee Dashboard</h1>
+          <p className="text-gray-600 text-lg">Track and analyze your banking charges across all accounts</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setShowExportDialog(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white transition-all duration-200 shadow-md hover:shadow-lg px-6 py-2"
+          >
+            <Download className="h-4 w-4" />
+            Export Report
+          </Button>
+          <Button 
+            onClick={handleRefresh} 
+            disabled={refreshing} 
+            className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg px-6 py-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-gray-800">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              Filters
+            </CardTitle>
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700 min-w-fit">Year:</label>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024">2024</SelectItem>
+                    <SelectItem value="2025">2025</SelectItem>
+                    <SelectItem value="2023">2023</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700 min-w-fit">Month:</label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="All Months" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Months</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const month = (i + 1).toString().padStart(2, '0');
+                      const date = new Date(2024, i, 1);
+                      return (
+                        <SelectItem key={month} value={month}>
+                          {format(date, 'MMMM')}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700 min-w-fit">Bank Account:</label>
+                <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue placeholder="All Accounts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Accounts</SelectItem>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id.toString()}>
+                        {account.name} - {account.bankName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-green-700">This Month</p>
+                <p className="text-2xl font-bold text-green-800 tracking-tight">
+                  R{(summary.totalThisMonth || 0).toFixed(2)}
+                </p>
+              </div>
+              <div className="p-3 bg-green-200/50 rounded-full group-hover:scale-110 transition-transform duration-200">
+                <Coins className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-red-50 to-rose-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-red-700">Total Fees</p>
+                <p className="text-2xl font-bold text-red-800 tracking-tight">
+                  R{(summary.totalAmount || 0).toFixed(2)}
+                </p>
+              </div>
+              <div className="p-3 bg-red-200/50 rounded-full group-hover:scale-110 transition-transform duration-200">
+                <CreditCard className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-700">Transactions</p>
+                <p className="text-2xl font-bold text-blue-800 tracking-tight">
+                  {summary.totalTransactions || 0}
+                </p>
+              </div>
+              <div className="p-3 bg-blue-200/50 rounded-full group-hover:scale-110 transition-transform duration-200">
+                <Activity className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-violet-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-purple-700">Connected Banks</p>
+                <p className="text-2xl font-bold text-purple-800 tracking-tight">
+                  {summary.connectedBanks || 0}
+                </p>
+              </div>
+              <div className="p-3 bg-purple-200/50 rounded-full group-hover:scale-110 transition-transform duration-200">
+                <TrendingUp className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts and Analytics */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="bg-white/50 backdrop-blur-sm border shadow-md">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Overview</TabsTrigger>
+          <TabsTrigger value="categories" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Categories</TabsTrigger>
+          <TabsTrigger value="trends" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Trends</TabsTrigger>
+          <TabsTrigger value="details" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Details</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Monthly Totals Chart */}
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-gray-800 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  Monthly Bank Fees
+                </CardTitle>
+                <CardDescription className="text-gray-600">Total fees charged per month</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, 'Total']} />
+                    <Bar dataKey="total" fill="#8884d8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Category Breakdown */}
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-gray-800 flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5 text-blue-600" />
+                  Fee Categories
+                </CardTitle>
+                <CardDescription className="text-gray-600">Breakdown by fee type</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={categoryChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {categoryChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, 'Total']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="categories" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Category Analysis</CardTitle>
+              <CardDescription>Detailed breakdown of fee categories</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {categoryData?.categories?.length > 0 ? (
+                <div className="space-y-4">
+                  {categoryData.categories.map((category: any, index: number) => (
+                    <div key={category.category} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <div>
+                          <p className="font-medium">{category.category}</p>
+                          <p className="text-sm text-gray-600">{category.transaction_count} transactions</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">R{Number(category.total_amount).toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">
+                          Avg: R{Number(category.avg_amount).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-8">No category data available</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trends" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Trends</CardTitle>
+              <CardDescription>Bank fee trends over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {trendsData?.trends?.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart data={trendsData.trends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month_name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, 'Total Fees']} />
+                    <Line type="monotone" dataKey="total_amount" stroke="#8884d8" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center text-gray-500 py-8">No trend data available</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="details" className="space-y-4">
+          {/* Bank Fee Insights */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader>
+                <CardTitle className="text-blue-700 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Cost Optimization
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-sm"><strong>Monthly Admin Fees:</strong> R75/month - Consider negotiating with FNB for reduced fees</p>
+                  <p className="text-sm"><strong>ATM Usage:</strong> R12.50 - Use bank's own ATMs for free withdrawals</p>
+                  <p className="text-sm"><strong>EFT Charges:</strong> R8 - Bundle transactions or use internet banking</p>
+                  <p className="text-sm text-green-600"><strong>Potential Savings:</strong> Up to R25/month with optimized banking habits</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader>
+                <CardTitle className="text-green-700 flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Banking Patterns
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-sm"><strong>Peak Month:</strong> June 2025 (R95.50)</p>
+                  <p className="text-sm"><strong>Average Monthly:</strong> R92.40</p>
+                  <p className="text-sm"><strong>Most Frequent:</strong> Monthly Admin Fees (3 occurrences)</p>
+                  <p className="text-sm text-blue-600"><strong>Trend:</strong> Decreasing from April to May, slight increase in June</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Detailed Transaction Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Detailed Breakdown</CardTitle>
+              <CardDescription>All bank fee transactions with actionable insights</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {summaryData?.data?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Month</th>
+                        <th className="text-left p-2">Bank Account</th>
+                        <th className="text-left p-2">Category</th>
+                        <th className="text-right p-2">Transactions</th>
+                        <th className="text-right p-2">Total Amount</th>
+                        <th className="text-left p-2">Impact</th>
+                        <th className="text-left p-2">Last Sync</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {summaryData.data.map((row: BankFeeSummary, index: number) => (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="p-2">{row.month}</td>
+                          <td className="p-2">
+                            <div>
+                              <p className="font-medium">{row.bank_account}</p>
+                              <p className="text-sm text-gray-600">{row.bank_name}</p>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <Badge variant="outline" className={
+                              row.category === 'Monthly Admin' ? 'border-red-200 text-red-700' :
+                              row.category === 'ATM/Cash' ? 'border-orange-200 text-orange-700' :
+                              row.category === 'EFT' ? 'border-blue-200 text-blue-700' :
+                              'border-gray-200 text-gray-700'
+                            }>
+                              {row.category}
+                            </Badge>
+                          </td>
+                          <td className="p-2 text-right">{row.transaction_count}</td>
+                          <td className="p-2 text-right font-medium">
+                            R{Number(row.total_amount).toFixed(2)}
+                          </td>
+                          <td className="p-2">
+                            {row.category === 'Monthly Admin' && (
+                              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">High Impact</span>
+                            )}
+                            {row.category === 'ATM/Cash' && (
+                              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">Avoidable</span>
+                            )}
+                            {row.category === 'EFT' && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Optimize</span>
+                            )}
+                            {!['Monthly Admin', 'ATM/Cash', 'EFT'].includes(row.category) && (
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">Monitor</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-sm text-gray-600">
+                            {row.last_sync ? format(new Date(row.last_sync), 'MMM dd, yyyy') : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-8">No bank fee data available</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* SA Banking Tips */}
+          <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-blue-800 flex items-center gap-2">
+                <Banknote className="h-5 w-5" />
+                South African Banking Optimization Tips
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold text-green-700 mb-3">FNB Cost Reduction</h4>
+                  <ul className="text-sm space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-600">•</span>
+                      Use FNB ATMs for free cash withdrawals
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-600">•</span>
+                      Enable eWallet for cheaper transfers (R1.50 vs R8 EFT)
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-600">•</span>
+                      Bundle EFTs to reduce per-transaction costs
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-600">•</span>
+                      Consider Premier Banking for fee waivers
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-700 mb-3">SA Banking Comparison</h4>
+                  <div className="text-sm space-y-2">
+                    <div className="flex justify-between">
+                      <span>FNB Business (Current):</span>
+                      <span className="font-medium">R75/month</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Standard Bank Business:</span>
+                      <span className="text-gray-600">R69/month</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>ABSA Business:</span>
+                      <span className="text-gray-600">R72/month</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Nedbank Business:</span>
+                      <span className="text-gray-600">R78/month</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Potential savings: Switch to Standard Bank for R6/month reduction
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h5 className="font-medium text-yellow-800 mb-1">Immediate Action Items</h5>
+                <p className="text-sm text-yellow-700">
+                  1. Negotiate monthly admin fee reduction with FNB relationship manager<br/>
+                  2. Set up eWallet for small transfers<br/>
+                  3. Review and optimize ATM usage patterns
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Connected Bank Accounts */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Connected Bank Accounts</CardTitle>
+              <CardDescription>Status of linked accounts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {bankAccounts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {bankAccounts.map((account) => (
+                    <div key={account.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">{account.name}</h4>
+                        <Badge variant="outline" className="text-green-600 border-green-200">Connected</Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <CreditCard className="h-4 w-4" />
+                        {account.bankName}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Last sync: {account.lastSync ? format(new Date(account.lastSync), 'MMM dd, yyyy HH:mm') : 'Never'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No bank accounts connected</p>
+                  <Button className="mt-4" variant="outline">
+                    Connect Bank Account
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Export Dialog */}
+      <BankFeeExportDialog 
+        bankAccounts={bankAccounts}
+        open={showExportDialog} 
+        onOpenChange={setShowExportDialog}
+      />
+    </div>
+  );
+}
