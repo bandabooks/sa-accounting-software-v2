@@ -8536,177 +8536,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enhanced Bank Statement Parse (for bulk capture) with AI-powered bank detection
   app.post('/api/bank/parse-statement', authenticate, bankStatementUpload.single('file'), async (req: AuthenticatedRequest, res) => {
+    let filePath: string | undefined;
     try {
       const companyId = req.user?.companyId;
       const userId = req.user?.id;
-      
-      if (!companyId || !userId) {
-        return res.status(400).json({ message: "User authentication required" });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({ message: "No bank statement file uploaded" });
-      }
+      if (!companyId || !userId) return res.status(400).json({ message: 'User authentication required' });
+      if (!req.file) return res.status(400).json({ message: 'No bank statement file uploaded' });
 
       const { bankAccountId } = req.body;
-      
-      if (!bankAccountId) {
-        return res.status(400).json({ message: "Bank account selection required" });
-      }
+      if (!bankAccountId) return res.status(400).json({ message: 'Bank account selection required' });
 
-      // Read and parse the uploaded file using enhanced bank statement parser
-      const filePath = req.file.path;
+      filePath = req.file.path;
       const fileName = req.file.originalname;
-      
-      let parseResult;
-      let transactions: any[] = [];
-      
-      try {
-        // Use enhanced bank statement parser service
-        const fileBuffer = fs.readFileSync(filePath);
-        parseResult = await bankStatementParser.parseStatement(fileBuffer, fileName);
-        
-        console.log(`🏦 Bank detected: ${parseResult.bankName}`);
-        console.log(`📊 Parsed ${parseResult.transactions.length} transactions`);
-        console.log(`⚠️ Errors: ${parseResult.errors.length}`);
+      const fileBuffer = fs.readFileSync(filePath);
 
-        // Convert to the format expected by bulk capture
-        transactions = parseResult.transactions.map((t, index) => ({
-          id: `temp_${Date.now()}_${index}`,
-          date: t.date,
-          description: t.description,
-          reference: t.reference || '',
-          amount: t.amount,
-          balance: t.balance || null,
-          type: t.type,
-          originalData: t.originalData
-        }));
+      const parseResult = await bankStatementParser.parseStatement(fileBuffer, fileName);
 
-        // Fallback for PDF with sample data if no transactions found
-        if (transactions.length === 0 && fileName.toLowerCase().includes('.pdf')) {
-          console.log('PDF parsing fallback: Using sample transaction data');
-          const sampleTransactions = [
-            // Sample FNB transactions for demonstration
-            { date: '2024-05-27', description: 'Payment Cr Ikhokha(61656)', amount: 3202.74, type: 'credit' },
-            { date: '2024-05-27', description: 'FNB App Rtc Pmt To M Kekae - Leseding Salary', amount: 800.00, type: 'debit' },
-            { date: '2024-05-27', description: 'ADT Cash Deposit 00351003 - Gesond', amount: 310.00, type: 'credit' },
-            { date: '2024-05-27', description: 'ADT Cash Deposit 00351004 - Cocktail', amount: 800.00, type: 'credit' },
-            { date: '2024-05-27', description: 'ADT Cash Deposit 00351003 - Gesond', amount: 1290.00, type: 'credit' },
-            { date: '2024-05-27', description: 'ADT Cash Deposit 00351003 - Gesond', amount: 3200.00, type: 'credit' },
-            { date: '2024-05-28', description: 'Payment Cr Ikhokha(61656)', amount: 14113.38, type: 'credit' },
-            { date: '2024-05-28', description: 'ADT Cash Deposit Mokopane - Mukwevho', amount: 750.00, type: 'credit' },
-            { date: '2024-05-28', description: 'FNB App Payment To 2595629Pbg1000', amount: 21300.00, type: 'debit' },
-            { date: '2024-05-28', description: 'FNB App Payment To Mc Banda - Banda', amount: 300.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Martin Kekana - Think Solar Pv', amount: 400.00, type: 'debit' },
-            { date: '2024-05-30', description: 'Payment Cr Ikhokha(61656)', amount: 239.61, type: 'credit' },
-            { date: '2024-05-30', description: 'ADT Cash Deposit 00351010 - Gsd', amount: 19000.00, type: 'credit' },
-            { date: '2024-05-30', description: 'ADT Cash Deposit 00351010 - Gsd', amount: 400.00, type: 'credit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Salary - F Banda', amount: 250.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Transfer From B2B', amount: 25000.00, type: 'credit' },
-            { date: '2024-05-30', description: 'FNB App Transfer To Pay', amount: 15000.00, type: 'debit' },
-            { date: '2024-05-30', description: 'Payment To Investment Drawings', amount: 2000.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To B2B', amount: 20000.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Pholoso Hlongoane - Mf Banda', amount: 300.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Payment To Mc Banda - Banda', amount: 150.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Nicolas Kekana - Gesond Payments', amount: 2000.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Kekulu Nyoni - Gesond Salary', amount: 1800.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Anna R Langa - Gesond May', amount: 1500.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Transfer From B2B', amount: 15000.00, type: 'credit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Rm Maringa Salary - Gesond May', amount: 1200.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Rio Mokupi - Gesond R Salary May', amount: 2000.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Thabang Ched Kgosana - Gsond Salary May', amount: 2000.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Kabelo Motlatle - Gesondsalary May', amount: 2000.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Lesiba Mmelwa - Gesond May', amount: 2300.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Sylvester Nyoni - Gesond Salary May', amount: 2200.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To S Banda - Banda Mf', amount: 2500.00, type: 'debit' },
-            { date: '2024-05-30', description: 'FNB App Rtc Pmt To Mmdolo Parking Lot - Parking For June', amount: 1600.00, type: 'debit' },
-            { date: '2024-05-31', description: 'Payment Cr Ikhokha(61656)', amount: 586.80, type: 'credit' },
-            { date: '2024-05-31', description: 'Internal Debit Order F/Card Comcommis01388403', amount: 5.67, type: 'debit' },
-            { date: '2024-05-31', description: 'Magtape Debit Telkommobi50890687501157097212', amount: 599.00, type: 'debit' },
-            { date: '2024-05-31', description: 'Magtape Debit Vodacom 0435580175 B0464659', amount: 940.61, type: 'debit' },
-            // June 2024 transactions - Complete month coverage
-            { date: '2024-06-01', description: 'FNB App Transfer From B2B', amount: 10000.00, type: 'credit' },
-            { date: '2024-06-01', description: 'Payment Cr Ikhokha(61656)', amount: 51.44, type: 'credit' },
-            { date: '2024-06-01', description: 'ADT Cash Deposit 00351010 - Ntebogeng', amount: 750.00, type: 'credit' },
-            { date: '2024-06-01', description: 'FNB App Payment From DSTV', amount: 558.00, type: 'credit' },
-            { date: '2024-06-01', description: 'Magtape Debit Tracker 00Cli2421209Trct4123', amount: 199.00, type: 'debit' },
-            { date: '2024-06-03', description: 'FNB App Rtc Pmt To Malose Room Rent - Banda Rent June', amount: 1200.00, type: 'debit' },
-            { date: '2024-06-03', description: 'FNB App Payment To Potato Bags - Gesond Restaurant', amount: 1600.00, type: 'debit' },
-            { date: '2024-06-03', description: 'Payment Cr Ikhokha(61656)', amount: 1744.65, type: 'credit' },
-            { date: '2024-06-03', description: 'FNB App Payment To Mc Banda - Banda', amount: 1000.00, type: 'debit' },
-            { date: '2024-06-03', description: 'FNB App Rtc Pmt To Maria Modisa Lesding - Leseding May', amount: 1500.00, type: 'debit' },
-            { date: '2024-06-03', description: 'ADT Cash Deposit 00351003 - Gesond', amount: 9800.00, type: 'credit' },
-            { date: '2024-06-03', description: 'ADT Cash Deposit 00351003 - Gesond', amount: 9400.00, type: 'credit' },
-            { date: '2024-06-03', description: 'ADT Cash Deposit 00351003 - Gesond', amount: 11700.00, type: 'credit' },
-            { date: '2024-06-03', description: 'ADT Cash Deposit 00351003 - Gesond', amount: 3950.00, type: 'credit' },
-            { date: '2024-06-03', description: 'FNB App Rtc Pmt To Letie M - Tron', amount: 1200.00, type: 'debit' },
-            // Additional transactions to demonstrate unlimited capability
-            { date: '2024-06-04', description: 'Payment Cr Ikhokha(61656)', amount: 2150.00, type: 'credit' },
-            { date: '2024-06-04', description: 'FNB App Payment To Supplier ABC', amount: 3500.00, type: 'debit' },
-            { date: '2024-06-05', description: 'ADT Cash Deposit 00351005 - Restaurant Income', amount: 8500.00, type: 'credit' },
-            { date: '2024-06-05', description: 'FNB App Rtc Pmt To Employee Salary - June', amount: 4200.00, type: 'debit' },
-            { date: '2024-06-06', description: 'Payment Cr Ikhokha(61656)', amount: 1875.50, type: 'credit' },
-            { date: '2024-06-07', description: 'FNB App Payment To Utility Company', amount: 2800.00, type: 'debit' },
-            { date: '2024-06-08', description: 'ADT Cash Deposit 00351006 - Weekend Sales', amount: 12400.00, type: 'credit' },
-            { date: '2024-06-10', description: 'FNB App Transfer From Investment Account', amount: 50000.00, type: 'credit' },
-            { date: '2024-06-10', description: 'FNB App Payment To Equipment Supplier', amount: 15600.00, type: 'debit' },
-            { date: '2024-06-11', description: 'Payment Cr Ikhokha(61656)', amount: 3800.25, type: 'credit' },
-            { date: '2024-06-12', description: 'FNB App Rtc Pmt To Marketing Agency', amount: 8500.00, type: 'debit' },
-            { date: '2024-06-13', description: 'ADT Cash Deposit 00351007 - Daily Operations', amount: 5600.00, type: 'credit' },
-            { date: '2024-06-14', description: 'FNB App Payment To Insurance Premium', amount: 4200.00, type: 'debit' },
-            { date: '2024-06-15', description: 'Payment Cr Ikhokha(61656)', amount: 2950.00, type: 'credit' }
-          ];
-          
-          transactions = sampleTransactions.map((t, index) => ({
-            id: `temp_${Date.now()}_${index}`,
-            date: t.date,
-            description: t.description,
-            reference: t.description,
-            amount: t.amount,
-            balance: null,
-            type: t.type,
-            originalData: t
-          }));
-        }
+      const transactions = (parseResult?.transactions ?? []).map((t: any, index: number) => ({
+        id: `temp_${Date.now()}_${index}`,
+        date: t.date,
+        description: t.description,
+        reference: t.reference ?? '',
+        amount: t.amount,
+        balance: t.balance ?? null,
+        type: t.type,
+        originalData: t.originalData ?? t,
+      })).filter((t: any) => t.date && t.description && typeof t.amount === 'number');
 
-        // Filter out invalid transactions (but keep valid amounts including 0)
-        transactions = transactions.filter(t => t.date && t.description && typeof t.amount === 'number');
-
-        // Clean up uploaded file
-        fs.unlinkSync(filePath);
-        
-        // Log the action
-        await logAudit(userId, 'CREATE', 'bank_parse', companyId, `Parsed ${transactions.length} transactions from ${fileName} (${parseResult?.bankName || 'Unknown Bank'})`);
-        
-        res.json({ 
-          success: true, 
-          message: `Bank statement parsed successfully${parseResult ? ` - ${parseResult.bankName} detected` : ''}`,
-          transactions: transactions,
-          fileName: fileName,
-          bankName: parseResult?.bankName || 'Unknown',
-          bankAccountId: bankAccountId,
-          parseResult: {
-            bankDetected: parseResult?.bankName,
-            transactionCount: transactions.length,
-            errors: parseResult?.errors || [],
-            metadata: parseResult?.metadata
-          }
+      if (transactions.length === 0) {
+        console.warn('Statement parsing returned 0 transactions', { fileName, bank: parseResult?.bankName ?? 'Unknown', errors: parseResult?.errors ?? [] });
+        return res.status(422).json({
+          success: false,
+          code: 'NO_TRANSACTIONS_EXTRACTED',
+          message: 'Unable to extract transactions from the uploaded statement. Please try a different file/format.',
+          details: {
+            bankDetected: parseResult?.bankName ?? 'Unknown',
+            errorsFound: parseResult?.errors ?? [],
+            fileName,
+            suggestions: [
+              'Try uploading a CSV instead of PDF if available',
+              'Ensure the PDF is not password-protected',
+              'Confirm the statement includes a transaction table (not just a summary)'
+            ],
+          },
         });
-        
-      } catch (parseError) {
-        // Clean up uploaded file on error
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-        throw parseError;
       }
-      
-    } catch (error) {
-      console.error('Error parsing bank statement:', error);
-      res.status(500).json({ 
-        message: 'Failed to parse bank statement',
-        error: error instanceof Error ? error.message : 'Unknown error'
+
+      await logAudit(userId, 'CREATE', 'bank_parse', companyId, `Parsed ${transactions.length} transactions from ${fileName} (${parseResult?.bankName || 'Unknown Bank'})`);
+
+      return res.json({
+        success: true,
+        message: `Bank statement parsed successfully${parseResult?.bankName ? ` - ${parseResult.bankName} detected` : ''}`,
+        transactions,
+        fileName,
+        bankName: parseResult?.bankName || 'Unknown',
+        bankAccountId: bankAccountId,
+        parseResult: {
+          bankDetected: parseResult?.bankName,
+          transactionCount: transactions.length,
+          errors: parseResult?.errors || [],
+          metadata: parseResult?.metadata
+        }
       });
+    } catch (error) {
+      console.error('Bank statement parse failed:', error);
+      return res.status(500).json({ success: false, message: 'Failed to parse bank statement', error: error instanceof Error ? error.message : 'Unknown error' });
+    } finally {
+      try { if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
     }
   });
 
