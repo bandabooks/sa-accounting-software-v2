@@ -7977,6 +7977,36 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
+  async getRecentBankTransactions(
+    companyId: number, 
+    bankAccountId: number, 
+    limit = 50
+  ): Promise<BankTransaction[]> {
+    return await db.select().from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId)
+      ))
+      .orderBy(desc(bankTransactions.transactionDate))
+      .limit(limit);
+  }
+
+  async getBankTransactionsByPeriod(
+    companyId: number,
+    bankAccountId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<BankTransaction[]> {
+    return await db.select().from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        gte(bankTransactions.transactionDate, startDate),
+        lte(bankTransactions.transactionDate, endDate)
+      ))
+      .orderBy(desc(bankTransactions.transactionDate));
+  }
+
   // Bank Feed Cursor Management
   async getBankFeedCursor(
     companyId: number,

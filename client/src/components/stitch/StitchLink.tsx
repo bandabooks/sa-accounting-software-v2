@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle, Loader2, Landmark, Link as LinkIcon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, CheckCircle, Loader2, Landmark, Link as LinkIcon, Bell, Brain, Receipt, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -32,11 +34,21 @@ interface StitchLinkProps {
 
 export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
   const [isLinking, setIsLinking] = useState(false);
-  const [linkStep, setLinkStep] = useState<'init' | 'linking' | 'selecting' | 'complete'>('init');
+  const [linkStep, setLinkStep] = useState<'init' | 'linking' | 'selecting' | 'configuring' | 'complete'>('init');
   const [availableAccounts, setAvailableAccounts] = useState<StitchAccount[]>([]);
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   const [linkingError, setLinkingError] = useState<string | null>(null);
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
+  
+  // Phase 2 Enhancement: Monitoring configuration state
+  const [monitoringConfig, setMonitoringConfig] = useState({
+    enableRealTimeMonitoring: true,
+    enableAutoCategorization: true,
+    enableVATInsights: true,
+    enableBankingOptimization: true,
+    enableInstantNotifications: true
+  });
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,8 +71,8 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
     }
   });
 
-  const exchangeLinkMutation = useMutation<{accounts: any[], message: string}, Error, { userId: string; accounts: StitchAccount[] }>({
-    mutationFn: async (data: { userId: string; accounts: StitchAccount[] }) => {
+  const exchangeLinkMutation = useMutation<{accounts: any[], message: string}, Error, { userId: string; accounts: StitchAccount[]; monitoringConfig: typeof monitoringConfig }>({
+    mutationFn: async (data: { userId: string; accounts: StitchAccount[]; monitoringConfig: typeof monitoringConfig }) => {
       const response = await apiRequest('/api/stitch/exchange', 'POST', data);
       return response.json();
     },
@@ -210,11 +222,26 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
       return;
     }
 
+    // Move to configuration step for Phase 2 monitoring features
+    setLinkStep('configuring');
+  };
+
+  const handleFinalLinking = () => {
+    const accountsToLink = availableAccounts.filter(acc => selectedAccounts.has(acc.id));
+
     setIsLinking(true);
     exchangeLinkMutation.mutate({
       userId: 'user_demo_123', // In real app, this would come from auth context
-      accounts: accountsToLink
+      accounts: accountsToLink,
+      monitoringConfig
     });
+  };
+
+  const handleMonitoringConfigChange = (key: keyof typeof monitoringConfig, value: boolean) => {
+    setMonitoringConfig(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
   const handleTryAgain = () => {
@@ -373,7 +400,157 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
                 onClick={handleLinkSelectedAccounts} 
                 disabled={isLinking || selectedAccounts.size === 0}
                 className="flex-1"
-                data-testid="button-link-selected-accounts"
+                data-testid="button-continue-to-config"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 'configuring':
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-2">Configure AI-Powered Banking Features</h3>
+              <p className="text-sm text-muted-foreground">
+                Enable advanced features for South African businesses to optimize your banking experience
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <Card className="border-blue-100 bg-blue-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <Zap className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-blue-900">Real-Time Transaction Monitoring</div>
+                        <div className="text-sm text-blue-700">
+                          Get instant notifications for all bank transactions and automatic sync
+                        </div>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={monitoringConfig.enableRealTimeMonitoring}
+                      onCheckedChange={(checked) => handleMonitoringConfigChange('enableRealTimeMonitoring', checked)}
+                      data-testid="switch-real-time-monitoring"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-green-100 bg-green-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <Brain className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-green-900">AI Transaction Categorization</div>
+                        <div className="text-sm text-green-700">
+                          Automatically categorize transactions using SA-specific patterns
+                        </div>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={monitoringConfig.enableAutoCategorization}
+                      onCheckedChange={(checked) => handleMonitoringConfigChange('enableAutoCategorization', checked)}
+                      data-testid="switch-auto-categorization"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-purple-100 bg-purple-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <Receipt className="w-5 h-5 text-purple-600 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-purple-900">VAT Compliance Insights</div>
+                        <div className="text-sm text-purple-700">
+                          Track VAT deductible expenses and SARS compliance automatically
+                        </div>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={monitoringConfig.enableVATInsights}
+                      onCheckedChange={(checked) => handleMonitoringConfigChange('enableVATInsights', checked)}
+                      data-testid="switch-vat-insights"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-orange-100 bg-orange-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <Landmark className="w-5 h-5 text-orange-600 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-orange-900">SA Banking Fee Optimization</div>
+                        <div className="text-sm text-orange-700">
+                          Analyze bank fees and get recommendations to reduce costs
+                        </div>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={monitoringConfig.enableBankingOptimization}
+                      onCheckedChange={(checked) => handleMonitoringConfigChange('enableBankingOptimization', checked)}
+                      data-testid="switch-banking-optimization"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-red-100 bg-red-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <Bell className="w-5 h-5 text-red-600 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-red-900">Instant Notifications</div>
+                        <div className="text-sm text-red-700">
+                          Receive alerts for important transactions and insights
+                        </div>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={monitoringConfig.enableInstantNotifications}
+                      onCheckedChange={(checked) => handleMonitoringConfigChange('enableInstantNotifications', checked)}
+                      data-testid="switch-instant-notifications"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <div className="font-medium text-blue-900 mb-1">Ready to Link</div>
+                  <div className="text-sm text-blue-700">
+                    Linking {selectedAccounts.size} account{selectedAccounts.size !== 1 ? 's' : ''} with advanced features enabled
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setLinkStep('selecting')} 
+                className="flex-1"
+                data-testid="button-back-to-selection"
+              >
+                Back
+              </Button>
+              <Button 
+                onClick={handleFinalLinking} 
+                disabled={isLinking}
+                className="flex-1"
+                data-testid="button-complete-linking"
               >
                 {isLinking ? (
                   <>
@@ -381,7 +558,10 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
                     Linking...
                   </>
                 ) : (
-                  `Link ${selectedAccounts.size} Account${selectedAccounts.size !== 1 ? 's' : ''}`
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Complete Setup
+                  </>
                 )}
               </Button>
             </div>

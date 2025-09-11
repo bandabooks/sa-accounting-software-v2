@@ -9788,7 +9788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const authReq = req as AuthenticatedRequest;
       const companyId = authReq.user?.companyId || 2;
-      const { userId, accounts } = req.body;
+      const { userId, accounts, monitoringConfig } = req.body;
 
       if (!userId || !accounts || !Array.isArray(accounts)) {
         return res.status(400).json({ error: 'Missing required fields: userId, accounts' });
@@ -9798,12 +9798,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const linkedAccounts = await stitchService.exchangeLinkSuccess({
         userId,
         accounts,
-        companyId
+        companyId,
+        monitoringConfig
       });
+
+      // Store monitoring configuration if provided
+      if (monitoringConfig) {
+        console.log('📊 Storing monitoring configuration:', monitoringConfig);
+        
+        // Update real-time monitoring service with user preferences
+        const { realTimeMonitoringService } = await import('./services/realTimeMonitoringService');
+        realTimeMonitoringService.updateMonitoringConfiguration(companyId, monitoringConfig);
+      }
 
       await logAudit(authReq.user?.id || 0, 'CREATE', 'bank_feed_link', 0, {
         provider: 'stitch',
-        accountCount: linkedAccounts.length
+        accountCount: linkedAccounts.length,
+        monitoringEnabled: monitoringConfig?.enableRealTimeMonitoring || false
       });
 
       res.json({ 
@@ -9919,6 +9930,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching sync status:', error);
       res.status(500).json({ error: 'Failed to fetch sync status' });
+    }
+  });
+
+  // Phase 2 Enhancement: Banking Insights and Optimization Routes
+  app.get("/api/stitch/insights/:accountId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+      const bankAccountId = parseInt(req.params.accountId);
+      const analysisMonths = parseInt(req.query.months as string) || 12;
+
+      if (isNaN(bankAccountId)) {
+        return res.status(400).json({ error: 'Invalid bank account ID' });
+      }
+
+      const { stitchService } = await import('./stitch/service');
+      const insights = await stitchService.getBankingInsights(companyId, bankAccountId, analysisMonths);
+
+      res.json(insights);
+    } catch (error) {
+      console.error('Error fetching banking insights:', error);
+      res.status(500).json({ error: 'Failed to fetch banking insights' });
+    }
+  });
+
+  app.get("/api/stitch/categorized-transactions/:accountId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+      const bankAccountId = parseInt(req.params.accountId);
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      if (isNaN(bankAccountId)) {
+        return res.status(400).json({ error: 'Invalid bank account ID' });
+      }
+
+      const { stitchService } = await import('./stitch/service');
+      const categorizedTransactions = await stitchService.getCategorizedTransactions(companyId, bankAccountId, limit);
+
+      res.json(categorizedTransactions);
+    } catch (error) {
+      console.error('Error fetching categorized transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch categorized transactions' });
+    }
+  });
+
+  app.get("/api/stitch/vat-compliance/:accountId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId || 2;
+      const bankAccountId = parseInt(req.params.accountId);
+
+      if (isNaN(bankAccountId)) {
+        return res.status(400).json({ error: 'Invalid bank account ID' });
+      }
+
+      const { stitchService } = await import('./stitch/service');
+      const vatSummary = await stitchService.getVATComplianceSummary(companyId, bankAccountId);
+
+      res.json(vatSummary);
+    } catch (error) {
+      console.error('Error fetching VAT compliance summary:', error);
+      res.status(500).json({ error: 'Failed to fetch VAT compliance summary' });
+    }
+  });
+
+  app.get("/api/stitch/monitoring-config", authenticate, async (req, res) => {
+    try {
+      const { stitchService } = await import('./stitch/service');
+      const config = stitchService.getMonitoringConfiguration();
+
+      res.json(config);
+    } catch (error) {
+      console.error('Error fetching monitoring configuration:', error);
+      res.status(500).json({ error: 'Failed to fetch monitoring configuration' });
+    }
+  });
+
+  app.put("/api/stitch/monitoring-config/:ruleId", authenticate, async (req, res) => {
+    try {
+      const { ruleId } = req.params;
+      const updates = req.body;
+
+      const { stitchService } = await import('./stitch/service');
+      stitchService.updateMonitoringRule(ruleId, updates);
+
+      res.json({ message: 'Monitoring rule updated successfully' });
+    } catch (error) {
+      console.error('Error updating monitoring rule:', error);
+      res.status(500).json({ error: 'Failed to update monitoring rule' });
     }
   });
 

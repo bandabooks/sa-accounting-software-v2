@@ -5,6 +5,9 @@
 
 import { stitchClient, type StitchAccount, type StitchTransaction, type StitchLinkSuccess } from './client';
 import { DatabaseStorage } from '../storage';
+import { realTimeMonitoringService } from '../services/realTimeMonitoringService';
+import { saBankingOptimizationEngine } from '../services/saBankingOptimizationEngine';
+import { transactionCategorizationService } from '../services/transactionCategorizationService';
 import { 
   type BankAccount, 
   type InsertBankAccount, 
@@ -23,6 +26,13 @@ interface ExchangeLinkOptions {
   userId: string;
   accounts: StitchAccount[];
   companyId: number;
+  monitoringConfig?: {
+    enableRealTimeMonitoring?: boolean;
+    enableAutoCategorization?: boolean;
+    enableVATInsights?: boolean;
+    enableBankingOptimization?: boolean;
+    enableInstantNotifications?: boolean;
+  };
 }
 
 interface SyncAccountsOptions {
@@ -68,6 +78,11 @@ export class StitchService {
   async exchangeLinkSuccess(options: ExchangeLinkOptions): Promise<BankAccount[]> {
     try {
       const createdAccounts: BankAccount[] = [];
+
+      // Log monitoring configuration if provided
+      if (options.monitoringConfig) {
+        console.log('🔧 Applying monitoring configuration:', options.monitoringConfig);
+      }
 
       for (const stitchAccount of options.accounts) {
         // Check if account already exists
@@ -239,8 +254,23 @@ export class StitchService {
             reconciled: false,
           };
 
-          await this.storage.createBankTransaction(transactionData);
+          const createdTransaction = await this.storage.createBankTransaction(transactionData);
           newTransactions++;
+
+          // Phase 2 Enhancement: Real-time monitoring and categorization
+          try {
+            // Monitor the new transaction for alerts and patterns
+            const alerts = await realTimeMonitoringService.monitorTransaction(createdTransaction);
+            
+            // Log monitoring results
+            if (alerts.length > 0) {
+              console.log(`🔍 Generated ${alerts.length} alerts for transaction ${createdTransaction.id}:`, 
+                alerts.map(a => `${a.severity}: ${a.title}`).join(', '));
+            }
+          } catch (monitoringError) {
+            console.error('Real-time monitoring error:', monitoringError);
+            // Don't fail transaction sync if monitoring fails
+          }
         }
 
         // Update cursor and check for more pages
@@ -399,6 +429,222 @@ export class StitchService {
     }
 
     return results;
+  }
+
+  /**
+   * Phase 2 Enhancement: Get banking optimization insights for an account
+   */
+  async getBankingInsights(companyId: number, bankAccountId: number, analysisMonths = 12): Promise<{
+    insights: any[];
+    feeAnalysis: any;
+    cashFlowAnalysis: any;
+    vatAnalysis: any;
+    patterns: any[];
+    overallScore: number;
+  }> {
+    try {
+      const bankAccount = await this.storage.getBankAccount(bankAccountId);
+      if (!bankAccount || bankAccount.companyId !== companyId) {
+        throw new Error('Bank account not found or access denied');
+      }
+
+      if (bankAccount.externalProvider !== 'stitch') {
+        throw new Error('Insights are only available for Stitch-connected accounts');
+      }
+
+      const analysisResult = await saBankingOptimizationEngine.analyzeAccountOptimization(
+        companyId,
+        bankAccountId,
+        analysisMonths
+      );
+
+      console.log(`📊 Generated banking insights for account ${bankAccountId}: ${analysisResult.insights.length} insights, score: ${analysisResult.overallScore}`);
+      
+      return analysisResult;
+    } catch (error) {
+      console.error('Failed to generate banking insights:', error);
+      throw new Error('Failed to generate banking insights');
+    }
+  }
+
+  /**
+   * Phase 2 Enhancement: Get transaction categorization for recent transactions
+   */
+  async getCategorizedTransactions(
+    companyId: number, 
+    bankAccountId: number, 
+    limit = 50
+  ): Promise<Array<{
+    transaction: BankTransaction;
+    category: any;
+    confidence: number;
+  }>> {
+    try {
+      const bankAccount = await this.storage.getBankAccount(bankAccountId);
+      if (!bankAccount || bankAccount.companyId !== companyId) {
+        throw new Error('Bank account not found or access denied');
+      }
+
+      // Get recent transactions (this would need to be implemented in storage)
+      const recentTransactions = await this.storage.getRecentBankTransactions(companyId, bankAccountId, limit);
+      
+      const categorizedTransactions = [];
+      
+      for (const transaction of recentTransactions) {
+        const category = await transactionCategorizationService.categorizeTransaction({
+          description: transaction.description,
+          amount: transaction.amount,
+          reference: transaction.reference || undefined
+        });
+
+        categorizedTransactions.push({
+          transaction,
+          category,
+          confidence: category.confidence
+        });
+      }
+
+      return categorizedTransactions.sort((a, b) => b.confidence - a.confidence);
+    } catch (error) {
+      console.error('Failed to get categorized transactions:', error);
+      throw new Error('Failed to get categorized transactions');
+    }
+  }
+
+  /**
+   * Phase 2 Enhancement: Get VAT compliance summary for an account
+   */
+  async getVATComplianceSummary(companyId: number, bankAccountId: number): Promise<{
+    vatDeductible: number;
+    vatLiability: number;
+    complianceScore: number;
+    issues: string[];
+    recommendations: string[];
+    monthlyBreakdown: Array<{ month: string; deductible: number; liability: number }>;
+  }> {
+    try {
+      const bankAccount = await this.storage.getBankAccount(bankAccountId);
+      if (!bankAccount || bankAccount.companyId !== companyId) {
+        throw new Error('Bank account not found or access denied');
+      }
+
+      // Get transactions for the last 12 months
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 12);
+
+      const transactions = await this.storage.getBankTransactionsByPeriod(
+        companyId, 
+        bankAccountId, 
+        startDate, 
+        endDate
+      );
+
+      let totalVatDeductible = 0;
+      let totalVatLiability = 0;
+      const monthlyBreakdown = new Map<string, { deductible: number; liability: number }>();
+      const issues: string[] = [];
+      const recommendations: string[] = [];
+
+      for (const transaction of transactions) {
+        const category = await transactionCategorizationService.categorizeTransaction({
+          description: transaction.description,
+          amount: transaction.amount,
+          reference: transaction.reference || undefined
+        });
+
+        const amount = Math.abs(parseFloat(transaction.amount));
+        const month = new Date(transaction.transactionDate).toISOString().slice(0, 7);
+
+        if (!monthlyBreakdown.has(month)) {
+          monthlyBreakdown.set(month, { deductible: 0, liability: 0 });
+        }
+
+        if (category.vatApplicable && category.vatRate) {
+          const vatAmount = amount * (category.vatRate / 100);
+          
+          if (category.type === 'expense') {
+            totalVatDeductible += vatAmount;
+            monthlyBreakdown.get(month)!.deductible += vatAmount;
+          } else if (category.type === 'income') {
+            totalVatLiability += vatAmount;
+            monthlyBreakdown.get(month)!.liability += vatAmount;
+          }
+        }
+      }
+
+      // Calculate compliance score
+      let complianceScore = 100;
+      
+      // Check for proper documentation
+      const undocumentedTransactions = transactions.filter(t => 
+        !t.reference && Math.abs(parseFloat(t.amount)) > 100
+      );
+      
+      if (undocumentedTransactions.length > transactions.length * 0.1) {
+        issues.push(`${undocumentedTransactions.length} transactions lack proper documentation`);
+        recommendations.push('Ensure all VAT-deductible expenses have proper references');
+        complianceScore -= 15;
+      }
+
+      // Check VAT registration threshold
+      const annualTurnover = transactions
+        .filter(t => parseFloat(t.amount) > 0)
+        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+      if (annualTurnover > 1000000) {
+        const hasVatPayments = transactions.some(t => 
+          t.description.toLowerCase().includes('vat') && parseFloat(t.amount) < 0
+        );
+        
+        if (!hasVatPayments && totalVatLiability > 10000) {
+          issues.push('No VAT payments detected despite high liability');
+          recommendations.push('Ensure regular VAT payments to avoid penalties');
+          complianceScore -= 25;
+        } else {
+          recommendations.push('Continue monitoring VAT obligations');
+        }
+      }
+
+      return {
+        vatDeductible: totalVatDeductible,
+        vatLiability: totalVatLiability,
+        complianceScore: Math.max(0, complianceScore),
+        issues,
+        recommendations,
+        monthlyBreakdown: Array.from(monthlyBreakdown.entries()).map(([month, data]) => ({
+          month,
+          deductible: data.deductible,
+          liability: data.liability
+        })).sort()
+      };
+    } catch (error) {
+      console.error('Failed to get VAT compliance summary:', error);
+      throw new Error('Failed to get VAT compliance summary');
+    }
+  }
+
+  /**
+   * Phase 2 Enhancement: Get real-time monitoring rules and status
+   */
+  getMonitoringConfiguration(): {
+    rules: any[];
+    isEnabled: boolean;
+    alertsSent: number;
+  } {
+    const rules = realTimeMonitoringService.getMonitoringRules();
+    return {
+      rules,
+      isEnabled: rules.some(r => r.enabled),
+      alertsSent: 0 // Would track this in database
+    };
+  }
+
+  /**
+   * Phase 2 Enhancement: Update monitoring rule configuration
+   */
+  updateMonitoringRule(ruleId: string, updates: any): void {
+    realTimeMonitoringService.updateMonitoringRule(ruleId, updates);
   }
 }
 
