@@ -37,7 +37,10 @@ export default function Customers() {
   
   const { data: customers, isLoading } = useQuery({
     queryKey: ["/api/customers"],
-    queryFn: customersApi.getAll
+    queryFn: customersApi.getAll,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true // Refetch when user returns to tab
   });
 
   const { data: stats, isLoading: statsLoading } = useQuery({
